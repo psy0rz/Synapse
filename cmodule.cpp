@@ -176,6 +176,20 @@ bool Cmodule::setHandler(const string & eventName, const string & functionName)
 
 }
 
+bool Cmodule::setDefaultHandler(const string & functionName)
+{
+	FsoHandler soHandler;
+	soHandler=(FsoHandler)resolve("synapse_"+functionName);
+	if (soHandler!=NULL)
+	{
+		DEB("(default handler) -> " << functionName << "@" << name );
+		soDefaultHandler=soHandler;
+		return true;
+	}
+
+	return false;
+
+}
 
 /*!
     \fn Cmodule::resolve(const string * functionName)

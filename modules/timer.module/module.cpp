@@ -66,7 +66,7 @@ SYNAPSE_REGISTER(timer_Set)
 	out.src=0;
 	out.dst=msg["dst"];
 	out.event=(string)msg["event"];
-	out.erase(out.find("event"));
+	out.erase("event");
 	out.send();
 }
 

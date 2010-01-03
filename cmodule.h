@@ -66,15 +66,18 @@ public:
 
 	//event handling stuff,
 	//converting an event string into an actual function call.
-	FsoHandler soDefaultHandler;
 	bool setHandler(const string & eventName, const string & functionName);
+	bool setDefaultHandler(const string & functionName);
 	FsoHandler getHandler(string eventName);
 	void * resolve(const string & functionName);
     bool isLoaded(string path);
     string getName(string path);
 	FsoInit soInit;
 	void *soHandle;
+
+	private:
 	ChandlerHashMap handlers;
+	FsoHandler soDefaultHandler;
 
 
 };

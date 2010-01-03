@@ -23,10 +23,7 @@
 using namespace std;
 using namespace boost;
 
-typedef variant<int,float,string> anyType;
 
-//extern CMessageMan * messageManPtr;
-//extern weak_ptr<Cmodule> modulePtr;
 
 /*
 typical route of a cmsg object

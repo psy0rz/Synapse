@@ -16,6 +16,7 @@
 #include <string>
 #include "boost/variant.hpp"
 #include <map>
+
 using namespace std;
 using namespace boost;
 
@@ -24,29 +25,49 @@ using namespace boost;
 */
 
 //this has to corospond with the variant order in the Cvar class below:
-#define CVAR_LONG_DOUBLE 0
-#define CVAR_STRING 1
+#define CVAR_EMPTY 0
+#define CVAR_MAP 1
+#define CVAR_LONG_DOUBLE 2
+#define CVAR_STRING 3
 
-class Cvar : public map<const string,Cvar >{
+typedef map<const string,class Cvar> CvarMap;
+
+class Cvar {
 public:
-    Cvar();
+	typedef CvarMap::iterator iterator;
 
+	//common stuff
+	int which();
+	string getPrint(string prefix="");
+    Cvar();
     ~Cvar();
+	void clear();
+	bool isEmpty();
+
+	//CVAR_STRING stuff
  	void operator=(const string & value);
-//	operator string ();
 	operator string &();
 	string & str();
 
+	//CVAR_LONG_DOUBLE stuff
  	void operator=(const long double & value);
 	operator long double  ();
-	string getPrint(string prefix);
-	int which();
-    bool isSet(string key);
+
+	//CVAR_MAP stuff
+ 	void operator=(CvarMap & value);
+	operator CvarMap & ();
+	Cvar & operator [](const char * key);
+    bool isSet(const char * key);
+	iterator begin();
+	iterator end();
+	const int size();
+	void erase(const char * key);
+
 	
 
 private:
 	
-	variant <long double,string> value;
+	variant <void *,CvarMap , long double,string> value;
 };
 
 #endif

@@ -20,13 +20,35 @@ SYNAPSE_REGISTER(module_Init)
 	out.event="core_Ready";
 	out.send();
 
+	
+	//load the modules you wanna fiddle around with:
 	out.clear();
 	out.event="core_LoadModule";
+
 	out["path"]="modules/lirc.module/liblirc.so";
-//	out["path"]="modules/net.module/libnet.so";
 	out.send();
 
+//	out["path"]="modules/net.module/libnet.so";
+//	out.send();
+
+	out["path"]="modules/conn_json.module/libconn_json.so";
+	out.send();
+
+
+	while(1)
+	{
+		out.event="test";
+		out.dst=0;
+		out["getal"]=4000000000;
+		out["sub1"]["txt"]="geert";
+		out["sub1"]["nr"]=2;
+		out["sub1"]["sub2"]["diepp"]=2;
+
+		out.send();
+		sleep(1);
+	}
 }
+
 
 
  

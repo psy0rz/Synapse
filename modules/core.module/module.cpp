@@ -5,6 +5,7 @@
 //Also dont forget you CANT send() while holding the core-lock. (it will deadlock)
 
 //this is THE core module - we need a bootstrap function:
+//(init is automagically called if it exists)
 void init()
 {
 	//We have no core lock, but there are no threads yet, so its no problem.
@@ -32,6 +33,11 @@ SYNAPSE_REGISTER(module_Init)
 		return;
 	}
 
+	Cvar t;
+//	t="stringetje";
+	INFO("t is " << t);
+ 
+
 	///module_Error
 	out.clear();
 	out.event="core_ChangeEvent";
@@ -39,6 +45,8 @@ SYNAPSE_REGISTER(module_Init)
 	out["modifyGroup"]="core";
 	out["sendGroup"]="modules";
 	out["recvGroup"]="everyone";
+	INFO("event is " << out["event"]);
+	INFO("print is " << out.getPrint());
 	out.send();
 
 
@@ -248,10 +256,22 @@ SYNAPSE_REGISTER(core_Register)
 			else
 				handler=(string)msg["event"];
 
-			if (!session->module->setHandler(msg["event"], handler))
-				error="Can't find handler "+handler+" in module "+session->module->name;
+			if (msg.isSet("event"))
+			{
+				//set a handler for a specific event
+				if (!session->module->setHandler(msg["event"], handler))
+					error="Can't find handler "+handler+" in module "+session->module->name;
+				else
+					return;
+			}
 			else
-				return;
+			{
+				//set the default handler for all events
+				if (!session->module->setDefaultHandler(handler))
+					error="Can't find default handler "+handler+" in module "+session->module->name;
+				else
+					return;
+			}
 		}
 	}
 	msg.returnError(error);

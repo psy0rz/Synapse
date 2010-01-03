@@ -107,8 +107,7 @@ bool Cmsg::returnIfOtherThan(char * keys, ...)
 	unsigned int found=0;
 	
 	do
-	{
-		
+	{		
 		if (isSet(key))
 		{
 			found++;
@@ -118,7 +117,7 @@ bool Cmsg::returnIfOtherThan(char * keys, ...)
 
 	va_end(args);
 
-	if (size()>found)
+	if (((CvarMap)(*this)).size()>found)
 	{
 		returnError("Extra parameters found");
 		return true;
