@@ -1,0 +1,128 @@
+//
+// C++ Implementation: ccallman
+//
+// Description: 
+//
+//
+// Author:  <>, (C) 2009
+//
+// Copyright: See COPYING file that comes with this distribution
+//
+//
+#include "ccallman.h"
+#include "clog.h"
+using namespace boost;
+
+CcallMan::CcallMan()
+{
+	statsTotal=0;
+}
+
+
+CcallMan::~CcallMan()
+{
+}
+
+
+
+
+/*!
+    \fn CcallMan::addCall(CmsgPtr msg, CsessionPtr dst)
+ */
+bool CcallMan::addCall(const CmsgPtr & msg, const CsessionPtr & dst, FsoHandler soHandler)
+{
+	callList.push_back(Ccall(msg,dst,soHandler));
+	statsTotal++;
+//	DEB( "(" << callList.size() << ")" << " " << msg->event << " FROM " << msg->src << " TO " << msg->dst << " CALLDST " << dst->id);
+}
+
+
+
+
+
+
+/*!
+    \fn CcallMan::popCall()
+ */
+CcallList::iterator CcallMan::startCall(const CthreadPtr & threadPtr)
+{
+	//find a call thats ready to go and return it
+	//TODO:optimize 
+	for (CcallList::iterator callI=callList.begin(); callI!=callList.end(); callI++)
+	{
+		if (!callI->started && callI->dst->startThread())
+		{
+			callI->threadPtr=threadPtr;
+			callI->started=1;
+//			DEB( callI->msg->event << " FROM " << callI->msg->src << " TO " << callI->msg->dst << " CALLDST " << callI->dst->id);
+		
+			return callI;
+		}
+	}
+	return CcallList::iterator();
+}
+
+void CcallMan::endCall(CcallList::iterator callI)
+{
+	callI->dst->endThread();
+//	DEB( callI->msg->event << " FROM " << callI->msg->src << " TO " << callI->msg->dst << " CALLDST " << callI->dst->id);
+	
+	callList.erase(callI);
+//	DEB("calls left: " << callList.size());
+}
+
+
+/*!
+    \fn CcallMan::print()
+ */
+void CcallMan::print()
+{
+	DEB( statsTotal << " calls processed, " << callList.size() << " calls queued" );
+	string status;
+	for (CcallList::iterator callI=callList.begin(); callI!=callList.end(); callI++)
+	{
+		if (callI->started)
+			status="RUNNING";
+		else
+			status="QUEUED ";
+
+		DEB(" |" << status << " " << callI->msg->event << " FROM " << callI->msg->src << " TO " <<
+			callI->dst->id << ":" << callI->dst->user->getName() << "@" << callI->dst->module->name 
+			<< callI->msg->getPrint("  |")
+		);
+	}
+	
+	statsTotal=0;
+
+}
+
+bool CcallMan::interruptCall(string event, int src, int dst)
+{
+	for (CcallList::iterator callI=callList.begin(); callI!=callList.end(); callI++)
+	{
+		if (callI->msg->event==event)
+		{
+			if (callI->msg->src==src)
+			{
+				if (dst==0 || dst==callI->dst->id)
+				{	
+					//send interrupt
+					if (callI->started && callI->threadPtr)
+					{
+						DEB("Interrupting call: " << event << " FROM " << src << " TO " << dst);
+						callI->threadPtr->interrupt();
+						return (true);
+					}
+					//not started yet, we can just delete it from the queue
+					{
+						DEB("Cancelling call: " << event << " FROM " << src << " TO " << dst);
+						callList.erase(callI);
+						return (true);
+
+					}
+				}
+			}
+		}
+	}
+	return false;
+}
