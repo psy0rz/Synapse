@@ -7,35 +7,35 @@
     <projectmanagement>KDevCustomProject</projectmanagement>
     <primarylanguage>C++</primarylanguage>
     <ignoreparts/>
-    <projectdirectory>/home/psy/svnhobbybop/framework/synapse</projectdirectory>
-    <absoluteprojectpath>true</absoluteprojectpath>
+    <projectdirectory>.</projectdirectory>
+    <absoluteprojectpath>false</absoluteprojectpath>
     <secondaryLanguages>
       <language>C</language>
     </secondaryLanguages>
     <projectname>synapse</projectname>
     <description></description>
     <defaultencoding></defaultencoding>
-    <versioncontrol></versioncontrol>
+    <versioncontrol/>
   </general>
   <kdevcustomproject>
-    <filelistdirectory>/home/psy/svnhobbybop/framework/synapse</filelistdirectory>
+    <filelistdirectory>.</filelistdirectory>
     <run>
-      <mainprogram>/home/psy/svnhobbybop/framework/synapse/synapse</mainprogram>
+      <mainprogram></mainprogram>
       <directoryradio>custom</directoryradio>
-      <customdirectory>/home/psy/svnhobbybop/framework/synapse</customdirectory>
+      <customdirectory>.</customdirectory>
       <programargs>modules/test.module/libtest.so</programargs>
       <terminal>true</terminal>
       <autocompile>true</autocompile>
       <envvars/>
       <globaldebugarguments></globaldebugarguments>
-      <globalcwd>/home/psy/svnhobbybop/framework/synapse</globalcwd>
+      <globalcwd></globalcwd>
       <useglobalprogram>false</useglobalprogram>
       <autoinstall>false</autoinstall>
       <autokdesu>false</autokdesu>
     </run>
     <build>
       <buildtool>make</buildtool>
-      <builddir>/home/psy/svnhobbybop/framework/synapse</builddir>
+      <builddir></builddir>
     </build>
     <make>
       <abortonerror>false</abortonerror>
@@ -55,22 +55,7 @@
       <defaulttarget></defaulttarget>
       <makeoptions></makeoptions>
     </make>
-    <blacklist>
-      <path>modules/test/CMakeFiles</path>
-      <path>modules/test/CMakeFiles/CompilerIdC</path>
-      <path>modules/test/CMakeFiles/CompilerIdC/CMakeCCompilerId.c</path>
-      <path>modules/test/CMakeFiles/CompilerIdCXX</path>
-      <path>modules/test/CMakeFiles/CompilerIdCXX/CMakeCXXCompilerId.cpp</path>
-      <path>modules/test/CMakeLists.txt</path>
-      <path>modules/test/Makefile</path>
-      <path>modules/test/src</path>
-      <path>modules/test/src/CMakeLists.txt</path>
-      <path>modules/test/src/Makefile</path>
-      <path>modules/test/src/test.cpp</path>
-      <path>modules/test/src/test.h</path>
-      <path>modules/test/src/testtest.cpp</path>
-      <path>synapse.h</path>
-    </blacklist>
+    <blacklist/>
     <filetypes>
       <filetype>*.java</filetype>
       <filetype>*.h</filetype>
@@ -202,7 +187,7 @@
     <LICENSEFILE>COPYING</LICENSEFILE>
     <VERSION>0.1</VERSION>
     <YEAR>2009</YEAR>
-    <dest>/home/psy/svnhobbybop/framework/synapse</dest>
+    <dest>.</dest>
   </substmap>
   <kdevdebugger>
     <general>
@@ -224,9 +209,9 @@
   </kdevdebugger>
   <kdevdocumentation>
     <projectdoc>
-      <docsystem></docsystem>
-      <docurl></docurl>
-      <usermanualurl></usermanualurl>
+      <docsystem/>
+      <docurl/>
+      <usermanualurl/>
     </projectdoc>
   </kdevdocumentation>
 </kdevelop>
