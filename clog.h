@@ -28,13 +28,20 @@ extern boost::mutex logMutex;
 #define  TERM_RECV_MESSAGE "\033[34;1m"
 #define  TERM_BOLD "\033[1m"
 
+//TODO: replace this with a better more efficient logging mechnism, altough its not trivial to make a thread-safe version of cout.
 
 //thread-safe 'wrapper' around cout:
+//we first buffer the output to a streamstream, since sometimes recursive calls happen from functions that are called while doing a << .
 #define LOG(s) \
 	{ \
-		boost::lock_guard<boost::mutex> lock(logMutex); \
-		cout  << s; \
+		stringstream log_buff; \
+		log_buff << s; \
+		{ \
+			boost::lock_guard<boost::mutex> lock(logMutex); \
+			cout  << log_buff.rdbuf(); \
+		} \
 	}
+
 
 //debug output with extra info:
 #ifndef NDEBUG

@@ -30,7 +30,7 @@ using namespace boost;
 #define CVAR_LONG_DOUBLE 2
 #define CVAR_STRING 3
 
-typedef map<const string,class Cvar> CvarMap;
+typedef map< string,class Cvar> CvarMap;
 
 class Cvar {
 public:
@@ -56,7 +56,7 @@ public:
 	//CVAR_MAP stuff
  	void operator=(CvarMap & value);
 	operator CvarMap & ();
-	Cvar & operator [](const char * key);
+	Cvar & operator [](const string & key);
     bool isSet(const char * key);
 	iterator begin();
 	iterator end();

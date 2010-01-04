@@ -36,14 +36,11 @@ SYNAPSE_REGISTER(module_Init)
 
 
 	while(1)
-	{
+	{	
+		out.clear();
 		out.event="test";
 		out.dst=0;
-		out["getal"]=4000000000;
-		out["sub1"]["txt"]="geert";
-		out["sub1"]["nr"]=2;
-		out["sub1"]["sub2"]["diepp"]=2;
-
+out.clear();
 		out.send();
 		sleep(1);
 	}

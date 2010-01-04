@@ -137,7 +137,7 @@ bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg)
 		if (logSends)
 		{
 			msgStr << msg->dst << ":" << dst->user->getName() << "@" << dst->module->name << 
-				msg->getPrint(" |");
+				" DATA=" << msg->getPrint(" |");
 			LOG_SEND(msgStr.str());
 		}
 
@@ -195,7 +195,7 @@ bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg)
 		}
 		if (logSends)
 		{
-			msgStr << ")" << 
+			msgStr << ") DATA=" <<  
 				msg->getPrint(" |");
 			LOG_SEND(msgStr.str());
 		}
@@ -268,7 +268,7 @@ void CmessageMan::operator()()
 			stringstream msgStr;
 			msgStr << "RECV " << callI->msg->event << 
 				" FROM " << callI->msg->src << 
-				" BY " << callI->dst->id << ":" << callI->dst->user->getName() << "@" << callI->dst->module->name <<
+				" BY " << callI->dst->id << ":" << callI->dst->user->getName() << "@" << callI->dst->module->name << " DATA=" <<
 				callI->msg->getPrint(" |");
 
 			LOG_RECV(msgStr.str());
@@ -382,11 +382,18 @@ void CmessageMan::checkThread()
  */
 int CmessageMan::run(string coreName, string moduleName)
 {	
-//	test();
-
-	//Cmodule module;
+/*	INFO("test");
+	Cvar v;
+	
+//	INFO("print" << v["geert"]["sub"]);
+	v["geert"].clear();
+	v="test";
+	INFO(v.getPrint());
 	
 
+	INFO("k");
+return(1);
+*/
 	//load the first module as user core UNLOCKED!
 	loadModule(coreName, "core");
 	this->firstModuleName=moduleName;

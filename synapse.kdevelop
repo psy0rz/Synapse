@@ -27,7 +27,7 @@
       <terminal>true</terminal>
       <autocompile>false</autocompile>
       <envvars/>
-      <globaldebugarguments></globaldebugarguments>
+      <globaldebugarguments>modules/test.module/libtest.so</globaldebugarguments>
       <globalcwd>/home/psy/opensyn3/projects/synapse/</globalcwd>
       <useglobalprogram>false</useglobalprogram>
       <autoinstall>false</autoinstall>

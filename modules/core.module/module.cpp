@@ -33,10 +33,6 @@ SYNAPSE_REGISTER(module_Init)
 		return;
 	}
 
-	Cvar t;
-//	t="stringetje";
-	INFO("t is " << t);
- 
 
 	///module_Error
 	out.clear();
@@ -45,8 +41,6 @@ SYNAPSE_REGISTER(module_Init)
 	out["modifyGroup"]="core";
 	out["sendGroup"]="modules";
 	out["recvGroup"]="everyone";
-	INFO("event is " << out["event"]);
-	INFO("print is " << out.getPrint());
 	out.send();
 
 
