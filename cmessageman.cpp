@@ -56,11 +56,23 @@ bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg)
 	// -our job is to verify if everything is ok and populate the call queue
 	// -internally the core only works with smartpointers, so most stuff thats not in msg will be a smartpointer.
 
+	if (shutdown)
+		return false;
 
 	//no src session specified means use default session of module:
 	//NOTE: this is the only case where modify the actual msg object.
 	if (!msg->src)
-		msg->src=module->defaultSessionId;
+	{
+		if (module->defaultSessionId!=SESSION_DISABLED)
+		{
+			msg->src=module->defaultSessionId;
+		}
+		else
+		{
+			ERROR("send: module " << module->name << " want to send " << msg->event << " from its default session, but is doesnt have one." );
+			return false;
+		}
+	}
 
 
 	//resolve source session id to session a pointer
@@ -70,7 +82,7 @@ bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg)
 	if (!src)
 	{
 		//not found. we cant send an error back yet, so just return false
-		ERROR("send: in module " << module->name << " session " << msg->src << " does not exist");
+		ERROR("send: module " << module->name << " want to send " << msg->event << " from non-existing session " << msg->src );
 		return false;
 	}
 
@@ -78,7 +90,7 @@ bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg)
 	if (src->module!=module)
 	{
 		//module is not the session owner. we cant send an error back yet, so just return false
-		ERROR("send: module " << module->name << " does not own session " << msg->src );
+		ERROR("send: module " << module->name << " wants to send " << msg->event << " from session " << msg->src << ", but isnt the owner of this session.");
 		return false;
 	}
 
@@ -240,7 +252,7 @@ void CmessageMan::operator()()
 			}
 
 			//get next call
-			while ((callI=callMan.startCall(threadPtr)) == CcallList::iterator() || shutdown)
+			while ((callI=callMan.startCall(threadPtr)) == CcallList::iterator())
 			{
 				//no call ready...
 				//indicate we're idle
@@ -329,14 +341,13 @@ void CmessageMan::activeThread()
 
 
 /*!
-    \fn CmessageMan::endThread()
 	called when thread is ready and does nothing
  */
 bool CmessageMan::idleThread()
 {
 	activeThreads--;
 	//we want less threads? let this one die by returning false
-	if (wantCurrentThreads<currentThreads || shutdown)
+	if (wantCurrentThreads<currentThreads)
 	{
 		currentThreads--;
 		return false;
@@ -351,8 +362,6 @@ bool CmessageMan::idleThread()
  */
 void CmessageMan::checkThread()
 {
-	if (shutdown)
-		return;
 
 	//if all threads are active, indicate that we want one want one more
 	//(there always should be a least one idle thread)
@@ -382,18 +391,6 @@ void CmessageMan::checkThread()
  */
 int CmessageMan::run(string coreName, string moduleName)
 {	
-/*	INFO("test");
-	Cvar v;
-	
-//	INFO("print" << v["geert"]["sub"]);
-	v["geert"].clear();
-	v="test";
-	INFO(v.getPrint());
-	
-
-	INFO("k");
-return(1);
-*/
 	//load the first module as user core UNLOCKED!
 	loadModule(coreName, "core");
 	this->firstModuleName=moduleName;
@@ -402,7 +399,7 @@ return(1);
 	checkThread();
 
 	//thread manager loop
-	while (1)
+	while (! (shutdown && callMan.callList.empty() ))
 	{
 		sleep(10);
 
@@ -412,9 +409,6 @@ return(1);
 			DEB(maxActiveThreads << "/" << wantCurrentThreads << " threads active."); 
 			callMan.print();
 			userMan.print();
-
-			if (shutdown)
-				break;
 
 			if (maxActiveThreads<wantCurrentThreads-1)
 			{
@@ -427,16 +421,18 @@ return(1);
 		}
 
 	}
+	//loop exits when shutdown=true and callist is empty.
 
 	//shutdown loop
+	wantCurrentThreads=0;
 	while(1)
 	{
-		
 		{
 			lock_guard<mutex> lock(threadMutex);
 			if (currentThreads)
 			{
 				INFO("shutting down - waiting for threads to end:" << currentThreads);
+				//send all running calls an interrupt
 				threadCond.notify_all();
 			}
 			else
@@ -462,6 +458,12 @@ return(1);
 CsessionPtr CmessageMan::loadModule(string path, string userName)
 {
 	CmodulePtr module(new Cmodule);
+
+	if (shutdown)
+	{
+		ERROR("Shutting down, cant load new module: " << path);
+		return (CsessionPtr());
+	}
 
 	//modules get unloaded automaticly when the module-object is deleted:
 	if (module->load(path))
@@ -541,7 +543,8 @@ bool CmessageMan::isModuleReady(string path)
 void CmessageMan::doShutdown(int exit=0)
 {
 	WARNING("Shutdown requested, exit code="<<exit);
-	shutdown=1;
+	shutdown=true;
+	userMan.doShutdown();
 	this->exit=exit;
 	threadCond.notify_all();
 }

@@ -96,3 +96,20 @@ SYNAPSE_REGISTER(lirc_Disconnect)
 	net.doDisconnect(msg.src);
 }
 
+/** When a session ends, make sure the corresponding network connection is disconnected as well.
+ *
+ */
+SYNAPSE_REGISTER(module_SessionEnded)
+{
+	net.doDisconnect(msg["session"]);
+}
+
+/** Called when synapse whats the module to shutdown completely
+ * This makes sure that all ports and network connections are closed, so there wont be any 'hanging' threads left.
+ * If you care about data-ordering, send this to session-id that sended you the net_Connected.
+ */
+SYNAPSE_REGISTER(module_Shutdown)
+{
+	//let the net module shut down to fix the rest
+	net.doShutdown();
+}

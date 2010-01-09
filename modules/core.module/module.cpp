@@ -78,6 +78,13 @@ SYNAPSE_REGISTER(module_Init)
 	out["recvGroup"]="core";
 	out.send();
 
+	out.clear();
+	out.event="core_ChangeEvent";
+	out["event"]="module_Shutdown";
+	out["modifyGroup"]="core";
+	out["sendGroup"]="core";
+	out["recvGroup"]="modules";
+	out.send();
 
 	/// core_Login
 	out.clear();
@@ -440,6 +447,65 @@ SYNAPSE_REGISTER(core_NewSession)
 }
 
 
+SYNAPSE_REGISTER(core_Shutdown)
+{
+	//this ends all sessions, so that all modules are eventually unloaded and the core shuts down.
+
+	Cmsg endmsg;
+	lock_guard<mutex> lock(messageMan->threadMutex);
+
+	WARNING("Shutdown requested, ending all sessions.");
+
+	//first tell all the modules we want them to shut down
+	endmsg.clear();
+	endmsg.event="module_Shutdown";
+	endmsg.dst=0;
+	//use lowlevel sendMessage, since endmsg.send would deadlock
+	messageMan->sendMessage((CmodulePtr)module,CmsgPtr(new Cmsg(endmsg))); 
+	
+
+	//now tell all the sessions they are ended, and actually delete them
+	//do this PER session.
+	for (int sessionId=2; sessionId<MAX_SESSIONS; sessionId++)
+	{
+
+		CsessionPtr session=messageMan->userMan.getSession(sessionId);
+		if (session)
+		{
+			//send endmessage to the (still existing ) session:
+			endmsg.clear();
+			endmsg.event="module_SessionEnd";
+			endmsg.dst=sessionId;
+			//use lowlevel sendMessage, since endmsg.send would deadlock
+			messageMan->sendMessage((CmodulePtr)module,CmsgPtr(new Cmsg(endmsg))); 
+	
+			//inform everyone the session has ended
+			endmsg.clear();
+			endmsg.event="module_SessionEnded";
+			endmsg["session"]=sessionId;
+			endmsg.dst=0;
+			messageMan->sendMessage((CmodulePtr)module,CmsgPtr(new Cmsg(endmsg))); 
+		
+			//now actually delete the session
+			//Csession object stays intact as long as there are shared_ptr's referring to it from the call queue
+			if (!messageMan->userMan.delSession(sessionId))
+					ERROR("cant delete session" << sessionId);
+			
+			//when the last session for a module is gone the module is unloaded.
+			//when the last module is unloaded the program shuts down.
+		}
+	}
+	
+	//delete the core session, so nobody can do any corestuff from now on
+	messageMan->userMan.delSession(1);
+
+	//make the shutdown flag true:
+	//-this prevents new sessions from being created and modules from being loaded.
+	//-also all calls to sendMessage will be silently ignored.
+	messageMan->doShutdown(msg["exit"]);
+}
+
+
 SYNAPSE_REGISTER(core_Logout)
 {
 	string error;
@@ -460,6 +526,7 @@ SYNAPSE_REGISTER(core_Logout)
 		endmsg.dst=msg.src;
 		endmsg.send();
 
+		//inform the rest of the world
 		endmsg.event="module_SessionEnded";
 		endmsg["session"]=endmsg.dst;
 		endmsg.dst=0;
@@ -469,7 +536,7 @@ SYNAPSE_REGISTER(core_Logout)
 		{
 			lock_guard<mutex> lock(messageMan->threadMutex);
 			if (!messageMan->userMan.delSession(msg.src))
-				ERROR("cant delete session");
+				ERROR("cant delete session" << msg.src);
 		}
 	}
 }
@@ -562,13 +629,6 @@ SYNAPSE_REGISTER(core_Interrupt)
 		out.send();
 }
 
-SYNAPSE_REGISTER(core_Shutdown)
-{
-	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
-		messageMan->doShutdown((int)msg["exit"]);
-	}
-}
 
 SYNAPSE_REGISTER(core_ChangeLogging)
 {

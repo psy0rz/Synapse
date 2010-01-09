@@ -75,14 +75,17 @@ void CcallMan::endCall(CcallList::iterator callI)
 /*!
     \fn CcallMan::print()
  */
-void CcallMan::print()
+void CcallMan::print(int verbose)
 {
-	DEB( statsTotal << " calls processed, " << callList.size() << " calls queued" );
+	if (verbose)
+		DEB( statsTotal << " calls processed, " << callList.size() << " calls queued" );
 	string status;
 	for (CcallList::iterator callI=callList.begin(); callI!=callList.end(); callI++)
 	{
 		if (callI->started)
 			status="RUNNING";
+		else if (!verbose)
+			continue;
 		else
 			status="QUEUED ";
 
@@ -122,6 +125,24 @@ bool CcallMan::interruptCall(string event, int src, int dst)
 					}
 				}
 			}
+		}
+	}
+	return false;
+}
+
+//interrupt all running calls (used for shutdown)
+bool CcallMan::interruptAll()
+{
+	for (CcallList::iterator callI=callList.begin(); callI!=callList.end(); callI++)
+	{
+		//send interrupt
+		if (callI->started && callI->threadPtr)
+		{
+			DEB("Interrupting call: " << callI->msg->event << " FROM " << callI->msg->src << " TO " <<
+			callI->dst->id << ":" << callI->dst->user->getName() << "@" << callI->dst->module->name 
+			<< callI->msg->getPrint("  |"));
+
+			callI->threadPtr->interrupt();
 		}
 	}
 	return false;

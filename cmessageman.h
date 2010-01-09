@@ -46,10 +46,14 @@ public:
 	CmessageMan();
 	
 	~CmessageMan();
-	bool sendMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg);
-	//these are the threads:
+
+	//these 2 are 'the' threads, and do their own locking:
 	void operator()();
 	int run(string coreName,string moduleName);
+
+	//the rest is not thread safe, so callers are responsible for locking:
+	bool sendMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg);
+
 	void checkThread();
     	CsessionPtr loadModule(string path, string userName);
 	CeventPtr getEvent(const string & name);

@@ -22,6 +22,7 @@ CuserMan::CuserMan()
 {
 	sessionCounter=0;
 	sessionMaxPerUser=1000;
+	shutdown=false;
 
 	addGroup(CgroupPtr(new Cgroup("core")));
 	addGroup(CgroupPtr(new Cgroup("modules")));
@@ -141,9 +142,15 @@ CgroupPtr CuserMan::getGroup(const string &groupName)
  */
 int CuserMan::addSession( CsessionPtr session)
 {
+	if (shutdown)
+	{
+		ERROR("Shutting down, cant add new session.");
+		return (SESSION_DISABLED);
+	}
+
 	//too much for this user already?
 	int userSessions=0;
-	for (int sessionId=0; sessionId<MAX_SESSIONS; sessionId++)
+	for (int sessionId=1; sessionId<MAX_SESSIONS; sessionId++)
 	{
 		CsessionPtr chkSession;
 		chkSession=getSession(sessionId);
@@ -214,7 +221,7 @@ bool CuserMan::delSession(const int sessionId)
 		}
 		//reset shared ptr.
 		//as soon as nobody uses the session object anymore it will be destroyed.
-//NIET:		sessions[sessionId]->id=SESSION_DISABLED;
+//NIET, is onhandig in de praktijk, ook bij shutdown:		sessions[sessionId]->id=SESSION_DISABLED;
 		sessions[sessionId].reset();
 		return (true);
 	}
@@ -240,4 +247,9 @@ void CuserMan::print()
 		}
 	}
 
+}
+
+void CuserMan::doShutdown()
+{
+	shutdown=true;
 }

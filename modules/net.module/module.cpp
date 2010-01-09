@@ -150,6 +150,7 @@ SYNAPSE_REGISTER(net_Close)
 	net.doClose(msg["port"]);
 }
 
+
 /** Disconnections the connection related to src 
  */
 SYNAPSE_REGISTER(net_Disconnect)
@@ -167,5 +168,21 @@ SYNAPSE_REGISTER(net_Write)
 	net.doWrite(msg.src, msg["data"]);
 }
 
+/** When a session ends, make sure the corresponding network connection is disconnected as well.
+ *
+ */
+SYNAPSE_REGISTER(module_SessionEnded)
+{
+	net.doDisconnect(msg["session"]);
+}
 
+/** Called when synapse whats the module to shutdown completely
+ * This makes sure that all ports and network connections are closed, so there wont be any 'hanging' threads left.
+ * If you care about data-ordering, send this to session-id that sended you the net_Connected.
+ */
+SYNAPSE_REGISTER(module_Shutdown)
+{
+	//let the net module shut down to fix the rest
+	net.doShutdown();
+}
 

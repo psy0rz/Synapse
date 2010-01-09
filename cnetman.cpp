@@ -152,7 +152,7 @@ bool CnetMan::doDisconnect(int id)
 		lock_guard<mutex> lock(threadMutex);
 		if (nets.find(id)==nets.end())
 		{
-			ERROR("id " << id << " does not exist, ignoring disconnect request");
+			DEB("id " << id << " does not exist, ignoring disconnect request");
 			return false;
 		}
 		nets[id]->doDisconnect();
@@ -175,6 +175,28 @@ bool CnetMan::doWrite(int id, string & data)
 }
 
 
+void CnetMan::doShutdown()
+{
+	{
+		lock_guard<mutex> lock(threadMutex);
+		//close all ports
+		DEB("Closing all open ports");	
+		for (CacceptorMap::iterator acceptorI=acceptors.begin(); acceptorI!=acceptors.end(); acceptorI++)
+		{
+			acceptorI->second->get_io_service().post(bind(&CnetMan::closeHandler,this,acceptorI->first));
+		}
+
+		//FIXME: we need a sleep here? since it takes a while to post and process the request, and in that time new connections could arrive?
+
+		//disconnect all connections
+		DEB("Disconneting all connections");	
+		for (CnetMap::iterator netI=nets.begin(); netI!=nets.end(); netI++)
+		{
+			netI->second->doDisconnect();
+		}
+
+	}
+}
 
 void CnetMan::listening(int port)
 {
@@ -225,4 +247,5 @@ void CnetMan::read(int id, asio::streambuf &readBuffer, std::size_t bytesTransfe
 	//dummy
 	DEB("Read data " << id << ":" << &readBuffer);
 }
+
 

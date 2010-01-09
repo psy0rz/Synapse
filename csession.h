@@ -21,8 +21,15 @@ typedef shared_ptr<class Csession> CsessionPtr;
 #include "cmodule.h"
 #include "cuser.h"
 
-
+/*
+	disabled sessions have id SESSION_DISABLED (-1)
+	broadcasts go to sessions id 0
+	core always has session id 1
+	rest of the world has 2 and higher.
+*/
 #define SESSION_DISABLED -1
+
+
 
 /**
 	@author 

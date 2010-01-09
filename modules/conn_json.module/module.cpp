@@ -82,11 +82,14 @@ SYNAPSE_HANDLER(all)
 	jsonMsg.push_back(msg.dst);
 	jsonMsg.push_back(msg.event);
 	
-	//convert the parameters
-	Value jsonPars;
-	Cvar2Value(msg,jsonPars);
-
-	jsonMsg.push_back(jsonPars);
+	//convert the parameters, if any
+	if (!msg.isEmpty())
+	{
+		Value jsonPars;
+		Cvar2Value(msg,jsonPars);
+	
+		jsonMsg.push_back(jsonPars);
+	}
 
 	INFO("json: " << write( jsonMsg));
 }

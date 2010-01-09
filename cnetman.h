@@ -46,10 +46,15 @@ class CnetMan
 	//for both client and server:
 	bool doDisconnect(int id); 
 	bool doWrite(int id, string & data);
+	void doShutdown();
 
 	private:
-	map<int, CnetPtr> nets;
-	map<int, CacceptorPtr> acceptors;
+	typedef map<int, CnetPtr> CnetMap;
+	CnetMap nets;
+
+	typedef map<int, CacceptorPtr> CacceptorMap;
+	CacceptorMap acceptors;
+
 	mutex threadMutex;
 
 	void closeHandler(int port);

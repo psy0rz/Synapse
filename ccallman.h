@@ -30,7 +30,8 @@ public:
 	CcallList::iterator startCall(const CthreadPtr & threadPtr);
 	void endCall(CcallList::iterator callI);
 	bool interruptCall(string event, int src, int dst);
-    void print();
+	bool interruptAll();
+    void print(int verbose=1);
 	int statsTotal;
 
 	CcallList callList;

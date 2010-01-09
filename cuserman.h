@@ -39,13 +39,15 @@ public:
 	CsessionPtr getSession(const int & sessionId);
 	bool delSession(const int id);
     void print();
+	void doShutdown();
 
 private:
+	bool shutdown;
 	list<CuserPtr> users;
 	list<CgroupPtr> groups;
 	//performance: we use an oldskool array, so session lookups are quick
 	int sessionCounter;
-	CsessionPtr sessions[MAX_SESSIONS];
+	CsessionPtr sessions[MAX_SESSIONS+1];
 	int sessionMaxPerUser;
 	
 };

@@ -34,19 +34,45 @@ SYNAPSE_REGISTER(module_Init)
 	out["path"]="modules/conn_json.module/libconn_json.so";
 	out.send();
 
+// 	out.clear();
+// 	out.event="core_ChangeLogging";
+// 	out["logSends"]=0;
+// 	out["logReceives"]=0;
+// 	out.send();
 
-	while(1)
+// 	out.clear();
+// 	out.event="loop";
+// 	out["bla"]="loopback test";
+// 	out.dst=msg.dst;
+// 	out.send();
+
+
+	for (int bla=0; bla < 2; bla++)
 	{	
 		out.clear();
 		out.event="test";
 		out.dst=0;
-out.clear();
+		out.clear();
 		out.send();
 		sleep(1);
 	}
+
+	out.event="core_Shutdown";
+	out.dst=0;
+	out.send();
 }
 
 
+SYNAPSE_REGISTER(loop)
+{
+
+	Cmsg out;
+	out.clear();
+	out.event="loop";
+	out["bla"]="loopback test";
+	out.dst=msg.dst;
+	out.send();
+}
 
  
 SYNAPSE_REGISTER(lirc_Ready)
