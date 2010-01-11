@@ -47,7 +47,7 @@ SYNAPSE_REGISTER(module_Init)
 // 	out.send();
 
 
-	for (int bla=0; bla < 2; bla++)
+/*	for (int bla=0; bla < 10; bla++)
 	{	
 		out.clear();
 		out.event="test";
@@ -59,7 +59,9 @@ SYNAPSE_REGISTER(module_Init)
 
 	out.event="core_Shutdown";
 	out.dst=0;
-	out.send();
+	out.send();*/
+
+
 }
 
 
@@ -85,6 +87,16 @@ SYNAPSE_REGISTER(lirc_Ready)
 	out.send();
 
 
+}
+
+SYNAPSE_REGISTER(conn_json_Ready)
+{
+	Cmsg out;
+	out.clear();
+	out.event="conn_json_Listen";
+	out["port"]="12345";
+	out.dst=msg["session"];
+	out.send();
 }
 
 SYNAPSE_REGISTER(net_Ready)

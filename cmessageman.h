@@ -55,9 +55,9 @@ public:
 	bool sendMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg);
 
 	void checkThread();
-    	CsessionPtr loadModule(string path, string userName);
+   	CsessionPtr loadModule(string path, string userName);
 	CeventPtr getEvent(const string & name);
-    bool isModuleReady(string path);
+    int isModuleReady(string path);
     void doShutdown(int exit);
 
 	mutex threadMutex;

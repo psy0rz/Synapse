@@ -28,7 +28,7 @@ SYNAPSE_REGISTER(module_Init)
 	//max number of parallel threads
 	out.clear();
 	out.event="core_ChangeModule";
-	out["maxThreads"]=3000;
+	out["maxThreads"]=1000;
 	out.send();
 
 	//The default session will be used to call the run-functions.

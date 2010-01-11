@@ -193,6 +193,7 @@ void Cnet::connectHandler(
 }
 
 //handle the results of a read (incoming data) 
+//used for both client and servers.
 void Cnet::readHandler(
 	const boost::system::error_code& ec,
 	std::size_t bytesTransferred)

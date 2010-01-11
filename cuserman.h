@@ -40,6 +40,7 @@ public:
 	bool delSession(const int id);
     void print();
 	void doShutdown();
+	string login(const int & sessionId, const string & userName, const string & password);
 
 private:
 	bool shutdown;

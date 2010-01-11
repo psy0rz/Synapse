@@ -62,7 +62,8 @@ public:
 	int defaultSessionId;
 	string name;
 	string path;
-	bool ready;
+	int readySession;
+
 
 	//event handling stuff,
 	//converting an event string into an actual function call.

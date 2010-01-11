@@ -33,147 +33,109 @@ SYNAPSE_REGISTER(module_Init)
 		return;
 	}
 
-
-	///module_Error
+	/// SET CORE EVENT PERMISSIONS:
+	// these permissions should never be changed!
 	out.clear();
 	out.event="core_ChangeEvent";
-	out["event"]="module_Error";
-	out["modifyGroup"]="core";
-	out["sendGroup"]="modules";
-	out["recvGroup"]="everyone";
+
+
+	/// basic core events
+	out["event"]=		"module_Error"; /// SEND to module on all kinds of errors
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"modules";
+	out["recvGroup"]=	"everyone";
+	out.send();
+
+	out["event"]=		"core_ChangeEvent"; /// RECV to change permissions of events
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"modules";
+	out["recvGroup"]=	"core";
+	out.send();
+
+	out["event"]=		"core_Register";  /// RECV to register handlers
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"modules";
+	out["recvGroup"]=	"core";
 	out.send();
 
 
-	///set permissions on these important core features
-	//The handlers where already registered by init()
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="core_ChangeEvent";
-	out["modifyGroup"]="core";
-	out["sendGroup"]="modules";
-	out["recvGroup"]="core";
+	/// module loading and unloading
+	out["event"]=		"core_LoadModule"; /// RECV to load a module
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"modules";
+	out["recvGroup"]=	"core";
 	out.send();
 
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="core_Register";
-	out["modifyGroup"]="core";
-	out["sendGroup"]="modules";
-	out["recvGroup"]="core";
+	out["event"]=		"module_Init";  /// SEND to module after loading it
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"core";
+	out["recvGroup"]=	"modules";
 	out.send();
 
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="module_Init";
-	out["modifyGroup"]="core";
-	out["sendGroup"]="core";
-	out["recvGroup"]="modules";
-	out.send();
-
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="core_LoadModule";
-	out["modifyGroup"]="core";
-	out["sendGroup"]="modules";
-	out["recvGroup"]="core";
-	out.send();
-
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="module_Shutdown";
-	out["modifyGroup"]="core";
-	out["sendGroup"]="core";
-	out["recvGroup"]="modules";
-	out.send();
-
-	/// core_Login
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="module_SessionStart";
-	out["modifyGroup"]="core";
-	out["sendGroup"]="core";
-	out["recvGroup"]="everyone";
-	out.send();
-
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="module_SessionStarted";
-	out["modifyGroup"]="core";
-	out["sendGroup"]="core";
-	out["recvGroup"]="everyone";
-	out.send();
-
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="module_Login";
-	out["modifyGroup"]="core";
-	out["sendGroup"]="core";
-	out["recvGroup"]="modules";
+	out["event"]=		"module_Shutdown"; /// SEND because we want to unload the module cleanup
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"core";
+	out["recvGroup"]=	"modules";
 	out.send();
 
 
-	/// core_NewSession
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="core_NewSession";
-	out["modifyGroup"]="core";
-	out["sendGroup"]="modules";
-	out["recvGroup"]="core";
+	/// session handling
+	out["event"]=		"core_NewSession"; /// RECV to start a new session
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"modules";
+	out["recvGroup"]=	"core";
 	out.send();
 
-	/// core_Logout
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="core_Logout";
-	out["modifyGroup"]="core";
-	out["sendGroup"]="everyone";
-	out["recvGroup"]="core";
+	out["event"]=		"module_SessionStart"; /// SEND to newly started session
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"core";
+	out["recvGroup"]=	"anonymous";
 	out.send();
 
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="module_SessionEnd";
+	out["event"]=		"module_SessionStarted"; /// SEND to broadcast, on newly created session
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"core";
+	out["recvGroup"]=	"everyone";
+	out.send();
+
+	out["event"]=		"core_DelSession"; /// RECV to delete src session
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"anonymous";
+	out["recvGroup"]=	"core";
+	out.send();
+
+	out["event"]=		"module_SessionEnd"; /// SEND to ended session
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"core";
+	out["recvGroup"]=	"anonymous";
+	out.send();
+
+	out["event"]=		"module_SessionEnded"; /// SEND to broadcast, on ended session
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"core";
+	out["recvGroup"]=	"everyone";
+	out.send();
+
+	out["event"]=		"core_Login"; /// RECV to login the src session with specified user and password
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"anonymous";
+	out["recvGroup"]=	"core";
+	out.send();
+
+	out["event"]="module_Login"; /// SEND to session after succesfull login
 	out["modifyGroup"]="core";
 	out["sendGroup"]="core";
-	out["recvGroup"]="everyone";
+	out["recvGroup"]="anonymous";
 	out.send();
 
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="module_SessionEnded";
-	out["modifyGroup"]="core";
-	out["sendGroup"]="core";
-	out["recvGroup"]="everyone";
-	out.send();
-
-	/// core_ChangeModule
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="core_ChangeModule";
-	out["modifyGroup"]="core";
-	out["sendGroup"]="modules";
-	out["recvGroup"]="core";
-	out.send();
-
-	/// core_ChangeSession
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="core_ChangeSession";
-	out["modifyGroup"]="core";
-	out["sendGroup"]="modules";
-	out["recvGroup"]="core";
-	out.send();
-
-	/// core_Ready
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="core_Ready";
+	out["event"]="core_ChangeSession"; /// RECV to change src session parameters
 	out["modifyGroup"]="core";
 	out["sendGroup"]="modules";
 	out["recvGroup"]="core";
 	out.send();
 
 
+	/// END OF PERMISSIONS
 
 	//we're done with our stuff,
 	//load the first application module:
@@ -207,14 +169,18 @@ SYNAPSE_REGISTER(core_LoadModule)
 		{
 			DEB("module " << (string)msg["path"] << " is already loaded");
 			//is it ready as well?
-			if (!messageMan->isModuleReady(msg["path"]))
-				return;
-			else
+			int readySession=messageMan->isModuleReady(msg["path"]);
+			if (readySession!=SESSION_DISABLED)
 			{
-				//send out a modulename_ready to the requesting session to inform its already ready:
+				//send out a modulename_ready to the requesting session to inform the module is already ready:
 				out.event=module.getName((string)msg["path"])+"_Ready";
 				DEB("module is already ready, sending a " << out.event);
 				out.dst=msg.src;
+				out["session"]=readySession;
+			}
+			else
+			{
+				return;
 			}
 		}
 		else
@@ -281,7 +247,7 @@ SYNAPSE_REGISTER(core_Register)
 
 SYNAPSE_REGISTER(core_ChangeEvent)
 {
-	//since permissions are very imporatant, make sure the user didnt make a typo.
+	//since permissions are very important, make sure the user didnt make a typo.
 	//(normally we dont care about typo's since then something just wouldn't work, but this function will work if the user doesnt specify one or more parameters.)
 	if (msg.returnIfOtherThan("sendGroup","event","recvGroup","modifyGroup",NULL))
 		return;
@@ -333,50 +299,22 @@ SYNAPSE_REGISTER(core_ChangeEvent)
 } 
 
 /** core_Login
- * Check username and password and starts new session.
- * Sends: module_SessionStart to new session 
- * Sends: module_SessionStarted to broadcast
+ * Check username and password and changes users of src session.
  * Sends: module_Login to src
  */
 SYNAPSE_REGISTER(core_Login)
 {
 	string error;
-	Cmsg startmsg;
 	Cmsg loginmsg;
-
 	{
 		lock_guard<mutex> lock(messageMan->threadMutex);
-		CsessionPtr session=messageMan->userMan.getSession(msg.src);
-		if (!session)
-			error="Session not found";
-		else
+		error=messageMan->userMan.login(msg.src, msg["username"], msg["password"]);
+		if (error=="")
 		{
-			CuserPtr user(messageMan->userMan.getUser(msg["username"]));
-			if (!user || !user->isPassword(msg["password"]))
-				error="Login invalid";
-			else
-			{
-				CsessionPtr newSession=CsessionPtr(new Csession(user,session->module));
-				int sessionId=messageMan->userMan.addSession(newSession);
-				if (sessionId==SESSION_DISABLED)
-					error="cant create new session";
-				else
-				{
-					//set max threads?
-					if (msg["maxThreads"] > 0)
-						newSession->maxThreads=msg["maxThreads"];
-
-					//send startmessage to the new session:
-					startmsg.event="module_SessionStart";
-					startmsg.dst=sessionId;
-					startmsg["username"]=msg["username"];
-
-					//send login message to the session that was requesting the login
-					loginmsg.event="module_Login";
-					loginmsg.dst=msg.src;
-					loginmsg["username"]=msg["username"];
-				}
-			}
+			//send login message to the session that was requesting the login
+			loginmsg.event="module_Login";
+			loginmsg.dst=msg.src;
+			loginmsg["username"]=msg["username"];
 		}
 	}
 
@@ -385,12 +323,6 @@ SYNAPSE_REGISTER(core_Login)
 	else
 	{
 		loginmsg.send();
-		startmsg.send();
-		//also broadcast module_SessionStarted, so other modules know that a session is started
-		startmsg.event="module_SessionStarted";
-		startmsg["session"]=startmsg.dst;
-		startmsg.dst=0;
-		startmsg.send();
 	}
 }
 
@@ -417,18 +349,26 @@ SYNAPSE_REGISTER(core_NewSession)
 				error="cant create new session";
 			else
 			{
-				//set max threads?
-				if (msg["maxThreads"] > 0)
-					newSession->maxThreads=msg["maxThreads"];
+				//login?
+				if (msg.isSet("username"))
+					error=messageMan->userMan.login(sessionId, msg["username"], msg["password"]);
 
-				//send startmessage to the new session:
-				startmsg.event="module_SessionStart";
-				startmsg.dst=sessionId;
-				if (msg.isSet("pars"))
+				if (error!="")
 				{
-					startmsg["pars"]=msg["pars"];
+					//login failed, delete session again
+					messageMan->userMan.delSession(msg.src);
 				}
-				startmsg["username"]=session->user->getName();
+				{
+					//set max threads?
+					if (msg.isSet("maxThreads") && msg["maxThreads"] > 0)
+						newSession->maxThreads=msg["maxThreads"];
+	
+					//send startmessage to the new session, copy all parameters.
+					startmsg=msg;
+					startmsg.event="module_SessionStart";
+					startmsg.dst=sessionId;
+					startmsg.src=0;
+				}
 			}
 		}
 	}
@@ -438,7 +378,9 @@ SYNAPSE_REGISTER(core_NewSession)
 	else
 	{
 		startmsg.send();
+
 		//also broadcast module_SessionStarted, so other modules know that a session is started
+		startmsg.clear();
 		startmsg.event="module_SessionStarted";
 		startmsg["session"]=startmsg.dst;
 		startmsg.dst=0;
@@ -506,7 +448,7 @@ SYNAPSE_REGISTER(core_Shutdown)
 }
 
 
-SYNAPSE_REGISTER(core_Logout)
+SYNAPSE_REGISTER(core_DelSession)
 {
 	string error;
 	Cmsg endmsg;
@@ -597,7 +539,8 @@ SYNAPSE_REGISTER(core_Ready)
 		else
 		{
 			out.event=session->module->name+"_Ready";
-			session->module->ready=true;
+			out["session"]=session->id;;
+			session->module->readySession=session->id;
 		}
 	}
 

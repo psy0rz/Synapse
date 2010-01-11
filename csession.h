@@ -42,6 +42,7 @@ public:
     bool isEnabled();
     void endThread();
     bool startThread();
+
 	CuserPtr user;
 	CmodulePtr module;
 	int	id;

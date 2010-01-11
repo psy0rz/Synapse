@@ -518,7 +518,7 @@ CeventPtr CmessageMan::getEvent(const string & name)
 /*!
     \fn CmessageMan::isModuleReady(string name)
  */
-bool CmessageMan::isModuleReady(string path)
+int CmessageMan::isModuleReady(string path)
 {
 	CsessionPtr session;
 	string name;
@@ -528,12 +528,12 @@ bool CmessageMan::isModuleReady(string path)
 	{
 		session=userMan.getSession(sessionId);
 		//session exists and is still active, and its the module?
-		if (session && session->isEnabled() && session->module->name==name)
+		if (session && session->isEnabled() && session->module->name==name && session->module->readySession==session->id)
 		{
-			return (session->module->ready);
+			return (session->module->readySession);
 		}
 	}
-	return false;	
+	return SESSION_DISABLED;	
 }
 
 

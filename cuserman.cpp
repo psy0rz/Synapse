@@ -28,27 +28,32 @@ CuserMan::CuserMan()
 	addGroup(CgroupPtr(new Cgroup("modules")));
 	addGroup(CgroupPtr(new Cgroup("users")));
 	addGroup(CgroupPtr(new Cgroup("everyone")));
+	addGroup(CgroupPtr(new Cgroup("anonymous")));
 
 	CuserPtr user;
 	user=CuserPtr(new Cuser("core",""));
 	user->addMemberGroup(getGroup("core"));
 	user->addMemberGroup(getGroup("modules"));
 	user->addMemberGroup(getGroup("everyone"));
+	user->addMemberGroup(getGroup("anonymous"));
 	addUser(user);
 
 	user=CuserPtr(new Cuser("module",""));
 	user->addMemberGroup(getGroup("modules"));
 	user->addMemberGroup(getGroup("everyone"));
+	user->addMemberGroup(getGroup("anonymous"));
 	addUser(user);
 
-	//anonymous isnt member of anything
-	user=CuserPtr(new Cuser("anonymous",""));
+	//anonymous is only member of anonymous and probably only can send a core_Login.
+	user=CuserPtr(new Cuser("anonymous","anonymous"));
+	user->addMemberGroup(getGroup("anonymous"));
 	addUser(user);
 
 	//testusers
 	user=CuserPtr(new Cuser("psy","as"));
 	user->addMemberGroup(getGroup("users"));
 	user->addMemberGroup(getGroup("everyone"));
+	user->addMemberGroup(getGroup("anonymous"));
 	addUser(user);
 
 	user=CuserPtr(new Cuser("admin","bs"));
@@ -56,6 +61,7 @@ CuserMan::CuserMan()
 	user->addMemberGroup(getGroup("core"));
 	user->addMemberGroup(getGroup("modules"));
 	user->addMemberGroup(getGroup("everyone"));
+	user->addMemberGroup(getGroup("anonymous"));
 	addUser(user);  
 
 // 	for (int i=0; i<MAX_SESSIONS; i++)
@@ -252,4 +258,25 @@ void CuserMan::print()
 void CuserMan::doShutdown()
 {
 	shutdown=true;
+}
+
+
+
+string CuserMan::login(const int & sessionId, const string & userName, const string & password)
+{
+	CsessionPtr session=getSession(sessionId);
+	if (!session)
+		return (string("Session not found"));
+	else
+	{
+		CuserPtr user(getUser(userName));
+		if (!user || !user->isPassword(password))
+			return (string("Login invalid"));
+		else
+		{
+			//change user
+			session->user=user;
+			return (string());
+		}
+	}
 }

@@ -74,6 +74,8 @@ string Cuser::getName()
  */
 bool Cuser::isPassword(const string & password)
 {
+	//blank passwords not allowed, they are used for module and core users.
+
 	if (password!="" && this->password!="")
 	    return (this->password==password);
 	else
