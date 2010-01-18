@@ -59,8 +59,8 @@ SYNAPSE_REGISTER(module_Init)
 
 	out.event="core_Shutdown";
 	out.dst=0;
-	out.send();*/
-
+	out.send();
+*/
 
 }
 

@@ -17,7 +17,7 @@
 #include <map>
 #include "cevent.h"
 #include "common.h"
-#include <hash_map.h>
+//#include <hash_map.h>
 #include "cuserman.h"
 //#include "cmodule.h"
 #include "cmsg.h"

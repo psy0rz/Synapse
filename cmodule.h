@@ -14,7 +14,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/bind.hpp>
-#include <hash_map.h>
+//#include <hash_map.h>
 #include "common.h"
 
 using namespace boost;
