@@ -2,6 +2,9 @@
 #include "synapse.h"
 
 #include "json_spirit.h"
+#define MAX_MESSAGE 2048
+
+//TODO: optimize: perhaps its more efficient to use boost spirit directly, without the json_spirit lib?
 
 using namespace json_spirit;
 
@@ -105,19 +108,67 @@ class CnetModule : public CnetMan
 		out.send();
 	}
 
+	/** Recursively converts a json_spirit Value to a Cvar
+	*/
+	void Value2Cvar(Value &value,Cvar &var)
+	{
+		switch(value.type())
+		{
+			case(null_type):
+				var.clear();
+				break;
+			case(str_type):
+				var=value.get_str();
+				break;
+			case(real_type):
+				var=value.get_real();
+				break;
+			case(obj_type):
+				//convert the Object(string,Value) pairs to a CvarMap 
+				for (Object::iterator ObjectI=value.get_obj().begin(); ObjectI!=value.get_obj().end(); ObjectI++)
+				{
+					//recurse to convert the map-value of the CvarMap into a json_spirit Value:
+					Value2Cvar(ObjectI->value_, var[ObjectI->name_]);
+				}
+				break;
+			default:
+				WARNING("Ignoring unknown json variable type " << value.type());
+				break;
+		}
+	}
+
 	/** Connection 'id' has received new data.
 	*/
 	void read(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
 		Cmsg out;
-		//TODO: isnt there a more efficient way to convert the streambuf to string?
-		const char* s=boost::asio::buffer_cast<const char*>(readBuffer.data());
-		//remove newline..
-		out["data"].str().erase();
-		out["data"].str().append(s,bytesTransferred-1);
-		
-		//parse json and send message
-		INFO("session " << id << " got " << out["data"]);
+	
+		if (bytesTransferred > 1024)
+		{
+			WARNING("Json message on id " << id << " is " << bytesTransferred << " bytes. (max=" << MAX_MESSAGE << ")");
+			return ;
+		}
+
+		//parse json input
+		std::istream readBufferIstream(&readBuffer);
+		try
+		{
+			Value jsonMsg;
+			//TODO:how safe is it actually to let json_spirit parse untrusted input? (regarding DoS, buffer overflows, etc)
+			json_spirit::read(readBufferIstream, jsonMsg);
+			out.src=jsonMsg.get_array()[0].get_int();
+			out.dst=jsonMsg.get_array()[1].get_int();
+			out.event=jsonMsg.get_array()[2].get_str();
+			Value2Cvar(jsonMsg.get_array()[3], out);
+		}
+		catch(...)
+		{
+			WARNING("Error while parsing incomming json message on id " << id);
+			return ;
+		}
+
+		//translate....
+		out.send();			
 	}
 
 	/** Connection 'id' is disconnected, or a connect-attempt has failed.
@@ -135,6 +186,7 @@ class CnetModule : public CnetMan
 };
 
 CnetModule net;
+
 
 
 
@@ -270,6 +322,7 @@ void Cvar2Value(Cvar &var,Value &value)
 			break;
 	}
 }
+
 
 
 /** This handler is called for all events that:

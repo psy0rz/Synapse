@@ -1,10 +1,10 @@
-#ifndef JASON_SPIRIT_VALUE
-#define JASON_SPIRIT_VALUE
+#ifndef JSON_SPIRIT_VALUE
+#define JSON_SPIRIT_VALUE
 
 //          Copyright John W. Wilkinson 2007 - 2009.
 // Distributed under the MIT License, see accompanying file LICENSE.txt
 
-// json spirit version 4.02
+// json spirit version 4.03
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1020)
 # pragma once
@@ -14,6 +14,8 @@
 #include <map>
 #include <string>
 #include <cassert>
+#include <sstream>
+#include <stdexcept>
 #include <boost/config.hpp> 
 #include <boost/cstdint.hpp> 
 #include <boost/shared_ptr.hpp> 
@@ -75,6 +77,8 @@ namespace json_spirit
         static const Value_impl null;
 
     private:
+
+        void check_type( const Value_type vtype ) const;
 
         typedef boost::variant< String_type, 
                                 boost::recursive_wrapper< Object >, boost::recursive_wrapper< Array >, 
@@ -331,9 +335,22 @@ namespace json_spirit
     }
 
     template< class Config >
+    void Value_impl< Config >::check_type( const Value_type vtype ) const
+    {
+        if( type() != vtype ) 
+        {
+            std::ostringstream os;
+
+            os << "value type is " << type() << " not " << vtype;
+
+            throw std::runtime_error( os.str() );
+        }
+    }
+
+    template< class Config >
     const typename Config::String_type& Value_impl< Config >::get_str() const
     {
-        assert( type() == str_type );
+        check_type(  str_type );
 
         return *boost::get< String_type >( &v_ );
     }
@@ -341,7 +358,7 @@ namespace json_spirit
     template< class Config >
     const typename Value_impl< Config >::Object& Value_impl< Config >::get_obj() const
     {
-        assert( type() == obj_type );
+        check_type( obj_type );
 
         return *boost::get< Object >( &v_ );
     }
@@ -349,7 +366,7 @@ namespace json_spirit
     template< class Config >
     const typename Value_impl< Config >::Array& Value_impl< Config >::get_array() const
     {
-        assert( type() == array_type );
+        check_type(  array_type );
 
         return *boost::get< Array >( &v_ );
     }
@@ -357,7 +374,7 @@ namespace json_spirit
     template< class Config >
     bool Value_impl< Config >::get_bool() const
     {
-        assert( type() == bool_type );
+        check_type(  bool_type );
 
         return boost::get< bool >( v_ );
     }
@@ -365,7 +382,7 @@ namespace json_spirit
     template< class Config >
     int Value_impl< Config >::get_int() const
     {
-        assert( type() == int_type );
+        check_type(  int_type );
 
         return static_cast< int >( get_int64() );
     }
@@ -373,7 +390,7 @@ namespace json_spirit
     template< class Config >
     boost::int64_t Value_impl< Config >::get_int64() const
     {
-        assert( type() == int_type );
+        check_type(  int_type );
 
         return boost::get< boost::int64_t >( v_ );
     }
@@ -381,7 +398,7 @@ namespace json_spirit
     template< class Config >
     boost::uint64_t Value_impl< Config >::get_uint64() const
     {
-        assert( type() == int_type );
+        check_type(  int_type );
 
         return static_cast< boost::uint64_t >( get_int64() );
     }
@@ -395,7 +412,7 @@ namespace json_spirit
                                : static_cast< double >( get_int64() );
         }
 
-        assert( type() == real_type );
+        check_type(  real_type );
 
         return boost::get< double >( v_ );
     }
@@ -403,7 +420,7 @@ namespace json_spirit
     template< class Config >
     typename Value_impl< Config >::Object& Value_impl< Config >::get_obj()
     {
-        assert( type() == obj_type );
+        check_type(  obj_type );
 
         return *boost::get< Object >( &v_ );
     }
@@ -411,7 +428,7 @@ namespace json_spirit
     template< class Config >
     typename Value_impl< Config >::Array& Value_impl< Config >::get_array()
     {
-        assert( type() == array_type );
+        check_type(  array_type );
 
         return *boost::get< Array >( &v_ );
     }
