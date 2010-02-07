@@ -21,7 +21,7 @@ SYNAPSE_REGISTER(module_Init)
 	out.send();
 
 	//The default session will be used to receive broadcasts that need to be transported via json.
-	//Make sure we only process message at a time, so they stay in order.
+	//Make sure we only process 1 message at a time, so they stay in order.
 	out.clear();
 	out.event="core_ChangeSession";
 	out["maxThreads"]=1;
@@ -73,7 +73,7 @@ class CnetModule : public CnetMan
 	*/
 	void listening(int port)
 	{
-		//start a new anonymous acceptor to accept new incoming connections and handle the incomming data
+		//start a new anonymous acceptors to accept new incoming connections and handle the incomming data
 		Cmsg out;
 		out.event="core_NewSession";
 		out["username"]="anonymous";
@@ -210,7 +210,8 @@ SYNAPSE_REGISTER(module_SessionStart)
 	//new session that was started to run the acceptor for a port:
 	if (msg.isSet("port"))
 	{
-		net.runAccept(msg["port"], msg.dst);
+		//keep accepting until shutdown or some other error
+		while(net.runAccept(msg["port"], msg.dst));
 		
 		//we're done, delete our session
 		Cmsg out;

@@ -110,6 +110,7 @@ SYNAPSE_REGISTER(module_SessionEnded)
  */
 SYNAPSE_REGISTER(module_Shutdown)
 {
+	INFO("conn_json shutting down...");
 	//let the net module shut down to fix the rest
 	net.doShutdown();
 }

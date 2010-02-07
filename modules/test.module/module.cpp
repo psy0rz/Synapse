@@ -34,6 +34,12 @@ SYNAPSE_REGISTER(module_Init)
 	out["path"]="modules/conn_json.module/libconn_json.so";
 	out.send();
 
+
+// 	sleep(5);
+// 	out.event="core_Shutdown";
+// 	out.dst=0;
+// 	out.send();
+
 // 	out.clear();
 // 	out.event="core_ChangeLogging";
 // 	out["logSends"]=0;
