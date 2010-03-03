@@ -6,6 +6,17 @@
 
 //TODO: optimize: perhaps its more efficient to use boost spirit directly, without the json_spirit lib?
 
+/**
+	-New connections are handled in a session with user anonymous
+	-Received network message are send to the core.
+	-Received core messages are send to the network.
+
+	-The session should do a core_Login
+
+
+*/
+
+
 using namespace json_spirit;
 
 int networkSessionId=0;

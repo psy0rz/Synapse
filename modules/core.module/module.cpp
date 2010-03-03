@@ -1,5 +1,7 @@
 #define SYNAPSE_HAS_INIT
 #include "synapse.h"
+#include <signal.h>
+
 
 //Dont forget you can only do things to core-objects after locking the core!
 //Also dont forget you CANT send() while holding the core-lock. (it will deadlock)
@@ -20,6 +22,16 @@ void init()
 
 }
  
+void exitHandler(int signum)
+{
+	//disable it from now on, so pressing ctrl-c a second time interrupts it.
+	signal(SIGINT, SIG_DFL);
+
+	Cmsg out;
+	INFO("Interrupt received, calling shutdown (press ctrl-c again to stop now)");
+	out.event="core_Shutdown";
+	out.send();
+}
 
 SYNAPSE_REGISTER(module_Init)
 {
@@ -32,6 +44,9 @@ SYNAPSE_REGISTER(module_Init)
 		ERROR("This core-module should be started as the first and only one.");
 		return;
 	}
+
+	/// Shutdown signal handler
+	signal(SIGINT, exitHandler);
 
 	/// SET CORE EVENT PERMISSIONS:
 	// these permissions should never be changed!
