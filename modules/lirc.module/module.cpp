@@ -1,6 +1,8 @@
-#include "cnet.h"
+#include "cnetman.h"
 #include "synapse.h"
 #include <boost/regex.hpp>
+#include "cnet.h"
+#include "cnetman.h"
 
 SYNAPSE_REGISTER(module_Init)
 {
@@ -24,6 +26,23 @@ SYNAPSE_REGISTER(module_Init)
  
 class CnetModule : public Cnet
 {
+	public:
+	CnetModule(int id, string host, int port, int reconnectTime)
+	: Cnet(id,host,port,reconnectTime)
+ 	{
+ 		
+ 	}
+// 	CnetModule()
+// 	{
+// 		
+// 	}
+// 	
+  	CnetModule(int id, CacceptorPtr acceptorPtr)
+ 	:Cnet(id,acceptorPtr)
+  	{
+  		
+  	}
+
  	void connected(int id)
 	{
 		Cmsg out;
