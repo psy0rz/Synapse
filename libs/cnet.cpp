@@ -12,8 +12,8 @@
 #include "clog.h"
 
 //client mode: construct the net-object and start resolving immeadiatly
-Cnet::Cnet(CnetMan & netManRef, int id, string host, int port, int reconnectTime)
-		:netMan(netManRef), tcpSocket(ioService), tcpResolver(ioService), readBuffer(65535), connectTimer(ioService)
+Cnet::Cnet(int id, string host, int port, int reconnectTime)
+		:tcpSocket(ioService), tcpResolver(ioService), readBuffer(65535), connectTimer(ioService)
 {
 	this->id=id;
 	this->host=host;
@@ -30,11 +30,12 @@ void Cnet::doConnect()
 	tcpResolver.cancel();
 	tcpSocket.close();
 
-	stringstream portStr;
-	portStr << port;
-	ioService.post(bind(&CnetMan::connecting,&netMan,id,host,port));
+	//ioService.post(bind(&CnetMan::connecting,&netMan,id,host,port));
+	connecting(id, host, port);
 
 	//start the resolver	
+	stringstream portStr;
+	portStr << port;
 	DEB("Starting resolver for id " << id << ", resolving: " << host<<":"<<port);
 	tcp::resolver::query connectQuery(host, portStr.str());
 	tcpResolver.async_resolve(connectQuery,
@@ -43,7 +44,7 @@ void Cnet::doConnect()
 
 	//start the timerout timer
 	connectTimer.expires_from_now(boost::posix_time::seconds(CONNECT_TIMEOUT));
-    connectTimer.async_wait(boost::bind(&Cnet::connectTimerHandler, this,_1));
+	connectTimer.async_wait(boost::bind(&Cnet::connectTimerHandler, this,_1));
     
 }
 
@@ -73,21 +74,23 @@ void Cnet::doReconnect()
 }
 
 //server mode: construct the net-object from a new connection that comes from the acceptor.
-Cnet::Cnet(CnetMan & netManRef, int id, CacceptorPtr acceptorPtr)
-		:netMan(netManRef), tcpSocket(ioService), tcpResolver(ioService), readBuffer(65535), connectTimer(ioService)
+Cnet::Cnet(int id, CacceptorPtr acceptorPtr)
+		:tcpSocket(ioService), tcpResolver(ioService), readBuffer(65535), connectTimer(ioService)
 {
 	this->id=id;
 
-	//inform the world we're trying to accept a new connection
-	ioService.post(bind(
-		&CnetMan::accepting,
-		&netMan,
-		acceptorPtr->local_endpoint().port(),
-		id)
-	);
-
 	reconnectTime=0;
 	DEB("Starting acceptor for port " << acceptorPtr->local_endpoint().port()<< " into id " << id);
+
+	//inform the world we're trying to accept a new connection
+// 	ioService.post(bind(
+// 		&CnetMan::accepting,
+// 		&netMan,
+// 		acceptorPtr->local_endpoint().port(),
+// 		id)
+// 	);
+	accepting(id, acceptorPtr->local_endpoint().port());
+
 	//start the accept
 
 	asio::io_service::work work(ioService);
@@ -106,13 +109,14 @@ void Cnet::acceptHandler(
 	if (ec)
 	{
 		DEB("Accepting for id " << id << " failed: " <<ec.message());
-		disconnected(ec);
+		reset(ec);
 		return;
 	}
 
 	//when an acception has succeeded, we also use the connected-callback.
 	//this ways its easy to change existing code between server and client mode.
-	netMan.connected(id);
+	//netMan.connected(id);
+	connected(id, tcpSocket.remote_endpoint().address().to_string(), tcpSocket.remote_endpoint().port());
 
 	//start reading the incoming data
 	asio::async_read_until(tcpSocket,
@@ -138,7 +142,7 @@ void Cnet::resolveHandler(
 	if (ec)
 	{
 		DEB("Resolver for id " << id << " failed: " <<ec.message());
-		disconnected(ec);
+		reset(ec);
 		return;
 	}
 	
@@ -173,14 +177,16 @@ void Cnet::connectHandler(
 		//failure
 		else
 		{
-			disconnected(ec);
+			reset(ec);
 		}
 		return;
 	}
 
 	//connection succeeded
 	connectTimer.cancel();
-	netMan.connected(id);
+	//netMan.connected(id);
+	connected(id, tcpSocket.remote_endpoint().address().to_string(), tcpSocket.remote_endpoint().port());
+
 
 	//start reading the incoming data
 	asio::async_read_until(tcpSocket,
@@ -200,11 +206,12 @@ void Cnet::readHandler(
 {
 	if (ec)
 	{
-		disconnected(ec);
+		reset(ec);
 		return;
 	}
 	
-	netMan.read(id, readBuffer, bytesTransferred);
+	//netMan.read(id, readBuffer, bytesTransferred);
+	received(id, readBuffer, bytesTransferred);
 	readBuffer.consume(bytesTransferred);
 
 	//start reading the next incoming data
@@ -216,7 +223,7 @@ void Cnet::readHandler(
 
 }
 
-void Cnet::doDisconnectHandler()
+void Cnet::disconnectHandler()
 {
 	DEB("Initiating permanent disconnect for id " << id);
 	reconnectTime=0;
@@ -231,19 +238,16 @@ void Cnet::writeHandler(
 {
 	if (ec)
 	{
-		disconnected(ec);
+		reset(ec);
 		return;
 	}
-
-	//no use to call this yet?
-	//netMan.wrote(id, stringPtr);
 
 }
 
 
 void Cnet::doDisconnect()
 {
-	ioService.post(bind(&Cnet::doDisconnectHandler,this));
+	ioService.post(bind(&Cnet::disconnectHandler,this));
 }
 
 void Cnet::doWrite(string & data)
@@ -263,7 +267,7 @@ void Cnet::run()
 	ioService.run();
 }
 
-void Cnet::disconnected(const boost::system::error_code& ec)
+void Cnet::reset(const boost::system::error_code& ec)
 {
 	//we probably got disconnected or had some kind of error,
 	//just cancel and close everything to be sure.
@@ -272,9 +276,49 @@ void Cnet::disconnected(const boost::system::error_code& ec)
 	tcpSocket.close();
 
 	//callback to netmanager
-	netMan.disconnected(id, ec);
+	//netMan.disconnected(id, ec);
+	disconnected(id, ec);
 
 	//check if we need to reconnect
 	doReconnect();
 }
+
+
+
+
+
+void Cnet::accepting(int id, int port)
+{
+	//dummy
+	DEB(id << " is accepting connection on " << port);
+}
+
+
+
+void Cnet::connecting(int id, const string &host, int port)
+{
+	//dummy
+	DEB(id << " is connecting to " << host << ":" << port);
+}
+
+void Cnet::connected(int id, const string &host, int port)
+{
+	//dummy
+	DEB(id << " is connected to " << host << ":" << port);
+}
+
+void Cnet::disconnected(int id, const boost::system::error_code& error)
+{
+	//dummy
+	DEB(id << " has been disconnected:" << error.message());
+}
+
+
+
+void Cnet::received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
+{
+	//dummy
+	DEB(id << " has received data:" << &readBuffer);
+}
+
 

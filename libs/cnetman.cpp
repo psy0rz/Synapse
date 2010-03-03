@@ -1,28 +1,13 @@
-//
-// C++ Implementation: cnet
-//
 
-//
-//
-// Author:  <>, (C) 2009
-//
-// Copyright: See COPYING file that comes with this distribution
-//
-//
-#include "cnetman.h"
 #include "clog.h"
+#include "cnet.h"
 
-CnetMan::CnetMan()
-{
+/// NOTE: since this is a template, this cpp file will be included from cnetman.h! (and thus re-compiled for every module)
 
-}
 
-CnetMan::~CnetMan()
-{
 
-}
-
-bool CnetMan::runConnect(int id, string host, int port, int reconnectTime)
+template <class Tnet> 
+bool CnetMan<Tnet>::runConnect(int id, string host, int port, int reconnectTime)
 {
 	CnetPtr netPtr;
 	{
@@ -34,7 +19,7 @@ bool CnetMan::runConnect(int id, string host, int port, int reconnectTime)
 		}
 
 		//add a new object to the list
-		netPtr=(CnetPtr(new Cnet(*this,id,host,port,reconnectTime)));
+		netPtr=(CnetPtr(new Tnet(id,host,port,reconnectTime)));
 		nets[id]=netPtr;
 	}
 
@@ -51,7 +36,8 @@ bool CnetMan::runConnect(int id, string host, int port, int reconnectTime)
 	return true;
 }
 
-bool CnetMan::runListen(int port)
+template <class Tnet> 
+bool CnetMan<Tnet>::runListen(int port)
 {
 	asio::io_service ioService;
 	{
@@ -66,7 +52,6 @@ bool CnetMan::runListen(int port)
 		acceptors[port]=CacceptorPtr(new tcp::acceptor(ioService,tcp::endpoint(tcp::v4(), port)));
 
 		//inform the world we're listening
-		acceptors[port]->get_io_service().post(bind(&CnetMan::listening,this,port));
 		INFO("Listening on tcp port " << port);
 	}
 	//at this point the ioservice has no work yet, so make sure it keeps running:
@@ -74,19 +59,18 @@ bool CnetMan::runListen(int port)
 
 	//let the ioservice run, until the acceptor is closed 
 	ioService.run();
-	DEB("ioservice finished for port " << port);
-		
 	{
 		lock_guard<mutex> lock(threadMutex);
 		//we're done, remove the acceptor from the list
 		acceptors.erase(port);
 	}
-	closed(port);
+	INFO("Stopped listening on tcp port " << port);
 
 	return true;
 }
 
-bool CnetMan::runAccept(int port, int id)
+template <class Tnet> 
+bool CnetMan<Tnet>::runAccept(int port, int id)
 {
 	CnetPtr netPtr;
 	{
@@ -103,9 +87,8 @@ bool CnetMan::runAccept(int port, int id)
 			return false;
 		}
 		//create a new net-object that will async_accept the next connection from acceptors[port]
-		netPtr=(CnetPtr(new Cnet(*this,id,acceptors[port])));
+		netPtr=(CnetPtr(new Tnet(id,acceptors[port])));
 		nets[id]=netPtr;
-
 	}
 
 	//let the ioservice run, until the connection is closed again:
@@ -121,7 +104,8 @@ bool CnetMan::runAccept(int port, int id)
 	return true;
 }
 
-bool CnetMan::doClose(int port)
+template <class Tnet> 
+bool CnetMan<Tnet>::doClose(int port)
 {
 	{
 		lock_guard<mutex> lock(threadMutex);
@@ -139,14 +123,16 @@ bool CnetMan::doClose(int port)
 }
 
 //called from the doListen->ioService->run() thread:
-void CnetMan::closeHandler(int port)
+template <class Tnet> 
+void CnetMan<Tnet>::closeHandler(int port)
 {
 	acceptors[port]->close();
 	acceptors[port]->get_io_service().stop();
 	//after cancelling all pending accepts, doListen will now return
 }
 
-bool CnetMan::doDisconnect(int id)
+template <class Tnet> 
+bool CnetMan<Tnet>::doDisconnect(int id)
 {
 	{
 		lock_guard<mutex> lock(threadMutex);
@@ -160,7 +146,8 @@ bool CnetMan::doDisconnect(int id)
 	return true;
 }
 
-bool CnetMan::doWrite(int id, string & data)
+template <class Tnet> 
+bool CnetMan<Tnet>::doWrite(int id, string & data)
 {
 	{
 		lock_guard<mutex> lock(threadMutex);
@@ -175,7 +162,8 @@ bool CnetMan::doWrite(int id, string & data)
 }
 
 
-void CnetMan::doShutdown()
+template <class Tnet> 
+void CnetMan<Tnet>::doShutdown()
 {
 	{
 		lock_guard<mutex> lock(threadMutex);
@@ -190,62 +178,11 @@ void CnetMan::doShutdown()
 
 		//disconnect all connections
 		DEB("Disconneting all connections");	
-		for (CnetMap::iterator netI=nets.begin(); netI!=nets.end(); netI++)
+		for (typename CnetMap::iterator netI=nets.begin(); netI!=nets.end(); netI++)
 		{
 			netI->second->doDisconnect();
 		}
 
 	}
 }
-
-void CnetMan::listening(int port)
-{
-	//dummy
-	DEB("Listening on port " << port);
-}
-
-void CnetMan::accepting(int port, int id)
-{
-	//dummy
-	DEB("Accepting connection on " << port << " into id " << id);
-}
-
-// void CnetMan::accepted(int port, int id, string ip)
-// {
-// 	//dummy
-// 	DEB("Accepted new connection on port " << port << " to id " << id << ". ip adress = " << ip);
-// }
-
-void CnetMan::closed(int port)
-{
-	//dummy
-	DEB("Stopped listening on port " << port);
-}
-
-void CnetMan::connecting(int id, string host, int port)
-{
-	//dummy
-	DEB("Connecting " << id << " to " << host << ":" << port);
-}
-
-void CnetMan::connected(int id)
-{
-	//dummy
-	DEB("Connected " << id);
-}
-
-void CnetMan::disconnected(int id, const boost::system::error_code& error)
-{
-	//dummy
-	DEB("Disconnected " << id << ":" << error.message());
-}
-
-
-
-void CnetMan::read(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
-{
-	//dummy
-	DEB("Read data " << id << ":" << &readBuffer);
-}
-
 

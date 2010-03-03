@@ -1,3 +1,4 @@
+#include "cnetman.h"
 #include "cnet.h"
 #include "synapse.h"
 
@@ -75,24 +76,30 @@ SYNAPSE_REGISTER(module_Init)
 
 
 
-// We extent the CnetMan class with our own network handlers.
+// We extent the Cnet class with our own network handlers.
 // As soon as something with a network connection 'happens', these handlers will be called.
 // This stuff basically runs as anonymous, until a user uses core_login to change the user.
-class CnetModule : public CnetMan
+class CnetModule : public Cnet
 {
-	/** We started listening on a port
-	*/
-	void listening(int port)
-	{
-		//start a new anonymous acceptors to accept new incoming connections and handle the incomming data
-		Cmsg out;
-		out.event="core_NewSession";
-		out["username"]="anonymous";
-		out["password"]="anonymous";
-		out["port"]=port;
-		out.send();
-	}
+	public:
+ 	CnetModule(int id, string host, int port, int reconnectTime)
+	: Cnet(id,host,port,reconnectTime)
+ 	{
+ 		
+ 	}
+// 	CnetModule()
+// 	{
+// 		
+// 	}
+// 	
+  	CnetModule(int id, CacceptorPtr acceptorPtr)
+ 	:Cnet(id,acceptorPtr)
+  	{
+  		
+  	}
 
+
+	
 	/** Connection 'id' is trying to connect to host:port
 	* Sends: net_Connecting
 	*/
@@ -150,7 +157,7 @@ class CnetModule : public CnetMan
 
 	/** Connection 'id' has received new data.
 	*/
-	void read(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
+	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
 		Cmsg out;
 	
@@ -196,7 +203,7 @@ class CnetModule : public CnetMan
 	}
 };
 
-CnetModule net;
+CnetMan<CnetModule> net;
 
 
 
@@ -249,6 +256,14 @@ SYNAPSE_REGISTER(conn_json_Listen)
 {
 	if (msg.dst==networkSessionId)
 	{
+ 		//start a new anonymous acceptors to accept new incoming connections and handle the incomming data
+		Cmsg out;
+ 		out.event="core_NewSession";
+ 		out["username"]="anonymous";
+ 		out["password"]="anonymous";
+ 		out["port"]=msg["port"];
+ 		out.send();
+
 		net.runListen(msg["port"]);
 	}
 	else

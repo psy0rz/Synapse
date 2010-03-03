@@ -33,39 +33,42 @@ using asio::ip::tcp;
 
 #define CONNECT_TIMEOUT 60
 
-typedef shared_ptr<class Cnet> CnetPtr;
 typedef shared_ptr<tcp::acceptor> CacceptorPtr;
-#include "cnetman.h"
 
-class CnetMan;
 
 class Cnet
 {
+	
 	public:
 
-	Cnet(CnetMan & netManRef, int id, string host, int port, int reconnectTime=0);
-	Cnet(CnetMan & netManRef, int id, CacceptorPtr acceptorPtr);
-	virtual ~Cnet();
+	Cnet(int id, string host, int port, int reconnectTime=0);
+	Cnet(int id, CacceptorPtr acceptorPtr);
+	~Cnet();
 
+	//end-user api to ask us to DO stuff: (usually called from CnetMan)
 	void doDisconnect();
 	void doConnect();
 	void doReconnect();
 	void doWrite(string & data);	
 	void run();
+
 	
 	private:
-	int id;
-	CnetMan &netMan;
-	asio::io_service ioService;
-	int reconnectTime;
-
 	tcp::socket tcpSocket;
 	tcp::resolver tcpResolver;
 	asio::streambuf readBuffer; 
 	asio::deadline_timer connectTimer;
+
+	
+	int id;
+	asio::io_service ioService;
+	int reconnectTime;
+
+
 	string host;
 	int port;
 
+	//ASIO handlers to handle asynconious asio events:
 	void acceptHandler(
 		asio::io_service::work work,
 		const boost::system::error_code& ec
@@ -93,9 +96,21 @@ class Cnet
 		const boost::system::error_code& ec
 	);
 
-	void doDisconnectHandler();
+	void disconnectHandler();
 
-	void disconnected(const boost::system::error_code& ec);
+	void reset(const boost::system::error_code& ec);
+
+	
+	//end-user "callbacks" for server
+	virtual void accepting(int id, int port);
+ 
+	//end-user "callbacks" for client
+	virtual void connecting(int id, const string &host, int port);
+
+	//end-user "callbacks" for client and server 
+	virtual void connected(int id, const string &host, int port);
+	virtual void disconnected(int id, const boost::system::error_code& error);
+	virtual void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred);
 
 };
 

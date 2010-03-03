@@ -1,15 +1,6 @@
-//
-// C++ Interface: cnet
-//
 // Description: Generic thread-safe networking class for synapse modules.
 //              Creates and handles Cnet-sessions.
-//
-//
-// Author:  <>, (C) 2009
-//
-// Copyright: See COPYING file that comes with this distribution
-//
-//
+
 
 /** Synapse network states/flow:
 	
@@ -70,13 +61,11 @@ using asio::ip::tcp;
 typedef shared_ptr<tcp::acceptor> CacceptorPtr;
 #include "cnet.h"
 
+template <class Tnet>
 class CnetMan
 {
-	friend class Cnet;
 
 	public:
-	CnetMan ();
-	virtual ~CnetMan();
 
 	//for server: call runListen to listen on a port. 
 	//It returns when doClose is called.
@@ -94,7 +83,8 @@ class CnetMan
 	void doShutdown();
 
 	private:
-	typedef map<int, CnetPtr> CnetMap;
+	typedef shared_ptr<Tnet> CnetPtr;
+	typedef map<int, CnetPtr > CnetMap;
 	CnetMap nets;
 
 	typedef map<int, CacceptorPtr> CacceptorMap;
@@ -104,21 +94,11 @@ class CnetMan
 
 	void closeHandler(int port);
 
-	//callbacks for server
-    virtual void listening(int port);
-	virtual void accepting(int port, int id);
-    virtual void closed(int port);
- 
-	//callbacks for client
-    virtual void connecting(int id, string host, int port);
-
-	//callbacks for client and server 
-    virtual void connected(int id);
-    virtual void disconnected(int id, const boost::system::error_code& error);
-    virtual void read(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred);
 	
 
 };
 
+/// Templates need to be compiled for every use-case:
+#include "cnetman.cpp"
 
 #endif

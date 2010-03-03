@@ -1,4 +1,3 @@
-#include "cnet.h"
 #include "synapse.h"
 
 SYNAPSE_REGISTER(module_Init)
@@ -25,15 +24,17 @@ SYNAPSE_REGISTER(module_Init)
 	out.clear();
 	out.event="core_LoadModule";
 
-	out["path"]="modules/lirc.module/liblirc.so";
-	out.send();
+// 	out["path"]="modules/lirc.module/liblirc.so";
+// 	out.send();
 
 //	out["path"]="modules/net.module/libnet.so";
 //	out.send();
 
-	out["path"]="modules/conn_json.module/libconn_json.so";
-	out.send();
+// 	out["path"]="modules/conn_json.module/libconn_json.so";
+// 	out.send();
 
+ 	out["path"]="modules/ami.module/libami.so";
+ 	out.send();
 
 // 	sleep(5);
 // 	out.event="core_Shutdown";
@@ -69,6 +70,40 @@ SYNAPSE_REGISTER(module_Init)
 */
 
 }
+/*
+class CamiState
+{
+	
+	
+}*/
+
+SYNAPSE_REGISTER(ami_Ready)
+{
+	Cmsg out;
+	out.clear();
+	out.event="ami_Connect";
+	out["host"]="192.168.13.1";
+	out["port"]="5038";
+	out.send();
+}
+
+SYNAPSE_REGISTER(ami_Connected)
+{
+	Cmsg out;
+	out.clear();
+	out.event="ami_Action";
+	out["Action"]="Login";
+	out["UserName"]="admin";
+	out["Secret"]="s3xl1jn";
+	out["ActionID"]="Login";
+	out["Events"]="on";
+	out.send();
+}
+
+SYNAPSE_REGISTER(ami_Response_Success)
+{
+	INFO("woei");
+}
 
 
 SYNAPSE_REGISTER(loop)
@@ -94,6 +129,7 @@ SYNAPSE_REGISTER(lirc_Ready)
 
 
 }
+
 
 SYNAPSE_REGISTER(conn_json_Ready)
 {

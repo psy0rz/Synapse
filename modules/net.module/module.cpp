@@ -16,8 +16,9 @@
 
 #include <string>
 
-#include "cnet.h"
 #include "synapse.h"
+#include "cnet.h"
+#include "cnetman.h"
 
 /** module_Init - called first, set up basic stuff here
  */
@@ -58,11 +59,32 @@ SYNAPSE_REGISTER(module_SessionStart)
 	out.send();
 }
 
-// We extent the CnetMan class with our own network handlers.
+// We extent the Cnet class with our own network handlers.
+// Every new network session will get its own Cnet object. 
 // As soon as something with a network connection 'happens', these handlers will be called.
 // In the case of this generic module, the data is assume to be readable text and is sended with a net_Read message.
-class CnetModule : public CnetMan
+class CnetModule : public Cnet
 {
+	public:
+	CnetModule(int id, string host, int port, int reconnectTime)
+	: Cnet(id,host,port,reconnectTime)
+ 	{
+ 		
+ 	}
+// 	CnetModule()
+// 	{
+// 		
+// 	}
+// 	
+  	CnetModule(int id, CacceptorPtr acceptorPtr)
+ 	:Cnet(id,acceptorPtr)
+  	{
+  		
+  	}
+
+	
+	//...put your per-network-connection variables here...
+	
 	/** Connection 'id' is trying to connect to host:port
 	* Sends: net_Connecting
 	*/
@@ -91,7 +113,7 @@ class CnetModule : public CnetMan
 	/** Connection 'id' has received new data.
 	* Sends: net_Read
 	*/
-	void read(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
+	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
 		Cmsg out;
 		//TODO: isnt there a more efficient way to convert the streambuf to string?
@@ -118,7 +140,7 @@ class CnetModule : public CnetMan
 	}
 };
 
-CnetModule net;
+CnetMan<Cnet> net;
 
 
 /** Client-only: Create a new connection, connects to host:port for session src

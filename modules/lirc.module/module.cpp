@@ -22,7 +22,7 @@ SYNAPSE_REGISTER(module_Init)
 	out.send();
 }
  
-class CnetModule : public CnetMan
+class CnetModule : public Cnet
 {
  	void connected(int id)
 	{
@@ -32,7 +32,7 @@ class CnetModule : public CnetMan
 		out.send();
 	}
 
-	void read(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
+	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
 		//convert streambuf to string
 		string s(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
@@ -84,7 +84,7 @@ class CnetModule : public CnetMan
 
 };
 
-CnetModule net;
+CnetMan<CnetModule> net;
 
 SYNAPSE_REGISTER(lirc_Connect)
 {

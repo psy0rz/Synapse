@@ -31,11 +31,11 @@ SYNAPSE_REGISTER(module_Init)
 	out["path"]="modules/net.module/libnet.so";
 	out.send();
 
-	out.clear();
-	out.event="core_ChangeLogging";
-	out["logSends"]=0;
-	out["logReceives"]=0;
-	out.send();
+// 	out.clear();
+// 	out.event="core_ChangeLogging";
+// 	out["logSends"]=0;
+// 	out["logReceives"]=0;
+// 	out.send();
 
 }
 
@@ -51,6 +51,9 @@ SYNAPSE_REGISTER(net_Ready)
 	out.event="net_Listen";
 	out["port"]=12345;
 	out.send();
+	
+	//wait for the message to get processed (also easier to debug)
+	sleep(1);
 
 	//accept connections
 	for (int a=0; a<NET_SESSIONS; a++)
@@ -60,6 +63,9 @@ SYNAPSE_REGISTER(net_Ready)
 		out["pars"]["mode"]="accept";
 		out.send();
 	};
+
+	//wait for the message to get processed (also easier to debug)
+	sleep(1);
 
 	//create connections
 	for (int a=0; a<NET_SESSIONS; a++)
