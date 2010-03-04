@@ -77,33 +77,15 @@ SYNAPSE_REGISTER(module_Init)
 
 
 // We extent the Cnet class with our own network handlers.
+
 // As soon as something with a network connection 'happens', these handlers will be called.
 // This stuff basically runs as anonymous, until a user uses core_login to change the user.
 class CnetModule : public Cnet
 {
-	public:
- 	CnetModule(int id, string host, int port, int reconnectTime)
-	: Cnet(id,host,port,reconnectTime)
- 	{
- 		
- 	}
-// 	CnetModule()
-// 	{
-// 		
-// 	}
-// 	
-  	CnetModule(int id, CacceptorPtr acceptorPtr)
- 	:Cnet(id,acceptorPtr)
-  	{
-  		
-  	}
-
-
-	
 	/** Connection 'id' is trying to connect to host:port
 	* Sends: net_Connecting
 	*/
- 	void connecting(int id, string host, string port)
+ 	void connecting(int id, const string &host, int port)
 	{
 		Cmsg out;
 		out.dst=id;
@@ -117,7 +99,7 @@ class CnetModule : public Cnet
 	/** Connection 'id' is established.
 	* Sends: conn_Connected
 	*/
- 	void connected(int id)
+ 	void connected(int id, const string &host, int port)
 	{
 		Cmsg out;
 		out.dst=id;

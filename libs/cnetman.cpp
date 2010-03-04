@@ -18,9 +18,10 @@ bool CnetMan<Tnet>::runConnect(int id, string host, int port, int reconnectTime)
 			return false;
 		}
 
-		//add a new object to the list
-		netPtr=(CnetPtr(new Tnet(id,host,port,reconnectTime)));
+		//add a new object to the list and do the connect
+		netPtr=(CnetPtr(new Tnet()));
 		nets[id]=netPtr;
+		netPtr->doConnect(id,host,port,reconnectTime);
 	}
 
 	//let the ioservice run, until the connection is closed again:
@@ -87,8 +88,9 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
 			return false;
 		}
 		//create a new net-object that will async_accept the next connection from acceptors[port]
-		netPtr=(CnetPtr(new Tnet(id,acceptors[port])));
+		netPtr=(CnetPtr(new Tnet()));
 		nets[id]=netPtr;
+		netPtr->doAccept(id,acceptors[port]);
 	}
 
 	//let the ioservice run, until the connection is closed again:

@@ -26,24 +26,8 @@ SYNAPSE_REGISTER(module_Init)
  
 class CnetModule : public Cnet
 {
-	public:
-	CnetModule(int id, string host, int port, int reconnectTime)
-	: Cnet(id,host,port,reconnectTime)
- 	{
- 		
- 	}
-// 	CnetModule()
-// 	{
-// 		
-// 	}
-// 	
-  	CnetModule(int id, CacceptorPtr acceptorPtr)
- 	:Cnet(id,acceptorPtr)
-  	{
-  		
-  	}
 
- 	void connected(int id)
+ 	void connected(int id, const string &host, int port)
 	{
 		Cmsg out;
 		out.dst=id;

@@ -1,44 +1,21 @@
-//
-// C++ Implementation: cnet
-//
-//
-//
-// Author:  <>, (C) 2009
-//
-// Copyright: See COPYING file that comes with this distribution
-//
-//
+// Dont use directly: Use CnetMan instead. Look at the network-module example how to use.
+
 #include "cnet.h"
 #include "clog.h"
 
-//client mode: construct the net-object and start resolving immeadiatly
-Cnet::Cnet(int id, string host, int port, int reconnectTime)
+Cnet::Cnet()
 		:tcpSocket(ioService), tcpResolver(ioService), readBuffer(65535), connectTimer(ioService)
 {
-	this->id=id;
-	this->host=host;
-	this->port=port;
-	this->reconnectTime=reconnectTime;
-
-	doConnect();
 } 
 
-//server mode: construct the net-object from a new connection that comes from the acceptor.
-Cnet::Cnet(int id, CacceptorPtr acceptorPtr)
-		:tcpSocket(ioService), tcpResolver(ioService), readBuffer(65535), connectTimer(ioService)
+//server mode: accept a new connection from the specified acceptorPtr. (usually provided by CnetMan)
+void Cnet::doAccept(int id, CacceptorPtr acceptorPtr)
 {
 	this->id=id;
 
 	reconnectTime=0;
 	DEB("Starting acceptor for port " << acceptorPtr->local_endpoint().port()<< " into id " << id);
 
-	//inform the world we're trying to accept a new connection
-// 	ioService.post(bind(
-// 		&CnetMan::accepting,
-// 		&netMan,
-// 		acceptorPtr->local_endpoint().port(),
-// 		id)
-// 	);
 	accepting(id, acceptorPtr->local_endpoint().port());
 
 	//start the accept
@@ -52,9 +29,20 @@ Cnet::Cnet(int id, CacceptorPtr acceptorPtr)
 } 
 
 
-//Used in client mode to actually do the connect-stuff
+//Client mode: Initiate a connect.
+void Cnet::doConnect(int id, string host, int port, int reconnectTime)
+{
+	this->id=id;
+	this->host=host;
+	this->port=port;
+	this->reconnectTime=reconnectTime;
+	doConnect();
+}
+
 void Cnet::doConnect()
 {
+
+
 	//in case of a reconnect we need some extra cleaning
 	tcpResolver.cancel();
 	tcpSocket.close();
@@ -93,16 +81,6 @@ void Cnet::connectTimerHandler(
 	}
 }
 
-//Called on disconnect: Checks if we need to reconnect.
-void Cnet::doReconnect()
-{
-	if (reconnectTime)
-	{
-		DEB("Will reconnect id " << id << ", after " << reconnectTime << " seconds...");
-		sleep(reconnectTime);
-		doConnect();
-	}
-}
 
 
 void Cnet::acceptHandler(
@@ -284,7 +262,13 @@ void Cnet::reset(const boost::system::error_code& ec)
 	disconnected(id, ec);
 
 	//check if we need to reconnect
-	doReconnect();
+	if (reconnectTime)
+	{
+		DEB("Will reconnect id " << id << ", after " << reconnectTime << " seconds...");
+		sleep(reconnectTime);
+		doConnect();
+	}
+
 }
 
 

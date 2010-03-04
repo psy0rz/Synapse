@@ -65,22 +65,6 @@ SYNAPSE_REGISTER(module_SessionStart)
 // In the case of this generic module, the data is assume to be readable text and is sended with a net_Read message.
 class CnetModule : public Cnet
 {
-	public:
-	CnetModule(int id, string host, int port, int reconnectTime)
-	: Cnet(id,host,port,reconnectTime)
- 	{
- 		
- 	}
-// 	CnetModule()
-// 	{
-// 		
-// 	}
-// 	
-  	CnetModule(int id, CacceptorPtr acceptorPtr)
- 	:Cnet(id,acceptorPtr)
-  	{
-  		
-  	}
 
 	
 	//...put your per-network-connection variables here...

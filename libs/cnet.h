@@ -41,14 +41,13 @@ class Cnet
 	
 	public:
 
-	Cnet(int id, string host, int port, int reconnectTime=0);
-	Cnet(int id, CacceptorPtr acceptorPtr);
+	Cnet();
 	~Cnet();
 
 	//end-user api to ask us to DO stuff: (usually called from CnetMan)
 	void doDisconnect();
-	void doConnect();
-	void doReconnect();
+	void doAccept(int id, CacceptorPtr acceptorPtr);
+	void doConnect(int id, string host, int port, int reconnectTime=0);
 	void doWrite(string & data);	
 	void run();
 
@@ -66,6 +65,10 @@ class Cnet
 
 	string host;
 	int port;
+
+	//Internal functions
+	void doConnect();
+
 
 	//ASIO handlers to handle asynconious asio events:
 	void acceptHandler(
