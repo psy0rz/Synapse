@@ -23,7 +23,7 @@ SYNAPSE_REGISTER(module_Init)
 	out.clear();
 	out.event="core_ChangeSession";
 	out["maxThreads"]=10;
-		out.send();
+	out.send();
 
 	out.clear();
 	out.event="core_LoadModule";
@@ -31,11 +31,11 @@ SYNAPSE_REGISTER(module_Init)
 	out["path"]="modules/net.module/libnet.so";
 	out.send();
 
-// 	out.clear();
-// 	out.event="core_ChangeLogging";
-// 	out["logSends"]=0;
-// 	out["logReceives"]=0;
-// 	out.send();
+	out.clear();
+	out.event="core_ChangeLogging";
+	out["logSends"]=0;
+	out["logReceives"]=0;
+	out.send();
 
 }
 

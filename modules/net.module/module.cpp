@@ -88,7 +88,7 @@ class CnetModule : public Cnet
 	/** Connection 'id' is trying to connect to host:port
 	* Sends: net_Connecting
 	*/
- 	void connecting(int id, string host, string port)
+ 	void connecting(int id, const string &host, int port)
 	{
 		Cmsg out;
 		out.dst=id;
@@ -98,10 +98,20 @@ class CnetModule : public Cnet
 		out.send();
 	}
 
+	/** Connection 'id' is trying to accept a new connection on port
+     */
+	void accepting(int id, int port)
+	{
+		//dummy
+		DEB(id << " is accepting connection on " << port);
+	}
+
+
 	/** Connection 'id' is established.
+    * Used for both client and servers.
 	* Sends: net_Connected
 	*/
- 	void connected(int id)
+ 	void connected(int id, const string &host, int port)
 	{
 		Cmsg out;
 		out.dst=id;
@@ -138,9 +148,9 @@ class CnetModule : public Cnet
 		out["reason"]=ec.message();
 		out.send();
 	}
-};
+}; 
 
-CnetMan<Cnet> net;
+CnetMan<CnetModule> net;
 
 
 /** Client-only: Create a new connection, connects to host:port for session src

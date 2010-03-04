@@ -54,15 +54,14 @@ class Cnet
 
 	
 	private:
+	int id;
+	asio::io_service ioService;
+	int reconnectTime;
+
 	tcp::socket tcpSocket;
 	tcp::resolver tcpResolver;
 	asio::streambuf readBuffer; 
 	asio::deadline_timer connectTimer;
-
-	
-	int id;
-	asio::io_service ioService;
-	int reconnectTime;
 
 
 	string host;

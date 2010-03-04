@@ -23,56 +23,6 @@ Cnet::Cnet(int id, string host, int port, int reconnectTime)
 	doConnect();
 } 
 
-//Used in client mode to actually do the connect-stuff
-void Cnet::doConnect()
-{
-	//in case of a reconnect we need some extra cleaning
-	tcpResolver.cancel();
-	tcpSocket.close();
-
-	//ioService.post(bind(&CnetMan::connecting,&netMan,id,host,port));
-	connecting(id, host, port);
-
-	//start the resolver	
-	stringstream portStr;
-	portStr << port;
-	DEB("Starting resolver for id " << id << ", resolving: " << host<<":"<<port);
-	tcp::resolver::query connectQuery(host, portStr.str());
-	tcpResolver.async_resolve(connectQuery,
-			bind(&Cnet::resolveHandler,this, _1 ,_2)
-	);
-
-	//start the timerout timer
-	connectTimer.expires_from_now(boost::posix_time::seconds(CONNECT_TIMEOUT));
-	connectTimer.async_wait(boost::bind(&Cnet::connectTimerHandler, this,_1));
-    
-}
-
-//a connect timeout happend
-void Cnet::connectTimerHandler(
-	const boost::system::error_code& ec
-)
-{
-	if (!ec)
-	{
-		//A connect-timeout happend, so cancel all operations.
-		//the other handlers will reconnect if neccesary
-		tcpResolver.cancel();
-		tcpSocket.close();
-	}
-}
-
-//Called on disconnect: Checks if we need to reconnect.
-void Cnet::doReconnect()
-{
-	if (reconnectTime)
-	{
-		DEB("Will reconnect id " << id << ", after " << reconnectTime << " seconds...");
-		sleep(reconnectTime);
-		doConnect();
-	}
-}
-
 //server mode: construct the net-object from a new connection that comes from the acceptor.
 Cnet::Cnet(int id, CacceptorPtr acceptorPtr)
 		:tcpSocket(ioService), tcpResolver(ioService), readBuffer(65535), connectTimer(ioService)
@@ -100,6 +50,60 @@ Cnet::Cnet(int id, CacceptorPtr acceptorPtr)
 	);	
 		
 } 
+
+
+//Used in client mode to actually do the connect-stuff
+void Cnet::doConnect()
+{
+	//in case of a reconnect we need some extra cleaning
+	tcpResolver.cancel();
+	tcpSocket.close();
+
+	//ioService.post(bind(&CnetMan::connecting,&netMan,id,host,port));
+	connecting(id, host, port);
+
+	//start the resolver	
+	stringstream portStr;
+	portStr << port;
+	DEB("Starting resolver for id " << id << ", resolving: " << host<<":"<<port);
+	tcp::resolver::query connectQuery(host, portStr.str());
+	tcpResolver.async_resolve(connectQuery,
+			bind(&Cnet::resolveHandler,this, _1 ,_2)
+	);
+
+	//start the timerout timer
+	connectTimer.expires_from_now(boost::posix_time::seconds(CONNECT_TIMEOUT));
+	connectTimer.async_wait(boost::bind(&Cnet::connectTimerHandler, this,_1));
+    
+}
+
+
+
+//a connect timeout happend
+void Cnet::connectTimerHandler(
+	const boost::system::error_code& ec
+)
+{
+	if (!ec)
+	{
+		//A connect-timeout happend, so cancel all operations.
+		//the other handlers will reconnect if neccesary
+		tcpResolver.cancel();
+		tcpSocket.close();
+	}
+}
+
+//Called on disconnect: Checks if we need to reconnect.
+void Cnet::doReconnect()
+{
+	if (reconnectTime)
+	{
+		DEB("Will reconnect id " << id << ", after " << reconnectTime << " seconds...");
+		sleep(reconnectTime);
+		doConnect();
+	}
+}
+
 
 void Cnet::acceptHandler(
 	asio::io_service::work work,
