@@ -11,7 +11,7 @@ string(REGEX REPLACE ".*/([^/]*).module$" "\\1" module_name "${CMAKE_CURRENT_BIN
 MESSAGE(STATUS "Module name of ${CMAKE_CURRENT_BINARY_DIR} is: '${module_name}'")
 
 #automaticly add all sourcefiles to current module
-file(GLOB sources *.cpp json_spirit/*.cpp)
+file(GLOB sources *.cpp json_spirit/*.cpp ../../libs/cnet.cpp)
 ADD_LIBRARY(${module_name} MODULE ${sources})
 
 #need to link to some other libraries ? just add them here

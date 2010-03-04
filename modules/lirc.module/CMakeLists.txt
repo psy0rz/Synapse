@@ -12,7 +12,7 @@ MESSAGE(STATUS "Module name of ${CMAKE_CURRENT_BINARY_DIR} is: '${module_name}'"
 
 #automaticly add all sourcefiles to current module
 file(GLOB sources *.cpp)
-ADD_LIBRARY(${module_name} MODULE ${sources})
+ADD_LIBRARY(${module_name} MODULE ${sources} ../../libs/cnet.cpp)
 
 #need to link to some other libraries ? just add them here
 TARGET_LINK_LIBRARIES(${module_name})
