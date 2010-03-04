@@ -3,6 +3,42 @@
 #include "synapse.h"
 #include <boost/regex.hpp>
 
+/**
+	Documentation: 
+
+	To login to an asterisk server define these two handlers:
+		SYNAPSE_REGISTER(ami_Ready)
+		{
+			Cmsg out;
+			out.clear();
+			out.event="ami_Connect";
+			out["host"]="192.168.13.1";
+			out["port"]="5038";
+			out.send();
+		}
+		
+		SYNAPSE_REGISTER(ami_Connected)
+		{
+			Cmsg out;
+			out.clear();
+			out.event="ami_Action";
+			out["Action"]="Login";
+			out["UserName"]="admin";
+			out["Secret"]="yourpassword";
+			out["ActionID"]="Login";
+			out["Events"]="on";
+			out.send();
+		}
+
+	Sending actions can be done with ami_Action. 
+
+	Received events are converted to messages with event: ami_Event_"eventname" .
+
+	Received responses are converted to messages with event: ami_Response_"responsename" .
+
+	All parameters are copied from/to asterisk without modification.
+*/
+
 SYNAPSE_REGISTER(module_Init)
 {
 	Cmsg out;
