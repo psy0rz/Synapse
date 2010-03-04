@@ -6,12 +6,15 @@
 Cnet::Cnet()
 		:tcpSocket(ioService), tcpResolver(ioService), readBuffer(65535), connectTimer(ioService)
 {
+	delimiter="\n";
 } 
 
 //server mode: accept a new connection from the specified acceptorPtr. (usually provided by CnetMan)
 void Cnet::doAccept(int id, CacceptorPtr acceptorPtr)
 {
 	this->id=id;
+
+	init(id);
 
 	reconnectTime=0;
 	DEB("Starting acceptor for port " << acceptorPtr->local_endpoint().port()<< " into id " << id);
@@ -36,6 +39,7 @@ void Cnet::doConnect(int id, string host, int port, int reconnectTime)
 	this->host=host;
 	this->port=port;
 	this->reconnectTime=reconnectTime;
+	init(id);
 	doConnect();
 }
 
@@ -103,7 +107,7 @@ void Cnet::acceptHandler(
 	//start reading the incoming data
 	asio::async_read_until(tcpSocket,
 		readBuffer,
-		"\n",
+		delimiter,
 		bind(&Cnet::readHandler, this, _1, _2)
 	);
 
@@ -173,7 +177,7 @@ void Cnet::connectHandler(
 	//start reading the incoming data
 	asio::async_read_until(tcpSocket,
 		readBuffer,
-		"\n",
+		delimiter,
 		bind(&Cnet::readHandler, this, _1, _2)
 	);
 
@@ -199,7 +203,7 @@ void Cnet::readHandler(
 	//start reading the next incoming data
 	asio::async_read_until(tcpSocket,
 		readBuffer,
-		"\n",
+		delimiter,
 		bind(&Cnet::readHandler, this, _1, _2)
 	);
 
@@ -273,6 +277,11 @@ void Cnet::reset(const boost::system::error_code& ec)
 
 
 
+void Cnet::init(int id)
+{
+	//dummy
+	DEB(id << " initalizing");
+}
 
 
 void Cnet::accepting(int id, int port)

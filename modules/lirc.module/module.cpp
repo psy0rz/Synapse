@@ -1,8 +1,6 @@
 #include "cnetman.h"
 #include "synapse.h"
 #include <boost/regex.hpp>
-#include "cnet.h"
-#include "cnetman.h"
 
 SYNAPSE_REGISTER(module_Init)
 {

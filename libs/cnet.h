@@ -51,6 +51,12 @@ class Cnet
 	void doWrite(string & data);	
 	void run();
 
+
+	protected:
+
+	//change these settings in the init() callback handler.
+	string delimiter;
+
 	
 	private:
 	int id;
@@ -103,6 +109,7 @@ class Cnet
 	void reset(const boost::system::error_code& ec);
 
 	
+
 	//end-user "callbacks" for server
 	virtual void accepting(int id, int port);
  
@@ -110,6 +117,7 @@ class Cnet
 	virtual void connecting(int id, const string &host, int port);
 
 	//end-user "callbacks" for client and server 
+	virtual void init(int id);
 	virtual void connected(int id, const string &host, int port);
 	virtual void disconnected(int id, const boost::system::error_code& error);
 	virtual void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred);

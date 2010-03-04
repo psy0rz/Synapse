@@ -17,7 +17,6 @@
 #include <string>
 
 #include "synapse.h"
-#include "cnet.h"
 #include "cnetman.h"
 
 /** module_Init - called first, set up basic stuff here

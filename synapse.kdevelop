@@ -23,11 +23,11 @@
       <mainprogram>/home/psy/opensyn3/projects/synapse/./synapse</mainprogram>
       <directoryradio>custom</directoryradio>
       <customdirectory>.</customdirectory>
-      <programargs>modules/test_net_loop.module/libtest_net_loop.so</programargs>
+      <programargs>modules/test.module/libtest.so</programargs>
       <terminal>true</terminal>
       <autocompile>false</autocompile>
       <envvars/>
-      <globaldebugarguments>modules/test_net_loop.module/libtest_net_loop.so</globaldebugarguments>
+      <globaldebugarguments>modules/test.module/libtest.so</globaldebugarguments>
       <globalcwd>/home/psy/opensyn3/projects/synapse/</globalcwd>
       <useglobalprogram>false</useglobalprogram>
       <autoinstall>false</autoinstall>
@@ -209,9 +209,9 @@
   </kdevdebugger>
   <kdevdocumentation>
     <projectdoc>
-      <docsystem/>
-      <docurl/>
-      <usermanualurl/>
+      <docsystem></docsystem>
+      <docurl></docurl>
+      <usermanualurl></usermanualurl>
     </projectdoc>
   </kdevdocumentation>
 </kdevelop>

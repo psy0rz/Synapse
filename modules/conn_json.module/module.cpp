@@ -1,5 +1,4 @@
 #include "cnetman.h"
-#include "cnet.h"
 #include "synapse.h"
 
 #include "json_spirit.h"

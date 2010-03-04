@@ -1,4 +1,5 @@
-#include "cnet.h"
+#include "cnetman.h"
+
 #include "synapse.h"
 #include <boost/regex.hpp>
 
@@ -24,7 +25,12 @@ SYNAPSE_REGISTER(module_Init)
  
 class CnetModule : public Cnet
 {
- 	void connected(int id)
+	void init(int id)
+	{
+		delimiter="\r\n\r\n";
+	}
+	
+  	void connected(int id, const string &host, int port)
 	{
 		Cmsg out;
 		out.dst=id;
@@ -33,39 +39,54 @@ class CnetModule : public Cnet
 	}
 
 	/** Parse an event from asterisk and convert it to a synapse message
+	Events look like this ( \r\n as seperator ):
+		Event: Newstate
+		Privilege: call,all
+		Channel: SIP/601-0000001d
+		State: Up
+		CallerID: 601
+		CallerIDName: Erwin
+		Uniqueid: 1267713042.34
+
+	Responses look like this:
+		Response: Success
+		ActionID: Login
+		Message: Authentication accepted
+
+
 	*/
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
 		//convert streambuf to string
-		string s(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
+		string amiStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
 
-		DEB("Received:\n" << s);
-		/* Example ami output:
+		DEB("RECEIVED FROM ASTERISK:\n" << amiStr);
 
+		//create a regex iterator
+		boost::sregex_iterator tokenI(
+			amiStr.begin(), 
+			amiStr.end(), 
+			boost::regex("^([[:alpha:]]*): (.*?)$")
+		);
 
-		*/
-		//parse lirc output
-		smatch what;
-		if (regex_match(
-			s,
-			what, 
-			boost::regex("(.*?) (.*?) (.*?) (.*?)\n")
-		))
+		Cmsg out;
+		while (tokenI!=sregex_iterator())
 		{
-			//TODO: make a dynamicly configurable mapper, which maps lirc-events to other events.
-			//(we'll do that probably after the gui-stuff is done)
-			Cmsg out;
-			out.event="lirc_Read";
-			out["code"]		=what[1];
-			out["repeat"]	=what[2];
-			out["key"]		=what[3];
-			out["remote"]	=what[4];
-			out.send();
+			string key=(*tokenI)[1].str();
+			string value=(*tokenI)[2].str();
+
+			//assign it to the message hash-array:
+			out[key]=value;
+
+			if (key == "Event" )
+				out.event="ami_Event_"+value;
+
+			if (key == "Response" )
+				out.event="ami_Response_"+value;
+
+			tokenI++;
 		}
-		else
-		{
-			ERROR("Cant parse lirc output: " << s);
-		}
+		out.send();
 
 	}
 
@@ -125,7 +146,7 @@ SYNAPSE_REGISTER(ami_Action)
 	}
 	amiString+="\r\n";
 	
-	DEB("Sending:\n" << amiString);
+	DEB("SEND TO ASTERISK:\n" << amiString);
 
 	net.doWrite(msg.src, amiString);
 }
