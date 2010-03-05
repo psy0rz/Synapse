@@ -37,7 +37,8 @@ class CnetModule : public Cnet
 	{
 		//convert streambuf to string
 		string s(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
-		
+		int dataLength=s.find(delimiter)+delimiter.length();
+
 		
 		/* Example lirc output:
 			0000000000001010 00 sys_00_command_10 PHILIPS_RC-5
@@ -70,6 +71,8 @@ class CnetModule : public Cnet
 		{
 			ERROR("Cant parse lirc output: " << s);
 		}
+
+		readBuffer.consume(dataLength);
 
 	}
 

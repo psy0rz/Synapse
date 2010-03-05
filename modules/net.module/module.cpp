@@ -109,15 +109,17 @@ class CnetModule : public Cnet
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
 		Cmsg out;
-		//TODO: isnt there a more efficient way to convert the streambuf to string?
-		const char* s=boost::asio::buffer_cast<const char*>(readBuffer.data());
+		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
+		int dataLength=dataStr.find(delimiter)+delimiter.length();
+
 		//remove newline..
-		out["data"].str().erase();
-		out["data"].str().append(s,bytesTransferred-1);
+		out["data"]=dataStr.substr(0,dataLength-1);
 		out.event="net_Read";
 		out.dst=id;
 		out.src=dataSessionId;
 		out.send();
+
+		readBuffer.consume(dataLength);
 	}
 
 	/** Connection 'id' is disconnected, or a connect-attempt has failed.

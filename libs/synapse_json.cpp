@@ -82,15 +82,15 @@ Format is:
 	srcid, dstid, eventname, parameterobject
 
 */
-bool json2Cmsg(asio::streambuf &readBuffer, Cmsg & msg)
+bool json2Cmsg(string &jsonStr, Cmsg & msg)
 {
 	//parse json input
-	std::istream readBufferIstream(&readBuffer);
+//	std::istream readBufferIstream(&readBuffer);
 	try
 	{
 		Value jsonMsg;
 		//TODO:how safe is it actually to let json_spirit parse untrusted input? (regarding DoS, buffer overflows, etc)
-		json_spirit::read(readBufferIstream, jsonMsg);
+		json_spirit::read(jsonStr, jsonMsg);
 		msg.src=jsonMsg.get_array()[0].get_int();
 		msg.dst=jsonMsg.get_array()[1].get_int();
 		msg.event=jsonMsg.get_array()[2].get_str();

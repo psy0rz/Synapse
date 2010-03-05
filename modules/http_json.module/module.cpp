@@ -82,9 +82,9 @@ class CnetModule : public Cnet
 	{
 		if (state==REQUEST)
 		{
+				DEB("Starting async read for REQUEST headers");
 				//The request-block ends with a empty newline, so read until a double new-line:
 				headers.clear();
-				readBuffer.prepare(4096);
 				asio::async_read_until(
 					tcpSocket,
 					readBuffer,
@@ -94,14 +94,24 @@ class CnetModule : public Cnet
 		else 
 		if (state==CONTENT)
 		{
-				readBuffer.prepare((int)headers["Content-Length"]);
+				DEB("Starting async read for CONTENT, with length: " << (int)headers["Content-Length"] );
 				asio::async_read(
 					tcpSocket,
 					readBuffer,
+					asio::transfer_at_least(10),
 					bind(&Cnet::readHandler, this, _1, _2));
 
 		}
 	}
+
+ 	void connected(int id, const string &host, int port)
+	{
+		//TODO: is this efficient enough? is there another way to get the data immediatly? should we change buffer sizes on the fly?
+		boost::asio::socket_base::receive_buffer_size option(1);
+		tcpSocket.set_option(option);
+
+	}
+
 
 	// Received new data:
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
@@ -160,8 +170,21 @@ class CnetModule : public Cnet
 				//ok, change states to do a content-read this time:
 				state=CONTENT;
 			}
-
-		}		
+else
+{
+			string s;
+			s="HTTP/1.1 200 OK\r\n \
+Date: Fri, 05 Mar 2010 18:33:05 GMT\r\n \
+Server: Apache/2.2.8 (Debian) PHP/5.2.6-1+lenny4 with Suhosin-Patch mod_python/3.3.1 Python/2.5.2\r\n \
+Accept-Ranges: bytes\r\n \
+Vary: Accept-Encoding\r\n \
+Content-Length: 70\r\n \
+Keep-Alive: timeout=15, max=100\r\n \
+Connection: Keep-Alive\r\n \
+Content-Type: text/html\r\n\r\n<form method='post'><input name='jan'><submit>bla</form>TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT";
+			doWrite(s);
+}
+		}
 		else 
 		if (state==CONTENT)
 		{

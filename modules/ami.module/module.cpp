@@ -93,23 +93,24 @@ class CnetModule : public Cnet
 	*/
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
-		//convert streambuf to string
-		string amiStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
+		//convert streambuf to string, and determine dataLength (can be less then bytesTransferred)
+		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
+		int dataLength=dataStr.find(delimiter)+delimiter.length();
 
-		DEB("RECEIVED FROM ASTERISK:\n" << amiStr);
+		DEB("RECEIVED FROM ASTERISK:\n" << dataStr.substr(0,dataLength) );
 
 		//create a regex iterator
-		boost::sregex_iterator tokenI(
-			amiStr.begin(), 
-			amiStr.end(), 
+		boost::sregex_iterator regexI(
+			dataStr.begin(), 
+			dataStr.begin()+dataLength, 
 			boost::regex("^([[:alnum:]]*): (.*?)$")
 		);
 
 		Cmsg out;
-		while (tokenI!=sregex_iterator())
+		while (regexI!=sregex_iterator())
 		{
-			string key=(*tokenI)[1].str();
-			string value=(*tokenI)[2].str();
+			string key=(*regexI)[1].str();
+			string value=(*regexI)[2].str();
 
 			//assign it to the message hash-array:
 			out[key]=value;
@@ -120,10 +121,11 @@ class CnetModule : public Cnet
 			if (key == "Response" )
 				out.event="ami_Response_"+value;
 
-			tokenI++;
+			regexI++;
 		}
 		out.send();
 
+		readBuffer.consume(dataLength);
 	}
 
  	void disconnected(int id, const boost::system::error_code& ec)

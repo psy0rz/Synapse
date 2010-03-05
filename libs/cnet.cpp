@@ -191,7 +191,6 @@ void Cnet::readHandler(
 	
 	//netMan.read(id, readBuffer, bytesTransferred);
 	received(id, readBuffer, bytesTransferred);
-	readBuffer.consume(bytesTransferred);
 
 	//start reading the next incoming data
 	startAsyncRead();
@@ -265,7 +264,8 @@ void Cnet::reset(const boost::system::error_code& ec)
 
 void Cnet::startAsyncRead()
 {
-		asio::async_read_until(tcpSocket,
+	asio::async_read_until(
+		tcpSocket,
 		readBuffer,
 		delimiter,
 		bind(&Cnet::readHandler, this, _1, _2)
@@ -326,6 +326,7 @@ void Cnet::received(int id, asio::streambuf &readBuffer, std::size_t bytesTransf
 {
 	//dummy
 	DEB(id << " has received data:" << &readBuffer);
+	readBuffer.consume(bytesTransferred);
 }
 
 
