@@ -101,8 +101,9 @@ void Cnet::acceptHandler(
 
 	//when an acception has succeeded, we also use the connected-callback.
 	//this ways its easy to change existing code between server and client mode.
-	//netMan.connected(id);
-	connected(id, tcpSocket.remote_endpoint().address().to_string(), tcpSocket.remote_endpoint().port());
+	//we ALSO call a specific server handler, just in case the user needs the distinction
+	connected(       id, tcpSocket.remote_endpoint().address().to_string(), tcpSocket.remote_endpoint().port());
+	connected_server(id, tcpSocket.remote_endpoint().address().to_string(), tcpSocket.remote_endpoint().port());
 
 	//start reading the incoming data
 	asio::async_read_until(tcpSocket,
@@ -170,8 +171,8 @@ void Cnet::connectHandler(
 
 	//connection succeeded
 	connectTimer.cancel();
-	//netMan.connected(id);
-	connected(id, tcpSocket.remote_endpoint().address().to_string(), tcpSocket.remote_endpoint().port());
+	connected(       id, tcpSocket.remote_endpoint().address().to_string(), tcpSocket.remote_endpoint().port());
+	connected_client(id, tcpSocket.remote_endpoint().address().to_string(), tcpSocket.remote_endpoint().port());
 
 
 	//start reading the incoming data
@@ -261,8 +262,7 @@ void Cnet::reset(const boost::system::error_code& ec)
 	tcpResolver.cancel();
 	tcpSocket.close();
 
-	//callback to netmanager
-	//netMan.disconnected(id, ec);
+	//callback for user
 	disconnected(id, ec);
 
 	//check if we need to reconnect
@@ -301,8 +301,22 @@ void Cnet::connecting(int id, const string &host, int port)
 void Cnet::connected(int id, const string &host, int port)
 {
 	//dummy
-	DEB(id << " is connected to " << host << ":" << port);
 }
+
+void Cnet::connected_server(int id, const string &host, int port)
+{
+	//dummy
+	DEB(id << " server is connected to " << host << ":" << port);
+}
+
+void Cnet::connected_client(int id, const string &host, int port)
+{
+	//dummy
+	DEB(id << " client is connected to " << host << ":" << port);
+}
+
+
+
 
 void Cnet::disconnected(int id, const boost::system::error_code& error)
 {

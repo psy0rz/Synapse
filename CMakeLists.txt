@@ -20,8 +20,9 @@ ADD_EXECUTABLE(synapse ${sources})
 
 
 #need to link to some other libraries ? just add them here
-TARGET_LINK_LIBRARIES(synapse boost_thread-mt dl boost_regex-mt boost_system-mt -pg)
+TARGET_LINK_LIBRARIES(synapse boost_thread-mt dl boost_regex-mt boost_system-mt -pg )
+
 
 INCLUDE_DIRECTORIES(libs)
 
-SUBDIRS(modules)
+SUBDIRS(libs modules)

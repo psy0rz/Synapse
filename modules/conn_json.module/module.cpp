@@ -1,10 +1,9 @@
 #include "cnetman.h"
 #include "synapse.h"
 
-#include "json_spirit.h"
+#include "synapse_json.h"
 #define MAX_MESSAGE 2048
 
-//TODO: optimize: perhaps its more efficient to use boost spirit directly, without the json_spirit lib?
 
 /**
 	-New connections are handled in a session with user anonymous
@@ -17,7 +16,6 @@
 */
 
 
-using namespace json_spirit;
 
 int networkSessionId=0;
 
@@ -61,6 +59,7 @@ SYNAPSE_REGISTER(module_Init)
 	out["event"]="conn_json_Close";
 	out.send();
 
+
 	//register a special handler without specified event
 	//this will receive all events that are not handled elsewhere in this module.
 	out.clear();
@@ -69,9 +68,6 @@ SYNAPSE_REGISTER(module_Init)
 	out.send();
 
 }
-
-
-
 
 
 
@@ -95,10 +91,9 @@ class CnetModule : public Cnet
 		out.send();
 	}
 
-	/** Connection 'id' is established.
-	* Sends: conn_Connected
+	/** Client connection 'id' is established.
 	*/
- 	void connected(int id, const string &host, int port)
+ 	void connected_client(int id, const string &host, int port)
 	{
 		Cmsg out;
 		out.dst=id;
@@ -107,34 +102,13 @@ class CnetModule : public Cnet
 		out.send();
 	}
 
-	/** Recursively converts a json_spirit Value to a Cvar
+	/** Server connection 'id' is established.
 	*/
-	void Value2Cvar(Value &value,Cvar &var)
+ 	void connected_server(int id, const string &host, int port)
 	{
-		switch(value.type())
-		{
-			case(null_type):
-				var.clear();
-				break;
-			case(str_type):
-				var=value.get_str();
-				break;
-			case(real_type):
-				var=value.get_real();
-				break;
-			case(obj_type):
-				//convert the Object(string,Value) pairs to a CvarMap 
-				for (Object::iterator ObjectI=value.get_obj().begin(); ObjectI!=value.get_obj().end(); ObjectI++)
-				{
-					//recurse to convert the map-value of the CvarMap into a json_spirit Value:
-					Value2Cvar(ObjectI->value_, var[ObjectI->name_]);
-				}
-				break;
-			default:
-				WARNING("Ignoring unknown json variable type " << value.type());
-				break;
-		}
+		//someone is connecting us..
 	}
+
 
 	/** Connection 'id' has received new data.
 	*/
@@ -142,32 +116,20 @@ class CnetModule : public Cnet
 	{
 		Cmsg out;
 	
-		if (bytesTransferred > 1024)
+		if (bytesTransferred > MAX_MESSAGE)
 		{
 			WARNING("Json message on id " << id << " is " << bytesTransferred << " bytes. (max=" << MAX_MESSAGE << ")");
 			return ;
 		}
 
-		//parse json input
-		std::istream readBufferIstream(&readBuffer);
-		try
+		if (json2Cmsg(readBuffer, out))
 		{
-			Value jsonMsg;
-			//TODO:how safe is it actually to let json_spirit parse untrusted input? (regarding DoS, buffer overflows, etc)
-			json_spirit::read(readBufferIstream, jsonMsg);
-			out.src=jsonMsg.get_array()[0].get_int();
-			out.dst=jsonMsg.get_array()[1].get_int();
-			out.event=jsonMsg.get_array()[2].get_str();
-			Value2Cvar(jsonMsg.get_array()[3], out);
+			out.send();
 		}
-		catch(...)
+		else
 		{
 			WARNING("Error while parsing incomming json message on id " << id);
-			return ;
 		}
-
-		//translate....
-		out.send();			
 	}
 
 	/** Connection 'id' is disconnected, or a connect-attempt has failed.
@@ -294,42 +256,6 @@ SYNAPSE_REGISTER(module_Shutdown)
 }
 
 
-/** Recursively converts a Cvar to a json_spirit Value.
-*/
-void Cvar2Value(Cvar &var,Value &value)
-{
-	switch(var.which())
-	{
-		case(CVAR_EMPTY):
-			value=Value();
-			break;
-		case(CVAR_STRING):
-			value=(string)var;
-			break;
-		case(CVAR_LONG_DOUBLE):
-			value=(double)var;
-			break;
-		case(CVAR_MAP):
-			//convert the CvarMap to a json_spirit Object with (String,Value) pairs 
-			value=Object();
-			for (Cvar::iterator varI=var.begin(); varI!=var.end(); varI++)
-			{
-				Value subValue;
-				//recurse to convert the map-value of the CvarMap into a json_spirit Value:
-				Cvar2Value(varI->second, subValue);
-				
-				//push the resulting Value onto the json_spirit Object
-				value.get_obj().push_back(Pair(
-					varI->first,
-					subValue
-				));
-			}
-			break;
-		default:
-			WARNING("Ignoring unknown variable type " << var.which());
-			break;
-	}
-}
 
 
 
@@ -339,23 +265,11 @@ void Cvar2Value(Cvar &var,Value &value)
  */
 SYNAPSE_HANDLER(all)
 {
-
-	//convert the message to a json-message
-	Array jsonMsg;
-	jsonMsg.push_back(msg.src);	
-	jsonMsg.push_back(msg.dst);
-	jsonMsg.push_back(msg.event);
+	string jsonStr;
+	Cmsg2json(msg, jsonStr);
 	
-	//convert the parameters, if any
-	if (!msg.isEmpty())
-	{
-		Value jsonPars;
-		Cvar2Value(msg,jsonPars);
-	
-		jsonMsg.push_back(jsonPars);
-	}
-
-	INFO("json: " << write( jsonMsg));
+	//send to corresponding network connection
+	INFO("json: " << jsonStr);
 }
 
 

@@ -119,6 +119,8 @@ class Cnet
 	//end-user "callbacks" for client and server 
 	virtual void init(int id);
 	virtual void connected(int id, const string &host, int port);
+	virtual void connected_server(int id, const string &host, int port);
+	virtual void connected_client(int id, const string &host, int port);
 	virtual void disconnected(int id, const boost::system::error_code& error);
 	virtual void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred);
 
