@@ -5,6 +5,23 @@
 /// NOTE: since this is a template, this cpp file will be included from cnetman.h! (and thus re-compiled for every module)
 
 
+template <class Tnet> 
+CnetMan<Tnet>::CnetMan()
+{
+	autoIdCount=0;	
+
+}
+
+template <class Tnet> 
+int CnetMan<Tnet>::getAutoId()
+{	
+	//NOTE: we assume we already are locked!
+	autoIdCount++;
+	while (autoIdCount==0 || nets.find(autoIdCount)!=nets.end())
+		autoIdCount++;
+
+	return autoIdCount;
+}
 
 template <class Tnet> 
 bool CnetMan<Tnet>::runConnect(int id, string host, int port, int reconnectTime)
@@ -12,7 +29,11 @@ bool CnetMan<Tnet>::runConnect(int id, string host, int port, int reconnectTime)
 	CnetPtr netPtr;
 	{
 		lock_guard<mutex> lock(threadMutex);
-		if (nets.find(id)!=nets.end())
+		if (id==0)
+		{
+			id=getAutoId();
+		}
+		else if (nets.find(id)!=nets.end())
 		{
 			ERROR("id " << id << " is already busy, ignoring connect-request");
 			return false;
@@ -78,11 +99,15 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
 		lock_guard<mutex> lock(threadMutex);
 		if (acceptors.find(port)==acceptors.end())
 		{
-			ERROR("port " << port << " is not listening, ignoring accept-request");
+			ERROR("port " << port << " is not listening (anymore), ignoring accept-request");
 			return false;
 		}
 
-		if (nets.find(id)!=nets.end())
+		if (id==0)
+		{
+			id=getAutoId();
+		}
+		else if (nets.find(id)!=nets.end())
 		{
 			ERROR("id " << id << " is already busy, ignoring accept-request on port " << port);
 			return false;

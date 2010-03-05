@@ -6,12 +6,15 @@
 	
 	CnetMan is threadsafe, Cnet is NOT.
 	
+	id is optional: when 0 it will assign an id automaticly.
+
 	For clients:
 		runConnect(id,host,port,reconnectTime)
 			-> returns false if error 
 			-> calls back connecting(id)
 			on succesfull resolving and connecting:
 				-> calls back connected(id)
+				-> calls back connected_client(id);
 				-> calls back read(id,...) for all incoming data until disconnected
 			-> calls back disconnected(id,error); 
 			if reconnectTime>0 and doDisconnect was not called: sleeps and starts over again..
@@ -21,9 +24,7 @@
 		First call runListen to open the port:
 		runListen(int port)
 			-> returns false if error 
-			-> calls back listening(port)
 			-> listens on port, keeps running until user calls doClose(port) or until error
-			-> calls back closed(port)
 			-> returns true
 							
 		Now call runAccept to accept new connections:
@@ -33,7 +34,8 @@
 			-> waits for new connection on port until user calls doDisconnect(id).or until error
 			on newly accepted connection:
 				-> calls back connected(id);
-				-> calls back read(id,...) for all incoming data until disconnected
+				-> calls back connected_server(id);
+				-> calls back received(id,...) for all incoming data until disconnected
 			-> calls back disconnected(id,error); 
 			-> returns true;
 
@@ -66,6 +68,7 @@ class CnetMan
 {
 
 	public:
+	CnetMan();
 
 	//for server: call runListen to listen on a port. 
 	//It returns when doClose is called.
@@ -83,6 +86,7 @@ class CnetMan
 	void doShutdown();
 
 	private:
+	int autoIdCount;
 	typedef shared_ptr<Tnet> CnetPtr;
 	typedef map<int, CnetPtr > CnetMap;
 	CnetMap nets;
@@ -93,7 +97,7 @@ class CnetMan
 	mutex threadMutex;
 
 	void closeHandler(int port);
-
+	int getAutoId();
 	
 
 };

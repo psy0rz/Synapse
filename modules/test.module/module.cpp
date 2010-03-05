@@ -30,52 +30,27 @@ SYNAPSE_REGISTER(module_Init)
 //	out["path"]="modules/net.module/libnet.so";
 //	out.send();
 
-	out["path"]="modules/conn_json.module/libconn_json.so";
+// 	out["path"]="modules/conn_json.module/libconn_json.so";
+// 	out.send();
+
+	out["path"]="modules/http_json.module/libhttp_json.so";
 	out.send();
 
  	out["path"]="modules/ami.module/libami.so";
  	out.send();
 
-// 	sleep(5);
-// 	out.event="core_Shutdown";
-// 	out.dst=0;
-// 	out.send();
-
-// 	out.clear();
-// 	out.event="core_ChangeLogging";
-// 	out["logSends"]=0;
-// 	out["logReceives"]=0;
-// 	out.send();
-
-// 	out.clear();
-// 	out.event="loop";
-// 	out["bla"]="loopback test";
-// 	out.dst=msg.dst;
-// 	out.send();
-
-
-/*	for (int bla=0; bla < 10; bla++)
-	{	
-		out.clear();
-		out.event="test";
-		out.dst=0;
-		out.clear();
-		out.send();
-		sleep(1);
-	}
-
-	out.event="core_Shutdown";
-	out.dst=0;
-	out.send();
-*/
 
 }
-/*
-class CamiState
+
+SYNAPSE_REGISTER(http_json_Ready)
 {
-	
-	
-}*/
+	Cmsg out;
+	out.clear();
+	out.event="http_json_Listen";
+	out["port"]="10080";
+	out.dst=msg["session"];
+	out.send();
+}
 
 SYNAPSE_REGISTER(ami_Ready)
 {
