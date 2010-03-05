@@ -36,8 +36,8 @@ class CnetModule : public Cnet
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
 		//convert streambuf to string
-		string s(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
-		int dataLength=s.find(delimiter)+delimiter.length();
+		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
+		dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 
 		
 		/* Example lirc output:
@@ -52,7 +52,7 @@ class CnetModule : public Cnet
 		//parse lirc output
 		smatch what;
 		if (regex_match(
-			s,
+			dataStr,
 			what, 
 			boost::regex("(.*?) (.*?) (.*?) (.*?)\n")
 		))
@@ -69,10 +69,10 @@ class CnetModule : public Cnet
 		}
 		else
 		{
-			ERROR("Cant parse lirc output: " << s);
+			ERROR("Cant parse lirc output: " << dataStr);
 		}
 
-		readBuffer.consume(dataLength);
+		readBuffer.consume(dataStr.length());
 
 	}
 

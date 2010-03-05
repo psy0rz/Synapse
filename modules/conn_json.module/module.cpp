@@ -116,15 +116,15 @@ class CnetModule : public Cnet
 	*/
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
-		Cmsg out;
-		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
-		int dataLength=dataStr.find(delimiter)+delimiter.length();
-
 		if (bytesTransferred > MAX_MESSAGE)
 		{
 			WARNING("Json message on id " << id << " is " << bytesTransferred << " bytes. (max=" << MAX_MESSAGE << ")");
 			return ;
 		}
+
+		Cmsg out;
+		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
+		dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 
 		if (json2Cmsg(dataStr, out))
 		{
@@ -135,7 +135,7 @@ class CnetModule : public Cnet
 			WARNING("Error while parsing incomming json message on id " << id);
 		}
 
-		readBuffer.consume(dataLength);
+		readBuffer.consume(dataStr.length());
 	}
 
 	/** Connection 'id' is disconnected, or a connect-attempt has failed.

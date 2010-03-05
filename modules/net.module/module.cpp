@@ -110,16 +110,16 @@ class CnetModule : public Cnet
 	{
 		Cmsg out;
 		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
-		int dataLength=dataStr.find(delimiter)+delimiter.length();
+		dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 
-		//remove newline..
-		out["data"]=dataStr.substr(0,dataLength-1);
+		//remove newline
+		out["data"]=dataStr.substr(0, dataStr.length()-1);
 		out.event="net_Read";
 		out.dst=id;
 		out.src=dataSessionId;
 		out.send();
 
-		readBuffer.consume(dataLength);
+		readBuffer.consume(dataStr.length());
 	}
 
 	/** Connection 'id' is disconnected, or a connect-attempt has failed.

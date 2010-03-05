@@ -95,14 +95,14 @@ class CnetModule : public Cnet
 	{
 		//convert streambuf to string, and determine dataLength (can be less then bytesTransferred)
 		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
-		int dataLength=dataStr.find(delimiter)+delimiter.length();
+		dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 
-		DEB("RECEIVED FROM ASTERISK:\n" << dataStr.substr(0,dataLength) );
+		DEB("RECEIVED FROM ASTERISK:\n" << dataStr );
 
 		//create a regex iterator
 		boost::sregex_iterator regexI(
 			dataStr.begin(), 
-			dataStr.begin()+dataLength, 
+			dataStr.end(), 
 			boost::regex("^([[:alnum:]]*): (.*?)$")
 		);
 
@@ -125,7 +125,7 @@ class CnetModule : public Cnet
 		}
 		out.send();
 
-		readBuffer.consume(dataLength);
+		readBuffer.consume(dataStr.length());
 	}
 
  	void disconnected(int id, const boost::system::error_code& ec)

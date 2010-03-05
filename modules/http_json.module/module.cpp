@@ -119,32 +119,34 @@ class CnetModule : public Cnet
 		if (state==REQUEST)
 		{
 			//parse http headers
-			string inputStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
-			DEB("Got http REQUEST: \n" << inputStr);
+			string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
+			dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 
-// 		//determine the kind of request:
-// 		smatch what;
-// 		if (regex_match(
-// 			s,
-// 			what, 
-// 			boost::regex("^(GET|POST) (.*) HTTP/.*?$")
-// 		))
-// 		{
-// 			//TODO: make a dynamicly configurable mapper, which maps lirc-events to other events.
-// 			//(we'll do that probably after the gui-stuff is done)
-// 			Cmsg out;
-// 			out.event="lirc_Read";
-// 			out["code"]		=what[1];
-// 			out["repeat"]	=what[2];
-// 			out["key"]		=what[3];
-// 			out["remote"]	=what[4];
-// 			out.send();
-// 		}
+			DEB("Got http REQUEST: \n" << dataStr);
+
+			//determine the kind of request:
+// 			smatch what;
+// 			if (regex_match(
+// 				,
+// 				what, 
+// 				boost::regex("^(GET|POST) (.*) HTTP/.*?$")
+// 			))
+// 			{
+// 				//TODO: make a dynamicly configurable mapper, which maps lirc-events to other events.
+// 				//(we'll do that probably after the gui-stuff is done)
+// 				Cmsg out;
+// 				out.event="lirc_Read";
+// 				out["code"]		=what[1];
+// 				out["repeat"]	=what[2];
+// 				out["key"]		=what[3];
+// 				out["remote"]	=what[4];
+// 				out.send();
+// 			}
 
 			//create a regex iterator to parse http headers:
 			boost::sregex_iterator tokenI(
-				inputStr.begin(), 
-				inputStr.end(), 
+				dataStr.begin(), 
+				dataStr.end(), 
 				boost::regex("^([[:alnum:]-]*): (.*?)$")
 			);
 	
