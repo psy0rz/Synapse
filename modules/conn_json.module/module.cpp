@@ -6,6 +6,8 @@
 
 
 /**
+	THIS MODULE IS UNFINISHED - DO NOT USE
+
 	-New connections are handled in a session with user anonymous
 	-Received network message are send to the core.
 	-Received core messages are send to the network.
