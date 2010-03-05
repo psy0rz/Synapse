@@ -4,7 +4,7 @@
 #include "clog.h"
 
 Cnet::Cnet()
-		:tcpSocket(ioService), tcpResolver(ioService), readBuffer(65535), connectTimer(ioService)
+		:tcpResolver(ioService), connectTimer(ioService), readBuffer(65535), tcpSocket(ioService) 
 {
 	delimiter="\n";
 } 
@@ -106,11 +106,7 @@ void Cnet::acceptHandler(
 	connected_server(id, tcpSocket.remote_endpoint().address().to_string(), tcpSocket.remote_endpoint().port());
 
 	//start reading the incoming data
-	asio::async_read_until(tcpSocket,
-		readBuffer,
-		delimiter,
-		bind(&Cnet::readHandler, this, _1, _2)
-	);
+	startAsyncRead();
 
 }
 
@@ -176,11 +172,7 @@ void Cnet::connectHandler(
 
 
 	//start reading the incoming data
-	asio::async_read_until(tcpSocket,
-		readBuffer,
-		delimiter,
-		bind(&Cnet::readHandler, this, _1, _2)
-	);
+	startAsyncRead();
 
 
 }
@@ -202,11 +194,7 @@ void Cnet::readHandler(
 	readBuffer.consume(bytesTransferred);
 
 	//start reading the next incoming data
-	asio::async_read_until(tcpSocket,
-		readBuffer,
-		delimiter,
-		bind(&Cnet::readHandler, this, _1, _2)
-	);
+	startAsyncRead();
 
 }
 
@@ -275,6 +263,14 @@ void Cnet::reset(const boost::system::error_code& ec)
 
 }
 
+void Cnet::startAsyncRead()
+{
+		asio::async_read_until(tcpSocket,
+		readBuffer,
+		delimiter,
+		bind(&Cnet::readHandler, this, _1, _2)
+	);
+}
 
 
 void Cnet::init(int id)

@@ -102,7 +102,7 @@ class CnetModule : public Cnet
 		boost::sregex_iterator tokenI(
 			amiStr.begin(), 
 			amiStr.end(), 
-			boost::regex("^([[:alpha:]]*): (.*?)$")
+			boost::regex("^([[:alnum:]]*): (.*?)$")
 		);
 
 		Cmsg out;

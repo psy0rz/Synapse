@@ -52,25 +52,33 @@ class Cnet
 	void run();
 
 
-	protected:
-
-	//change these settings in the init() callback handler.
-	string delimiter;
-
+	//this needs to be public, in case someone overrides startAsyncRead():
+	void readHandler(
+		const boost::system::error_code& ec,
+		std::size_t bytesTransferred);
 	
 	private:
 	int id;
 	asio::io_service ioService;
 	int reconnectTime;
 
-	tcp::socket tcpSocket;
 	tcp::resolver tcpResolver;
-	asio::streambuf readBuffer; 
 	asio::deadline_timer connectTimer;
 
 
 	string host;
 	int port;
+
+	protected:
+
+	//change these settings in the init() callback handler.
+	string delimiter;
+
+	//this needs to be protected, in case someone overrides startAsyncRead():
+	asio::streambuf readBuffer; 
+	tcp::socket tcpSocket;
+
+	private:
 
 	//Internal functions
 	void doConnect();
@@ -91,9 +99,6 @@ class Cnet
 		const boost::system::error_code& ec
 		);
 
-	void readHandler(
-		const boost::system::error_code& ec,
-		std::size_t bytesTransferred);
 
 	void writeHandler(
 		shared_ptr<string> stringPtr,
@@ -108,15 +113,17 @@ class Cnet
 
 	void reset(const boost::system::error_code& ec);
 
-	
+	//you might want to override this if you need more flexible reading.
+	//(usefull for http servers)
+	virtual void startAsyncRead();
 
-	//end-user "callbacks" for server
+	//end-user "hooks" for server
 	virtual void accepting(int id, int port);
  
-	//end-user "callbacks" for client
+	//end-user "hooks" for client
 	virtual void connecting(int id, const string &host, int port);
 
-	//end-user "callbacks" for client and server 
+	//end-user "hooks" for client and server 
 	virtual void init(int id);
 	virtual void connected(int id, const string &host, int port);
 	virtual void connected_server(int id, const string &host, int port);

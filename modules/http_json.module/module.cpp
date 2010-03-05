@@ -3,7 +3,7 @@
 #include <boost/regex.hpp>
 
 #include "synapse_json.h"
-#define MAX_MESSAGE 2048
+#define MAX_CONTENT 20000
 
 
 /**
@@ -58,34 +58,126 @@ SYNAPSE_REGISTER(module_Init)
 
 
 // We extent the Cnet class with our own network handlers.
-
+// Every connect will get its own unique Cnet object.
 // As soon as something with a network connection 'happens', these handlers will be called.
-// This stuff basically runs as anonymous, until a user uses core_login to change the user.
 class CnetModule : public Cnet
 {
+	//http basically has two states: The request-block and the content-body.
+	//The states alter eachother continuesly during a connection.
+	//We require different read, depending on the state we're in:
+	enum states{
+		REQUEST,
+		CONTENT,
+	};
+
 	void init(int id)
 	{
-		delimiter="\r\n\r\n";
+		state=REQUEST;
 	}
 
-	/** Sombody connected us
-	*/
- 	void connected_server(int id, const string &host, int port)
+	states state;
+	int contentLength;	
+	Cvar headers;
+	void startAsyncRead()
 	{
+		if (state==REQUEST)
+		{
+				//The request-block ends with a empty newline, so read until a double new-line:
+				headers.clear();
+				readBuffer.prepare(4096);
+				asio::async_read_until(
+					tcpSocket,
+					readBuffer,
+					"\r\n\r\n",
+					bind(&Cnet::readHandler, this, _1, _2));
+		}
+		else 
+		if (state==CONTENT)
+		{
+				readBuffer.prepare((int)headers["Content-Length"]);
+				asio::async_read(
+					tcpSocket,
+					readBuffer,
+					bind(&Cnet::readHandler, this, _1, _2));
 
+		}
 	}
 
-
-	/** Connection 'id' has received new data.
-	*/
+	// Received new data:
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
-		/* Parse the http request
-		*/
+		if (state==REQUEST)
+		{
+			//parse http headers
+			string inputStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
+			DEB("Got http REQUEST: \n" << inputStr);
 
-		string s(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
-		INFO("Got http shizzle: \n" << s);
-		doDisconnect();	
+// 		//determine the kind of request:
+// 		smatch what;
+// 		if (regex_match(
+// 			s,
+// 			what, 
+// 			boost::regex("^(GET|POST) (.*) HTTP/.*?$")
+// 		))
+// 		{
+// 			//TODO: make a dynamicly configurable mapper, which maps lirc-events to other events.
+// 			//(we'll do that probably after the gui-stuff is done)
+// 			Cmsg out;
+// 			out.event="lirc_Read";
+// 			out["code"]		=what[1];
+// 			out["repeat"]	=what[2];
+// 			out["key"]		=what[3];
+// 			out["remote"]	=what[4];
+// 			out.send();
+// 		}
+
+			//create a regex iterator to parse http headers:
+			boost::sregex_iterator tokenI(
+				inputStr.begin(), 
+				inputStr.end(), 
+				boost::regex("^([[:alnum:]-]*): (.*?)$")
+			);
+	
+			while (tokenI!=sregex_iterator())
+			{
+				string header=(*tokenI)[1].str();
+				string value=(*tokenI)[2].str();
+
+				headers[header]=value;	
+				tokenI++;
+			}
+
+			//does the browser has context for us?
+			if ((int)headers["Content-Length"] >0)
+			{
+				if((int)headers["Content-Length"] > MAX_CONTENT )
+				{
+	
+					ERROR("Content-Length too big: " << (int)headers["Content-Length"]);
+					doDisconnect();
+					return;
+				}
+				//ok, change states to do a content-read this time:
+				state=CONTENT;
+			}
+
+		}		
+		else 
+		if (state==CONTENT)
+		{
+			string inputStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
+			DEB("Got http CONTENT: \n" << inputStr);
+
+			if (bytesTransferred!=headers["Content-Length"])
+			{
+				ERROR("Expected " << (int)headers["Content-Length"] << " bytes, but got: " << bytesTransferred);
+				doDisconnect();
+				return;
+			}
+			state=REQUEST;			
+		}
+
+//		doDisconnect();	
 /*		
 
 		Cmsg out;
