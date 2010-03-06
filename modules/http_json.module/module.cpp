@@ -104,6 +104,8 @@ class CnetModule : public Cnet
 		{
 				//the buffer might already contain the data, so calculate how much more bytes we need:
 				int bytesToTransfer=((int)headers["Content-Length"]-readBuffer.size());
+				if (bytesToTransfer<0)
+					bytesToTransfer=0;
 
 				DEB("Starting async read for CONTENT, still need to receive " << bytesToTransfer << " of " << (int)headers["Content-Length"] << " bytes.");
 
