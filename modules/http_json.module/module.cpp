@@ -76,7 +76,8 @@ class CnetModule : public Cnet
 	}
 
 	states state;
-	int contentLength;	
+	string requestType;
+	string requestUrl;
 	Cvar headers;
 	void startAsyncRead()
 	{
@@ -125,57 +126,54 @@ class CnetModule : public Cnet
 			DEB("Got http REQUEST: \n" << dataStr);
 
 			//determine the kind of request:
-// 			smatch what;
-// 			if (regex_match(
-// 				,
-// 				what, 
-// 				boost::regex("^(GET|POST) (.*) HTTP/.*?$")
-// 			))
-// 			{
-// 				//TODO: make a dynamicly configurable mapper, which maps lirc-events to other events.
-// 				//(we'll do that probably after the gui-stuff is done)
-// 				Cmsg out;
-// 				out.event="lirc_Read";
-// 				out["code"]		=what[1];
-// 				out["repeat"]	=what[2];
-// 				out["key"]		=what[3];
-// 				out["remote"]	=what[4];
-// 				out.send();
-// 			}
-
-			//create a regex iterator to parse http headers:
-			boost::sregex_iterator tokenI(
-				dataStr.begin(), 
-				dataStr.end(), 
-				boost::regex("^([[:alnum:]-]*): (.*?)$")
-			);
-	
-			while (tokenI!=sregex_iterator())
+ 			smatch what;
+ 			if (!regex_match(
+ 				dataStr,
+ 				what, 
+ 				boost::regex("^(HEAD|GET|POST) (.*) HTTP/.*?$")
+ 			))
+ 			{
+				ERROR("Cant parse request");
+ 			}
+			else
 			{
-				string header=(*tokenI)[1].str();
-				string value=(*tokenI)[2].str();
+				requestType=what[1];
+				requestUrl=what[2];
 
-				headers[header]=value;	
-				tokenI++;
-			}
-
-			//does the browser has context for us?
-			if ((int)headers["Content-Length"] >0)
-			{
-				if((int)headers["Content-Length"] > MAX_CONTENT )
+				//create a regex iterator for http headers
+				boost::sregex_iterator tokenI(
+					dataStr.begin(), 
+					dataStr.end(), 
+					boost::regex("^([[:alnum:]-]*): (.*?)$")
+				);
+		
+				//parse http headers
+				while (tokenI!=sregex_iterator())
 				{
+					string header=(*tokenI)[1].str();
+					string value=(*tokenI)[2].str();
 	
-					ERROR("Content-Length too big: " << (int)headers["Content-Length"]);
-					doDisconnect();
-					return;
+					headers[header]=value;	
+					tokenI++;
 				}
-				//ok, change states to do a content-read this time:
-				state=CONTENT;
-			}
-else
-{
-			string s;
-			s="HTTP/1.1 200 OK\r\n \
+
+				if (requestType=="POST")
+				{
+					if ( (int)headers["Content-Length"]<=0  || (int)headers["Content-Length"] > MAX_CONTENT )
+					{
+						ERROR("Invalid Content-Length: " << (int)headers["Content-Length"]);
+					}
+					else
+					{
+						//change state to read the content of the POST:
+						state=CONTENT;
+						return;
+					}
+				}
+				else if (requestType=="GET")
+				{
+					string s;
+					s="HTTP/1.1 200 OK\r\n \
 Date: Fri, 05 Mar 2010 18:33:05 GMT\r\n \
 Server: Apache/2.2.8 (Debian) PHP/5.2.6-1+lenny4 with Suhosin-Patch mod_python/3.3.1 Python/2.5.2\r\n \
 Accept-Ranges: bytes\r\n \
@@ -184,7 +182,17 @@ Content-Length: 70\r\n \
 Keep-Alive: timeout=15, max=100\r\n \
 Connection: Keep-Alive\r\n \
 Content-Type: text/html\r\n\r\n<form method='post'><input name='jan'><submit>bla</form>TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT";
-			doWrite(s);
+					doWrite(s);
+						
+				}
+			}
+			//something went wrong, disconnect
+			doDisconnect();
+			return;
+			
+
+else
+{
 }
 		}
 		else 
