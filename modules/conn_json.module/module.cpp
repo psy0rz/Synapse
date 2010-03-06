@@ -123,7 +123,7 @@ class CnetModule : public Cnet
 		}
 
 		Cmsg out;
-		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
+		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), readBuffer.size());
 		dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 
 		if (json2Cmsg(dataStr, out))

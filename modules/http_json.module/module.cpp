@@ -70,10 +70,17 @@ class CnetModule : public Cnet
 		CONTENT,
 	};
 
-	void init(int id)
+	void init_server(int id, CacceptorPtr acceptorPtr)
 	{
 		state=REQUEST;
+		delimiter="\r\n\r\n";
+
+		//TODO: is this efficient enough? is there another way to get the data immediatly? should we change buffer sizes on the fly?
+	//	boost::asio::socket_base::receive_buffer_size option(1);
+		//acceptorPtr->set_option(option);
+
 	}
+
 
 	states state;
 	string requestType;
@@ -89,39 +96,66 @@ class CnetModule : public Cnet
 				asio::async_read_until(
 					tcpSocket,
 					readBuffer,
-					"\r\n\r\n",
+					delimiter,
 					bind(&Cnet::readHandler, this, _1, _2));
 		}
 		else 
 		if (state==CONTENT)
 		{
-				DEB("Starting async read for CONTENT, with length: " << (int)headers["Content-Length"] );
+				//the buffer might already contain the data, so calculate how much more bytes we need:
+				int bytesToTransfer=((int)headers["Content-Length"]-readBuffer.size());
+
+				DEB("Starting async read for CONTENT, still need to receive " << bytesToTransfer << " of " << (int)headers["Content-Length"] << " bytes.");
+
+
 				asio::async_read(
 					tcpSocket,
 					readBuffer,
-					asio::transfer_at_least(10),
+					asio::transfer_at_least(bytesToTransfer),
 					bind(&Cnet::readHandler, this, _1, _2));
 
 		}
-	}
-
- 	void connected(int id, const string &host, int port)
-	{
-		//TODO: is this efficient enough? is there another way to get the data immediatly? should we change buffer sizes on the fly?
-		boost::asio::socket_base::receive_buffer_size option(1);
-		tcpSocket.set_option(option);
-
 	}
 
 
 	// Received new data:
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
+		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), readBuffer.size());
+		string error;
+
+
+					string s;
+					string content;
+
+content="<form method='post'><input name='jan'><submit>bla</form>JOJO";
+
+					s="HTTP/1.1 200 OK\r\n\
+Date: Fri, 05 Mar 2010 18:33:05 GMT\r\n\
+Server: Apache/2.2.8 (Debian) PHP/5.2.6-1+lenny4 with Suhosin-Patch mod_python/3.3.1 Python/2.5.2\r\n\
+Accept-Ranges: bytes\r\n\
+Vary: Accept-Encoding\r\n\
+Content-Length: ";
+
+stringstream ss;
+
+ss << content.length();
+s=s+ss.str();
+
+s=s+"\r\n\
+Keep-Alive: timeout=15, max=100\r\n\
+Connection: Keep-Alive\r\n\
+Content-Type: text/html\r\n\r\n";
+
+s=s+content;
+
+
+		//parse http request headers
 		if (state==REQUEST)
 		{
-			//parse http headers
-			string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
+			//resize data to first delimiter:
 			dataStr.resize(dataStr.find(delimiter)+delimiter.length());
+			readBuffer.consume(dataStr.length());
 
 			DEB("Got http REQUEST: \n" << dataStr);
 
@@ -133,7 +167,7 @@ class CnetModule : public Cnet
  				boost::regex("^(HEAD|GET|POST) (.*) HTTP/.*?$")
  			))
  			{
-				ERROR("Cant parse request");
+				error="Cant parse request.";
  			}
 			else
 			{
@@ -157,78 +191,61 @@ class CnetModule : public Cnet
 					tokenI++;
 				}
 
+				//proceed based on requestType
 				if (requestType=="POST")
 				{
 					if ( (int)headers["Content-Length"]<=0  || (int)headers["Content-Length"] > MAX_CONTENT )
 					{
-						ERROR("Invalid Content-Length: " << (int)headers["Content-Length"]);
+						error="Invalid Content-Length";
 					}
 					else
 					{
-						//change state to read the content of the POST:
+						//ok, now change state to read the contents of the POST:
 						state=CONTENT;
 						return;
 					}
 				}
 				else if (requestType=="GET")
 				{
-					string s;
-					s="HTTP/1.1 200 OK\r\n \
-Date: Fri, 05 Mar 2010 18:33:05 GMT\r\n \
-Server: Apache/2.2.8 (Debian) PHP/5.2.6-1+lenny4 with Suhosin-Patch mod_python/3.3.1 Python/2.5.2\r\n \
-Accept-Ranges: bytes\r\n \
-Vary: Accept-Encoding\r\n \
-Content-Length: 70\r\n \
-Keep-Alive: timeout=15, max=100\r\n \
-Connection: Keep-Alive\r\n \
-Content-Type: text/html\r\n\r\n<form method='post'><input name='jan'><submit>bla</form>TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT";
+					//return requested page or events:
+					DEB("SENDING: " << s);
 					doWrite(s);
-						
+					return ;	
 				}
 			}
-			//something went wrong, disconnect
-			doDisconnect();
-			return;
-			
-
-else
-{
-}
 		}
 		else 
+		//we've received contents of a POST request.
 		if (state==CONTENT)
 		{
-			string inputStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
-			DEB("Got http CONTENT: \n" << inputStr);
+			//the next thing we should receive is another request, so change back state:
+			state=REQUEST;			
 
-			if (bytesTransferred!=headers["Content-Length"])
+			if (readBuffer.size() < headers["Content-Length"])
 			{
-				ERROR("Expected " << (int)headers["Content-Length"] << " bytes, but got: " << bytesTransferred);
-				doDisconnect();
+				error="Didn't receive enough content-bytes!";
+				DEB("ERROR: Expected " << (int)headers["Content-Length"] << " bytes, but only got: " << bytesTransferred);
+			}
+			else
+			{
+				
+				dataStr.resize(headers["Content-Length"]);
+				readBuffer.consume(headers["Content-Length"]);
+				DEB("Got http CONTENT with length=" << dataStr.size() << ": \n" << dataStr);
+
+
+					DEB("SENDING: " << s);
+					doWrite(s);
+
 				return;
 			}
-			state=REQUEST;			
 		}
+		ERROR("Error while processing http data: " << error);
+		error="Request aborted: "+error+"\n";
+		doWrite(error);
+		doDisconnect();
+		return;
 
-//		doDisconnect();	
-/*		
-
-		Cmsg out;
-	
-		if (bytesTransferred > MAX_MESSAGE)
-		{
-			WARNING("Json message on id " << id << " is " << bytesTransferred << " bytes. (max=" << MAX_MESSAGE << ")");
-			return ;
-		}
-
-		if (json2Cmsg(readBuffer, out))
-		{
-			out.send();
-		}
-		else
-		{
-			WARNING("Error while parsing incomming json message on id " << id);
-		}*/
 	}
 
 	/** Connection 'id' is disconnected, or a connect-attempt has failed.

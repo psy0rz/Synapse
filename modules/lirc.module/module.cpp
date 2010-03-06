@@ -36,7 +36,7 @@ class CnetModule : public Cnet
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
 		//convert streambuf to string
-		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), bytesTransferred);
+		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), readBuffer.size());
 		dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 
 		

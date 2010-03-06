@@ -36,8 +36,8 @@ SYNAPSE_REGISTER(module_Init)
 	out["path"]="modules/http_json.module/libhttp_json.so";
 	out.send();
 
- 	out["path"]="modules/ami.module/libami.so";
- 	out.send();
+// 	out["path"]="modules/ami.module/libami.so";
+ //	out.send();
 
 
 }

@@ -14,20 +14,20 @@ void Cnet::doAccept(int id, CacceptorPtr acceptorPtr)
 {
 	this->id=id;
 
+	init_server(id, acceptorPtr);
 	init(id);
 
 	reconnectTime=0;
 	DEB("Starting acceptor for port " << acceptorPtr->local_endpoint().port()<< " into id " << id);
 
-	accepting(id, acceptorPtr->local_endpoint().port());
-
 	//start the accept
-
 	asio::io_service::work work(ioService);
 	acceptorPtr->async_accept(
 		tcpSocket,
 		bind(&Cnet::acceptHandler,this,asio::io_service::work(ioService),_1)
 	);	
+
+	accepting(id, acceptorPtr->local_endpoint().port());
 		
 } 
 
@@ -39,20 +39,18 @@ void Cnet::doConnect(int id, string host, int port, int reconnectTime)
 	this->host=host;
 	this->port=port;
 	this->reconnectTime=reconnectTime;
-	init(id);
 	doConnect();
 }
 
 void Cnet::doConnect()
 {
+	init(id);
 
 
 	//in case of a reconnect we need some extra cleaning
 	tcpResolver.cancel();
 	tcpSocket.close();
 
-	//ioService.post(bind(&CnetMan::connecting,&netMan,id,host,port));
-	connecting(id, host, port);
 
 	//start the resolver	
 	stringstream portStr;
@@ -66,6 +64,8 @@ void Cnet::doConnect()
 	//start the timerout timer
 	connectTimer.expires_from_now(boost::posix_time::seconds(CONNECT_TIMEOUT));
 	connectTimer.async_wait(boost::bind(&Cnet::connectTimerHandler, this,_1));
+
+	connecting(id, host, port);
     
 }
 
@@ -278,6 +278,12 @@ void Cnet::init(int id)
 	//dummy
 	DEB(id << " initalizing");
 }
+
+void Cnet::init_server(int id, CacceptorPtr acceptorPtr)
+{
+	DEB(id << " initalizing server");
+}
+
 
 
 void Cnet::accepting(int id, int port)

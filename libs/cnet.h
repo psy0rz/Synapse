@@ -118,16 +118,17 @@ class Cnet
 	virtual void startAsyncRead();
 
 	//end-user "hooks" for server
+	virtual void init_server(int id, CacceptorPtr acceptorPtr);
 	virtual void accepting(int id, int port);
+	virtual void connected_server(int id, const string &host, int port);
  
 	//end-user "hooks" for client
 	virtual void connecting(int id, const string &host, int port);
+	virtual void connected_client(int id, const string &host, int port);
 
 	//end-user "hooks" for client and server 
 	virtual void init(int id);
 	virtual void connected(int id, const string &host, int port);
-	virtual void connected_server(int id, const string &host, int port);
-	virtual void connected_client(int id, const string &host, int port);
 	virtual void disconnected(int id, const boost::system::error_code& error);
 	virtual void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred);
 
