@@ -3,6 +3,7 @@
 #include "cnet.h"
 #include "clog.h"
 
+
 Cnet::Cnet()
 		:tcpResolver(ioService), connectTimer(ioService), readBuffer(65535), tcpSocket(ioService) 
 {
@@ -205,18 +206,6 @@ void Cnet::disconnectHandler()
 	tcpSocket.close();
 }
 
-void Cnet::writeHandler(
-	shared_ptr<string> stringPtr,
-	const boost::system::error_code& ec, 
-	std::size_t bytesTransferred)
-{
-	if (ec)
-	{
-		reset(ec);
-		return;
-	}
-
-}
 
 
 void Cnet::doDisconnect()
@@ -231,8 +220,44 @@ void Cnet::doWrite(string & data)
 	asio::async_write(
 		tcpSocket, 
 		asio::buffer(*stringPtr), 
-		bind(&Cnet::writeHandler, this, stringPtr, _1, _2)
+		bind(&Cnet::writeStringHandler, this, stringPtr, _1, _2)
 	);
+
+}
+
+void Cnet::doWrite(shared_ptr<asio::streambuf> bufferPtr)
+{
+	asio::async_write(
+		tcpSocket, 
+		*bufferPtr, 
+		bind(&Cnet::writeStreambufHandler, this, bufferPtr, _1, _2)
+	);
+
+}
+
+void Cnet::writeStringHandler(
+	shared_ptr<string> stringPtr,
+	const boost::system::error_code& ec, 
+	std::size_t bytesTransferred)
+{
+	if (ec)
+	{
+		reset(ec);
+		return;
+	}
+
+}
+
+void Cnet::writeStreambufHandler(
+	shared_ptr<asio::streambuf> bufferPtr,
+	const boost::system::error_code& ec, 
+	std::size_t bytesTransferred)
+{
+	if (ec)
+	{
+		reset(ec);
+		return;
+	}
 
 }
 

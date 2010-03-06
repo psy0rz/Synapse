@@ -109,7 +109,6 @@ class CnetModule : public Cnet
 
 				DEB("Starting async read for CONTENT, still need to receive " << bytesToTransfer << " of " << (int)headers["Content-Length"] << " bytes.");
 
-
 				asio::async_read(
 					tcpSocket,
 					readBuffer,
@@ -119,38 +118,40 @@ class CnetModule : public Cnet
 		}
 	}
 
+	void sendHeaders(int status, Cvar & extraHeaders)
+	{
+		stringstream statusStr;
+		statusStr << status;
+
+		string responseStr;
+
+		responseStr+="HTTP/1.1 ";
+		responseStr+statusStr.str();
+		responseStr+="\r\n";
+		responseStr+="Server:  synapse_http_json\r\n";
+
+		for (Cvar::iterator varI=extraHeaders.begin(); varI!=extraHeaders.end(); varI++)
+		{
+			responseStr+=(string)(varI->first)+": "+(string)(varI->second)+"\r\n";
+		}
+		responseStr+="\r\n";
+
+		DEB("Sending HEADERS: \n" << responseStr);
+		doWrite(responseStr);
+	}
+
+	void respondFile(string path)
+	{
+		Cvar extraHeaders;
+	//	extraHeaders["Content-Length"]
+		
+	}
 
 	// Received new data:
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
 		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), readBuffer.size());
 		string error;
-
-
-					string s;
-					string content;
-
-content="<form method='post'><input name='jan'><submit>bla</form>JOJO";
-
-					s="HTTP/1.1 200 OK\r\n\
-Date: Fri, 05 Mar 2010 18:33:05 GMT\r\n\
-Server: Apache/2.2.8 (Debian) PHP/5.2.6-1+lenny4 with Suhosin-Patch mod_python/3.3.1 Python/2.5.2\r\n\
-Accept-Ranges: bytes\r\n\
-Vary: Accept-Encoding\r\n\
-Content-Length: ";
-
-stringstream ss;
-
-ss << content.length();
-s=s+ss.str();
-
-s=s+"\r\n\
-Keep-Alive: timeout=15, max=100\r\n\
-Connection: Keep-Alive\r\n\
-Content-Type: text/html\r\n\r\n";
-
-s=s+content;
-
 
 		//parse http request headers
 		if (state==REQUEST)

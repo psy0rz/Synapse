@@ -49,6 +49,7 @@ class Cnet
 	void doAccept(int id, CacceptorPtr acceptorPtr);
 	void doConnect(int id, string host, int port, int reconnectTime=0);
 	void doWrite(string & data);	
+	void doWrite(shared_ptr<asio::streambuf> bufferPtr);	
 	void run();
 
 
@@ -100,8 +101,13 @@ class Cnet
 		);
 
 
-	void writeHandler(
+	void writeStringHandler(
 		shared_ptr<string> stringPtr,
+		const boost::system::error_code& ec, 
+		std::size_t bytesTransferred);
+
+	void writeStreambufHandler(
+		shared_ptr<asio::streambuf> bufferPtr,
 		const boost::system::error_code& ec, 
 		std::size_t bytesTransferred);
 
