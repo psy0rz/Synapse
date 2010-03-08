@@ -306,7 +306,6 @@ class CnetModule : public Cnet
 				//do we need a new http session cookie?
 				if (!cookies.isSet("httpSession"))
 				{
-					//FIXME: use drand48_r()
 					cookies["httpSession"]=httpSessionMan.generateCookie();					
 				}
 				
@@ -327,8 +326,27 @@ class CnetModule : public Cnet
 				}
 				else if (requestType=="GET")
 				{
-					//return requested page or events:
-					respondFile(requestUrl);
+					//http://en.wikipedia.org/wiki/Comet_%28programming%29
+					//Implements ajax long polling:
+					if (requestUrl=="/synapse/longpoll")
+					{
+						//send headers now, and the content-length + json data later.
+						Cvar extraHeaders;
+						sendHeaders(200, extraHeaders);
+						//inform the httpSessionMan we're ready for one longpoll reply:
+						httpSessionMan.readyLongpoll(cookies["httpSession"], id);
+					}
+					else
+					//Implements multipart/x-mixed-replace (only supported in firefox, but better performance)
+					if (requestUrl=="/synapse/multipart")
+					{
+						//send headers directly, with content-type multipart/x-mixed-replace
+					}
+					else
+					{
+						//return requested page or events:
+						respondFile(requestUrl);
+					}
 					return ;	
 				}
 			}
@@ -376,23 +394,6 @@ class CnetModule : public Cnet
 CnetMan<CnetModule> net;
 
 
-SYNAPSE_REGISTER(module_SessionStart)
-{
-
-	//first new session, this is the network threads session
-	if (!networkSessionId)
-	{
-		networkSessionId=msg.dst;
-
-		//tell the rest of the world we are ready for duty
-		Cmsg out;
-		out.event="core_Ready";
-		out.src=networkSessionId;
-		out.send();
-		return;
-	}
-
-}
 
 /** Creates a new server and listens specified port
  */
@@ -445,6 +446,30 @@ SYNAPSE_REGISTER(module_Shutdown)
 }
 
 
+SYNAPSE_REGISTER(module_SessionStart)
+{
+
+	//first new session, this is the network threads session
+	if (!networkSessionId)
+	{
+		networkSessionId=msg.dst;
+
+		//tell the rest of the world we are ready for duty
+		Cmsg out;
+		out.event="core_Ready";
+		out.src=networkSessionId;
+		out.send();
+		return;
+	}
+
+	//other sessions are real sessions for clients, let httpSessionMan handle it
+	httpSessionMan.sessionStart(msg);
+}
+
+SYNAPSE_REGISTER(module_NewSession_Error)
+{
+	httpSessionMan.newSessionError(msg);
+}
 
 /** This handler is called for all events that:
  * -dont have a specific handler, 
@@ -452,11 +477,7 @@ SYNAPSE_REGISTER(module_Shutdown)
  */
 SYNAPSE_HANDLER(all)
 {
-	string jsonStr;
-	Cmsg2json(msg, jsonStr);
-	
-	//send to corresponding network connection
-	INFO("json: " << jsonStr);
+	httpSessionMan.sendMessage(msg);
 }
 
 
