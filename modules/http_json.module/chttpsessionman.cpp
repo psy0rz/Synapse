@@ -19,13 +19,32 @@ ChttpSessionMan::ChttpSessionMan()
 // {
 // }
 
-string ChttpSessionMan::generateCookie()
+string ChttpSessionMan::newHttpSession()
 {
 	//FIXME: better random cookies?
 	lock_guard<mutex> lock(threadMutex);
-	stringstream s;
+	stringstream httpSessionId;
 	double rndNumber;
 	drand48_r(&randomBuffer, &rndNumber);
-	s << rndNumber;
-	return (s.str());
+	httpSessionId << rndNumber;
+
+	//add to session map
+	//TODO: cleanup old or unused sessions
+	httpSessionMap[httpSessionId.str(s)]
+
+	return (httpSessionId.str());
 }
+
+void ChttpSessionMan::readyLongpoll(string httpSessionId, int netId)
+{
+	lock_guard<mutex> lock(threadMutex);
+	ChttpSessionMap::iterator httpSessionI=httpSessionMap.find(httpSessionId);
+
+	//session already known?
+	if (httpSessionI!=httpSessionMap.end())
+	{
+
+	}
+
+}
+

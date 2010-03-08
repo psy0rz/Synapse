@@ -306,7 +306,7 @@ class CnetModule : public Cnet
 				//do we need a new http session cookie?
 				if (!cookies.isSet("httpSession"))
 				{
-					cookies["httpSession"]=httpSessionMan.generateCookie();					
+					cookies["httpSession"]=httpSessionMan.newHttpSession();					
 				}
 				
 

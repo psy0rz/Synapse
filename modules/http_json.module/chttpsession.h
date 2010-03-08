@@ -3,16 +3,24 @@
 #define CHTTPSESSION_H
 
 #include <string>
+#include <list>
+#include <boost/shared_ptr.hpp>
+
+
 
 using namespace std;
+using namespace boost;
+
 
 class ChttpSession
 {
-	string cookie;
-	//only one network-connection can receive synapse events. 
-	int recvNetId;
+	
+	
+
 	ChttpSession();
 
 };
+
+typedef shared_ptr<ChttpSession> ChttpSessionPtr;
 
 #endif
