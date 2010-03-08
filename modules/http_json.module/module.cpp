@@ -2,6 +2,14 @@
 #include "synapse.h"
 #include <boost/regex.hpp>
 
+#include <fstream>
+#include <ostream>
+
+
+
+#include <sys/stat.h>
+
+
 #include "synapse_json.h"
 #define MAX_CONTENT 20000
 
@@ -75,9 +83,6 @@ class CnetModule : public Cnet
 		state=REQUEST;
 		delimiter="\r\n\r\n";
 
-		//TODO: is this efficient enough? is there another way to get the data immediatly? should we change buffer sizes on the fly?
-	//	boost::asio::socket_base::receive_buffer_size option(1);
-		//acceptorPtr->set_option(option);
 
 	}
 
@@ -124,11 +129,10 @@ class CnetModule : public Cnet
 		statusStr << status;
 
 		string responseStr;
-
 		responseStr+="HTTP/1.1 ";
-		responseStr+statusStr.str();
+		responseStr+=statusStr.str();
 		responseStr+="\r\n";
-		responseStr+="Server:  synapse_http_json\r\n";
+		responseStr+="Server: synapse_http_json\r\n";
 
 		for (Cvar::iterator varI=extraHeaders.begin(); varI!=extraHeaders.end(); varI++)
 		{
@@ -137,14 +141,85 @@ class CnetModule : public Cnet
 		responseStr+="\r\n";
 
 		DEB("Sending HEADERS: \n" << responseStr);
-		doWrite(responseStr);
+		write(tcpSocket,asio::buffer(responseStr));
 	}
 
+	void respondString(int status, string data)
+	{
+		Cvar extraHeaders;
+		extraHeaders["Content-Length"]=data.length();
+
+		sendHeaders(status, extraHeaders);
+		write(tcpSocket, asio::buffer(data));
+	}
+
+	void respondError(int status, string error)
+	{
+		WARNING("Responding with error: " << error);
+		respondString(status, "<h1>Error</h1>"+error);
+	}
+
+	/** Respond by sending a file relative to the wwwdir/
+	*/
 	void respondFile(string path)
 	{
 		Cvar extraHeaders;
-	//	extraHeaders["Content-Length"]
+
+		//FIXME: do a better way of checking/securing the path. Inode verification?
+		if (path.find("..")!=string::npos)
+		{
+			respondError(403, "Path contains illegal characters");
+			return;
+		}
+		string localPath;
+		localPath="wwwdir/"+path;
+	
+		struct stat statResults;
+		int statError=stat(localPath.c_str(), &statResults);
+		if (statError)
+		{
+			respondError(404, "Error while statting or file not found: " + path);
+			return;
+		}
+
+		if (! (S_ISREG(statResults.st_mode)) )
+		{
+			respondError(404, "Path " + path + " is not a regular file");
+			return;
+		}	
+
+		ifstream inputFile(localPath.c_str(), std::ios::in | std::ios::binary);
+		if (!inputFile.good() )
+		{
+			respondError(404, "Error while opening " + path );
+			return;
+		}
+
+		//determine filesize
+		inputFile.seekg (0, ios::end);
+		int fileSize=inputFile.tellg();
+		inputFile.seekg (0, ios::beg);
+
 		
+		extraHeaders["Content-Length"]=fileSize;
+		sendHeaders(200, extraHeaders);
+
+		DEB("Sending CONTENT of " << path);
+		char buf[1024];
+		//TODO: is there a better way to do this?
+		int sendSize=0;
+		while (inputFile.good())
+		{
+			inputFile.read(buf	,sizeof(buf));
+			write(tcpSocket, asio::buffer(buf, inputFile.gcount()));
+			sendSize+=inputFile.gcount();
+		}
+
+		if (sendSize!=fileSize)
+		{
+			ERROR("Error during file transfer, disconnecting");
+			doDisconnect();
+		}
 	}
 
 	// Received new data:
@@ -211,8 +286,7 @@ class CnetModule : public Cnet
 				else if (requestType=="GET")
 				{
 					//return requested page or events:
-					DEB("SENDING: " << s);
-					doWrite(s);
+					respondFile(requestUrl);
 					return ;	
 				}
 			}
@@ -236,16 +310,14 @@ class CnetModule : public Cnet
 				readBuffer.consume(headers["Content-Length"]);
 				DEB("Got http CONTENT with length=" << dataStr.size() << ": \n" << dataStr);
 
-
-					DEB("SENDING: " << s);
-					doWrite(s);
+				respondFile(requestUrl);
 
 				return;
 			}
 		}
 		ERROR("Error while processing http data: " << error);
 		error="Request aborted: "+error+"\n";
-		doWrite(error);
+		write(tcpSocket,asio::buffer(error));
 		doDisconnect();
 		return;
 
