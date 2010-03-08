@@ -5,12 +5,14 @@
 #include <fstream>
 #include <ostream>
 
-
-
 #include <sys/stat.h>
 
+#include <cstdlib> 
 
 #include "synapse_json.h"
+
+#include "chttpsessionman.h"
+
 #define MAX_CONTENT 20000
 
 
@@ -64,6 +66,8 @@ SYNAPSE_REGISTER(module_Init)
 }
 
 
+ChttpSessionMan httpSessionMan;
+
 
 // We extent the Cnet class with our own network handlers.
 // Every connection will get its own unique Cnet object.
@@ -91,7 +95,7 @@ class CnetModule : public Cnet
 	string requestType;
 	string requestUrl;
 	Cvar headers;
-	map <string, string> cookies;
+	Cvar cookies;
 
 	void startAsyncRead()
 	{
@@ -134,6 +138,12 @@ class CnetModule : public Cnet
 		responseStr+="HTTP/1.1 ";
 		responseStr+=statusStr.str()+="\r\n";
 		responseStr+="Server: synapse_http_json\r\n";
+	
+		//(re)send cookies
+		for (Cvar::iterator varI=cookies.begin(); varI!=cookies.end(); varI++)
+		{
+			responseStr+="Set-Cookie: "+(string)(varI->first)+"="+(string)(varI->second)+"\r\n";
+		}
 
 		for (Cvar::iterator varI=extraHeaders.begin(); varI!=extraHeaders.end(); varI++)
 		{
@@ -278,7 +288,7 @@ class CnetModule : public Cnet
 					boost::sregex_iterator cookieI(
 						headers["Cookie"].str().begin(), 
 						headers["Cookie"].str().end(), 
-						boost::regex("([^=; ]*)=([^=; ])")
+						boost::regex("([^=; ]*)=([^=; ]*)")
 					);
 			
 					//parse cookies
@@ -293,7 +303,12 @@ class CnetModule : public Cnet
 					}
 				}
 
-				//do we need a new cookie/session?
+				//do we need a new http session cookie?
+				if (!cookies.isSet("httpSession"))
+				{
+					//FIXME: use drand48_r()
+					cookies["httpSession"]=httpSessionMan.generateCookie();					
+				}
 				
 
 				//proceed based on requestType

@@ -287,23 +287,28 @@ SYNAPSE_REGISTER(core_ChangeEvent)
 					CgroupPtr group;
 
 					if (msg.isSet("modifyGroup"))
+					{
 						if (!(group=messageMan->userMan.getGroup(msg["modifyGroup"])))
 							error+="Cant find modifygroup " +(string)msg["modifyGroup"]+ " ";
 						else
 							event->setModifyGroup(group);
+					}
 
 					if (msg.isSet("recvGroup"))
+					{
 						if (!(group=messageMan->userMan.getGroup(msg["recvGroup"])))
 							error="Cant find recvgroup " + (string)msg["recvGroup"]+ " ";
 						else
 							event->setRecvGroup(group);
+					}
 
 					if (msg.isSet("sendGroup"))
+					{
 						if (!(group=messageMan->userMan.getGroup(msg["sendGroup"])))
 							error+="Cant find sendgroup " + (string)msg["sendGroup"]+ " ";
 						else
 							event->setSendGroup(group);
-
+					}
 				}
 			}
 		}
@@ -389,7 +394,16 @@ SYNAPSE_REGISTER(core_NewSession)
 	}
 
 	if (error!="")
-		msg.returnError(error);
+	{
+		//return error to the requester
+		Cmsg errormsg;
+		errormsg=msg;
+		errormsg.dst=msg.src;
+		errormsg.src=0;
+		errormsg.event="module_NewSession_Error";
+		errormsg["error"]=error;
+		errormsg.send();
+	}
 	else
 	{
 		startmsg.send();

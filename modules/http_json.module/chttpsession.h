@@ -1,3 +1,11 @@
+
+#ifndef CHTTPSESSION_H
+#define CHTTPSESSION_H
+
+#include <string>
+
+using namespace std;
+
 class ChttpSession
 {
 	string cookie;
@@ -7,3 +15,4 @@ class ChttpSession
 
 };
 
+#endif
