@@ -66,7 +66,7 @@ SYNAPSE_REGISTER(module_Init)
 
 
 // We extent the Cnet class with our own network handlers.
-// Every connect will get its own unique Cnet object.
+// Every connection will get its own unique Cnet object.
 // As soon as something with a network connection 'happens', these handlers will be called.
 class CnetModule : public Cnet
 {
@@ -91,6 +91,8 @@ class CnetModule : public Cnet
 	string requestType;
 	string requestUrl;
 	Cvar headers;
+	map <string, string> cookies;
+
 	void startAsyncRead()
 	{
 		if (state==REQUEST)
@@ -130,8 +132,7 @@ class CnetModule : public Cnet
 
 		string responseStr;
 		responseStr+="HTTP/1.1 ";
-		responseStr+=statusStr.str();
-		responseStr+="\r\n";
+		responseStr+=statusStr.str()+="\r\n";
 		responseStr+="Server: synapse_http_json\r\n";
 
 		for (Cvar::iterator varI=extraHeaders.begin(); varI!=extraHeaders.end(); varI++)
@@ -253,21 +254,47 @@ class CnetModule : public Cnet
 				requestUrl=what[2];
 
 				//create a regex iterator for http headers
-				boost::sregex_iterator tokenI(
+				boost::sregex_iterator headerI(
 					dataStr.begin(), 
 					dataStr.end(), 
 					boost::regex("^([[:alnum:]-]*): (.*?)$")
 				);
 		
 				//parse http headers
-				while (tokenI!=sregex_iterator())
+				while (headerI!=sregex_iterator())
 				{
-					string header=(*tokenI)[1].str();
-					string value=(*tokenI)[2].str();
+					string header=(*headerI)[1].str();
+					string value=(*headerI)[2].str();
 	
 					headers[header]=value;	
-					tokenI++;
+					headerI++;
 				}
+
+				
+				//browser sent us cookies?
+				if (headers.isSet("Cookie"))
+				{
+					//create a regex iterator for cookies
+					boost::sregex_iterator cookieI(
+						headers["Cookie"].str().begin(), 
+						headers["Cookie"].str().end(), 
+						boost::regex("([^=; ]*)=([^=; ])")
+					);
+			
+					//parse cookies
+					while (cookieI!=sregex_iterator())
+					{
+						string cookie=(*cookieI)[1].str();
+						string value=(*cookieI)[2].str();
+		
+						cookies[cookie]=value;	
+						DEB("COOKIE: " << cookie << " = " << value);
+						cookieI++;
+					}
+				}
+
+				//do we need a new cookie/session?
+				
 
 				//proceed based on requestType
 				if (requestType=="POST")
