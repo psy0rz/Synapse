@@ -348,8 +348,9 @@ SYNAPSE_REGISTER(core_Login)
 
 /** core_NewSession
  * Starts new session with the src user as owner
- * Sends: module_SessionStart to new session 
- * Sends: module_SessionStarted to broadcast
+ * Sends: 		module_SessionStart to new session 
+ * Sends: 		module_SessionStarted to broadcast
+ * On failure:	module_NewSession_Error
  */
 SYNAPSE_REGISTER(core_NewSession)
 {

@@ -14,9 +14,10 @@ using namespace boost;
 
 class ChttpSession
 {
-	
-	
+	public:
 
+	//currently a httpSession can only be linked to ONE synapse session. If we need multi session support we can implement it later.
+	int sessionId;
 	ChttpSession();
 
 };

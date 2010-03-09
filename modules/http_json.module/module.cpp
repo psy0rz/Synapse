@@ -13,6 +13,9 @@
 
 #include "chttpsessionman.h"
 
+#include <boost/lexical_cast.hpp>
+
+
 #define MAX_CONTENT 20000
 
 
@@ -76,30 +79,32 @@ class CnetModule : public Cnet
 {
 	//http basically has two states: The request-block and the content-body.
 	//The states alter eachother continuesly during a connection.
-	//We require different read, depending on the state we're in:
-	enum states{
+	//We require different read, depending on the state we're in.
+	//We have addition states for event polling
+	enum Tstates {
 		REQUEST,
 		CONTENT,
+		WAIT_LONGPOLL,
 	};
+
+	ThttpCookie httpCookie;
+	Tstates state;
+	string requestType;
+	string requestUrl;
+	Cvar headers;
+//	Cvar cookies;
+
 
 	void init_server(int id, CacceptorPtr acceptorPtr)
 	{
 		state=REQUEST;
 		delimiter="\r\n\r\n";
-
-
+		httpCookie=0;
 	}
-
-
-	states state;
-	string requestType;
-	string requestUrl;
-	Cvar headers;
-	Cvar cookies;
 
 	void startAsyncRead()
 	{
-		if (state==REQUEST)
+		if (state==REQUEST || state==WAIT_LONGPOLL)
 		{
 				DEB("Starting async read for REQUEST headers");
 				//The request-block ends with a empty newline, so read until a double new-line:
@@ -129,7 +134,7 @@ class CnetModule : public Cnet
 		}
 	}
 
-	void sendHeaders(int status, Cvar & extraHeaders)
+	void sendHeaders(int status, Cvar & extraHeaders, bool partial=false)
 	{
 		stringstream statusStr;
 		statusStr << status;
@@ -139,19 +144,32 @@ class CnetModule : public Cnet
 		responseStr+=statusStr.str()+="\r\n";
 		responseStr+="Server: synapse_http_json\r\n";
 	
-		//(re)send cookies
-		for (Cvar::iterator varI=cookies.begin(); varI!=cookies.end(); varI++)
-		{
-			responseStr+="Set-Cookie: "+(string)(varI->first)+"="+(string)(varI->second)+"\r\n";
-		}
+		//(re)send session cookie
+		stringstream cookieStr;
+		cookieStr << httpCookie;
+		responseStr+="Set-Cookie: httpSession="+cookieStr.str()+"\r\n";
+
+// 		for (Cvar::iterator varI=cookies.begin(); varI!=cookies.end(); varI++)
+// 		{
+// 			responseStr+="Set-Cookie: "+(string)(varI->first)+"="+(string)(varI->second)+"\r\n";
+// 		}
 
 		for (Cvar::iterator varI=extraHeaders.begin(); varI!=extraHeaders.end(); varI++)
 		{
 			responseStr+=(string)(varI->first)+": "+(string)(varI->second)+"\r\n";
 		}
-		responseStr+="\r\n";
+	
+	
+		if (partial)
+		{
+			DEB("Sending partial HEADERS: \n" << responseStr);
+		}
+		else
+		{
+			responseStr+="\r\n";
+			DEB("Sending HEADERS: \n" << responseStr);
+		}
 
-		DEB("Sending HEADERS: \n" << responseStr);
 		write(tcpSocket,asio::buffer(responseStr));
 	}
 
@@ -281,8 +299,8 @@ class CnetModule : public Cnet
 				}
 
 				
-				//browser sent us cookies?
-				if (headers.isSet("Cookie"))
+				//we dont have a httpCookie for this connection yet, and browser sent us cookies?
+				if (!httpCookie && headers.isSet("Cookie"))
 				{
 					//create a regex iterator for cookies
 					boost::sregex_iterator cookieI(
@@ -291,22 +309,31 @@ class CnetModule : public Cnet
 						boost::regex("([^=; ]*)=([^=; ]*)")
 					);
 			
-					//parse cookies
+					//parse cookies, to find httpSession cookie (if set)
 					while (cookieI!=sregex_iterator())
 					{
-						string cookie=(*cookieI)[1].str();
-						string value=(*cookieI)[2].str();
-		
-						cookies[cookie]=value;	
-						DEB("COOKIE: " << cookie << " = " << value);
+						if ((*cookieI)[1].str()=="httpSession")
+						{
+							try
+							{
+								httpCookie=lexical_cast<ThttpCookie>(((*cookieI)[2]).str());
+							}
+							catch(...)
+							{
+								WARNING("Invalid httpSession cookie: " << ((*cookieI)[2]).str()) ;
+								httpCookie=0;
+							}
+
+							break;
+						}
 						cookieI++;
 					}
 				}
 
 				//do we need a new http session cookie?
-				if (!cookies.isSet("httpSession"))
+				if (!httpCookie)
 				{
-					cookies["httpSession"]=httpSessionMan.newHttpSession();					
+					httpCookie=httpSessionMan.newHttpSession();
 				}
 				
 
@@ -330,17 +357,18 @@ class CnetModule : public Cnet
 					//Implements ajax long polling:
 					if (requestUrl=="/synapse/longpoll")
 					{
-						//send headers now, and the content-length + json data later.
+						//send partial headers now, and the content-length + json data later.
 						Cvar extraHeaders;
-						sendHeaders(200, extraHeaders);
-						//inform the httpSessionMan we're ready for one longpoll reply:
-						httpSessionMan.readyLongpoll(cookies["httpSession"], id);
+						sendHeaders(200, extraHeaders,true);
+						state=WAIT_LONGPOLL;
+						DEB("Connection " << id << " is doing a long poll.");
 					}
 					else
 					//Implements multipart/x-mixed-replace (only supported in firefox, but better performance)
 					if (requestUrl=="/synapse/multipart")
 					{
 						//send headers directly, with content-type multipart/x-mixed-replace
+						//TODO: implement me
 					}
 					else
 					{
@@ -374,6 +402,10 @@ class CnetModule : public Cnet
 
 				return;
 			}
+		}
+		else
+		{
+			error="Not expecting data in this state";
 		}
 		ERROR("Error while processing http data: " << error);
 		error="Request aborted: "+error+"\n";

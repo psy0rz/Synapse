@@ -1,5 +1,5 @@
 /** Http session management
-
+OBSOLETE INFO
 	-a http-client connects and does some kind of request
 	-if client has no httpSession cookie yet, it will get one
 	-If type of request:
@@ -32,11 +32,14 @@
 
 using namespace boost;
 
+
+typedef long int ThttpCookie;
+
+
 class ChttpSessionMan
 {
-	typedef map<string, ChttpSessionPtr> ChttpSessionMap;
+	typedef map<ThttpCookie, ChttpSession> ChttpSessionMap;
 	ChttpSessionMap httpSessionMap;
-	
 
 	mutex threadMutex;
  	struct drand48_data randomBuffer;
@@ -50,9 +53,9 @@ public:
 	void sendMessage(Cmsg & msg);
 
 	//Called from http-client-side:
-    string newHttpSession();
-	void readyLongpoll(string httpSessionId, int netId);
-	void disconnected(int netId);
+    ThttpCookie newHttpSession();
+// 	void readyLongpoll(ThttpCookie httpCookie, int netId);
+// 	void disconnected(int netId);
 
 
 };
