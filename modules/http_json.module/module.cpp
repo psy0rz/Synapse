@@ -15,6 +15,7 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "../../session.h"
 
 #define MAX_CONTENT 20000
 
@@ -75,6 +76,7 @@ ChttpSessionMan httpSessionMan;
 // We extent the Cnet class with our own network handlers.
 // Every connection will get its own unique Cnet object.
 // As soon as something with a network connection 'happens', these handlers will be called.
+// We do syncronised writing instead of using the asyncronious doWrite()
 class CnetModule : public Cnet
 {
 	//http basically has two states: The request-block and the content-body.
@@ -88,6 +90,7 @@ class CnetModule : public Cnet
 	};
 
 	ThttpCookie httpCookie;
+	int sessionId;
 	Tstates state;
 	string requestType;
 	string requestUrl;
@@ -100,6 +103,7 @@ class CnetModule : public Cnet
 		state=REQUEST;
 		delimiter="\r\n\r\n";
 		httpCookie=0;
+		sessionId=SESSION_DISABLED;
 	}
 
 	void startAsyncRead()
@@ -415,12 +419,28 @@ class CnetModule : public Cnet
 
 	}
 
+
 	/** Connection 'id' is disconnected, or a connect-attempt has failed.
 	* Sends: conn_Disconnected
 	*/
  	void disconnected(int id, const boost::system::error_code& ec)
 	{
 	}
+
+	public:
+	/** We receive this from synapse, with a message that COULD be for the connected client.
+	* We might to write, queue or drop it.
+    * We receive this call via the IOservice thread, so it runs in the same thread.
+	*/
+	void writeMessage(Cmsg & msg, string & jsonStr)
+	{
+		DEB("net " << id << " got " << jsonStr);
+		if (state==WAIT_LONGPOLL)
+		{
+
+		}
+	}
+
 };
 
 CnetMan<CnetModule> net;
@@ -509,7 +529,20 @@ SYNAPSE_REGISTER(module_NewSession_Error)
  */
 SYNAPSE_HANDLER(all)
 {
-	httpSessionMan.sendMessage(msg);
+	//encode to json, do it one time for performance reasons
+	string jsonStr;
+	Cmsg2json(msg, jsonStr);
+
+	{
+		//send the message to all open network connections.
+		//CnetModule::sendMessage will handle the rest..
+		lock_guard<mutex> lock(net.threadMutex);
+		for (CnetMan<CnetModule>::CnetMap::iterator netI=net.nets.begin(); netI!=net.nets.end(); netI++)
+		{
+		//	netI->second->writeMessage(msg, jsonStr);
+			netI->second->ioService.post(bind(&CnetModule::writeMessage,netI->second,msg,jsonStr));
+		}
+	}	
 }
 
 

@@ -57,10 +57,10 @@ class Cnet
 	void readHandler(
 		const boost::system::error_code& ec,
 		std::size_t bytesTransferred);
+
+	asio::io_service ioService;
 	
 	private:
-	int id;
-	asio::io_service ioService;
 	int reconnectTime;
 
 	tcp::resolver tcpResolver;
@@ -78,6 +78,10 @@ class Cnet
 	//this needs to be protected, in case someone overrides startAsyncRead():
 	asio::streambuf readBuffer; 
 	tcp::socket tcpSocket;
+
+	//never change this, CnetMan assigns it to you
+	int id;
+
 
 	private:
 

@@ -39,6 +39,14 @@ SYNAPSE_REGISTER(module_Init)
 // 	out["path"]="modules/ami.module/libami.so";
  //	out.send();
 
+	while (1)
+	{
+		Cmsg out;
+		out.event="test_Message";
+		out.send();
+		sleep(5);
+	}
+
 
 }
 

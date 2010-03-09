@@ -85,16 +85,19 @@ class CnetMan
 	bool doWrite(int id, string & data);
 	void doShutdown();
 
-	private:
-	int autoIdCount;
 	typedef shared_ptr<Tnet> CnetPtr;
 	typedef map<int, CnetPtr > CnetMap;
-	CnetMap nets;
-
 	typedef map<int, CacceptorPtr> CacceptorMap;
+
+	//also publicly avaible for easy access to all your connections
+	//be carefull with locking!
+	CnetMap nets;
+	mutex threadMutex;
+
+	private:
+	int autoIdCount;
 	CacceptorMap acceptors;
 
-	mutex threadMutex;
 
 	void closeHandler(int port);
 	int getAutoId();

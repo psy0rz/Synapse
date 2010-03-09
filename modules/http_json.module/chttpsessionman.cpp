@@ -45,6 +45,18 @@ ThttpCookie ChttpSessionMan::newHttpSession()
 }
 
 
+int ChttpSessionMan::getSessionId(ThttpCookie httpCookie)
+{
+	lock_guard<mutex> lock(threadMutex);
+	ChttpSessionMap::iterator httpSessionI=httpSessionMap.find(httpCookie);
+ 	if (httpSessionI!=httpSessionMap.end())
+		return httpSessionI->second.sessionId;
+	else
+		return SESSION_DISABLED;
+ 
+}
+
+
 void ChttpSessionMan::sessionStart(Cmsg & msg)
 {
 	lock_guard<mutex> lock(threadMutex);
@@ -84,6 +96,7 @@ void ChttpSessionMan::sendMessage(Cmsg & msg)
 {
 
 }
+
 
 
 // void ChttpSessionMan::readyLongpoll(ThttpCookie httpCookie, int netId)
