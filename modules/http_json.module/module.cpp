@@ -199,6 +199,35 @@ class CnetModule : public Cnet
 		respondString(status, "<h1>Error</h1>"+error);
 	}
 
+	/** Writes the current json queue to the client.
+	* Connection should be ready for it: e.g. browser did a longpoll, headers are sent, except for Content-Length.
+	*/
+	void respondJsonQueue()
+	{
+		if (!jsonQueue.empty())
+		{
+			//"close" the queue:
+			jsonQueue+="]";
+		}
+
+		//send headers
+		Cvar extraHeaders;
+		extraHeaders["Content-Length"]=jsonQueue.length();
+		extraHeaders["Cache-Control"]="no-cache";
+		extraHeaders["Content-Type"]="application/jsonrequest";
+		sendHeaders(200, extraHeaders);
+
+		//write the json queue
+		if (!jsonQueue.empty())
+		{
+			write(tcpSocket, asio::buffer(jsonQueue));
+			jsonQueue.clear();
+		}
+
+		state=REQUEST;
+	}
+
+
 	/** Respond by sending a file relative to the wwwdir/
 	*/
 	void respondFile(string path)
@@ -273,9 +302,9 @@ class CnetModule : public Cnet
 		{
 			if (state==WAIT_LONGPOLL)
 			{
-				DEB("Aborting longpoll on " << id);
-				write(tcpSocket,asio::buffer("\r\n"));
-				state=REQUEST;
+				DEB("Cancelling longpoll on " << id);
+				//the queue is still empty, so it responds with a content-length of 0 bytes:
+				respondJsonQueue();
 			}
 
 			//resize data to first delimiter:
@@ -386,16 +415,11 @@ class CnetModule : public Cnet
 					{
 						wantsMessages=true;
 
-						//send partial headers now, and the content-length + json data later.
-						Cvar extraHeaders;
-						extraHeaders["Cache-Control"]="no-cache";
-						extraHeaders["Content-Type"]="application/jsonrequest";
-						sendHeaders(200, extraHeaders,true);
 
 						if (!jsonQueue.empty())
 						{
-							//we have messages queued, so we can reply them all directly:
-							writeJson();
+							//we have messages queued, so we can reply them directly:
+							respondJsonQueue();
 							DEB("WROTE QUEUED messages for httpSession " << httpCookie << " at connection " << id );
 						}
 						else
@@ -470,29 +494,6 @@ class CnetModule : public Cnet
 	}
 
 
-	/** Writes the current json queue to the client.
-	* Connection should be ready for it: e.g. browser did a longpoll, headers are sent, except for Content-Length.
-	*/
-	void writeJson()
-	{
-		//"close" the queue:
-		jsonQueue+="]";
-
-		//create content-length header
-		stringstream s;
-		s << "Content-Length: " << jsonQueue.length() << "\r\n\r\n";
-
-		//write the whole string
-		write(tcpSocket, asio::buffer(s.str() + jsonQueue));
-		jsonQueue.clear();
-		state=REQUEST;
-
-
-/*		stringstream test;
-		test << "net id=" << id << ": " << jsonStr;
-		s << "Content-Length: " << test.str().length() << "\r\n\r\n";
-		write(tcpSocket, asio::buffer(s.str() + test.str()));*/
-	}
 
 	void enqueueJson(string & jsonStr)
 	{
@@ -548,7 +549,7 @@ class CnetModule : public Cnet
 		if (state==WAIT_LONGPOLL)
 		{	
 			//write it now
-			writeJson();
+			respondJsonQueue();
 			DEB("QUEUED and WROTE message for session " << dstSessionId << " for httpSession " << httpCookie << " at connection " << id );
 		}
 		else
