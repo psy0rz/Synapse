@@ -1,48 +1,48 @@
+event log:
+<div id='event'></div>
+
 <script>
-var xmlhttp=false;
-/*@cc_on @*/
-/*@if (@_jscript_version >= 5)
-// JScript gives us Conditional compilation, we can cope with old IE versions.
-// and security blocked creation of the objects.
- try {
-  xmlhttp = new ActiveXObject("Msxml2.XMLHTTP");
- } catch (e) {
-  try {
-   xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
-  } catch (E) {
-   xmlhttp = false;
+
+//From: http://www.javascriptkit.com/jsref/ajax.shtml
+function ajaxRequest(){
+ var activexmodes=["Msxml2.XMLHTTP", "Microsoft.XMLHTTP"] //activeX versions to check for in IE
+ if (window.ActiveXObject){ //Test for support for ActiveXObject in IE first (as XMLHttpRequest in IE7 is broken)
+  for (var i=0; i<activexmodes.length; i++){
+   try{
+    return new ActiveXObject(activexmodes[i])
+   }
+   catch(e){
+    //suppress error
+   }
   }
  }
-@end @*/
-if (!xmlhttp && typeof XMLHttpRequest!='undefined') {
-	try {
-		xmlhttp = new XMLHttpRequest();
-	} catch (e) {
-		xmlhttp=false;
-	}
-}
-if (!xmlhttp && window.createRequest) {
-	try {
-		xmlhttp = window.createRequest();
-	} catch (e) {
-		xmlhttp=false;
-	}
+ else if (window.XMLHttpRequest) // if Mozilla, Safari etc
+  return new XMLHttpRequest()
+ else
+  return false
 }
 
 
-xmlhttp.open("POST", "bla.txt",true);
- xmlhttp.onreadystatechange=function() {
-  if (xmlhttp.readyState==4) {
+request=new ajaxRequest();
 
-xmlhttp.open("POST", "2.txt",true);
- xmlhttp.send("tweede")
-//   write(xmlhttp.responseText)
-  }
- }
- xmlhttp.send("eerste")
+request.onreadystatechange=function(){
+if (request.readyState==4){ //if request has completed
+  //if (request.status==200){ //if request was successful (versus "page not found" etc)
+	document.getElementById("event").innerHTML=(request.responseText+"<br>"+document.getElementById("event").innerHTML.substr(0,3000));
+	request.open("GET", "/synapse/longpoll");
+	request.send();
+	
+ // }
+}
+}
+
+
+request.open("GET", "/synapse/longpoll");
+request.send();
+
 
 
 </script>
 
-God-jongejongejonge!
+
 

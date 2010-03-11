@@ -342,6 +342,7 @@ class CnetModule : public Cnet
 								if (httpSessionMan.isSessionValid(clientsCookie))
 								{
 									httpCookie=clientsCookie;
+									break;
 								}
 								else
 								{
@@ -353,8 +354,6 @@ class CnetModule : public Cnet
 								WARNING("Invalid httpSession format: " << ((*cookieI)[2]).str()) ;
 								httpCookie=0;
 							}
-
-							break;
 						}
 						cookieI++;
 					}
@@ -478,8 +477,12 @@ class CnetModule : public Cnet
 	{
 		state=REQUEST;
 		stringstream s;
-		s << "Content-Length: " << jsonStr.length() << "\r\n\r\n";
-		write(tcpSocket, asio::buffer(s.str() + jsonStr));
+/*		s << "Content-Length: " << jsonStr.length() << "\r\n\r\n";
+		write(tcpSocket, asio::buffer(s.str() + jsonStr));*/
+		stringstream test;
+		test << "net id=" << id << ": " << jsonStr;
+		s << "Content-Length: " << test.str().length() << "\r\n\r\n";
+		write(tcpSocket, asio::buffer(s.str() + test.str()));
 	}
 
 

@@ -36,15 +36,18 @@ SYNAPSE_REGISTER(module_Init)
 	out["path"]="modules/http_json.module/libhttp_json.so";
 	out.send();
 
-// 	out["path"]="modules/ami.module/libami.so";
- //	out.send();
+ 	out["path"]="modules/ami.module/libami.so";
+ 	out.send();
 
+	int c=0;
 	while (1)
 	{
+		c++;
 		Cmsg out;
 		out.event="test_Message";
+		out["counter"]=c;
 		out.send();
-		sleep(5);
+		sleep(1);
 	}
 
 
