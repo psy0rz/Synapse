@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+  <head>
+    <script type="text/javascript" src="jquery.js"></script>
+
+    <script type="text/javascript">
+
+	count=0;
+	function handler(data)
+	{
+		count++;
+		$('#updates').html(count);
+
+		try
+		{
+			$('#result').html(data[0][2]);
+		}
+		catch(e)
+		{
+			$('#result').html("error:"+e);
+		}
+
+		$.ajax({
+			dataType: "json",
+			url: '/synapse/longpoll',
+			success: handler
+		});
+//		alert("woei");
+	}
+
+	$(document).ready(function(){
+		//place code inside this block:
+		handler("");
+	});
+      
+    </script>
+  </head>
+  <body>
+	Update count:
+	<div id='updates'></div>
+<br>
+	Events:
+	<div id='result'></div>
+  </body>
+</html>
+

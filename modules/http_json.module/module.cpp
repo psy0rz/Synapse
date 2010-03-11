@@ -101,7 +101,7 @@ class CnetModule : public Cnet
 	string requestUrl;
 	Cvar headers;
 
-	queue<string> jsonQueue;
+	string jsonQueue;
 
 	void init_server(int id, CacceptorPtr acceptorPtr)
 	{
@@ -110,8 +110,7 @@ class CnetModule : public Cnet
 		httpCookie=0;
 		cachedSessionId=SESSION_DISABLED;
 		wantsMessages=false;
-		while(!jsonQueue.empty())
-			jsonQueue.pop();
+		jsonQueue.clear();
 	}
 
 	void startAsyncRead()
@@ -389,14 +388,15 @@ class CnetModule : public Cnet
 
 						//send partial headers now, and the content-length + json data later.
 						Cvar extraHeaders;
+						extraHeaders["Cache-Control"]="no-cache";
+						extraHeaders["Content-Type"]="application/jsonrequest";
 						sendHeaders(200, extraHeaders,true);
 
 						if (!jsonQueue.empty())
 						{
-							//we still have messages queued, so we can reply directly
-							writeJson(jsonQueue.front());
-							jsonQueue.pop();
-							DEB("WROTE QUEUED message for httpSession " << httpCookie << " at connection " << id );
+							//we have messages queued, so we can reply them all directly:
+							writeJson();
+							DEB("WROTE QUEUED messages for httpSession " << httpCookie << " at connection " << id );
 						}
 						else
 						{
@@ -470,21 +470,41 @@ class CnetModule : public Cnet
 	}
 
 
-	/** Writes a json string to a connection.
-	* Connection should be ready for it: e.g. headers are sent, except for Content-Length.
+	/** Writes the current json queue to the client.
+	* Connection should be ready for it: e.g. browser did a longpoll, headers are sent, except for Content-Length.
 	*/
-	void writeJson(string & jsonStr)
+	void writeJson()
 	{
-		state=REQUEST;
+		//"close" the queue:
+		jsonQueue+="]";
+
+		//create content-length header
 		stringstream s;
-/*		s << "Content-Length: " << jsonStr.length() << "\r\n\r\n";
-		write(tcpSocket, asio::buffer(s.str() + jsonStr));*/
-		stringstream test;
+		s << "Content-Length: " << jsonQueue.length() << "\r\n\r\n";
+
+		//write the whole string
+		write(tcpSocket, asio::buffer(s.str() + jsonQueue));
+		jsonQueue.clear();
+		state=REQUEST;
+
+
+/*		stringstream test;
 		test << "net id=" << id << ": " << jsonStr;
 		s << "Content-Length: " << test.str().length() << "\r\n\r\n";
-		write(tcpSocket, asio::buffer(s.str() + test.str()));
+		write(tcpSocket, asio::buffer(s.str() + test.str()));*/
 	}
 
+	void enqueueJson(string & jsonStr)
+	{
+		if (jsonQueue.empty())
+		{
+			jsonQueue="["+jsonStr;
+		}
+		else
+		{
+			jsonQueue+=","+jsonStr;
+		}
+	}
 
 	/// //////////////// PUBLIC INTERFACE FOR NETWORK CONNECTIONS
 	public:
@@ -522,15 +542,17 @@ class CnetModule : public Cnet
 			return;
 		}
 
-		//can we send it NOW or do we need to queue it?
+		enqueueJson(jsonStr);
+
+		//is the client waiting for json stuff?
 		if (state==WAIT_LONGPOLL)
-		{
-			writeJson(jsonStr);
-			DEB("WROTE message for session " << dstSessionId << " for httpSession " << httpCookie << " at connection " << id );
+		{	
+			//write it now
+			writeJson();
+			DEB("QUEUED and WROTE message for session " << dstSessionId << " for httpSession " << httpCookie << " at connection " << id );
 		}
 		else
 		{
-			jsonQueue.push(jsonStr);
 			DEB("QUEUED message for session " << dstSessionId << " for httpSession " << httpCookie << " at connection " << id );
 		}		
 	}

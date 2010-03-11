@@ -1,5 +1,7 @@
-event log:
+<pre>event log:
+
 <div id='event'></div>
+</pre>
 
 <script>
 
@@ -25,17 +27,21 @@ function ajaxRequest(){
 
 request=new ajaxRequest();
 
-request.onreadystatechange=function(){
+function handler(){
 if (request.readyState==4){ //if request has completed
-  //if (request.status==200){ //if request was successful (versus "page not found" etc)
+  if (request.status==200){ //if request was successful (versus "page not found" etc)
 	document.getElementById("event").innerHTML=(request.responseText+"<br>"+document.getElementById("event").innerHTML.substr(0,3000));
+
+request=new ajaxRequest();
+request.onreadystatechange=handler;
 	request.open("GET", "/synapse/longpoll");
 	request.send();
 	
- // }
+  }
 }
 }
 
+request.onreadystatechange=handler;
 
 request.open("GET", "/synapse/longpoll");
 request.send();
