@@ -55,6 +55,7 @@ public:
 	//Called from http-client-side:
     ThttpCookie newHttpSession();
 	int getSessionId(ThttpCookie httpCookie);
+	bool isSessionValid(ThttpCookie httpCookie);
 // 	void readyLongpoll(ThttpCookie httpCookie, int netId);
 // 	void disconnected(int netId);
 

@@ -118,7 +118,7 @@ class CnetModule : public Cnet
 	{
 		if (state==REQUEST || state==WAIT_LONGPOLL)
 		{
-				DEB("Starting async read for REQUEST headers");
+				DEB(id << " starting async read for REQUEST headers");
 				//The request-block ends with a empty newline, so read until a double new-line:
 				headers.clear();
 				asio::async_read_until(
@@ -135,7 +135,7 @@ class CnetModule : public Cnet
 				if (bytesToTransfer<0)
 					bytesToTransfer=0;
 
-				DEB("Starting async read for CONTENT, still need to receive " << bytesToTransfer << " of " << (int)headers["Content-Length"] << " bytes.");
+				DEB(id << " starting async read for CONTENT, still need to receive " << bytesToTransfer << " of " << (int)headers["Content-Length"] << " bytes.");
 
 				asio::async_read(
 					tcpSocket,
@@ -270,8 +270,15 @@ class CnetModule : public Cnet
 		string error;
 
 		//parse http request headers
-		if (state==REQUEST)
+		if (state==REQUEST || WAIT_LONGPOLL)
 		{
+			if (state==WAIT_LONGPOLL)
+			{
+				DEB("Aborting longpoll on " << id);
+				write(tcpSocket,asio::buffer("\r\n"));
+				state=REQUEST;
+			}
+
 			//resize data to first delimiter:
 			dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 			readBuffer.consume(dataStr.length());
@@ -328,11 +335,22 @@ class CnetModule : public Cnet
 						{
 							try
 							{
-								httpCookie=lexical_cast<ThttpCookie>(((*cookieI)[2]).str());
+								ThttpCookie clientsCookie=lexical_cast<ThttpCookie>(((*cookieI)[2]).str());
+	
+								//do we know the cookie the browser is giving us?
+								//This is an expensive call, but its only done if httpCookie ist set yet
+								if (httpSessionMan.isSessionValid(clientsCookie))
+								{
+									httpCookie=clientsCookie;
+								}
+								else
+								{
+									DEB(id << " ignored invalid or expired cookie " << clientsCookie);
+								}
 							}
 							catch(...)
 							{
-								WARNING("Invalid httpSession cookie: " << ((*cookieI)[2]).str()) ;
+								WARNING("Invalid httpSession format: " << ((*cookieI)[2]).str()) ;
 								httpCookie=0;
 							}
 
@@ -342,12 +360,11 @@ class CnetModule : public Cnet
 					}
 				}
 
-				//do we need a new http session cookie?
+				//do we need a new http session cookie for this connection?
 				if (!httpCookie)
 				{
 					httpCookie=httpSessionMan.newHttpSession();
 				}
-				
 
 				//proceed based on requestType
 				if (requestType=="POST")
@@ -369,25 +386,41 @@ class CnetModule : public Cnet
 					//Implements ajax long polling:
 					if (requestUrl=="/synapse/longpoll")
 					{
+						wantsMessages=true;
+
 						//send partial headers now, and the content-length + json data later.
 						Cvar extraHeaders;
 						sendHeaders(200, extraHeaders,true);
-						state=WAIT_LONGPOLL;
-						wantsMessages=true;
-						DEB("Connection " << id << " is doing a long poll.");
+
+						if (!jsonQueue.empty())
+						{
+							//we still have messages queued, so we can reply directly
+							writeJson(jsonQueue.front());
+							jsonQueue.pop();
+							DEB("WROTE QUEUED message for httpSession " << httpCookie << " at connection " << id );
+						}
+						else
+						{
+							//we dont have messages, so wait for new messages.
+							//this wait can be aborted if the browser sends another request.
+							state=WAIT_LONGPOLL;
+							DEB("Connection " << id << " is now waiting for long poll results.");
+						}
 					}
-					else
+/*					else
+					//TODO: implement me
 					//Implements multipart/x-mixed-replace (only supported in firefox, but better performance)
 					if (requestUrl=="/synapse/multipart")
 					{
 						//send headers directly, with content-type multipart/x-mixed-replace
-						//TODO: implement me
-						//wantsMessages=true;
-					}
+						wantsMessages=true;
+						state=??
+					}*/
 					else
 					{
 						//return requested page or events:
 						respondFile(requestUrl);
+						state=REQUEST;
 					}
 					return ;	
 				}
@@ -443,6 +476,7 @@ class CnetModule : public Cnet
 	*/
 	void writeJson(string & jsonStr)
 	{
+		state=REQUEST;
 		stringstream s;
 		s << "Content-Length: " << jsonStr.length() << "\r\n\r\n";
 		write(tcpSocket, asio::buffer(s.str() + jsonStr));
@@ -599,7 +633,9 @@ SYNAPSE_HANDLER(all)
 			//NOTE: this is a lockless optimisation: we dont want to send the events to connections we can be 
 			//SURE of that dont want or need it.
 			if (netI->second->wantsMessages && 
-				(netI->second->cachedSessionId==msg.dst || netI->second->cachedSessionId==SESSION_DISABLED)
+				(msg.dst==0 || 
+				 netI->second->cachedSessionId==msg.dst || 
+				 netI->second->cachedSessionId==SESSION_DISABLED)
 			)
 			{
 				netI->second->ioService.post(bind(&CnetModule::writeMessage,netI->second,msg.dst,jsonStr));

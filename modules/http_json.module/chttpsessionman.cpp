@@ -44,6 +44,11 @@ ThttpCookie ChttpSessionMan::newHttpSession()
 	return (httpCookie);
 }
 
+bool ChttpSessionMan::isSessionValid(ThttpCookie httpCookie)
+{
+	lock_guard<mutex> lock(threadMutex);
+	return (httpSessionMap.find(httpCookie)!=httpSessionMap.end());
+}
 
 int ChttpSessionMan::getSessionId(ThttpCookie httpCookie)
 {
@@ -103,18 +108,3 @@ void ChttpSessionMan::sendMessage(Cmsg & msg)
 
 
 
-// void ChttpSessionMan::readyLongpoll(ThttpCookie httpCookie, int netId)
-// {
-// 	lock_guard<mutex> lock(threadMutex);
-// 	ChttpSessionMap::iterator httpSessionI=httpSessionMap.find(httpCookie);
-// 
-// 	if (httpSessionI==httpSessionMap.end())
-// 	{
-// 		WARNING("Http cookie invalid or expired: " << httpCookie);
-// 	}
-// 	else
-// 	{
-// 		httpSessionI->longPolls
-// 	}
-// }
-// 
