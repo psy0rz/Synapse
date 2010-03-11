@@ -15,7 +15,9 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include "../../session.h"
+#include "../../csession.h"
+
+#include <queue>
 
 #define MAX_CONTENT 20000
 
@@ -79,6 +81,10 @@ ChttpSessionMan httpSessionMan;
 // We do syncronised writing instead of using the asyncronious doWrite()
 class CnetModule : public Cnet
 {
+	/// //////////////// PRIVATE STUFF FOR NETWORK CONNECTIONS
+
+	private:
+
 	//http basically has two states: The request-block and the content-body.
 	//The states alter eachother continuesly during a connection.
 	//We require different read, depending on the state we're in.
@@ -90,20 +96,22 @@ class CnetModule : public Cnet
 	};
 
 	ThttpCookie httpCookie;
-	int sessionId;
 	Tstates state;
 	string requestType;
 	string requestUrl;
 	Cvar headers;
-//	Cvar cookies;
 
+	queue<string> jsonQueue;
 
 	void init_server(int id, CacceptorPtr acceptorPtr)
 	{
 		state=REQUEST;
 		delimiter="\r\n\r\n";
 		httpCookie=0;
-		sessionId=SESSION_DISABLED;
+		cachedSessionId=SESSION_DISABLED;
+		wantsMessages=false;
+		while(!jsonQueue.empty())
+			jsonQueue.pop();
 	}
 
 	void startAsyncRead()
@@ -365,6 +373,7 @@ class CnetModule : public Cnet
 						Cvar extraHeaders;
 						sendHeaders(200, extraHeaders,true);
 						state=WAIT_LONGPOLL;
+						wantsMessages=true;
 						DEB("Connection " << id << " is doing a long poll.");
 					}
 					else
@@ -373,6 +382,7 @@ class CnetModule : public Cnet
 					{
 						//send headers directly, with content-type multipart/x-mixed-replace
 						//TODO: implement me
+						//wantsMessages=true;
 					}
 					else
 					{
@@ -427,18 +437,65 @@ class CnetModule : public Cnet
 	{
 	}
 
+
+	/** Writes a json string to a connection.
+	* Connection should be ready for it: e.g. headers are sent, except for Content-Length.
+	*/
+	void writeJson(string & jsonStr)
+	{
+		stringstream s;
+		s << "Content-Length: " << jsonStr.length() << "\r\n\r\n";
+		write(tcpSocket, asio::buffer(s.str() + jsonStr));
+	}
+
+
+	/// //////////////// PUBLIC INTERFACE FOR NETWORK CONNECTIONS
 	public:
+	bool wantsMessages;
+	int cachedSessionId;
+
 	/** We receive this from synapse, with a message that COULD be for the connected client.
 	* We might to write, queue or drop it.
     * We receive this call via the IOservice thread, so it runs in the same thread.
 	*/
-	void writeMessage(Cmsg & msg, string & jsonStr)
+	void writeMessage(int dstSessionId, string & jsonStr)
 	{
-		DEB("net " << id << " got " << jsonStr);
+		if (!wantsMessages)
+		{
+			WARNING("Dropping message for session " << dstSessionId << ": connection " << id << " doesnt want messages.");
+			return;
+		}
+
+		//resolving a httpCookie to a session is an expensive call that involves locking, so cache it:
+		if (cachedSessionId==SESSION_DISABLED)
+		{
+			cachedSessionId=httpSessionMan.getSessionId(httpCookie);
+		}
+
+		if (cachedSessionId==SESSION_DISABLED)
+		{
+			WARNING("Dropping message for session " << dstSessionId << ": httpSession " << httpCookie << " at connection " << id << " doesnt have a sessionId yet.");
+			return;
+		}
+
+		if (cachedSessionId!=dstSessionId && dstSessionId!=0)
+		{
+			//this normally shouldnt happen, so its a warning:
+			WARNING("Dropping message for session " << dstSessionId << ": httpSession " << httpCookie << " at connection " << id << " only wants " << cachedSessionId);
+			return;
+		}
+
+		//can we send it NOW or do we need to queue it?
 		if (state==WAIT_LONGPOLL)
 		{
-
+			writeJson(jsonStr);
+			DEB("WROTE message for session " << dstSessionId << " for httpSession " << httpCookie << " at connection " << id );
 		}
+		else
+		{
+			jsonQueue.push(jsonStr);
+			DEB("QUEUED message for session " << dstSessionId << " for httpSession " << httpCookie << " at connection " << id );
+		}		
 	}
 
 };
@@ -539,8 +596,14 @@ SYNAPSE_HANDLER(all)
 		lock_guard<mutex> lock(net.threadMutex);
 		for (CnetMan<CnetModule>::CnetMap::iterator netI=net.nets.begin(); netI!=net.nets.end(); netI++)
 		{
-		//	netI->second->writeMessage(msg, jsonStr);
-			netI->second->ioService.post(bind(&CnetModule::writeMessage,netI->second,msg,jsonStr));
+			//NOTE: this is a lockless optimisation: we dont want to send the events to connections we can be 
+			//SURE of that dont want or need it.
+			if (netI->second->wantsMessages && 
+				(netI->second->cachedSessionId==msg.dst || netI->second->cachedSessionId==SESSION_DISABLED)
+			)
+			{
+				netI->second->ioService.post(bind(&CnetModule::writeMessage,netI->second,msg.dst,jsonStr));
+			}
 		}
 	}	
 }

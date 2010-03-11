@@ -48,6 +48,10 @@ ThttpCookie ChttpSessionMan::newHttpSession()
 int ChttpSessionMan::getSessionId(ThttpCookie httpCookie)
 {
 	lock_guard<mutex> lock(threadMutex);
+
+	if (!httpCookie)
+		return SESSION_DISABLED;
+
 	ChttpSessionMap::iterator httpSessionI=httpSessionMap.find(httpCookie);
  	if (httpSessionI!=httpSessionMap.end())
 		return httpSessionI->second.sessionId;
