@@ -217,6 +217,7 @@ class CnetModule : public Cnet
 			jsonQueue="[]";
 		}
 
+
 		//send headers
 		Cvar extraHeaders;
 		extraHeaders["Content-Length"]=jsonQueue.length();

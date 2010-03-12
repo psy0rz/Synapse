@@ -17,15 +17,18 @@ synapse_handlers=new Array();
 synapse_requestCount=0;
 
 
-events=0;
+var requests=0;
+var answers=0;
+
 function doRequest(jsonStr)
 {
-	events++;
-	console.log("events",events);
 
 	//only send a request if we have data to send, or if there are no more outstanding longpolls
 	if (typeof jsonStr!='undefined' || synapse_requestCount==0)
 	{
+		requests++;
+		console.debug("requests=",requests);
+
 		synapse_requestCount++;
 
 		if (typeof jsonStr=='undefined')
@@ -61,15 +64,26 @@ function synapse_handleError(request, status)
 	}
 }
 
-function synapse_handleMessages(messages, status)
+var stop=false;
+
+function synapse_handleMessages(messages, status, requestObject)
 {
+	if (stop)
+	{
+		console.debug("stopping, dropped message");
+		return;
+	}
+
+	answers++;
+	console.debug("answers=",answers);
+
 	synapse_requestCount--;
-	console.info("outstanding: ", synapse_requestCount);
 	if (messages==null)
 	{
 		if (synapse_handlers["error"])
 		{
 			synapse_handlers["error"]("Got null json reply, stopping.");
+			stop=true;
 		}
 		return;
 	}
@@ -130,9 +144,19 @@ function synapse_register(event, handler)
 }
 
 
-$(document).ready(function(){
+ $(document).ready(function(){
+// 
+// 		$.ajax({
+// 			"dataType":		"json",
+// 			"url":			'/synapse/longpoll',
+// 			"type":			"get",
+// 			"contentType":	"application/json",
+// 			"processData":	false,
+// 			"cache":		false,
+// 			"data":			[ ] 
+// 		});
 
-	//start the event loop
+//window.setInterval('doRequest()');
 	doRequest();
 });
 
