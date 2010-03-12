@@ -220,7 +220,7 @@ class CnetModule : public Cnet
 		Cvar extraHeaders;
 		extraHeaders["Content-Length"]=jsonQueue.length();
 		extraHeaders["Cache-Control"]="no-cache";
-		extraHeaders["Content-Type"]="application/jsonrequest";
+		extraHeaders["Content-Type"]="application/json";
 		sendHeaders(200, extraHeaders);
 
 		//write the json queue

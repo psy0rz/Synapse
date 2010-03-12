@@ -14,32 +14,32 @@ if (typeof console == 'undefined')
 
 var synapse_handlers=new Array();
 
+synapse_requestCount=0;
 
-function send(msg_dst, msg_event, msg)
+
+function doRequest(jsonStr)
 {
-	json=new Array();
-	json[0]=0;
-	json[1]=msg_dst;
-	json[2]=msg_event;
-	json[3]=msg;
-
-	console.debug("sending :",json);
-	$.ajax({
-		dataType: "json",
-		url: '/test.txt',
-		error: synapse_handleError,
-		type: "post",
-		data: json
-	});
+	//only send a request if we have data to send, or if there are no more outstanding longpolls
+	if (jsonStr!='' || synapse_requestCount==0)
+	{
+		synapse_requestCount++;
+		$.ajax({
+			dataType: "json",
+			url: '/synapse/longpoll',
+			error: synapse_handleError,
+			success: synapse_handleMessages,
+			type: "post",
+			contentType: "application/json",
+			processData: false ,
+			data: jsonStr
+		});
+	}
 }
 
-function synapse_register(event, handler)
-{
-	synapse_handlers[event]=handler;
-}
 
 function synapse_handleError(request, status)
 {
+	synapse_requestCount--;
 	if (synapse_handlers["error"])
 	{
 		synapse_handlers["error"]("Error while processing ajax request '" + request + "' status=" + status);
@@ -48,6 +48,7 @@ function synapse_handleError(request, status)
 
 function synapse_handleMessages(messages, status)
 {
+	synapse_requestCount--;
 	if (messages==null)
 	{
 		if (synapse_handlers["error"])
@@ -91,14 +92,26 @@ function synapse_handleMessages(messages, status)
 		}
 	}
 
-	$.ajax({
-		dataType: "json",
-		url: '/synapse/longpoll',
-		success: synapse_handleMessages,
-		error: synapse_handleError
-	});
+	doRequest();
 }
 
+function send(msg_dst, msg_event, msg)
+{
+/*	json=new Array();
+	json[0]=0;
+	json[1]=msg_dst;
+	json[2]=msg_event;
+	json[3]=msg;*/
+	
+	jsonStr=JSON.stringify([ 0, msg_dst, msg_event, msg ]);
+
+	doRequest(jsonStr);
+}
+
+function synapse_register(event, handler)
+{
+	synapse_handlers[event]=handler;
+}
 
 
 $(document).ready(function(){
