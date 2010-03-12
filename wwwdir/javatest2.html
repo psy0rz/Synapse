@@ -1,46 +1,46 @@
-<!doctype html>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
-  <head>
-    <script type="text/javascript" src="jquery.js"></script>
 
-    <script type="text/javascript">
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+	<script type="text/javascript" src="jquery.js"></script>
+	<script type="text/javascript" src="synapse.js"></script>
+	<script type="text/javascript">
 
-	count=0;
-	function handler(data)
-	{
-		count++;
-		$('#updates').html(count);
-
-// 		try
-// 		{
-// 			$('#result').html(data[0][2]);
-// 		}
-// 		catch(e)
-// 		{
-// 			$('#result').html("error:"+e);
-// 		}
-
-		$.ajax({
-
-			dataType: "text",
-			url: '/synapse/longpoll',
-			success: handler
+		synapse_register("error",function(error)
+		{
+			$('#error').html(error);
 		});
-	}
+	
+	
+		synapse_register("default",function(msg_src, msg_dst, msg_event, msg)
+		{
+			$('#event').html(msg_event);
+		});
+	
+		// 	synapse_register("test_Message",function(msg_src, msg_dst, msg_event, msg)
+		// 	{
+		// 		$('#counter').html(msg["counter"]);
+		// 	});
+	</script>
+</head>
 
-	$(document).ready(function(){
-		//place code inside this block:
-		handler("");
-	});
-      
-    </script>
-  </head>
-  <body>
-	Update count:
-	<div id='updates'></div>
-<br>
-	Events:
-	<div id='result'></div>
-  </body>
+
+<body>
+<p>
+	Last error:
+	<div id='error' style='color: red'></div>
+	
+	Last event:
+	<div id='event'></div>
+
+	Counter test:
+	<div id='counter'></div>
+
+	Status:
+	<div id='status'></div>
+
+</body>
+
 </html>
 

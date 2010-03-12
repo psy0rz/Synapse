@@ -209,6 +209,12 @@ class CnetModule : public Cnet
 			//"close" the queue:
 			jsonQueue+="]";
 		}
+		else
+		{
+			//respond with an empty array , instead of null:
+			//(better for error handling in firefox)
+			jsonQueue="[]";
+		}
 
 		//send headers
 		Cvar extraHeaders;
@@ -218,11 +224,8 @@ class CnetModule : public Cnet
 		sendHeaders(200, extraHeaders);
 
 		//write the json queue
-		if (!jsonQueue.empty())
-		{
-			write(tcpSocket, asio::buffer(jsonQueue));
-			jsonQueue.clear();
-		}
+		write(tcpSocket, asio::buffer(jsonQueue));
+		jsonQueue.clear();
 
 		state=REQUEST;
 	}
