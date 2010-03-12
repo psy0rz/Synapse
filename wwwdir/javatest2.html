@@ -18,10 +18,11 @@
 			$('#event').html(msg_event);
 		});
 	
-		// 	synapse_register("test_Message",function(msg_src, msg_dst, msg_event, msg)
-		// 	{
-		// 		$('#counter').html(msg["counter"]);
-		// 	});
+		synapse_register("test_Message",function(msg_src, msg_dst, msg_event, msg)
+		{
+			$('#counter').html(msg["counter"]);
+			send(0,"testjava","blaat");
+		});
 
 
 

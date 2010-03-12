@@ -88,7 +88,6 @@ SYNAPSE_REGISTER(ami_Connected)
 
 SYNAPSE_REGISTER(ami_Response_Success)
 {
-	INFO("woei");
 }
 
 

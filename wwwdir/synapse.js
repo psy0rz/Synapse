@@ -12,21 +12,26 @@ if (typeof console == 'undefined')
 	console=new Cconsole();
 }
 
-console.debug("dsa");
-
 var synapse_handlers=new Array();
 
 
-// function send(msg_dst, msg_event, msg)
-// {
-// /*	$.ajax({
-// 
-// 		dataType: "json",
-// 		url: '/synapse/send',
-// 		success: synapse_handleMessages,
-// 		error: synapse_handleError
-// 	});*/
-// }
+function send(msg_dst, msg_event, msg)
+{
+	json=new Array();
+	json[0]=0;
+	json[1]=msg_dst;
+	json[2]=msg_event;
+	json[3]=msg;
+
+	console.debug("sending :",json);
+	$.ajax({
+		dataType: "json",
+		url: '/test.txt',
+		error: synapse_handleError,
+		type: "post",
+		data: json
+	});
+}
 
 function synapse_register(event, handler)
 {
@@ -37,7 +42,7 @@ function synapse_handleError(request, status)
 {
 	if (synapse_handlers["error"])
 	{
-		synapse_handlers["error"]("Error while processing ajax request: " + status);
+		synapse_handlers["error"]("Error while processing ajax request '" + request + "' status=" + status);
 	}
 }
 
@@ -87,7 +92,6 @@ function synapse_handleMessages(messages, status)
 	}
 
 	$.ajax({
-
 		dataType: "json",
 		url: '/synapse/longpoll',
 		success: synapse_handleMessages,

@@ -173,12 +173,12 @@ class CnetModule : public Cnet
 	
 		if (partial)
 		{
-			DEB("Sending partial HEADERS: \n" << responseStr);
+			DEB(id << "sending partial HEADERS: \n" << responseStr);
 		}
 		else
 		{
 			responseStr+="\r\n";
-			DEB("Sending HEADERS: \n" << responseStr);
+			DEB(id << " sending HEADERS: \n" << responseStr);
 		}
 
 		write(tcpSocket,asio::buffer(responseStr));
@@ -195,7 +195,7 @@ class CnetModule : public Cnet
 
 	void respondError(int status, string error)
 	{
-		WARNING("Responding with error: " << error);
+		WARNING(id << " responding with error: " << error);
 		respondString(status, "<h1>Error</h1>"+error);
 	}
 
@@ -276,7 +276,7 @@ class CnetModule : public Cnet
 		extraHeaders["Content-Length"]=fileSize;
 		sendHeaders(200, extraHeaders);
 
-		DEB("Sending CONTENT of " << path);
+		DEB(id << " sending CONTENT of " << path);
 		char buf[1024];
 		//TODO: is there a better way to do this?
 		int sendSize=0;
@@ -289,7 +289,7 @@ class CnetModule : public Cnet
 
 		if (sendSize!=fileSize)
 		{
-			ERROR("Error during file transfer, disconnecting");
+			ERROR(id <<  " error during file transfer, disconnecting");
 			doDisconnect();
 		}
 	}
@@ -301,11 +301,11 @@ class CnetModule : public Cnet
 		string error;
 
 		//parse http request headers
-		if (state==REQUEST || WAIT_LONGPOLL)
+		if (state==REQUEST ||state==WAIT_LONGPOLL)
 		{
 			if (state==WAIT_LONGPOLL)
 			{
-				DEB("Cancelling longpoll on " << id);
+				DEB(id << " cancelling longpoll on ");
 				//the queue is still empty, so it responds with a content-length of 0 bytes:
 				respondJsonQueue();
 			}
@@ -314,7 +314,7 @@ class CnetModule : public Cnet
 			dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 			readBuffer.consume(dataStr.length());
 
-			DEB("Got http REQUEST: \n" << dataStr);
+			DEB(id << " got http REQUEST: \n" << dataStr);
 
 			//determine the kind of request:
  			smatch what;
@@ -382,7 +382,7 @@ class CnetModule : public Cnet
 							}
 							catch(...)
 							{
-								WARNING("Invalid httpSession format: " << ((*cookieI)[2]).str()) ;
+								WARNING(id << " Invalid httpSession format: " << ((*cookieI)[2]).str()) ;
 								httpCookie=0;
 							}
 						}
@@ -399,9 +399,18 @@ class CnetModule : public Cnet
 				//proceed based on requestType
 				if (requestType=="POST")
 				{
-					if ( (int)headers["Content-Length"]<=0  || (int)headers["Content-Length"] > MAX_CONTENT )
+					if ( (int)headers["Content-Length"]==0)
+					{
+						//no content, just respond now
+						respondFile(requestUrl);
+						state=REQUEST;
+						return;
+					}
+					else if ( (int)headers["Content-Length"]<0  || (int)headers["Content-Length"] > MAX_CONTENT )
 					{
 						error="Invalid Content-Length";
+						state=REQUEST; 	
+						//falls to error function..
 					}
 					else
 					{
@@ -423,14 +432,14 @@ class CnetModule : public Cnet
 						{
 							//we have messages queued, so we can reply them directly:
 							respondJsonQueue();
-							DEB("WROTE QUEUED messages for httpSession " << httpCookie << " at connection " << id );
+							DEB(id <<  " WROTE QUEUED messages for httpSession " << httpCookie );
 						}
 						else
 						{
 							//we dont have messages, so wait for new messages.
 							//this wait can be aborted if the browser sends another request.
 							state=WAIT_LONGPOLL;
-							DEB("Connection " << id << " is now waiting for long poll results.");
+							DEB(id << " is now waiting for long poll results.");
 						}
 					}
 /*					else
@@ -462,14 +471,15 @@ class CnetModule : public Cnet
 			if (readBuffer.size() < headers["Content-Length"])
 			{
 				error="Didn't receive enough content-bytes!";
-				DEB("ERROR: Expected " << (int)headers["Content-Length"] << " bytes, but only got: " << bytesTransferred);
+				DEB(id <<  " ERROR: Expected " << (int)headers["Content-Length"] << " bytes, but only got: " << bytesTransferred);
 			}
 			else
 			{
 				
 				dataStr.resize(headers["Content-Length"]);
 				readBuffer.consume(headers["Content-Length"]);
-				DEB("Got http CONTENT with length=" << dataStr.size() << ": \n" << dataStr);
+				DEB(id << " got http CONTENT with length=" << dataStr.size() << ": \n" << dataStr);
+				//for now we just ignore post data..
 
 				respondFile(requestUrl);
 
@@ -480,7 +490,7 @@ class CnetModule : public Cnet
 		{
 			error="Not expecting data in this state";
 		}
-		ERROR("Error while processing http data: " << error);
+		ERROR(id << " had error while processing http data: " << error);
 		error="Request aborted: "+error+"\n";
 		write(tcpSocket,asio::buffer(error));
 		doDisconnect();
@@ -523,7 +533,7 @@ class CnetModule : public Cnet
 	{
 		if (!wantsMessages)
 		{
-			WARNING("Dropping message for session " << dstSessionId << ": connection " << id << " doesnt want messages.");
+			WARNING(id << " dropping message for session " << dstSessionId << ": connection " << id << " doesnt want messages.");
 			return;
 		}
 
@@ -535,14 +545,14 @@ class CnetModule : public Cnet
 
 		if (cachedSessionId==SESSION_DISABLED)
 		{
-			WARNING("Dropping message for session " << dstSessionId << ": httpSession " << httpCookie << " at connection " << id << " doesnt have a sessionId yet.");
+			WARNING(id << " dropping message for session " << dstSessionId << ": httpSession " << httpCookie << " at connection " << id << " doesnt have a sessionId yet.");
 			return;
 		}
 
 		if (cachedSessionId!=dstSessionId && dstSessionId!=0)
 		{
 			//this normally shouldnt happen, so its a warning:
-			WARNING("Dropping message for session " << dstSessionId << ": httpSession " << httpCookie << " at connection " << id << " only wants " << cachedSessionId);
+			WARNING(id << " dropping message for session " << dstSessionId << ": httpSession " << httpCookie << " at connection " << id << " only wants " << cachedSessionId);
 			return;
 		}
 
@@ -553,11 +563,11 @@ class CnetModule : public Cnet
 		{	
 			//write it now
 			respondJsonQueue();
-			DEB("QUEUED and WROTE message for session " << dstSessionId << " for httpSession " << httpCookie << " at connection " << id );
+			DEB(id << " QUEUED and WROTE message for session " << dstSessionId << " for httpSession " << httpCookie );
 		}
 		else
 		{
-			DEB("QUEUED message for session " << dstSessionId << " for httpSession " << httpCookie << " at connection " << id );
+			DEB(id << " QUEUED message for session " << dstSessionId << " for httpSession " << httpCookie);
 		}		
 	}
 
