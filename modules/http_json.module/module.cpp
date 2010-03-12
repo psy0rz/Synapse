@@ -99,6 +99,7 @@ class CnetModule : public Cnet
 	Tstates state;
 	string requestType;
 	string requestUrl;
+	string requestQuery;
 	Cvar headers;
 
 	string jsonQueue;
@@ -227,7 +228,6 @@ class CnetModule : public Cnet
 		write(tcpSocket, asio::buffer(jsonQueue));
 		jsonQueue.clear();
 
-		state=REQUEST;
 	}
 
 
@@ -294,6 +294,38 @@ class CnetModule : public Cnet
 		}
 	}
 
+	/** This should be only called when the client is ready to receive a response to the requestUrl.
+	*/
+	void respond()
+	{
+		//someone requested the special longpoll url:
+		if (requestUrl=="/synapse/longpoll")
+		{
+			wantsMessages=true;
+			if (!jsonQueue.empty())
+			{
+				//we have messages queued, so we can reply them directly:
+				respondJsonQueue();
+				DEB(id <<  " WROTE QUEUED messages for httpSession " << httpCookie );
+				state=REQUEST;
+			}
+			else
+			{
+				//we dont have messages, so wait for new messages.
+				//this wait can be aborted if the browser sends another request.
+				//http://en.wikipedia.org/wiki/Comet_%28programming%29
+				//We implement long polling with message queueing
+				DEB(id << " is now waiting for long poll results.");
+				state=WAIT_LONGPOLL;
+			}
+		}
+		else
+		{
+			respondFile(requestUrl);
+			state=REQUEST;
+		}
+	}
+
 	// Received new data:
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
@@ -301,13 +333,14 @@ class CnetModule : public Cnet
 		string error;
 
 		//parse http request headers
-		if (state==REQUEST ||state==WAIT_LONGPOLL)
+		if (state==REQUEST || state==WAIT_LONGPOLL)
 		{
+			//there is still an outstanding longpoll, cancel it:
 			if (state==WAIT_LONGPOLL)
 			{
-				DEB(id << " cancelling longpoll on ");
-				//the queue is still empty, so it responds with a content-length of 0 bytes:
-				respondJsonQueue();
+				DEB(id << " cancelling longpoll");
+				//(the json-queue is still empty, so it responds with an empty array)
+				respond();
 			}
 
 			//resize data to first delimiter:
@@ -318,10 +351,11 @@ class CnetModule : public Cnet
 
 			//determine the kind of request:
  			smatch what;
- 			if (!regex_match(
+ 			if (!regex_search(
  				dataStr,
  				what, 
- 				boost::regex("^(HEAD|GET|POST) (.*) HTTP/.*?$")
+/* 				boost::regex("^(HEAD|GET|POST) (.*) HTTP/1.1")*/
+ 				boost::regex("^(HEAD|GET|POST) ([^? ]*)([^ ]*) HTTP/1.1$")
  			))
  			{
 				error="Cant parse request.";
@@ -330,6 +364,8 @@ class CnetModule : public Cnet
 			{
 				requestType=what[1];
 				requestUrl=what[2];
+				requestQuery=what[3];
+				DEB("REQUEST query: " << requestQuery);
 
 				//create a regex iterator for http headers
 				boost::sregex_iterator headerI(
@@ -402,61 +438,25 @@ class CnetModule : public Cnet
 					if ( (int)headers["Content-Length"]==0)
 					{
 						//no content, just respond now
-						respondFile(requestUrl);
-						state=REQUEST;
+						respond();
 						return;
 					}
 					else if ( (int)headers["Content-Length"]<0  || (int)headers["Content-Length"] > MAX_CONTENT )
 					{
 						error="Invalid Content-Length";
-						state=REQUEST; 	
-						//falls to error function..
+						//now we lose track of the datastreams, error out!
 					}
 					else
 					{
-						//ok, now change state to read the contents of the POST:
+						//change state to read the contents of the POST:
 						state=CONTENT;
 						return;
 					}
 				}
 				else if (requestType=="GET")
 				{
-					//http://en.wikipedia.org/wiki/Comet_%28programming%29
-					//Implements ajax long polling:
-					if (requestUrl=="/synapse/longpoll")
-					{
-						wantsMessages=true;
-
-
-						if (!jsonQueue.empty())
-						{
-							//we have messages queued, so we can reply them directly:
-							respondJsonQueue();
-							DEB(id <<  " WROTE QUEUED messages for httpSession " << httpCookie );
-						}
-						else
-						{
-							//we dont have messages, so wait for new messages.
-							//this wait can be aborted if the browser sends another request.
-							state=WAIT_LONGPOLL;
-							DEB(id << " is now waiting for long poll results.");
-						}
-					}
-/*					else
-					//TODO: implement me
-					//Implements multipart/x-mixed-replace (only supported in firefox, but better performance)
-					if (requestUrl=="/synapse/multipart")
-					{
-						//send headers directly, with content-type multipart/x-mixed-replace
-						wantsMessages=true;
-						state=??
-					}*/
-					else
-					{
-						//return requested page or events:
-						respondFile(requestUrl);
-						state=REQUEST;
-					}
+					//simple get, just respond:
+					respond();
 					return ;	
 				}
 			}
@@ -465,30 +465,25 @@ class CnetModule : public Cnet
 		//we've received contents of a POST request.
 		if (state==CONTENT)
 		{
-			//the next thing we should receive is another request, so change back state:
-			state=REQUEST;			
-
 			if (readBuffer.size() < headers["Content-Length"])
 			{
 				error="Didn't receive enough content-bytes!";
 				DEB(id <<  " ERROR: Expected " << (int)headers["Content-Length"] << " bytes, but only got: " << bytesTransferred);
 			}
 			else
-			{
-				
+			{				
 				dataStr.resize(headers["Content-Length"]);
 				readBuffer.consume(headers["Content-Length"]);
 				DEB(id << " got http CONTENT with length=" << dataStr.size() << ": \n" << dataStr);
 				//for now we just ignore post data..
 
-				respondFile(requestUrl);
-
+				respond();
 				return;
 			}
 		}
 		else
 		{
-			error="Not expecting data in this state";
+			error="programming error: Unexpected state?";
 		}
 		ERROR(id << " had error while processing http data: " << error);
 		error="Request aborted: "+error+"\n";
@@ -561,8 +556,8 @@ class CnetModule : public Cnet
 		//is the client waiting for json stuff?
 		if (state==WAIT_LONGPOLL)
 		{	
-			//write it now
-			respondJsonQueue();
+			//respond now!
+			respond();
 			DEB(id << " QUEUED and WROTE message for session " << dstSessionId << " for httpSession " << httpCookie );
 		}
 		else

@@ -4,6 +4,7 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
 	<script type="text/javascript" src="jquery.js"></script>
+	<script type="text/javascript" src="json2.js"></script>
 	<script type="text/javascript" src="synapse.js"></script>
 	<script type="text/javascript">
 
@@ -21,7 +22,7 @@
 		synapse_register("test_Message",function(msg_src, msg_dst, msg_event, msg)
 		{
 			$('#counter').html(msg["counter"]);
-			send(0,"testjava","blaat");
+	//		send(0,"testjava","blaat");
 		});
 
 

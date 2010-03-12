@@ -12,26 +12,41 @@ if (typeof console == 'undefined')
 	console=new Cconsole();
 }
 
-var synapse_handlers=new Array();
+synapse_handlers=new Array();
 
 synapse_requestCount=0;
 
 
+events=0;
 function doRequest(jsonStr)
 {
+	events++;
+	console.log("events",events);
+
 	//only send a request if we have data to send, or if there are no more outstanding longpolls
-	if (jsonStr!='' || synapse_requestCount==0)
+	if (typeof jsonStr!='undefined' || synapse_requestCount==0)
 	{
 		synapse_requestCount++;
+
+		if (typeof jsonStr=='undefined')
+		{
+			type="get";
+		}
+		else
+		{	
+			type="post";
+		}
+
 		$.ajax({
-			dataType: "json",
-			url: '/synapse/longpoll',
-			error: synapse_handleError,
-			success: synapse_handleMessages,
-			type: "post",
-			contentType: "application/json",
-			processData: false ,
-			data: jsonStr
+			"dataType":		"json",
+			"url":			'/synapse/longpoll',
+			"error": 		synapse_handleError,
+			"success":		synapse_handleMessages,
+			"type":			type,
+			"contentType":	"application/json",
+			"processData":	false,
+			"cache":		false,
+			"data":			jsonStr
 		});
 	}
 }
@@ -49,6 +64,7 @@ function synapse_handleError(request, status)
 function synapse_handleMessages(messages, status)
 {
 	synapse_requestCount--;
+	console.info("outstanding: ", synapse_requestCount);
 	if (messages==null)
 	{
 		if (synapse_handlers["error"])
@@ -115,9 +131,9 @@ function synapse_register(event, handler)
 
 
 $(document).ready(function(){
-	//place code inside this block:
 
-	synapse_handleMessages(Array());
+	//start the event loop
+	doRequest();
 });
 
 
