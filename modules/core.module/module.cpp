@@ -525,8 +525,11 @@ SYNAPSE_REGISTER(core_ChangeModule)
 			error="Can't find session";
 		else
 		{
-			if (msg["maxThreads"] > 0)
+			if (msg.isSet("maxThreads") > 0)
 				session->module->maxThreads=msg["maxThreads"];	
+
+			if (msg.isSet("broadcastMulti"))
+				session->module->broadcastMulti=msg["broadcastMulti"];	
 		}
 	}
 	if (error!="")

@@ -19,6 +19,8 @@
 
 #include <queue>
 
+#include <boost/asio/buffer.hpp>
+
 #define MAX_CONTENT 20000
 
 
@@ -30,6 +32,14 @@
 	The browser uses XMLhttprequest GET to receive events.
 	We try to use multipart/x-mixed-replace to use peristent connections.
 
+fout:
+-broadcast multi moet aan, omdat we anders niet weten of een sessien wel permissies heeft om een event te ontvangen.
+
+-queueing kan niet op connectie basis. 
+
+-queueing op cookie of "instance" of "lastMessage-id" of sessie basis?
+
+	
 
 */
 
@@ -42,10 +52,12 @@ SYNAPSE_REGISTER(module_Init)
 {
 	Cmsg out;
 
-	//max number of parallel module threads
+	//change module settings. 
+	//especially broadcastMulti is important for our "all"-handler
 	out.clear();
 	out.event="core_ChangeModule";
 	out["maxThreads"]=100;
+	out["broadcastMulti"]=1;
 	out.send();
 
 	//The default session will be used to receive broadcasts that need to be transported via json.
@@ -95,23 +107,18 @@ class CnetModule : public Cnet
 		WAIT_LONGPOLL,
 	};
 
-	ThttpCookie httpCookie;
+	ThttpCookie authCookie;
 	Tstates state;
 	string requestType;
 	string requestUrl;
 	string requestQuery;
 	Cvar headers;
 
-	string jsonQueue;
 
 	void init_server(int id, CacceptorPtr acceptorPtr)
 	{
 		state=REQUEST;
 		delimiter="\r\n\r\n";
-		httpCookie=0;
-		cachedSessionId=SESSION_DISABLED;
-		wantsMessages=false;
-		jsonQueue.clear();
 	}
 
 	void startAsyncRead()
@@ -146,7 +153,32 @@ class CnetModule : public Cnet
 		}
 	}
 
-	void sendHeaders(int status, Cvar & extraHeaders, bool partial=false)
+	/** Sends syncronious data to the tcpSocket and does error handling
+    * NOTE: what happens if sendbuffer is full and client doesnt read data anymore? will Cnet hang forever?
+	*/
+	bool sendData(const asio::const_buffers_1 & buffers)
+	{
+		if (write(tcpSocket,buffers) != buffer_size(buffers))
+		{
+			ERROR(id << " had write while sending data, disconnecting.");
+			doDisconnect();
+			return(false);
+		}
+		return(true);
+	}
+
+	bool sendData(const asio::mutable_buffers_1 & buffers)
+	{
+		if (write(tcpSocket,buffers) != buffer_size(buffers))
+		{
+			ERROR(id << " had write while sending data, disconnecting.");
+			doDisconnect();
+			return(false);
+		}
+		return(true);
+	}
+
+	void sendHeaders(int status, Cvar & extraHeaders)
 	{
 		stringstream statusStr;
 		statusStr << status;
@@ -155,11 +187,11 @@ class CnetModule : public Cnet
 		responseStr+="HTTP/1.1 ";
 		responseStr+=statusStr.str()+="\r\n";
 		responseStr+="Server: synapse_http_json\r\n";
-	
-		//(re)send session cookie
-		stringstream cookieStr;
-		cookieStr << httpCookie;
-		responseStr+="Set-Cookie: httpSession="+cookieStr.str()+"\r\n";
+
+// 		//(re)send session cookie in every response:
+// 		stringstream cookieStr;
+// 		cookieStr << httpCookie;
+// 		responseStr+="X-Synapse-Authcookie: "+cookieStr.str()+"\r\n";
 
 // 		for (Cvar::iterator varI=cookies.begin(); varI!=cookies.end(); varI++)
 // 		{
@@ -170,19 +202,12 @@ class CnetModule : public Cnet
 		{
 			responseStr+=(string)(varI->first)+": "+(string)(varI->second)+"\r\n";
 		}
-	
-	
-		if (partial)
-		{
-			DEB(id << "sending partial HEADERS: \n" << responseStr);
-		}
-		else
-		{
-			responseStr+="\r\n";
-			DEB(id << " sending HEADERS: \n" << responseStr);
-		}
+		
+		responseStr+="\r\n";
+		DEB(id << " sending HEADERS: \n" << responseStr);
+		
+		sendData(asio::buffer(responseStr));
 
-		write(tcpSocket,asio::buffer(responseStr));
 	}
 
 	void respondString(int status, string data)
@@ -191,7 +216,7 @@ class CnetModule : public Cnet
 		extraHeaders["Content-Length"]=data.length();
 
 		sendHeaders(status, extraHeaders);
-		write(tcpSocket, asio::buffer(data));
+		sendData(asio::buffer(data));
 	}
 
 	void respondError(int status, string error)
@@ -200,41 +225,11 @@ class CnetModule : public Cnet
 		respondString(status, "<h1>Error</h1>"+error);
 	}
 
-	/** Writes the current json queue to the client.
-	* Connection should be ready for it: e.g. browser did a longpoll, headers are sent, except for Content-Length.
-	*/
-	void respondJsonQueue()
-	{
-		if (!jsonQueue.empty())
-		{
-			//"close" the queue:
-			jsonQueue+="]";
-		}
-		else
-		{
-			//respond with an empty array , instead of null:
-			//(better for error handling in firefox)
-			jsonQueue="[]";
-		}
-
-
-		//send headers
-		Cvar extraHeaders;
-		extraHeaders["Content-Length"]=jsonQueue.length();
-		extraHeaders["Cache-Control"]="no-cache";
-		extraHeaders["Content-Type"]="application/json";
-		sendHeaders(200, extraHeaders);
-
-		//write the json queue
-		write(tcpSocket, asio::buffer(jsonQueue));
-		jsonQueue.clear();
-
-	}
 
 
 	/** Respond by sending a file relative to the wwwdir/
 	*/
-	void respondFile(string path)
+	bool respondFile(string path)
 	{
 		Cvar extraHeaders;
 
@@ -242,7 +237,7 @@ class CnetModule : public Cnet
 		if (path.find("..")!=string::npos)
 		{
 			respondError(403, "Path contains illegal characters");
-			return;
+			return(true);
 		}
 		string localPath;
 		localPath="wwwdir/"+path;
@@ -252,20 +247,20 @@ class CnetModule : public Cnet
 		if (statError)
 		{
 			respondError(404, "Error while statting or file not found: " + path);
-			return;
+			return(true);
 		}
 
 		if (! (S_ISREG(statResults.st_mode)) )
 		{
 			respondError(404, "Path " + path + " is not a regular file");
-			return;
+			return(true);
 		}	
 
 		ifstream inputFile(localPath.c_str(), std::ios::in | std::ios::binary);
 		if (!inputFile.good() )
 		{
 			respondError(404, "Error while opening " + path );
-			return;
+			return(true);
 		}
 
 		//determine filesize
@@ -284,7 +279,10 @@ class CnetModule : public Cnet
 		while (inputFile.good())
 		{
 			inputFile.read(buf	,sizeof(buf));
-			write(tcpSocket, asio::buffer(buf, inputFile.gcount()));
+			if (!sendData(asio::buffer(buf, inputFile.gcount())))
+			{
+				break;
+			}
 			sendSize+=inputFile.gcount();
 		}
 
@@ -293,37 +291,66 @@ class CnetModule : public Cnet
 			ERROR(id <<  " error during file transfer, disconnecting");
 			doDisconnect();
 		}
+
+		return true;
 	}
 
-	/** This should be only called when the client is ready to receive a response to the requestUrl.
+	/** Responds with messages that are in the json queue for this clients session
+	* If the queue is empty, it doesnt send anything and returns false. 
+    * Use abort to send an empty resonse without looking at the queue at all.
 	*/
-	void respond()
+	bool respondJsonQueue(bool abort=false)
+	{
+		string jsonStr;
+		if (abort)
+		{
+			//to abort we need to reply with an empty json array:
+			jsonStr="[]";
+		}
+		else
+		{
+			//check if there are messages in the queue, based on the authcookie from the last request:
+			//This function will change authCookie if neccesary and fill jsonStr!
+			httpSessionMan.getJsonQueue(id, authCookie, jsonStr);
+		}
+
+		if (jsonStr=="")
+		{
+			//nothing to reply (yet), retrun false and wait until there is a message
+			return(false);
+		}
+		else
+		{
+			//send headers
+			Cvar extraHeaders;
+			extraHeaders["Content-Length"]=jsonStr.length();
+			extraHeaders["Cache-Control"]="no-cache";
+			extraHeaders["Content-Type"]="application/json";
+			extraHeaders["X-Synapse-Authcookie"]=authCookie;
+			sendHeaders(200, extraHeaders);
+	
+			//write the json queue
+			sendData(asio::buffer(jsonStr));
+			return(true);
+		}
+	}
+
+
+	/** This should be only called when the client is ready to receive a response to the requestUrl.
+	* Returns true if something is sended.
+	* Returns false if there is nothing to send yet. (longpoll mode)
+    */
+	bool respond(bool abort=false)
 	{
 		//someone requested the special longpoll url:
 		if (requestUrl=="/synapse/longpoll")
 		{
-			wantsMessages=true;
-			if (!jsonQueue.empty())
-			{
-				//we have messages queued, so we can reply them directly:
-				respondJsonQueue();
-				DEB(id <<  " WROTE QUEUED messages for httpSession " << httpCookie );
-				state=REQUEST;
-			}
-			else
-			{
-				//we dont have messages, so wait for new messages.
-				//this wait can be aborted if the browser sends another request.
-				//http://en.wikipedia.org/wiki/Comet_%28programming%29
-				//We implement long polling with message queueing
-				DEB(id << " is now waiting for long poll results.");
-				state=WAIT_LONGPOLL;
-			}
+			return(respondJsonQueue(abort));
 		}
+		//just respond with a normal file
 		else
 		{
-			respondFile(requestUrl);
-			state=REQUEST;
+			return(respondFile(requestUrl));
 		}
 	}
 
@@ -333,15 +360,14 @@ class CnetModule : public Cnet
 		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), readBuffer.size());
 		string error;
 
-		//parse http request headers
+		//we're expecting a new request:
 		if (state==REQUEST || state==WAIT_LONGPOLL)
 		{
-			//there is still an outstanding longpoll, cancel it:
+			//if there is still an outstanding longpoll, cancel it:
 			if (state==WAIT_LONGPOLL)
 			{
 				DEB(id << " cancelling longpoll");
-				//(the json-queue is still empty, so it responds with an empty array)
-				respond();
+				respond(true);
 			}
 
 			//resize data to first delimiter:
@@ -355,8 +381,7 @@ class CnetModule : public Cnet
  			if (!regex_search(
  				dataStr,
  				what, 
-/* 				boost::regex("^(HEAD|GET|POST) (.*) HTTP/1.1")*/
- 				boost::regex("^(HEAD|GET|POST) ([^? ]*)([^ ]*) HTTP/1.1$")
+ 				boost::regex("^(GET|POST) ([^? ]*)([^ ]*) HTTP/1.1$")
  			))
  			{
 				error="Cant parse request.";
@@ -369,6 +394,7 @@ class CnetModule : public Cnet
 				DEB("REQUEST query: " << requestQuery);
 
 				//create a regex iterator for http headers
+				headers.clear();
 				boost::sregex_iterator headerI(
 					dataStr.begin(), 
 					dataStr.end(), 
@@ -378,6 +404,7 @@ class CnetModule : public Cnet
 				//parse http headers
 				while (headerI!=sregex_iterator())
 				{
+					//TODO: convert everything to lowcase
 					string header=(*headerI)[1].str();
 					string value=(*headerI)[2].str();
 	
@@ -385,67 +412,26 @@ class CnetModule : public Cnet
 					headerI++;
 				}
 
-				
-				//we dont have a httpCookie for this connection yet, and browser sent us cookies?
-				if (!httpCookie && headers.isSet("Cookie"))
-				{
-					//create a regex iterator for cookies
-					boost::sregex_iterator cookieI(
-						headers["Cookie"].str().begin(), 
-						headers["Cookie"].str().end(), 
-						boost::regex("([^=; ]*)=([^=; ]*)")
-					);
-			
-					//parse cookies, to find httpSession cookie (if set)
-					while (cookieI!=sregex_iterator())
-					{
-						if ((*cookieI)[1].str()=="httpSession")
-						{
-							try
-							{
-								ThttpCookie clientsCookie=lexical_cast<ThttpCookie>(((*cookieI)[2]).str());
-	
-								//do we know the cookie the browser is giving us?
-								//This is an expensive call, but its only done if httpCookie ist set yet
-								if (httpSessionMan.isSessionValid(clientsCookie))
-								{
-									httpCookie=clientsCookie;
-									break;
-								}
-								else
-								{
-									DEB(id << " ignored invalid or expired cookie " << clientsCookie);
-								}
-							}
-							catch(...)
-							{
-								WARNING(id << " Invalid httpSession format: " << ((*cookieI)[2]).str()) ;
-								httpCookie=0;
-							}
-						}
-						cookieI++;
-					}
-				}
+				//this header MUST be set on longpoll requests:
+				//if the client doesnt has one yet, httpSessionMan will assign a new one.
+				authCookie=headers["X-Synapse-Authcookie"];
 
-				//do we need a new http session cookie for this connection?
-				if (!httpCookie)
+				//proceed based on requestType:
+				//a GET or empty POST:
+				if (requestType=="GET" || (int)headers["Content-Length"]==0)
 				{
-					httpCookie=httpSessionMan.newHttpSession();
+					if (respond())
+						state=REQUEST;
+					else
+						state=WAIT_LONGPOLL;
+					return;	
 				}
-
-				//proceed based on requestType
-				if (requestType=="POST")
+				//a POST with content:
+				else 
 				{
-					if ( (int)headers["Content-Length"]==0)
-					{
-						//no content, just respond now
-						respond();
-						return;
-					}
-					else if ( (int)headers["Content-Length"]<0  || (int)headers["Content-Length"] > MAX_CONTENT )
+					if ( (int)headers["Content-Length"]<0  || (int)headers["Content-Length"] > MAX_CONTENT )
 					{
 						error="Invalid Content-Length";
-						//now we lose track of the datastreams, error out!
 					}
 					else
 					{
@@ -454,16 +440,10 @@ class CnetModule : public Cnet
 						return;
 					}
 				}
-				else if (requestType=="GET")
-				{
-					//simple get, just respond:
-					respond();
-					return ;	
-				}
 			}
 		}
 		else 
-		//we've received contents of a POST request.
+		//we're expecting the contents of a POST request.
 		if (state==CONTENT)
 		{
 			if (readBuffer.size() < headers["Content-Length"])
@@ -476,19 +456,20 @@ class CnetModule : public Cnet
 				dataStr.resize(headers["Content-Length"]);
 				readBuffer.consume(headers["Content-Length"]);
 				DEB(id << " got http CONTENT with length=" << dataStr.size() << ": \n" << dataStr);
-				//for now we just ignore post data..
 
-				respond();
+				//TODO: convert json posts to event
+
+				if (respond())
+					state=REQUEST;
+				else
+					state=WAIT_LONGPOLL;
 				return;
 			}
 		}
-		else
-		{
-			error="programming error: Unexpected state?";
-		}
+
 		ERROR(id << " had error while processing http data: " << error);
 		error="Request aborted: "+error+"\n";
-		write(tcpSocket,asio::buffer(error));
+		sendData(asio::buffer(error));
 		doDisconnect();
 		return;
 
@@ -504,68 +485,72 @@ class CnetModule : public Cnet
 
 
 
-	void enqueueJson(string & jsonStr)
-	{
-		if (jsonQueue.empty())
-		{
-			jsonQueue="["+jsonStr;
-		}
-		else
-		{
-			jsonQueue+=","+jsonStr;
-		}
-	}
 
 	/// //////////////// PUBLIC INTERFACE FOR NETWORK CONNECTIONS
 	public:
-	bool wantsMessages;
-	int cachedSessionId;
+
+	/** We receive this when the queue is changed and we are (probably) waiting for a message.
+	 * I say PROBABLY, because the client could have changed its mind in the meanwhile.
+	 */
+	void queueChanged()
+	{
+		//are we really waiting for something?
+		if (state==WAIT_LONGPOLL)
+		{
+			//try to respond (this will call the httpSessionMan to see if there really is a message for our authCookie)
+			if (respondJsonQueue())
+			{
+				//we responded, change our state back to REQUEST
+				state=REQUEST;
+			}
+		}
+	}
 
 	/** We receive this from synapse, with a message that COULD be for the connected client.
 	* We might to write, queue or drop it.
     * We receive this call via the IOservice thread, so it runs in the same thread.
 	*/
-	void writeMessage(int dstSessionId, string & jsonStr)
-	{
-		if (!wantsMessages)
-		{
-			WARNING(id << " dropping message for session " << dstSessionId << ": connection " << id << " doesnt want messages.");
-			return;
-		}
-
-		//resolving a httpCookie to a session is an expensive call that involves locking, so cache it:
-		if (cachedSessionId==SESSION_DISABLED)
-		{
-			cachedSessionId=httpSessionMan.getSessionId(httpCookie);
-		}
-
-		if (cachedSessionId==SESSION_DISABLED)
-		{
-			WARNING(id << " dropping message for session " << dstSessionId << ": httpSession " << httpCookie << " at connection " << id << " doesnt have a sessionId yet.");
-			return;
-		}
-
-		if (cachedSessionId!=dstSessionId && dstSessionId!=0)
-		{
-			//this normally shouldnt happen, so its a warning:
-			WARNING(id << " dropping message for session " << dstSessionId << ": httpSession " << httpCookie << " at connection " << id << " only wants " << cachedSessionId);
-			return;
-		}
-
-		enqueueJson(jsonStr);
-
-		//is the client waiting for json stuff?
-		if (state==WAIT_LONGPOLL)
-		{	
-			//respond now!
-			respond();
-			DEB(id << " QUEUED and WROTE message for session " << dstSessionId << " for httpSession " << httpCookie );
-		}
-		else
-		{
-			DEB(id << " QUEUED message for session " << dstSessionId << " for httpSession " << httpCookie);
-		}		
-	}
+// 	void writeMessage(int dstSessionId, string & jsonStr)
+// 	{
+// 		if (!wantsMessages)
+// 		{
+// 			WARNING(id << " dropping message for session " << dstSessionId << ": connection " << id << " doesnt want messages.");
+// 			return;
+// 		}
+// 
+// 		//resolving a httpCookie to a session is an expensive call that involves locking, so cache it:
+// 		if (cachedSessionId==SESSION_DISABLED)
+// 		{
+// 			cachedSessionId=httpSessionMan.getSessionId(httpCookie);
+// 		}
+// 
+// 		if (cachedSessionId==SESSION_DISABLED)
+// 		{
+// 			WARNING(id << " dropping message for session " << dstSessionId << ": httpSession " << httpCookie << " at connection " << id << " doesnt have a sessionId yet.");
+// 			return;
+// 		}
+// 
+// 		if (cachedSessionId!=dstSessionId && dstSessionId!=0)
+// 		{
+// 			//this normally shouldnt happen, so its a warning:
+// 			WARNING(id << " dropping message for session " << dstSessionId << ": httpSession " << httpCookie << " at connection " << id << " only wants " << cachedSessionId);
+// 			return;
+// 		}
+// 
+// 		enqueueJson(jsonStr);
+// 
+// 		//is the client waiting for json stuff?
+// 		if (state==WAIT_LONGPOLL)
+// 		{	
+// 			//respond now!
+// 			respond();
+// 			DEB(id << " QUEUED and WROTE message for session " << dstSessionId << " for httpSession " << httpCookie );
+// 		}
+// 		else
+// 		{
+// 			DEB(id << " QUEUED message for session " << dstSessionId << " for httpSession " << httpCookie);
+// 		}		
+// 	}
 
 };
 
@@ -649,6 +634,11 @@ SYNAPSE_REGISTER(module_NewSession_Error)
 	httpSessionMan.newSessionError(msg);
 }
 
+SYNAPSE_REGISTER(module_SessionEnd)
+{
+	httpSessionMan.sessionEnd(msg);
+}
+
 /** This handler is called for all events that:
  * -dont have a specific handler, 
  * -are send to broadcast or to a session we manage.
@@ -659,11 +649,27 @@ SYNAPSE_HANDLER(all)
 	string jsonStr;
 	Cmsg2json(msg, jsonStr);
 
+
+	int waitingNetId=httpSessionMan.sendMessage(msg);
+	if (waitingNetId)
 	{
-		//send the message to all open network connections.
-		//CnetModule::sendMessage will handle the rest..
+		//a client is waiting for a message, lets inform him:
 		lock_guard<mutex> lock(net.threadMutex);
-		for (CnetMan<CnetModule>::CnetMap::iterator netI=net.nets.begin(); netI!=net.nets.end(); netI++)
+
+		CnetMan<CnetModule>::CnetMap::iterator netI=net.nets.find(waitingNetId);
+
+		//still exists?
+		if (netI != net.nets.end())
+		{
+			DEB("Informing net " << waitingNetId << " of queue change.");
+			netI->second->ioService.post(bind(&CnetModule::queueChanged,netI->second));
+		}
+		else
+		{
+			DEB("Wanted to inform net " << waitingNetId << " of queue change, but it doesnt exist anymore?");
+		}
+	}
+/*		for (CnetMan<CnetModule>::CnetMap::iterator netI=net.nets.begin(); netI!=net.nets.end(); netI++)
 		{
 			//NOTE: this is a lockless optimisation: we dont want to send the events to connections we can be 
 			//SURE of that dont want or need it.
@@ -673,11 +679,53 @@ SYNAPSE_HANDLER(all)
 				 netI->second->cachedSessionId==SESSION_DISABLED)
 			)
 			{
-				netI->second->ioService.post(bind(&CnetModule::writeMessage,netI->second,msg.dst,jsonStr));
 			}
 		}
-	}	
+	}	*/
 }
 
 
 
+/*
+
+// 				//we dont have a httpCookie for this connection yet, and browser sent us cookies?
+// 				if (!httpCookie && headers.isSet("Cookie"))
+// 				{
+// 					//create a regex iterator for cookies
+// 					boost::sregex_iterator cookieI(
+// 						headers["Cookie"].str().begin(), 
+// 						headers["Cookie"].str().end(), 
+// 						boost::regex("([^=; ]*)=([^=; ]*)")
+// 					);
+// 			
+// 					//parse cookies, to find httpSession cookie (if set)
+// 					while (cookieI!=sregex_iterator())
+// 					{
+// 						if ((*cookieI)[1].str()=="httpSession")
+// 						{
+// 							try
+// 							{
+// 								ThttpCookie clientsCookie=lexical_cast<ThttpCookie>(((*cookieI)[2]).str());
+// 	
+// 								//do we know the cookie the browser is giving us?
+// 								//This is an expensive call, but its only done if httpCookie ist set yet
+// 								if (httpSessionMan.isSessionValid(clientsCookie))
+// 								{
+// 									httpCookie=clientsCookie;
+// 									break;
+// 								}
+// 								else
+// 								{
+// 									DEB(id << " ignored invalid or expired cookie " << clientsCookie);
+// 								}
+// 							}
+// 							catch(...)
+// 							{
+// 								WARNING(id << " Invalid httpSession format: " << ((*cookieI)[2]).str()) ;
+// 								httpCookie=0;
+// 							}
+// 						}
+// 						cookieI++;
+// 					}
+// 				}
+*/

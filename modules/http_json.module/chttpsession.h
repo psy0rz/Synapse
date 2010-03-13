@@ -3,25 +3,24 @@
 #define CHTTPSESSION_H
 
 #include <string>
-#include <list>
-#include <boost/shared_ptr.hpp>
 
+typedef long int ThttpCookie;
 
 
 using namespace std;
-using namespace boost;
 
 
 class ChttpSession
 {
 	public:
+	ThttpCookie authCookie;
+	string jsonQueue;
+	int netId;
 
-	//currently a httpSession can only be linked to ONE synapse session. If we need multi session support we can implement it later.
-	int sessionId;
 	ChttpSession();
+
 
 };
 
-typedef shared_ptr<ChttpSession> ChttpSessionPtr;
 
 #endif
