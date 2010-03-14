@@ -219,6 +219,7 @@ class CnetModule : public Cnet
 	{
 		Cvar extraHeaders;
 		extraHeaders["Content-Length"]=data.length();
+		extraHeaders["Content-Type"]="text/html";
 
 		sendHeaders(status, extraHeaders);
 		sendData(asio::buffer(data));
@@ -227,7 +228,7 @@ class CnetModule : public Cnet
 	void respondError(int status, string error)
 	{
 		WARNING(id << " responding with error: " << error);
-		respondString(status, "<h1>Error</h1>"+error);
+		respondString(status, "<h1 style='color:red;'>Error</h1>\n"+error);
 	}
 
 
@@ -463,13 +464,27 @@ class CnetModule : public Cnet
 				readBuffer.consume(headers["Content-Length"]);
 				DEB(id << " got http CONTENT with length=" << dataStr.size() << ": \n" << dataStr);
 
-				//TODO: convert json posts to event
+				//POST to the special send url?
+				if (requestUrl=="/synapse/send")
+				{
+					error=httpSessionMan.sendMessage(authCookie, dataStr);
+					if (error=="")
+						respondString(200, "");
+					else
+						respondError(400, error);
 
-				if (respond())
 					state=REQUEST;
+					return;
+				}
 				else
-					state=WAIT_LONGPOLL;
-				return;
+				{
+					//ignore whatever is posted, and just respond normally:
+					if (respond())
+						state=REQUEST;
+					else
+						state=WAIT_LONGPOLL;
+					return;
+				}
 			}
 		}
 

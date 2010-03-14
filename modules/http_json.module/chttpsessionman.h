@@ -33,6 +33,7 @@ public:
 
 	//Called from http-client-side:
 	void getJsonQueue(int netId, ThttpCookie & authCookie, string & jsonStr);
+	string sendMessage(ThttpCookie & authCookie, string & jsonStr);
 
 /*	int getSessionId(ThttpCookie httpCookie);
 	bool isSessionValid(ThttpCookie httpCookie);*/
@@ -46,6 +47,9 @@ public:
 	int enqueueMessage(Cmsg & msg, int dst);
 
 
+private:
+	//private stuff, no mutex locking!
+	ChttpSessionMap::iterator findSessionByCookie(ThttpCookie & authCookie);
 
 };
 

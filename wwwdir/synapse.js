@@ -15,60 +15,38 @@ if (typeof console == 'undefined')
 //user defined message handlers go in here:
 synapse_handlers=new Array();
 
-//we count the number of outstanding xmlhttprequests: we make sure at least on is doing a longpoll
-synapse_requestCount=0;
-
 //synapse uses the authCookie inside the X-Synapse-Authcookie to distinguish different script-instances
 synapse_authCookie=0;
 
 //set this to true to stop polling:
-//you can still SEND events, which will result in one poll, but after that it stops
 synapse_stop=false;
 
-
-function synapse_doRequest(jsonStr)
+//does a long poll to get events from the server
+function synapse_receive()
 {
-
-	//only send a request if we have data to send, or if there are no more outstanding longpolls
-	if (typeof jsonStr!='undefined' || ( synapse_stop==false && synapse_requestCount==0))
-	{
-		synapse_requestCount++;
-
-		if (typeof jsonStr=='undefined')
-		{
-			type="get";
-		}
-		else
-		{	
-			type="post";
-		}
-
-		$.ajax({
-			"dataType":		"json",
-			"url":			'/synapse/longpoll',
-			"error": 		synapse_handleError,
-			"success":		synapse_handleMessages,
-			"type":			type,
-			"contentType":	"application/json",
-			"beforeSend":	function (XMLHttpRequest) { XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); },
-			"processData":	false,
-			"cache":		false,
-			"data":			jsonStr
-		});
-	}
+	$.ajax({
+		"dataType":		"json",
+		"url":			'/synapse/longpoll',
+		"error": 		synapse_handleError,
+		"success":		synapse_handleMessages,
+		"type":			"get",
+		"contentType":	"application/json",
+		"beforeSend":	function (XMLHttpRequest) { XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); },
+		"processData":	false,
+		"cache":		false
+	});
 }
 
 
 function synapse_handleError(request, status)
 {
-	synapse_requestCount--;
 	if (synapse_handlers["error"])
 	{
 		synapse_handlers["error"]("Error while processing ajax request '" + request + "' status=" + status);
 	}
 }
 
-
+//handles long poll results, which contain incoming messages
 function synapse_handleMessages(messages, status, XMLHttpRequest)
 {
 	//did we get an authcookie? 
@@ -77,7 +55,6 @@ function synapse_handleMessages(messages, status, XMLHttpRequest)
 		synapse_authCookie=XMLHttpRequest.getResponseHeader("X-Synapse-Authcookie");
 	}
 
-	synapse_requestCount--;
 	if (messages==null)
 	{
 		if (synapse_handlers["error"])
@@ -122,7 +99,10 @@ function synapse_handleMessages(messages, status, XMLHttpRequest)
 		}
 	}
 
-	synapse_doRequest();
+	if (!synapse_stop)
+	{
+		synapse_receive();
+	}
 }
 
 
@@ -137,11 +117,22 @@ function send(msg_dst, msg_event, msg)
 	console.debug("sending :", jsonObj);
 
 	jsonStr=JSON.stringify(jsonObj);
-	synapse_doRequest(jsonStr);
+
+	$.ajax({
+		"dataType":		"text",
+		"url":			'/synapse/send',
+		"error": 		synapse_handleError,
+		"type":			"post",
+		"contentType":	"application/json",
+		"beforeSend":	function (XMLHttpRequest) { XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); },
+		"processData":	false,
+		"cache":		false,
+		"data":			jsonStr
+	});
 }
 
- $(document).ready(function(){
-	synapse_doRequest();
+$(document).ready(function(){
+	synapse_receive();
 });
 
 

@@ -14,14 +14,10 @@ ChttpSessionMan::ChttpSessionMan()
 	srand48_r(time(NULL), &randomBuffer);
 }
 
-//A client wants to pop the queued messages for the specified authCookie.
-//If the cookie is invalid, we overwrite it with a new one and request a new session from the core.
-//If the queue is still empty, jsonStr will be empty as well.
-//If there are messages in the queue, they are moved to jsonStr and the queue will be empty again.
-void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string & jsonStr)
-{
-	lock_guard<mutex> lock(threadMutex);
 
+
+ChttpSessionMan::ChttpSessionMap::iterator ChttpSessionMan::findSessionByCookie(ThttpCookie & authCookie)
+{
 	//find the session by searching for the authCookie
 	//TODO: optimize by letting the caller supply a sessionIdHint.
 	ChttpSessionMap::iterator httpSessionI=httpSessionMap.begin();
@@ -30,23 +26,43 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
 		//found it!
 		if (httpSessionI->second.authCookie==authCookie)
 		{
-			if (!httpSessionI->second.jsonQueue.empty())
-			{
-				//return the queued json messages: 
-				jsonStr=httpSessionI->second.jsonQueue+"]";
-				//clear the queue and netId
-				httpSessionI->second.jsonQueue.clear();
-				httpSessionI->second.netId=0;
-			}
-			else
-			{
-				//we dont have messages yet, the client will wait for us, so remember the netId of that client so we can inform it as soon as something arrives.
-				jsonStr.clear();
-				httpSessionI->second.netId=netId;
-			}
-			return ;
-		}			
+			return (httpSessionI);
+		}
 		httpSessionI++;
+	}
+	return(httpSessionI);
+}
+
+
+
+
+//A client wants to pop the queued messages for the specified authCookie.
+//If the cookie is invalid, we overwrite it with a new one and request a new session from the core.
+//If the queue is still empty, jsonStr will be empty as well.
+//If there are messages in the queue, they are moved to jsonStr and the queue will be empty again.
+void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string & jsonStr)
+{
+	lock_guard<mutex> lock(threadMutex);
+
+	ChttpSessionMap::iterator httpSessionI=findSessionByCookie(authCookie);
+
+	if (httpSessionI!=httpSessionMap.end())
+	{
+		if (!httpSessionI->second.jsonQueue.empty())
+		{
+			//return the queued json messages: 
+			jsonStr=httpSessionI->second.jsonQueue+"]";
+			//clear the queue and netId
+			httpSessionI->second.jsonQueue.clear();
+			httpSessionI->second.netId=0;
+		}
+		else
+		{
+			//we dont have messages yet, the client will wait for us, so remember the netId of that client so we can inform it as soon as something arrives.
+			jsonStr.clear();
+			httpSessionI->second.netId=netId;
+		}
+		return ;
 	}
 
 	DEB("Unknown or expired authCookie: " << authCookie << ", requesting new session.");
@@ -68,8 +84,44 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
 
 
 	//TODO: cleanup old or unused sessions
+}
 
+/** A client wants to send a message to the core 
+ */
+string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonStr)
+{
+	stringstream error;
+	Cmsg msg;
+	{
+		lock_guard<mutex> lock(threadMutex);
+		ChttpSessionMap::iterator httpSessionI=findSessionByCookie(authCookie);
+	
+		if (httpSessionI==httpSessionMap.end())
+		{
+			error << "Cannot send message, authCookie " << authCookie << " not found.";
+			return (error.str());
+		}
 
+		//fill in msg.src with the correct session id
+		msg.src=httpSessionI->first;
+	}
+
+	//we do this unlocked, since parsing probably takes most of the time:
+	if (json2Cmsg(jsonStr, msg))
+	{	
+		if (!msg.send())
+		{
+			error << "Error while sending message. (no permission?";
+			return (error.str());
+		}
+	}
+	else
+	{
+		error <<  "Error while parsing JSON message:" << jsonStr;
+		return (error.str());
+	}
+
+	return ("");
 }
 
 //core informs us of a new session that is started, probably for a client of us:
