@@ -68,6 +68,7 @@
 				value: 200000,
 				min: 0,
 				max: 5000000,
+				step: 100000,
 				slide: function(event, ui) {
 					send(0,"test_CounterSpeed", { 
 						"counterSleep": ui.value
@@ -172,7 +173,9 @@
 	</ul>
 
 	<p>
+	Counter delay: (100ms - 5000ms): 
 	<div style='width:50%' id='slider'></div>
+
 	<input type='submit' value='Counter faster' id='counterFaster'>
 	<input type='submit' value='Counter slower' id='counterSlower'>
 

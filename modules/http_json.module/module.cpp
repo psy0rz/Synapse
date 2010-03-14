@@ -64,14 +64,14 @@ SYNAPSE_REGISTER(module_Init)
 	//currently all the sessions are fighting over the same lock in httpSessionMan.
 	out.clear();
 	out.event="core_ChangeModule";
-	out["maxThreads"]=100;
+	out["maxThreads"]=200;
 	out["broadcastMulti"]=1;
 	out.send();
 
 	//we need multiple threads for network connection handling
 	out.clear();
 	out.event="core_ChangeSession";
-	out["maxThreads"]=20;
+	out["maxThreads"]=200;
 	out.send();
 
 	//register a special handler without specified event
@@ -595,7 +595,7 @@ SYNAPSE_REGISTER(http_json_Listen)
  		out["port"]=msg["port"];
 	
 		//start 10 accepting threads (e.g. max 10 connections)
-		for (int i=0; i<10; i++)
+		for (int i=0; i<30; i++)
 	 		out.send();
 
 		net.runListen(msg["port"]);
