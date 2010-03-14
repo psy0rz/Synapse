@@ -3,7 +3,9 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+	<link type="text/css" href="css/smoothness/jquery-ui-1.7.2.custom.css" rel="Stylesheet" />	
 	<script type="text/javascript" src="jquery.js"></script>
+	<script type="text/javascript" src="jquery-ui.js"></script>
 	<script type="text/javascript" src="json2.js"></script>
 	<script type="text/javascript" src="synapse.js"></script>
 	<script type="text/javascript">
@@ -18,17 +20,61 @@
 			$('#msg_src').html(msg_src);
 			$('#msg_dst').html(msg_dst);
 			$('#msg_event').html(msg_event);
-			$('#msg').html(JSON.stringify(msg));
+
+			if (typeof msg == "undefined")
+			{
+				$('#msg').html("(undefined)");
+			}
+			else
+			{
+				$('#msg').html(JSON.stringify(msg));
+			}
 
 		});
-	
+
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
  			$('#authCookie').html(msg["authCookie"]);
  			$('#dst').html(msg_dst);
  		});
 
+ 		synapse_register("module_Error",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+ 			$('#module_Error').html(msg["description"]);
+ 		});
+
+		lastCounter=0;
+ 		synapse_register("test_Counter",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			if (lastCounter!=0 && (msg["counter"] != lastCounter+1))
+			{
+				$('#counterError').html("Wrong counter value!");
+			}
+			$('#counter').html(msg["counter"]);
+ 		});
+
+ 		synapse_register("test_CounterStatus",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			console.info("asdf"+msg["counterSleep"]);
+			$("#slider").slider('value', msg["counterSleep"]);
+	
+		});
+
 		$(document).ready(function(){
+
+			$('#username').val("admin");
+			$('#password').val("bs");
+			$("#slider").slider({
+				value: 200000,
+				min: 0,
+				max: 5000000,
+				slide: function(event, ui) {
+					send(0,"test_CounterSpeed", { 
+						"counterSleep": ui.value
+					});				
+				}
+			});
+
 
 			$('#stop').click(function(event){
 				//send(0,"test","bla");
@@ -46,8 +92,26 @@
 			});
 
 			$('#reset').click(function(event){
+				synapse_stop=true;
 				synapse_authCookie=0;
 				synapse_receive();
+			});
+
+			$('#login').click(function(event){
+				send(0,"core_Login", { 
+					"username": $('#username').val(),
+					"password": $('#password').val()
+				});				
+			});
+
+			$('#counterFaster').click(function(event){
+				send(0,"test_CounterFaster", { 
+				});				
+			});
+
+			$('#counterSlower').click(function(event){
+				send(0,"test_CounterSlower", { 
+				});				
 			});
 
 		});
@@ -59,65 +123,59 @@
 
 <body>
 <p>
+	<h1>Synapse http debugging/test page</h1>
+
 	Tip: Use the firebug console to see debugging output.
-	<p>
+
+
+	<h2>Low level (synapse lola/http)</h2>
 
 	<ul>
-	<li>Last HTTP error:				<span id='error' style='color: red'></span>
-	<li>HTTP authCookie:		<span id='authCookie'></span>
-	<li>Synapse session id:		<span id='dst'></span>
-	<li>
-		Last message:
-		<ul>
-			<li>Source: 		<span id='msg_src'></div>
-			<li>Destination: 	<span id='msg_dst'></div>
-			<li>Event: 			<span id='msg_event'></div>
-			<li>JSON parameters:<span id='msg'></div>
-		</ul>
-
-
+		<li>Last HTTP error:		<span id='error' style='color: red'></span>
+		<li>HTTP authCookie:		<span id='authCookie'></span>
+		<li>Synapse session id:		<span id='dst'></span>
 	</ul>
-
 
 	<input type='submit' value='Stop polling' id='stop'>
 	<input type='submit' value='Poll one time' id='poll'>
 	<input type='submit' value='Start polling' id='start'>
-	<br>
+
+	<p>
 	<input type='submit' value='New session (stop polling first)' id='reset'>
 
 
+	<h2>High level (module and message stuff)</h2>
+
+		<ul>
+		<li>Last module_Error:		<span style='color: red' id='module_Error'></div>
+		<li>Last unhandled message:
+			<ul>
+				<li>Source: 		<span id='msg_src'></div>
+				<li>Destination: 	<span id='msg_dst'></div>
+				<li>Event: 			<span id='msg_event'></div>
+				<li>JSON parameters:<span id='msg'></div>
+			</ul>
+		</ul>
 
 
+	<h2>Application level (tests)</h2>
 
-<form>
-  <div><input type="text" name="a" value="1" id="a" /></div>
-  <div><input type="text" name="b" value="2" id="b" /></div>
-  <div><input type="hidden" name="c" value="3" id="c" /></div>
-  <div>
-    <textarea name="d" rows="8" cols="40">4</textarea>
-  </div>
-  <div><select name="e">
-    <option value="5" selected="selected">5</option>
-    <option value="6">6</option>
-    <option value="7">7</option>
-  </select></div>
-  <div>
-    <input type="checkbox" name="f" value="8" id="f" />
-  </div>
-  <div>
-    <input type="submit" name="g" value="Submit" id="g" />
-  </div>
-</form>
+	<h3>Login/off</h3>
+	Username: <input type="text" id="username" /><br>
+	Password: <input type="text" id="password" /><br>
+	<input type='submit' value='Login' id='login'>
+	
+	<h3>Counter testing</h3>
+	<ul>
+		<li>Counter test value:     <span id='counter'></span>
+		<li>Counter error: 	 	   <span style='color: red' id='counterError'></span>
+	</ul>
+
+	<p>
+	<div style='width:50%' id='slider'></div>
+	<input type='submit' value='Counter faster' id='counterFaster'>
+	<input type='submit' value='Counter slower' id='counterSlower'>
 
 
 </body>
-
 </html>
-
-<script >
-$('form').submit(function() {
-  alert($(this).serializeArray());
-  return false;
-});
-
-</script>

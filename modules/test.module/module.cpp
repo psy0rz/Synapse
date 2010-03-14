@@ -1,6 +1,7 @@
 #include "synapse.h"
 
 int counter;
+int counterSleep;
 
 SYNAPSE_REGISTER(module_Init)
 {
@@ -42,31 +43,71 @@ SYNAPSE_REGISTER(module_Init)
  	out.send();
 
 
+	// Counter that ever counterSleep seconds emits a message.
+	// Speed can be changed with appropriate messages
 	out.clear();
 	out.event="core_ChangeEvent";
-	out["event"]=		"test_Message"; 
+	out["event"]=		"test_Counter"; 
 	out["modifyGroup"]=	"modules";
 	out["sendGroup"]=	"modules";
 	out["recvGroup"]=	"anonymous";
 	out.send();
 
 	counter=0;
+	counterSleep=5000000;
 	out.clear();
-	out.event="test_Message";
+	out.event="test_Counter";
 	out.send();
 
 }
 
-SYNAPSE_REGISTER(test_Message)
+SYNAPSE_REGISTER(test_Counter)
 {
-	sleep(1);
+	usleep(counterSleep);
 	counter++;
 	Cmsg out;
-	out.event="test_Message";
+	out.event="test_Counter";
 	out["counter"]=counter;
+	out["counterSleep"]=counterSleep;
 	out.send();
 
 }
+
+void counterStatus()
+{
+	if (counterSleep<100000)
+		counterSleep=100000;
+
+	if (counterSleep>5000000)
+		counterSleep=5000000;
+
+
+	Cmsg out;
+	out.event="test_CounterStatus";
+	out["counterSleep"]=counterSleep;
+	out.send();
+}
+
+
+SYNAPSE_REGISTER(test_CounterFaster)
+{
+	counterSleep=counterSleep-100000;
+	counterStatus();
+}
+
+SYNAPSE_REGISTER(test_CounterSlower)
+{
+	counterSleep=counterSleep+100000;
+	counterStatus();
+}
+
+SYNAPSE_REGISTER(test_CounterSpeed)
+{
+	counterSleep=msg["counterSleep"];
+	counterStatus();
+}
+
+
 
 SYNAPSE_REGISTER(http_json_Ready)
 {

@@ -23,6 +23,9 @@ void Value2Cvar(Value &value,Cvar &var)
 		case(real_type):
 			var=value.get_real();
 			break;
+		case(int_type):
+			var=value.get_real();
+			break;
 		case(obj_type):
 			//convert the Object(string,Value) pairs to a CvarMap 
 			for (Object::iterator ObjectI=value.get_obj().begin(); ObjectI!=value.get_obj().end(); ObjectI++)

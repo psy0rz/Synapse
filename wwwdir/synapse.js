@@ -38,11 +38,13 @@ function synapse_receive()
 }
 
 
-function synapse_handleError(request, status)
+function synapse_handleError(request, status, e)
 {
+	errorTxt="Error while processing request: " + request.responseText;
+	console.error(errorTxt);
 	if (synapse_handlers["error"])
 	{
-		synapse_handlers["error"]("Error while processing ajax request '" + request + "' status=" + status);
+		synapse_handlers["error"](errorTxt);
 	}
 }
 

@@ -58,7 +58,7 @@ SYNAPSE_REGISTER(module_Init)
 	out["event"]=		"module_Error"; /// SEND to module on all kinds of errors
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"modules";
-	out["recvGroup"]=	"everyone";
+	out["recvGroup"]=	"anonymous";
 	out.send();
 
 	out["event"]=		"core_ChangeEvent"; /// RECV to change permissions of events
@@ -402,7 +402,7 @@ SYNAPSE_REGISTER(core_NewSession)
 		errormsg.dst=msg.src;
 		errormsg.src=0;
 		errormsg.event="module_NewSession_Error";
-		errormsg["error"]=error;
+		errormsg["description"]=error;
 		errormsg.send();
 	}
 	else

@@ -92,7 +92,16 @@ string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonStr)
 {
 	stringstream error;
 	Cmsg msg;
+
+	//we do this unlocked, since parsing probably takes most of the time:
+	if (!json2Cmsg(jsonStr, msg))
+	{	
+		error <<  "Error while parsing JSON message:" << jsonStr;
+		return (error.str());
+	}
+
 	{
+		//httpSession stuff, has to be locked offcourse:
 		lock_guard<mutex> lock(threadMutex);
 		ChttpSessionMap::iterator httpSessionI=findSessionByCookie(authCookie);
 	
@@ -106,18 +115,9 @@ string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonStr)
 		msg.src=httpSessionI->first;
 	}
 
-	//we do this unlocked, since parsing probably takes most of the time:
-	if (json2Cmsg(jsonStr, msg))
-	{	
-		if (!msg.send())
-		{
-			error << "Error while sending message. (no permission?";
-			return (error.str());
-		}
-	}
-	else
+	if (!msg.send())
 	{
-		error <<  "Error while parsing JSON message:" << jsonStr;
+		error << "Error while sending message. (no permission?)";
 		return (error.str());
 	}
 

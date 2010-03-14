@@ -229,7 +229,7 @@ class CnetModule : public Cnet
 	void respondError(int status, string error)
 	{
 		WARNING(id << " responding with error: " << error);
-		respondString(status, "<h1 style='color:red;'>Error</h1>\n"+error);
+		respondString(status, error);
 	}
 
 
