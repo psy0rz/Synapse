@@ -1,5 +1,7 @@
 #include "synapse.h"
 
+int counter;
+
 SYNAPSE_REGISTER(module_Init)
 {
 	Cmsg out;
@@ -39,17 +41,30 @@ SYNAPSE_REGISTER(module_Init)
  	out["path"]="modules/ami.module/libami.so";
  	out.send();
 
-	int c=0;
-	while (1)
-	{
-		c++;
-		Cmsg out;
-		out.event="test_Message";
-		out["counter"]=c;
-		out.send();
-		sleep(1);
-	}
 
+	out.clear();
+	out.event="core_ChangeEvent";
+	out["event"]=		"test_Message"; 
+	out["modifyGroup"]=	"modules";
+	out["sendGroup"]=	"modules";
+	out["recvGroup"]=	"anonymous";
+	out.send();
+
+	counter=0;
+	out.clear();
+	out.event="test_Message";
+	out.send();
+
+}
+
+SYNAPSE_REGISTER(test_Message)
+{
+	sleep(1);
+	counter++;
+	Cmsg out;
+	out.event="test_Message";
+	out["counter"]=counter;
+	out.send();
 
 }
 

@@ -43,7 +43,7 @@ public:
 	void sessionStart(Cmsg & msg);
 	void newSessionError(Cmsg & msg);
 	void sessionEnd(Cmsg & msg);
-	int sendMessage(Cmsg & msg);
+	int enqueueMessage(Cmsg & msg, int dst);
 
 
 

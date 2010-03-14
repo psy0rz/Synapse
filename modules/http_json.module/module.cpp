@@ -46,11 +46,15 @@ fout:
 
 
 int networkSessionId=0;
+int moduleSessionId=0;
+
 int netIdCounter=0;
 
 SYNAPSE_REGISTER(module_Init)
 {
 	Cmsg out;
+
+	moduleSessionId=msg.dst;
 
 	//change module settings. 
 	//especially broadcastMulti is important for our "all"-handler
@@ -62,6 +66,7 @@ SYNAPSE_REGISTER(module_Init)
 
 	//The default session will be used to receive broadcasts that need to be transported via json.
 	//Make sure we only process 1 message at a time (1 thread), so they stay in order.
+	//also we dont want useless lock-fighting in httpSessionMan 
 	out.clear();
 	out.event="core_ChangeSession";
 	out["maxThreads"]=1;
@@ -305,6 +310,7 @@ class CnetModule : public Cnet
 		if (abort)
 		{
 			//to abort we need to reply with an empty json array:
+			DEB(id << " cancelling longpoll");
 			jsonStr="[]";
 		}
 		else
@@ -317,6 +323,7 @@ class CnetModule : public Cnet
 		if (jsonStr=="")
 		{
 			//nothing to reply (yet), retrun false and wait until there is a message
+			DEB(id << " is now waiting for longpoll results");
 			return(false);
 		}
 		else
@@ -366,7 +373,6 @@ class CnetModule : public Cnet
 			//if there is still an outstanding longpoll, cancel it:
 			if (state==WAIT_LONGPOLL)
 			{
-				DEB(id << " cancelling longpoll");
 				respond(true);
 			}
 
@@ -467,9 +473,9 @@ class CnetModule : public Cnet
 			}
 		}
 
-		ERROR(id << " had error while processing http data: " << error);
-		error="Request aborted: "+error+"\n";
-		sendData(asio::buffer(error));
+		//ERROR(id << " had error while processing http data: " << error);
+		error="Bad request: "+error;
+		respondError(400, error);
 		doDisconnect();
 		return;
 
@@ -608,6 +614,36 @@ SYNAPSE_REGISTER(module_Shutdown)
 	net.doShutdown();
 }
 
+/** Enqueues the message for the appropriate httpSession, and informs any waiting Cnet network connections.
+*/
+void enqueueMessage(Cmsg & msg, int dst)
+{
+	//ignore these sessions
+	if (dst==networkSessionId || dst==moduleSessionId)
+		return;
+
+	//pass the message to the http session manager, he knows what to do with it!
+	int waitingNetId=httpSessionMan.enqueueMessage(msg,dst);
+	if (waitingNetId)
+	{
+		//a client is waiting for a message, lets inform him:
+		lock_guard<mutex> lock(net.threadMutex);
+
+		CnetMan<CnetModule>::CnetMap::iterator netI=net.nets.find(waitingNetId);
+
+		//client connection still exists?
+		if (netI != net.nets.end())
+		{
+			DEB("Informing net " << waitingNetId << " of queue change.");
+			netI->second->ioService.post(bind(&CnetModule::queueChanged,netI->second));
+		}
+		else
+		{
+			DEB("Want to inform net " << waitingNetId << " of queue change, but it doesnt exist anymore?");
+		}
+	}
+}
+
 
 SYNAPSE_REGISTER(module_SessionStart)
 {
@@ -627,16 +663,25 @@ SYNAPSE_REGISTER(module_SessionStart)
 
 	//other sessions are real sessions for clients, let httpSessionMan handle it
 	httpSessionMan.sessionStart(msg);
+	enqueueMessage(msg,dst);
 }
 
 SYNAPSE_REGISTER(module_NewSession_Error)
 {
+	//ignore these sessions
+	if (dst==networkSessionId || dst==moduleSessionId)
+		return;
+
 	httpSessionMan.newSessionError(msg);
+	enqueueMessage(msg,dst);
+	
 }
 
 SYNAPSE_REGISTER(module_SessionEnd)
 {
+
 	httpSessionMan.sessionEnd(msg);
+	enqueueMessage(msg,dst);
 }
 
 /** This handler is called for all events that:
@@ -645,30 +690,7 @@ SYNAPSE_REGISTER(module_SessionEnd)
  */
 SYNAPSE_HANDLER(all)
 {
-	//encode to json, do it one time for performance reasons
-	string jsonStr;
-	Cmsg2json(msg, jsonStr);
-
-
-	int waitingNetId=httpSessionMan.sendMessage(msg);
-	if (waitingNetId)
-	{
-		//a client is waiting for a message, lets inform him:
-		lock_guard<mutex> lock(net.threadMutex);
-
-		CnetMan<CnetModule>::CnetMap::iterator netI=net.nets.find(waitingNetId);
-
-		//still exists?
-		if (netI != net.nets.end())
-		{
-			DEB("Informing net " << waitingNetId << " of queue change.");
-			netI->second->ioService.post(bind(&CnetModule::queueChanged,netI->second));
-		}
-		else
-		{
-			DEB("Wanted to inform net " << waitingNetId << " of queue change, but it doesnt exist anymore?");
-		}
-	}
+	enqueueMessage(msg, dst);
 /*		for (CnetMan<CnetModule>::CnetMap::iterator netI=net.nets.begin(); netI!=net.nets.end(); netI++)
 		{
 			//NOTE: this is a lockless optimisation: we dont want to send the events to connections we can be 

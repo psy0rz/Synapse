@@ -115,13 +115,15 @@ void ChttpSessionMan::sessionEnd(Cmsg & msg)
 
 //core has a message for us, add it to the message-queue of the corresponding session:
 //returns a netId which is >0, if a network connection needs to be hinted of the change.
-int ChttpSessionMan::sendMessage(Cmsg & msg)
+int ChttpSessionMan::enqueueMessage(Cmsg & msg, int dst)
 {
 	lock_guard<mutex> lock(threadMutex);
-	ChttpSessionMap::iterator httpSessionI=httpSessionMap.find(msg.dst);
+	//NOTE: look at dst and NOT at msg.dst, because of broadcasts!
+
+	ChttpSessionMap::iterator httpSessionI=httpSessionMap.find(dst);
 	if (httpSessionI==httpSessionMap.end())
 	{
-		WARNING("Dropped message for session " << msg.dst << ": session not found");
+		WARNING("Dropped message for session " << dst << ": session not found");
 		return(0);
 	}
 
@@ -145,7 +147,7 @@ int ChttpSessionMan::sendMessage(Cmsg & msg)
 	int netId=httpSessionI->second.netId;
 	httpSessionI->second.netId=0;
 
-	DEB("Enqueued message, probably for netId " << netId << ": " << jsonStr);
+	DEB("Enqueued message for destination session " << dst << ", probably for netId " << netId << ": " << jsonStr);
 
 	return(netId);
 }
