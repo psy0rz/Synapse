@@ -169,39 +169,43 @@ void ChttpSessionMan::sessionEnd(Cmsg & msg)
 //returns a netId which is >0, if a network connection needs to be hinted of the change.
 int ChttpSessionMan::enqueueMessage(Cmsg & msg, int dst)
 {
-	lock_guard<mutex> lock(threadMutex);
-	//NOTE: look at dst and NOT at msg.dst, because of broadcasts!
-
-	ChttpSessionMap::iterator httpSessionI=httpSessionMap.find(dst);
-	if (httpSessionI==httpSessionMap.end())
-	{
-		WARNING("Dropped message for session " << dst << ": session not found");
-		return(0);
-	}
-
 	//convert message to json
+	//we do this without lock ,since it can be a "slow" operation:
 	string jsonStr;
 	Cmsg2json(msg, jsonStr);
 
-	//add it to the jsonQueue. Which is a string that contains a json-array.
-	if (httpSessionI->second.jsonQueue.empty())
 	{
-		httpSessionI->second.jsonQueue="["+jsonStr;
+		lock_guard<mutex> lock(threadMutex);
+		//NOTE: look at dst and NOT at msg.dst, because of broadcasts!
+	
+		ChttpSessionMap::iterator httpSessionI=httpSessionMap.find(dst);
+		if (httpSessionI==httpSessionMap.end())
+		{
+			WARNING("Dropped message for session " << dst << ": session not found");
+			return(0);
+		}
+	
+	
+		//add it to the jsonQueue. Which is a string that contains a json-array.
+		if (httpSessionI->second.jsonQueue.empty())
+		{
+			httpSessionI->second.jsonQueue="["+jsonStr;
+		}
+		else
+		{
+			httpSessionI->second.jsonQueue+=","+jsonStr;
+		}
+	
+		//TODO: check if the queue gets too big and session needs to be killed.
+	
+		//we want to inform the netId only ONE time
+		int netId=httpSessionI->second.netId;
+		httpSessionI->second.netId=0;
+	
+		DEB("Enqueued message for destination session " << dst << ", probably for netId " << netId << ": " << jsonStr);
+	
+		return(netId);
 	}
-	else
-	{
-		httpSessionI->second.jsonQueue+=","+jsonStr;
-	}
-
-	//TODO: check if the queue gets too big and session needs to be killed.
-
-	//we want to inform the netId only ONE time
-	int netId=httpSessionI->second.netId;
-	httpSessionI->second.netId=0;
-
-	DEB("Enqueued message for destination session " << dst << ", probably for netId " << netId << ": " << jsonStr);
-
-	return(netId);
 }
 
 

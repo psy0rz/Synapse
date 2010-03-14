@@ -21,6 +21,9 @@
 
 #include <boost/asio/buffer.hpp>
 
+#include <algorithm>
+
+
 #define MAX_CONTENT 20000
 
 
@@ -141,11 +144,11 @@ class CnetModule : public Cnet
 		if (state==CONTENT)
 		{
 				//the buffer might already contain the data, so calculate how much more bytes we need:
-				int bytesToTransfer=((int)headers["Content-Length"]-readBuffer.size());
+				int bytesToTransfer=((int)headers["content-length"]-readBuffer.size());
 				if (bytesToTransfer<0)
 					bytesToTransfer=0;
 
-				DEB(id << " starting async read for CONTENT, still need to receive " << bytesToTransfer << " of " << (int)headers["Content-Length"] << " bytes.");
+				DEB(id << " starting async read for CONTENT, still need to receive " << bytesToTransfer << " of " << (int)headers["content-length"] << " bytes.");
 
 				asio::async_read(
 					tcpSocket,
@@ -216,8 +219,8 @@ class CnetModule : public Cnet
 	void respondString(int status, string data)
 	{
 		Cvar extraHeaders;
-		extraHeaders["Content-Length"]=data.length();
-		extraHeaders["Content-Type"]="text/html";
+		extraHeaders["content-length"]=data.length();
+		extraHeaders["content-type"]="text/html";
 
 		sendHeaders(status, extraHeaders);
 		sendData(asio::buffer(data));
@@ -273,7 +276,7 @@ class CnetModule : public Cnet
 		inputFile.seekg (0, ios::beg);
 
 		
-		extraHeaders["Content-Length"]=fileSize;
+		extraHeaders["content-length"]=fileSize;
 		sendHeaders(200, extraHeaders);
 
 		DEB(id << " sending CONTENT of " << path);
@@ -329,10 +332,10 @@ class CnetModule : public Cnet
 		{
 			//send headers
 			Cvar extraHeaders;
-			extraHeaders["Content-Length"]=jsonStr.length();
-			extraHeaders["Cache-Control"]="no-cache";
-			extraHeaders["Content-Type"]="application/json";
-			extraHeaders["X-Synapse-Authcookie"]=authCookie;
+			extraHeaders["content-length"]=jsonStr.length();
+			extraHeaders["cache-control"]="no-cache";
+			extraHeaders["content-type"]="application/json";
+			extraHeaders["x-synapse-authcookie"]=authCookie;
 			sendHeaders(200, extraHeaders);
 	
 			//write the json queue
@@ -409,9 +412,11 @@ class CnetModule : public Cnet
 				//parse http headers
 				while (headerI!=sregex_iterator())
 				{
-					//TODO: convert everything to lowcase
 					string header=(*headerI)[1].str();
 					string value=(*headerI)[2].str();
+	
+					//headers handling is lowercase in synapse!
+					transform(header.begin(), header.end(), header.begin(), ::tolower);
 	
 					headers[header]=value;	
 					headerI++;
@@ -419,11 +424,11 @@ class CnetModule : public Cnet
 
 				//this header MUST be set on longpoll requests:
 				//if the client doesnt has one yet, httpSessionMan will assign a new one.
-				authCookie=headers["X-Synapse-Authcookie"];
+				authCookie=headers["x-synapse-authcookie"];
 
 				//proceed based on requestType:
 				//a GET or empty POST:
-				if (requestType=="GET" || (int)headers["Content-Length"]==0)
+				if (requestType=="GET" || (int)headers["content-length"]==0)
 				{
 					if (respond())
 						state=REQUEST;
@@ -434,7 +439,7 @@ class CnetModule : public Cnet
 				//a POST with content:
 				else 
 				{
-					if ( (int)headers["Content-Length"]<0  || (int)headers["Content-Length"] > MAX_CONTENT )
+					if ( (int)headers["content-length"]<0  || (int)headers["content-length"] > MAX_CONTENT )
 					{
 						error="Invalid Content-Length";
 					}
@@ -451,15 +456,15 @@ class CnetModule : public Cnet
 		//we're expecting the contents of a POST request.
 		if (state==CONTENT)
 		{
-			if (readBuffer.size() < headers["Content-Length"])
+			if (readBuffer.size() < headers["content-length"])
 			{
 				error="Didn't receive enough content-bytes!";
-				DEB(id <<  " ERROR: Expected " << (int)headers["Content-Length"] << " bytes, but only got: " << bytesTransferred);
+				DEB(id <<  " ERROR: Expected " << (int)headers["content-length"] << " bytes, but only got: " << bytesTransferred);
 			}
 			else
 			{				
-				dataStr.resize(headers["Content-Length"]);
-				readBuffer.consume(headers["Content-Length"]);
+				dataStr.resize(headers["content-length"]);
+				readBuffer.consume(headers["content-length"]);
 				DEB(id << " got http CONTENT with length=" << dataStr.size() << ": \n" << dataStr);
 
 				//POST to the special send url?

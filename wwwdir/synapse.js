@@ -126,13 +126,16 @@ function send(msg_dst, msg_event, msg)
 		"contentType":	"application/json",
 		"beforeSend":	function (XMLHttpRequest) { XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); },
 		"processData":	false,
+		"error": 		synapse_handleError,
 		"cache":		false,
 		"data":			jsonStr
 	});
 }
 
 $(document).ready(function(){
-	synapse_receive();
+	//need to start ansyncroniously, otherwise some browsers (android) keep loading:
+	//(hmm this not always prevents the problem, we will figure out a better way later)
+	setTimeout("synapse_receive()",1000);
 });
 
 
