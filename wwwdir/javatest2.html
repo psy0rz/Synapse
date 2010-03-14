@@ -11,25 +11,43 @@
 		synapse_register("error",function(errortxt)
 		{
 			$('#error').html(errortxt);
-		});
-	
+		});	
 				
 		synapse_register("default",function(msg_src, msg_dst, msg_event, msg)
 		{
-			s="from:"+ msg_src+ " to:" + msg_dst + " event:"+msg_event+" params:"+JSON.stringify(msg); 
-			$('#event').html(s);
+			$('#msg_src').html(msg_src);
+			$('#msg_dst').html(msg_dst);
+			$('#msg_event').html(msg_event);
+			$('#msg').html(JSON.stringify(msg));
+
 		});
 	
-// 		synapse_register("test_Message",function(msg_src, msg_dst, msg_event, msg)
-// 		{
-// 			$('#counter').html(msg["counter"]);
-// 	//		send(0,"testjava","blaat");
-// 		});
+ 		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+ 			$('#authCookie').html(msg["authCookie"]);
+ 			$('#dst').html(msg_dst);
+ 		});
 
 		$(document).ready(function(){
 
+			$('#stop').click(function(event){
+				//send(0,"test","bla");
+				synapse_stop=true;
+			});
+
+			$('#poll').click(function(event){
+				synapse_stop=true;
+				synapse_receive();
+			});
+
 			$('#start').click(function(event){
-				send(0,"test","bla");
+				synapse_stop=false;
+				synapse_receive();
+			});
+
+			$('#reset').click(function(event){
+				synapse_authCookie=0;
+				synapse_receive();
 			});
 
 		});
@@ -41,20 +59,35 @@
 
 <body>
 <p>
-	Last error:
-	<div id='error' style='color: red'></div>
-	
-	Last event:
-	<div id='event'></div>
+	Tip: Use the firebug console to see debugging output.
+	<p>
 
-	Counter test:
-	<div id='counter'></div>
+	<ul>
+	<li>Last HTTP error:				<span id='error' style='color: red'></span>
+	<li>HTTP authCookie:		<span id='authCookie'></span>
+	<li>Synapse session id:		<span id='dst'></span>
+	<li>
+		Last message:
+		<ul>
+			<li>Source: 		<span id='msg_src'></div>
+			<li>Destination: 	<span id='msg_dst'></div>
+			<li>Event: 			<span id='msg_event'></div>
+			<li>JSON parameters:<span id='msg'></div>
+		</ul>
 
-	Status:
-	<div id='status'></div>
+
+	</ul>
+
 
 	<input type='submit' value='Stop polling' id='stop'>
+	<input type='submit' value='Poll one time' id='poll'>
 	<input type='submit' value='Start polling' id='start'>
+	<br>
+	<input type='submit' value='New session (stop polling first)' id='reset'>
+
+
+
+
 
 <form>
   <div><input type="text" name="a" value="1" id="a" /></div>
