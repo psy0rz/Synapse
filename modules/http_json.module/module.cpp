@@ -45,7 +45,6 @@ fout:
 
 
 
-int networkSessionId=0;
 int moduleSessionId=0;
 
 int netIdCounter=0;
@@ -58,32 +57,31 @@ SYNAPSE_REGISTER(module_Init)
 
 	//change module settings. 
 	//especially broadcastMulti is important for our "all"-handler
+	//TODO: can we optimize the core in a way that the default-handler will be called by 1 thread at a time?
+	//currently all the sessions are fighting over the same lock in httpSessionMan.
 	out.clear();
 	out.event="core_ChangeModule";
 	out["maxThreads"]=100;
 	out["broadcastMulti"]=1;
 	out.send();
 
-	//The default session will be used to receive broadcasts that need to be transported via json.
-	//Make sure we only process 1 message at a time (1 thread), so they stay in order.
-	//also we dont want useless lock-fighting in httpSessionMan 
+	//we need multiple threads for network connection handling
 	out.clear();
 	out.event="core_ChangeSession";
-	out["maxThreads"]=1;
-	out.send();
-
-	//Create a session for incomming connection handling
-	out.clear();
-	out.event="core_NewSession";
 	out["maxThreads"]=20;
 	out.send();
-
 
 	//register a special handler without specified event
 	//this will receive all events that are not handled elsewhere in this module.
 	out.clear();
 	out.event="core_Register";
 	out["handler"]="all";
+	out.send();
+
+
+	//tell the rest of the world we are ready for duty
+	out.clear();
+	out.event="core_Ready";
 	out.send();
 
 }
@@ -583,11 +581,11 @@ CnetMan<CnetModule> net;
  */
 SYNAPSE_REGISTER(http_json_Listen)
 {
-	if (msg.dst==networkSessionId)
+	if (msg.dst==moduleSessionId)
 	{
 		//starts a new thread to accept and handle the incomming connection.
 		Cmsg out;
-		out.dst=networkSessionId;
+		out.dst=moduleSessionId;
  		out.event="http_json_Accept";
  		out["port"]=msg["port"];
 	
@@ -634,7 +632,7 @@ SYNAPSE_REGISTER(module_Shutdown)
 void enqueueMessage(Cmsg & msg, int dst)
 {
 	//ignore these sessions
-	if (dst==networkSessionId || dst==moduleSessionId)
+	if (dst==moduleSessionId)
 		return;
 
 	//pass the message to the http session manager, he knows what to do with it!
@@ -662,29 +660,16 @@ void enqueueMessage(Cmsg & msg, int dst)
 
 SYNAPSE_REGISTER(module_SessionStart)
 {
-
-	//first new session, this is the network threads session
-	if (!networkSessionId)
-	{
-		networkSessionId=msg.dst;
-
-		//tell the rest of the world we are ready for duty
-		Cmsg out;
-		out.event="core_Ready";
-		out.src=networkSessionId;
-		out.send();
+	if (dst==moduleSessionId)
 		return;
-	}
 
-	//other sessions are real sessions for clients, let httpSessionMan handle it
 	httpSessionMan.sessionStart(msg);
 	enqueueMessage(msg,dst);
 }
 
 SYNAPSE_REGISTER(module_NewSession_Error)
 {
-	//ignore these sessions
-	if (dst==networkSessionId || dst==moduleSessionId)
+	if (dst==moduleSessionId)
 		return;
 
 	httpSessionMan.newSessionError(msg);
@@ -694,6 +679,8 @@ SYNAPSE_REGISTER(module_NewSession_Error)
 
 SYNAPSE_REGISTER(module_SessionEnd)
 {
+	if (dst==moduleSessionId)
+		return;
 
 	httpSessionMan.sessionEnd(msg);
 	enqueueMessage(msg,dst);
