@@ -107,7 +107,7 @@ Cvar::operator string & ()
 	{
 		if (value.which()==CVAR_LONG_DOUBLE)
 		{
-			DEB("Cvar " << this << ": converting CVAR_LONG_DOUBLE to CVAR_STRING");
+			//DEB("Cvar " << this << ": converting CVAR_LONG_DOUBLE to CVAR_STRING");
 			//convert value to a permanent string
 			value=lexical_cast<string>(get<long double>(value));
 			return (get<string&>(value));
@@ -119,7 +119,7 @@ Cvar::operator string & ()
 		else if (value.which()==CVAR_EMPTY)
 		{
 			//change it from really empty, to an empty string
-			DEB("Cvar " << this << ": converting CVAR_EMPTY to CVAR_STRING"); 
+			//DEB("Cvar " << this << ": converting CVAR_EMPTY to CVAR_STRING"); 
 			value="";
 		}
 		else
@@ -160,13 +160,13 @@ Cvar::operator long double()
 		else if (value.which()==CVAR_STRING)
 		{
 			//convert string to long double
-			DEB("Cvar " << this << ": converting CVAR_STRING to CVAR_LONG_DOUBLE"); 
+			//DEB("Cvar " << this << ": converting CVAR_STRING to CVAR_LONG_DOUBLE"); 
 			return (lexical_cast<long double>(get<string>(value)));
 		}
 		else if (value.which()==CVAR_EMPTY)
 		{
 			//change it from empty to 0
-			DEB("Cvar " << this << ": converting CVAR_EMPTY to CVAR_LONG_DOUBLE"); 
+			//DEB("Cvar " << this << ": converting CVAR_EMPTY to CVAR_LONG_DOUBLE"); 
 			value=0;
 		}
 		else
@@ -190,7 +190,7 @@ Cvar::operator CvarMap & ()
 {
 	if (value.which()==CVAR_EMPTY)
 	{
-		DEB("Cvar " << this << ": converting CVAR_EMPTY to CVAR_MAP"); 
+		//DEB("Cvar " << this << ": converting CVAR_EMPTY to CVAR_MAP"); 
 		value=CvarMap();
 	}
 	else if (value.which()!=CVAR_MAP)
