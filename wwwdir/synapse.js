@@ -12,23 +12,26 @@ if (typeof console == 'undefined')
 	console=new Cconsole();
 }
 
+//user defined message handlers go in here:
 synapse_handlers=new Array();
 
+//we count the number of outstanding xmlhttprequests: we make sure at least on is doing a longpoll
 synapse_requestCount=0;
 
+//synapse uses the authCookie inside the X-Synapse-Authcookie to distinguish different script-instances
+synapse_authCookie=0;
 
-var requests=0;
-var answers=0;
+//set this to true to stop polling:
+//you can still SEND events, which will result in one poll, but after that it stops
+synapse_stop=false;
 
-function doRequest(jsonStr)
+
+function synapse_doRequest(jsonStr)
 {
 
 	//only send a request if we have data to send, or if there are no more outstanding longpolls
-	if (typeof jsonStr!='undefined' || synapse_requestCount==0)
+	if (typeof jsonStr!='undefined' || ( synapse_stop==false && synapse_requestCount==0))
 	{
-		requests++;
-		console.debug("requests=",requests);
-
 		synapse_requestCount++;
 
 		if (typeof jsonStr=='undefined')
@@ -47,6 +50,7 @@ function doRequest(jsonStr)
 			"success":		synapse_handleMessages,
 			"type":			type,
 			"contentType":	"application/json",
+			"beforeSend":	function (XMLHttpRequest) { XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); },
 			"processData":	false,
 			"cache":		false,
 			"data":			jsonStr
@@ -64,18 +68,14 @@ function synapse_handleError(request, status)
 	}
 }
 
-var stop=false;
 
-function synapse_handleMessages(messages, status, requestObject)
+function synapse_handleMessages(messages, status, XMLHttpRequest)
 {
-	if (stop)
+	//did we get an authcookie? 
+	if (XMLHttpRequest.getResponseHeader("X-Synapse-Authcookie"))
 	{
-		console.debug("stopping, dropped message");
-		return;
+		synapse_authCookie=XMLHttpRequest.getResponseHeader("X-Synapse-Authcookie");
 	}
-
-	answers++;
-	console.debug("answers=",answers);
 
 	synapse_requestCount--;
 	if (messages==null)
@@ -83,7 +83,7 @@ function synapse_handleMessages(messages, status, requestObject)
 		if (synapse_handlers["error"])
 		{
 			synapse_handlers["error"]("Got null json reply, stopping.");
-			stop=true;
+			synapse_stop=true;
 		}
 		return;
 	}
@@ -122,42 +122,26 @@ function synapse_handleMessages(messages, status, requestObject)
 		}
 	}
 
-	doRequest();
+	synapse_doRequest();
 }
 
-function send(msg_dst, msg_event, msg)
-{
-/*	json=new Array();
-	json[0]=0;
-	json[1]=msg_dst;
-	json[2]=msg_event;
-	json[3]=msg;*/
-	
-	jsonStr=JSON.stringify([ 0, msg_dst, msg_event, msg ]);
-
-	doRequest(jsonStr);
-}
 
 function synapse_register(event, handler)
 {
 	synapse_handlers[event]=handler;
 }
 
+function send(msg_dst, msg_event, msg)
+{
+	var jsonObj=[ 0, msg_dst, msg_event, msg ];
+	console.debug("sending :", jsonObj);
+
+	jsonStr=JSON.stringify(jsonObj);
+	synapse_doRequest(jsonStr);
+}
 
  $(document).ready(function(){
-// 
-// 		$.ajax({
-// 			"dataType":		"json",
-// 			"url":			'/synapse/longpoll',
-// 			"type":			"get",
-// 			"contentType":	"application/json",
-// 			"processData":	false,
-// 			"cache":		false,
-// 			"data":			[ ] 
-// 		});
-
-//window.setInterval('doRequest()');
-	doRequest();
+	synapse_doRequest();
 });
 
 

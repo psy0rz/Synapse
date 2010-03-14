@@ -16,16 +16,23 @@
 				
 		synapse_register("default",function(msg_src, msg_dst, msg_event, msg)
 		{
-			$('#event').html(msg_event);
+			s="from:"+ msg_src+ " to:" + msg_dst + " event:"+msg_event+" params:"+JSON.stringify(msg); 
+			$('#event').html(s);
 		});
 	
-		synapse_register("test_Message",function(msg_src, msg_dst, msg_event, msg)
-		{
-			$('#counter').html(msg["counter"]);
-	//		send(0,"testjava","blaat");
+// 		synapse_register("test_Message",function(msg_src, msg_dst, msg_event, msg)
+// 		{
+// 			$('#counter').html(msg["counter"]);
+// 	//		send(0,"testjava","blaat");
+// 		});
+
+		$(document).ready(function(){
+
+			$('#start').click(function(event){
+				send(0,"test","bla");
+			});
+
 		});
-
-
 
 
 	</script>
@@ -46,7 +53,8 @@
 	Status:
 	<div id='status'></div>
 
-
+	<input type='submit' value='Stop polling' id='stop'>
+	<input type='submit' value='Start polling' id='start'>
 
 <form>
   <div><input type="text" name="a" value="1" id="a" /></div>
