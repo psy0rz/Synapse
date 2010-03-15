@@ -59,7 +59,7 @@ SYNAPSE_REGISTER(module_Init)
 	out.send();
 }
  
-class CnetModule : public Cnet
+class CnetAmi : public Cnet
 {
 	void init(int id)
 	{
@@ -140,7 +140,7 @@ class CnetModule : public Cnet
 
 };
 
-CnetMan<CnetModule> net;
+CnetMan<CnetAmi> net;
 
 SYNAPSE_REGISTER(ami_Connect)
 {

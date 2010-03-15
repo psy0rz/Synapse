@@ -45,7 +45,7 @@ extern boost::mutex logMutex;
 
 //debug output with extra info:
 #ifndef NDEBUG
-#define DEB(s) LOG (boost::this_thread::get_id() << " " << "DEB: " << __PRETTY_FUNCTION__ << " - " << s << endl)
+#define DEB(s) LOG (boost::this_thread::get_id() << " " << "DEB: " << s << " @" << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ << endl)
 #else
 #define DEB(s)
 #endif

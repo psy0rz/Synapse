@@ -12,6 +12,11 @@ ChttpSessionMan::ChttpSessionMan()
 {
 	//FIXME: unsafe randomiser?
 	srand48_r(time(NULL), &randomBuffer);
+
+	//important limits:
+	maxSessionIdle=10;
+	maxSessions=100;
+	maxSessionQueue=100000;
 }
 
 
@@ -26,6 +31,8 @@ ChttpSessionMan::ChttpSessionMap::iterator ChttpSessionMan::findSessionByCookie(
 		//found it!
 		if (httpSessionI->second.authCookie==authCookie)
 		{
+			//remember the session is still used
+			httpSessionI->second.lastTime=time(NULL);
 			return (httpSessionI);
 		}
 		httpSessionI++;
@@ -36,18 +43,30 @@ ChttpSessionMan::ChttpSessionMap::iterator ChttpSessionMan::findSessionByCookie(
 
 
 
-//A client wants to pop the queued messages for the specified authCookie.
-//If the cookie is invalid, we overwrite it with a new one and request a new session from the core.
-//If the queue is still empty, jsonStr will be empty as well.
+/** A client wants to pop the queued messages for the specified authCookie.
+//If the authCookie is invalid, we overwrite authCookie with 0 and we abort.
+//
+//if the authCookie is 0, we create a new session and store it in authCookie.
+//
+//If the queue is empty, jsonStr will be empty as well. The netId will be remembered so that enqueueMessage() can return it to cmodule.cpp, which in turn will inform the network-session of a queue change.
+//
 //If there are messages in the queue, they are moved to jsonStr and the queue will be empty again.
+*/
 void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string & jsonStr)
 {
 	lock_guard<mutex> lock(threadMutex);
 
-	ChttpSessionMap::iterator httpSessionI=findSessionByCookie(authCookie);
-
-	if (httpSessionI!=httpSessionMap.end())
+	if (authCookie!=0)
 	{
+		ChttpSessionMap::iterator httpSessionI=findSessionByCookie(authCookie);
+	
+		if (httpSessionI==httpSessionMap.end())
+		{
+			DEB("Unknown or expired authCookie: " << authCookie << ", aborting.");
+			authCookie=0;
+			return;
+		}
+
 		if (!httpSessionI->second.jsonQueue.empty())
 		{
 			//return the queued json messages: 
@@ -62,15 +81,25 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
 			jsonStr.clear();
 			httpSessionI->second.netId=netId;
 		}
-		return ;
+		return;
 	}
 
-	DEB("Unknown or expired authCookie: " << authCookie << ", requesting new session.");
+	//expire old sessions, before creating new ones :)
+	expireCheckAll();
+
+	if (httpSessionMap.size() >= maxSessions)
+	{
+		WARNING("Too many httpSessions, not creating new session for netId " << netId);
+		return;
+	}
+
+	DEB("Creating new session for " << netId);
 	
-	//we cannot find the authCookie.
-	//probably because the client doesnt has one, or because its expired.
-	//lets create a new authCookie:
-	mrand48_r(&randomBuffer, &authCookie);
+	//create a new uniq authCookie:
+	while (!authCookie || findSessionByCookie(authCookie)!=httpSessionMap.end()) 
+	{
+		mrand48_r(&randomBuffer, &authCookie);
+	} 
 
 	//Request a new session from core.
 	//we add some extra information that helps us find back the client
@@ -81,10 +110,39 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
 	out["authCookie"]=authCookie;
 	out["netId"]=netId;
 	out.send();
-
-
-	//TODO: cleanup old or unused sessions
 }
+
+/** Called from to indicate that the network session is not interested anymore.
+ * Its neccesary to get informed of this, so we know when to expire session.
+ */
+void ChttpSessionMan::endGet(int netId,ThttpCookie & authCookie)
+{
+	//if theres netId or authCookie, we can just ignore it without locking
+	if (!netId || !authCookie)
+		return;
+
+	{
+		lock_guard<mutex> lock(threadMutex);
+	
+		ChttpSessionMap::iterator httpSessionI=findSessionByCookie(authCookie);
+	
+		if (httpSessionI==httpSessionMap.end())
+		{
+			DEB("Network id " << netId << " with UNKNOWN httpsession " << authCookie << " isnt interested in messages anymore. ignoring."); 
+			return;
+		}
+	
+		if (httpSessionI->second.netId!=netId)
+		{
+			DEB("UNKNOWN network id " << netId << " with httpsession " << authCookie << " isnt interested in messages anymore. ignoring."); 
+			return;
+		}
+	
+		DEB("Network id " << netId << " with httpsession " << authCookie << " isnt interested in messages anymore. Session timeout timing is now enable."); 
+		httpSessionI->second.netId=0;
+	}	
+}
+
 
 /** A client wants to send a message to the core 
  */
@@ -153,16 +211,18 @@ void ChttpSessionMan::sessionStart(Cmsg & msg)
 //session creation failed
 void ChttpSessionMan::newSessionError(Cmsg & msg)
 {
-	lock_guard<mutex> lock(threadMutex);
-	//TODO: inform the client somehow the session creation failed?
+//	lock_guard<mutex> lock(threadMutex);
+	//we cant do anything at this point...the client will just wait forever.
+	//if our maxSessions has a practical value this should never happen.
 }
 
 //core informs us a session has ended.
 void ChttpSessionMan::sessionEnd(Cmsg & msg)
 {
 	lock_guard<mutex> lock(threadMutex);
-	//TODO: inform the client somehow the session ended?
+	DEB("Core has ended session " << msg.dst << ", deleting httpSession.");
 	httpSessionMap.erase(msg.dst);
+
 }
 
 //core has a message for us, add it to the message-queue of the corresponding session:
@@ -184,7 +244,14 @@ int ChttpSessionMan::enqueueMessage(Cmsg & msg, int dst)
 			WARNING("Dropped message for session " << dst << ": session not found");
 			return(0);
 		}
-	
+
+		//check if the session is expired:
+		expireCheck(httpSessionI);
+		if (httpSessionI->second.expired)
+		{
+			DEB("Dropped message for session " << dst << ": session expired");
+			return(0);
+		}
 	
 		//add it to the jsonQueue. Which is a string that contains a json-array.
 		if (httpSessionI->second.jsonQueue.empty())
@@ -196,8 +263,6 @@ int ChttpSessionMan::enqueueMessage(Cmsg & msg, int dst)
 			httpSessionI->second.jsonQueue+=","+jsonStr;
 		}
 	
-		//TODO: check if the queue gets too big and session needs to be killed.
-	
 		//we want to inform the netId only ONE time
 		int netId=httpSessionI->second.netId;
 		httpSessionI->second.netId=0;
@@ -208,8 +273,55 @@ int ChttpSessionMan::enqueueMessage(Cmsg & msg, int dst)
 	}
 }
 
+void ChttpSessionMan::expireCheck(ChttpSessionMap::iterator httpSessionI)
+{
+	//already expired?, no need to check again
+	if (httpSessionI->second.expired)
+	{
+		return;
+	}
 
- 
+	//an active network session is currenty waiting? never expire it if this is the case.
+	if (httpSessionI->second.netId)
+	{
+		return;
+	}
+
+	//session timeout?
+	if ((time(NULL)-(httpSessionI->second.lastTime)) > maxSessionIdle)
+	{
+		DEB("Ending old session: " << httpSessionI->first << " with authCookie " << httpSessionI->second.authCookie << ".");
+
+		httpSessionI->second.expired=true;
+	}
+
+	//queue too big?
+	if (httpSessionI->second.jsonQueue.length() > maxSessionQueue)
+	{
+		WARNING("While trying to send to session " << httpSessionI->first << " with authCookie " << httpSessionI->second.authCookie << " queue overflowed, ending session.");
+		httpSessionI->second.expired=true;
+	}
+
+	if (httpSessionI->second.expired)
+	{
+		//ask core to delete session, after which our sessionEnd() will erase it from the session map:
+		Cmsg out;
+		out.src=httpSessionI->first;
+		out.event="core_DelSession";
+		out.send();
+	}
+
+}
+
+void ChttpSessionMan::expireCheckAll()
+{
+	ChttpSessionMap::iterator httpSessionI=httpSessionMap.begin();
+	while (httpSessionI!=httpSessionMap.end())
+	{
+		expireCheck(httpSessionI);
+		httpSessionI++;
+	}
+}
 
 
 

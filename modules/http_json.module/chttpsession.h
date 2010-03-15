@@ -16,9 +16,11 @@ class ChttpSession
 	ThttpCookie authCookie;
 	string jsonQueue;
 	int netId;
+	time_t lastTime;
+	bool expired;
 
 	ChttpSession();
-
+	
 
 };
 

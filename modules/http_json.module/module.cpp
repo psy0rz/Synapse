@@ -52,6 +52,8 @@ int moduleSessionId=0;
 
 int netIdCounter=0;
 
+int moduleThreads=1;
+
 map<string,string> contentTypes;
 
 
@@ -63,18 +65,16 @@ SYNAPSE_REGISTER(module_Init)
 
 	//change module settings. 
 	//especially broadcastMulti is important for our "all"-handler
-	//TODO: can we optimize the core in a way that the default-handler will be called by 1 thread at a time?
-	//currently all the sessions are fighting over the same lock in httpSessionMan.
 	out.clear();
 	out.event="core_ChangeModule";
-	out["maxThreads"]=200;
+	out["maxThreads"]=1;
 	out["broadcastMulti"]=1;
 	out.send();
 
 	//we need multiple threads for network connection handling
 	out.clear();
 	out.event="core_ChangeSession";
-	out["maxThreads"]=200;
+	out["maxThreads"]=1;
 	out.send();
 
 	//register a special handler without specified event
@@ -110,7 +110,7 @@ ChttpSessionMan httpSessionMan;
 // Every connection will get its own unique Cnet object.
 // As soon as something with a network connection 'happens', these handlers will be called.
 // We do syncronised writing instead of using the asyncronious doWrite()
-class CnetModule : public Cnet
+class CnetHttp : public Cnet
 {
 	/// //////////////// PRIVATE STUFF FOR NETWORK CONNECTIONS
 
@@ -138,6 +138,7 @@ class CnetModule : public Cnet
 	{
 		state=REQUEST;
 		delimiter="\r\n\r\n";
+		authCookie=0;
 	}
 
 	void startAsyncRead()
@@ -206,11 +207,6 @@ class CnetModule : public Cnet
 		responseStr+="HTTP/1.1 ";
 		responseStr+=statusStr.str()+="\r\n";
 		responseStr+="Server: synapse_http_json\r\n";
-
-// 		//(re)send session cookie in every response:
-// 		stringstream cookieStr;
-// 		cookieStr << httpCookie;
-// 		responseStr+="X-Synapse-Authcookie: "+cookieStr.str()+"\r\n";
 
 // 		for (Cvar::iterator varI=cookies.begin(); varI!=cookies.end(); varI++)
 // 		{
@@ -338,6 +334,7 @@ class CnetModule : public Cnet
 
 	/** Responds with messages that are in the json queue for this clients session
 	* If the queue is empty, it doesnt send anything and returns false. 
+	* if it does respond with SOMETHING, even an error-response, it returns true.
     * Use abort to send an empty resonse without looking at the queue at all.
 	*/
 	bool respondJsonQueue(bool abort=false)
@@ -348,12 +345,20 @@ class CnetModule : public Cnet
 			//to abort we need to reply with an empty json array:
 			DEB(id << " cancelling longpoll");
 			jsonStr="[]";
+			httpSessionMan.endGet(id, authCookie);
 		}
 		else
 		{
-			//check if there are messages in the queue, based on the authcookie from the last request:
+			//check if there are messages in the queue, based on the authcookie from the current request:
 			//This function will change authCookie if neccesary and fill jsonStr!
 			httpSessionMan.getJsonQueue(id, authCookie, jsonStr);
+	
+			//authcookie was probably expired, respond with error
+			if (!authCookie)
+			{
+				respondError(400, "Session is expired, or session limit reached.");
+				return(true);
+			}
 		}
 
 		if (jsonStr=="")
@@ -539,6 +544,7 @@ class CnetModule : public Cnet
 	*/
  	void disconnected(int id, const boost::system::error_code& ec)
 	{
+		httpSessionMan.endGet(id, authCookie);
 	}
 
 
@@ -612,7 +618,7 @@ class CnetModule : public Cnet
 
 };
 
-CnetMan<CnetModule> net;
+CnetMan<CnetHttp> net;
 
 
 
@@ -627,6 +633,9 @@ SYNAPSE_REGISTER(http_json_Listen)
 		out.dst=moduleSessionId;
  		out.event="http_json_Accept";
  		out["port"]=msg["port"];
+	
+		out.event="core_ChangeModule";
+		out["maxThreads"]=moduleThreads...hier was ik!;
 	
 		//start 10 accepting threads (e.g. max 10 connections)
 		for (int i=0; i<30; i++)
@@ -681,13 +690,13 @@ void enqueueMessage(Cmsg & msg, int dst)
 		//a client is waiting for a message, lets inform him:
 		lock_guard<mutex> lock(net.threadMutex);
 
-		CnetMan<CnetModule>::CnetMap::iterator netI=net.nets.find(waitingNetId);
+		CnetMan<CnetHttp>::CnetMap::iterator netI=net.nets.find(waitingNetId);
 
 		//client connection still exists?
 		if (netI != net.nets.end())
 		{
 			DEB("Informing net " << waitingNetId << " of queue change.");
-			netI->second->ioService.post(bind(&CnetModule::queueChanged,netI->second));
+			netI->second->ioService.post(bind(&CnetHttp::queueChanged,netI->second));
 		}
 		else
 		{
@@ -712,7 +721,7 @@ SYNAPSE_REGISTER(module_NewSession_Error)
 		return;
 
 	httpSessionMan.newSessionError(msg);
-	enqueueMessage(msg,dst);
+	//we cant: enqueueMessage(msg,dst);
 	
 }
 
@@ -722,7 +731,7 @@ SYNAPSE_REGISTER(module_SessionEnd)
 		return;
 
 	httpSessionMan.sessionEnd(msg);
-	enqueueMessage(msg,dst);
+	//we cant: enqueueMessage(msg,dst);
 }
 
 /** This handler is called for all events that:
@@ -732,63 +741,7 @@ SYNAPSE_REGISTER(module_SessionEnd)
 SYNAPSE_HANDLER(all)
 {
 	enqueueMessage(msg, dst);
-/*		for (CnetMan<CnetModule>::CnetMap::iterator netI=net.nets.begin(); netI!=net.nets.end(); netI++)
-		{
-			//NOTE: this is a lockless optimisation: we dont want to send the events to connections we can be 
-			//SURE of that dont want or need it.
-			if (netI->second->wantsMessages && 
-				(msg.dst==0 || 
-				 netI->second->cachedSessionId==msg.dst || 
-				 netI->second->cachedSessionId==SESSION_DISABLED)
-			)
-			{
-			}
-		}
-	}	*/
 }
 
 
 
-/*
-
-// 				//we dont have a httpCookie for this connection yet, and browser sent us cookies?
-// 				if (!httpCookie && headers.isSet("Cookie"))
-// 				{
-// 					//create a regex iterator for cookies
-// 					boost::sregex_iterator cookieI(
-// 						headers["Cookie"].str().begin(), 
-// 						headers["Cookie"].str().end(), 
-// 						boost::regex("([^=; ]*)=([^=; ]*)")
-// 					);
-// 			
-// 					//parse cookies, to find httpSession cookie (if set)
-// 					while (cookieI!=sregex_iterator())
-// 					{
-// 						if ((*cookieI)[1].str()=="httpSession")
-// 						{
-// 							try
-// 							{
-// 								ThttpCookie clientsCookie=lexical_cast<ThttpCookie>(((*cookieI)[2]).str());
-// 	
-// 								//do we know the cookie the browser is giving us?
-// 								//This is an expensive call, but its only done if httpCookie ist set yet
-// 								if (httpSessionMan.isSessionValid(clientsCookie))
-// 								{
-// 									httpCookie=clientsCookie;
-// 									break;
-// 								}
-// 								else
-// 								{
-// 									DEB(id << " ignored invalid or expired cookie " << clientsCookie);
-// 								}
-// 							}
-// 							catch(...)
-// 							{
-// 								WARNING(id << " Invalid httpSession format: " << ((*cookieI)[2]).str()) ;
-// 								httpCookie=0;
-// 							}
-// 						}
-// 						cookieI++;
-// 					}
-// 				}
-*/

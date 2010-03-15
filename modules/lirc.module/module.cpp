@@ -22,7 +22,7 @@ SYNAPSE_REGISTER(module_Init)
 	out.send();
 }
  
-class CnetModule : public Cnet
+class CnetLirc : public Cnet
 {
 
  	void connected(int id, const string &host, int port)
@@ -88,7 +88,7 @@ class CnetModule : public Cnet
 
 };
 
-CnetMan<CnetModule> net;
+CnetMan<CnetLirc> net;
 
 SYNAPSE_REGISTER(lirc_Connect)
 {

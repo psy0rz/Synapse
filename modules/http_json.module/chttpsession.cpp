@@ -7,5 +7,7 @@
 ChttpSession::ChttpSession()
 {
 	netId=0;
+	lastTime=time(NULL);
+	expired=false;
 }
 
