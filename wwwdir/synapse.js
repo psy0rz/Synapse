@@ -137,7 +137,8 @@ function send(msg_dst, msg_event, msg)
 $(document).ready(function(){
 	//need to start ansyncroniously, otherwise some browsers (android) keep loading:
 	//(hmm this not always prevents the problem, we will figure out a better way later)
-	setTimeout("synapse_receive()",1000);
+//	setTimeout("synapse_receive()",1000);
+	synapse_receive();
 });
 
 

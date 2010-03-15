@@ -52,6 +52,9 @@ int moduleSessionId=0;
 
 int netIdCounter=0;
 
+map<string,string> contentTypes;
+
+
 SYNAPSE_REGISTER(module_Init)
 {
 	Cmsg out;
@@ -80,6 +83,16 @@ SYNAPSE_REGISTER(module_Init)
 	out.event="core_Register";
 	out["handler"]="all";
 	out.send();
+
+	//set content types
+	//TODO: load it from a file?
+	contentTypes["css"]		="text/css";
+	contentTypes["html"]	="text/html";
+	contentTypes["js"]		="application/javascript";
+	contentTypes["gif"]		="image/gif";
+	contentTypes["jpeg"]	="image/jpeg";
+	contentTypes["jpg"]		="image/jpeg";
+	contentTypes["png"]		="image/png";
 
 
 	//tell the rest of the world we are ready for duty
@@ -270,6 +283,27 @@ class CnetModule : public Cnet
 			return(true);
 		}
 
+		//determine content-type
+
+		smatch what;
+		if (regex_search(
+			path,
+			what, 
+			boost::regex("([^.]*$)")
+		))
+		{
+			string extention=what[1];
+			if (contentTypes.find(extention)!=contentTypes.end())
+			{
+				extraHeaders["content-type"]=contentTypes[extention];
+				DEB("Content type of ." << extention << " is " << contentTypes[extention]);
+			}
+			else
+			{
+				WARNING("Cannot determine content-type of ." << extention << " files");
+			}
+		}	
+
 		//determine filesize
 		inputFile.seekg (0, ios::end);
 		int fileSize=inputFile.tellg();
@@ -389,7 +423,7 @@ class CnetModule : public Cnet
  			if (!regex_search(
  				dataStr,
  				what, 
- 				boost::regex("^(GET|POST) ([^? ]*)([^ ]*) HTTP/1.1$")
+ 				boost::regex("^(GET|POST) ([^? ]*)([^ ]*) HTTP/1..$")
  			))
  			{
 				error="Cant parse request.";
