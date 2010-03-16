@@ -67,14 +67,15 @@ SYNAPSE_REGISTER(module_Init)
 	//especially broadcastMulti is important for our "all"-handler
 	out.clear();
 	out.event="core_ChangeModule";
-	out["maxThreads"]=1;
+	out["maxThreads"]=moduleThreads;
 	out["broadcastMulti"]=1;
 	out.send();
 
 	//we need multiple threads for network connection handling
+	//(this is done with moduleThreads and sending core_ChangeModule events)
 	out.clear();
 	out.event="core_ChangeSession";
-	out["maxThreads"]=1;
+	out["maxThreads"]=10000;
 	out.send();
 
 	//register a special handler without specified event
@@ -630,18 +631,44 @@ SYNAPSE_REGISTER(http_json_Listen)
 	{
 		//starts a new thread to accept and handle the incomming connection.
 		Cmsg out;
-		out.dst=moduleSessionId;
- 		out.event="http_json_Accept";
- 		out["port"]=msg["port"];
-	
+		int connections;	
+
+		if (msg.isSet("connections"))
+		{
+			connections=msg["connections"];
+		}
+		else
+		{
+			//default is 100 connections
+			connections=100;		
+		}
+
+
+		//allow this many threads.
+		//NOTE: the reason why we do this, is to prevent multiple threads from entereing our "all" handler: this would be bad for performance, since httpSessionMan is locked to 1 thread.
+		moduleThreads+=connections+1;
+		out.clear();
 		out.event="core_ChangeModule";
-		out["maxThreads"]=moduleThreads...hier was ik!;
-	
-		//start 10 accepting threads (e.g. max 10 connections)
-		for (int i=0; i<30; i++)
+		out["maxThreads"]=moduleThreads;
+		out.send();
+		
+		//fire off acceptor threads
+		out.clear();
+		out.dst=moduleSessionId;
+		out.event="http_json_Accept";
+		out["port"]=msg["port"];
+		for (int i=0; i<connections; i++)
 	 		out.send();
 
+		//become the listening thread
 		net.runListen(msg["port"]);
+
+		//restore max module threads
+		moduleThreads-=(connections+1);
+		out.clear();
+		out.event="core_ChangeModule";
+		out["maxThreads"]=moduleThreads;
+		out.send();
 	}
 	else
 		ERROR("Send to the wrong session id");
@@ -653,6 +680,8 @@ SYNAPSE_REGISTER(http_json_Listen)
  */
 SYNAPSE_REGISTER(http_json_Accept)
 {
+		//race condition with net.runlisten..
+		sleep(1);
 		//keep accepting until shutdown or some other error
 		while(net.runAccept(msg["port"], 0));
 }

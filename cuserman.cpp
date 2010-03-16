@@ -30,14 +30,15 @@ CuserMan::CuserMan()
 	addGroup(CgroupPtr(new Cgroup("everyone")));
 	addGroup(CgroupPtr(new Cgroup("anonymous")));
 
+	//default core user
 	CuserPtr user;
 	user=CuserPtr(new Cuser("core",""));
 	user->addMemberGroup(getGroup("core"));
 	user->addMemberGroup(getGroup("modules"));
 	user->addMemberGroup(getGroup("everyone"));
-	user->addMemberGroup(getGroup("anonymous"));
 	addUser(user);
 
+	//default module user
 	user=CuserPtr(new Cuser("module",""));
 	user->addMemberGroup(getGroup("modules"));
 	user->addMemberGroup(getGroup("everyone"));
@@ -56,6 +57,7 @@ CuserMan::CuserMan()
 	user->addMemberGroup(getGroup("anonymous"));
 	addUser(user);
 
+	//this admin receives EVERYTHING, including coreshizzle
 	user=CuserPtr(new Cuser("admin","bs"));
 	user->addMemberGroup(getGroup("users"));
 	user->addMemberGroup(getGroup("core"));

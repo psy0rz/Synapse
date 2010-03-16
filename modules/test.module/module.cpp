@@ -75,8 +75,8 @@ SYNAPSE_REGISTER(test_Counter)
 
 void counterStatus()
 {
-	if (counterSleep<100000)
-		counterSleep=100000;
+	if (counterSleep<10000)
+		counterSleep=10000;
 
 	if (counterSleep>5000000)
 		counterSleep=5000000;

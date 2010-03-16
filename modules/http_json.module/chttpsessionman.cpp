@@ -15,7 +15,7 @@ ChttpSessionMan::ChttpSessionMan()
 
 	//important limits:
 	maxSessionIdle=10;
-	maxSessions=100;
+	maxSessions=200;
 	maxSessionQueue=100000;
 }
 
