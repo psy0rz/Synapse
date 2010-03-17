@@ -142,7 +142,17 @@ CnetMan<CnetModule> net;
  */
 SYNAPSE_REGISTER(net_Connect)
 {
-	net.runConnect(msg.src, msg["host"], msg["port"]);
+	if (msg.isSet("delimiter"))
+		net.runConnect(msg.src, msg["host"], msg["port"], msg["reconnectTime"], msg["delimiter"]);
+	else
+		net.runConnect(msg.src, msg["host"], msg["port"], msg["reconnectTime"]);
+
+	//indicate the net-object is destroyed. at this point the client may send another net_Connect
+	Cmsg out;
+	out.dst=msg.src;
+	out.src=dataSessionId;
+	out.event="net_ConnectEnded";
+	out.send();
 }
 
 /** Server only: Creates a new server and listens specified port
@@ -150,6 +160,12 @@ SYNAPSE_REGISTER(net_Connect)
 SYNAPSE_REGISTER(net_Listen)
 {
 	net.runListen(msg["port"]);
+
+	Cmsg out;
+	out.dst=msg.src;
+	out.src=dataSessionId;
+	out.event="net_ListenEnded";
+	out.send();
 }
 
 /** Server only: Accepts a connection on port and for session src
@@ -157,6 +173,11 @@ SYNAPSE_REGISTER(net_Listen)
 SYNAPSE_REGISTER(net_Accept)
 {
 	net.runAccept(msg["port"], msg.src);
+	Cmsg out;
+	out.dst=msg.src;
+	out.src=dataSessionId;
+	out.event="net_AcceptEnded";
+	out.send();
 
 }
 

@@ -78,7 +78,7 @@ class CnetMan
 	bool runAccept(int port, int id);
 
 	//for client: call runConnect(returns when connection is closed)
-	bool runConnect(int id, string host, int port, int reconnectTime=0);
+	bool runConnect(int id, string host, int port, int reconnectTime=0, string delimiter="\n");
 
 	//for both client and server:
 	bool doDisconnect(int id); 

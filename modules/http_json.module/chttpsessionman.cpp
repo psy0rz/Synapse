@@ -152,6 +152,7 @@ string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonStr)
 	Cmsg msg;
 
 	//we do this unlocked, since parsing probably takes most of the time:
+	//FIXME:SEGFAULT:
 	if (!json2Cmsg(jsonStr, msg))
 	{	
 		error <<  "Error while parsing JSON message:" << jsonStr;

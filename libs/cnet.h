@@ -47,7 +47,7 @@ class Cnet
 	//end-user api to ask us to DO stuff: (usually called from CnetMan)
 	void doDisconnect();
 	void doAccept(int id, CacceptorPtr acceptorPtr);
-	void doConnect(int id, string host, int port, int reconnectTime=0);
+	void doConnect(int id, string host, int port, int reconnectTime=0, string delimiter="\n");
 	void doWrite(string & data);	
 	void doWrite(shared_ptr<asio::streambuf> bufferPtr);	
 	void run();

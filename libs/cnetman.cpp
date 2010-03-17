@@ -24,7 +24,7 @@ int CnetMan<Tnet>::getAutoId()
 }
 
 template <class Tnet> 
-bool CnetMan<Tnet>::runConnect(int id, string host, int port, int reconnectTime)
+bool CnetMan<Tnet>::runConnect(int id, string host, int port, int reconnectTime, string delimiter)
 {
 	CnetPtr netPtr;
 	{
@@ -42,7 +42,7 @@ bool CnetMan<Tnet>::runConnect(int id, string host, int port, int reconnectTime)
 		//add a new object to the list and do the connect
 		netPtr=(CnetPtr(new Tnet()));
 		nets[id]=netPtr;
-		netPtr->doConnect(id,host,port,reconnectTime);
+		netPtr->doConnect(id,host,port,reconnectTime,delimiter);
 	}
 
 	//let the ioservice run, until the connection is closed again:

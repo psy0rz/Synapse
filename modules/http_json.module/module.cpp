@@ -522,6 +522,7 @@ class CnetHttp : public Cnet
 				else
 				{
 					//ignore whatever is posted, and just respond normally:
+					DEB(id << " ignored POST content");
 					if (respond())
 						state=REQUEST;
 					else
@@ -680,10 +681,13 @@ SYNAPSE_REGISTER(http_json_Listen)
  */
 SYNAPSE_REGISTER(http_json_Accept)
 {
+	if (msg.dst==moduleSessionId)
+	{
 		//race condition with net.runlisten..
 		sleep(1);
 		//keep accepting until shutdown or some other error
 		while(net.runAccept(msg["port"], 0));
+	}
 }
 
 /** Stop listening on a port

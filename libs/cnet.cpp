@@ -34,12 +34,13 @@ void Cnet::doAccept(int id, CacceptorPtr acceptorPtr)
 
 
 //Client mode: Initiate a connect.
-void Cnet::doConnect(int id, string host, int port, int reconnectTime)
+void Cnet::doConnect(int id, string host, int port, int reconnectTime, string delimiter)
 {
 	this->id=id;
 	this->host=host;
 	this->port=port;
 	this->reconnectTime=reconnectTime;
+	this->delimiter=delimiter;
 	doConnect();
 }
 
