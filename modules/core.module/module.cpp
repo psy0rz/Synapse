@@ -1,7 +1,7 @@
 /** \file
 The core module.
 
-This contains all the core functionality to control the plexus framework.
+This contains all the core functionality to control the synapse framework.
 
 Here are some common sends that can be emitted by all event-handers of the core:
 \par Sends \c module_Error:
@@ -9,7 +9,7 @@ Here are some common sends that can be emitted by all event-handers of the core:
 		\arg \c error A string describing the error.
 */
 
-*/
+
 
 /** \mainpage
 Look in the files section for more info..
@@ -66,117 +66,117 @@ SYNAPSE_REGISTER(module_Init)
 		return;
 	}
 
-	/// Shutdown signal handler
+	// Shutdown signal handler
 	signal(SIGINT, exitHandler);
 
-	/// SET CORE EVENT PERMISSIONS:
+	// SET CORE EVENT PERMISSIONS:
 	// these permissions should never be changed!
 	out.clear();
 	out.event="core_ChangeEvent";
 
 
-	/// basic core events
-	out["event"]=		"module_Error"; /// SEND to module on all kinds of errors
+	// basic core events
+	out["event"]=		"module_Error"; // SEND to module on all kinds of errors
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"modules";
 	out["recvGroup"]=	"anonymous";
 	out.send();
 
-	out["event"]=		"core_ChangeEvent"; /// RECV to change permissions of events
+	out["event"]=		"core_ChangeEvent"; // RECV to change permissions of events
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"modules";
 	out["recvGroup"]=	"core";
 	out.send();
 
-	out["event"]=		"core_Register";  /// RECV to register handlers
+	out["event"]=		"core_Register";  // RECV to register handlers
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"modules";
 	out["recvGroup"]=	"core";
 	out.send();
 
-	out["event"]=		"core_Status"; /// RECV to request status of core
+	out["event"]=		"core_Status"; // RECV to request status of core
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"core";
 	out["recvGroup"]=	"core";
 
 
-	/// module loading and unloading
-	out["event"]=		"core_LoadModule"; /// RECV to load a module
+	// module loading and unloading
+	out["event"]=		"core_LoadModule"; // RECV to load a module
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"modules";
 	out["recvGroup"]=	"core";
 	out.send();
 
-	out["event"]=		"module_Init";  /// SEND to module after loading it
+	out["event"]=		"module_Init";  // SEND to module after loading it
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"core";
 	out["recvGroup"]=	"modules";
 	out.send();
 
-	out["event"]=		"module_Shutdown"; /// SEND because we want to unload the module cleanup
+	out["event"]=		"module_Shutdown"; // SEND because we want to unload the module cleanup
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"core";
 	out["recvGroup"]=	"modules";
 	out.send();
 
 
-	/// session handling
-	out["event"]=		"core_NewSession"; /// RECV to start a new session
+	// session handling
+	out["event"]=		"core_NewSession"; // RECV to start a new session
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"modules";
 	out["recvGroup"]=	"core";
 	out.send();
 
-	out["event"]=		"module_SessionStart"; /// SEND to newly started session
+	out["event"]=		"module_SessionStart"; // SEND to newly started session
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"core";
 	out["recvGroup"]=	"anonymous";
 	out.send();
 
-	out["event"]=		"module_SessionStarted"; /// SEND to broadcast, on newly created session
+	out["event"]=		"module_SessionStarted"; // SEND to broadcast, on newly created session
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"core";
 	out["recvGroup"]=	"everyone";
 	out.send();
 
-	out["event"]=		"core_DelSession"; /// RECV to delete src session
+	out["event"]=		"core_DelSession"; // RECV to delete src session
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"anonymous";
 	out["recvGroup"]=	"core";
 	out.send();
 
-	out["event"]=		"module_SessionEnd"; /// SEND to ended session
+	out["event"]=		"module_SessionEnd"; // SEND to ended session
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"core";
 	out["recvGroup"]=	"anonymous";
 	out.send();
 
-	out["event"]=		"module_SessionEnded"; /// SEND to broadcast, on ended session
+	out["event"]=		"module_SessionEnded"; // SEND to broadcast, on ended session
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"core";
 	out["recvGroup"]=	"everyone";
 	out.send();
 
-	out["event"]=		"core_Login"; /// RECV to login the src session with specified user and password
+	out["event"]=		"core_Login"; // RECV to login the src session with specified user and password
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"anonymous";
 	out["recvGroup"]=	"core";
 	out.send();
 
-	out["event"]="module_Login"; /// SEND to session after succesfull login
+	out["event"]="module_Login"; // SEND to session after succesfull login
 	out["modifyGroup"]="core";
 	out["sendGroup"]="core";
 	out["recvGroup"]="anonymous";
 	out.send();
 
-	out["event"]="core_ChangeSession"; /// RECV to change src session parameters
+	out["event"]="core_ChangeSession"; // RECV to change src session parameters
 	out["modifyGroup"]="core";
 	out["sendGroup"]="modules";
 	out["recvGroup"]="core";
 	out.send();
 
 
-	/// END OF PERMISSIONS
+	// END OF PERMISSIONS
 
 	//we're done with our stuff,
 	//load the first application module:
@@ -378,59 +378,6 @@ SYNAPSE_REGISTER(core_ChangeEvent)
 } 
 
 
-SYNAPSE_REGISTER(core_Status)
-{
-
-	string error;
- 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
-		CsessionPtr session=messageMan->userMan.getSession(msg.src);
-		if (!session)
-			error="Session not found";
-		else
-		{
-			CeventPtr event=messageMan->getEvent(msg["event"]);
-			if (!event)
-				error="Event not found?";
-			else
-			{
-				if (!event->isModifyAllowed(session->user))
-					error="You're not allowed to modify this event.";
-				else
-				{
-					CgroupPtr group;
-
-					if (msg.isSet("modifyGroup"))
-					{
-						if (!(group=messageMan->userMan.getGroup(msg["modifyGroup"])))
-							error+="Cant find modifygroup " +(string)msg["modifyGroup"]+ " ";
-						else
-							event->setModifyGroup(group);
-					}
-
-					if (msg.isSet("recvGroup"))
-					{
-						if (!(group=messageMan->userMan.getGroup(msg["recvGroup"])))
-							error="Cant find recvgroup " + (string)msg["recvGroup"]+ " ";
-						else
-							event->setRecvGroup(group);
-					}
-
-					if (msg.isSet("sendGroup"))
-					{
-						if (!(group=messageMan->userMan.getGroup(msg["sendGroup"])))
-							error+="Cant find sendgroup " + (string)msg["sendGroup"]+ " ";
-						else
-							event->setSendGroup(group);
-					}
-				}
-			}
-		}
-	}
-
-	if (error!="")
-		msg.returnError(error);
-} 
 
 /** Changes the user of the \c src session.
 	\param username The username of the user you want to become.
@@ -813,3 +760,20 @@ SYNAPSE_REGISTER(core_ChangeLogging)
 		messageMan->logReceives=msg["logReceives"];
 	}
 }
+
+
+
+/** Requests status of core.
+Usefull for debugging and administration.
+
+\par Replies \c module_Status:
+	Contains several status fields.
+*/
+SYNAPSE_REGISTER(core_Status)
+{
+	{
+		lock_guard<mutex> lock(messageMan->threadMutex);
+		messageMan->logSends=msg["logSends"];
+		messageMan->logReceives=msg["logReceives"];
+	}
+} 

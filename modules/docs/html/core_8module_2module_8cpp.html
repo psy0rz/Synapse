@@ -34,7 +34,8 @@ void&nbsp;</td><td class="memItemRight" valign="bottom"><b>init</b> ()</td></tr>
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a90c435d29ec3fe5e836bff8b72e0c3c"></a><!-- doxytag: member="core.module/module.cpp::exitHandler" ref="a90c435d29ec3fe5e836bff8b72e0c3c" args="(int signum)" -->
 void&nbsp;</td><td class="memItemRight" valign="bottom"><b>exitHandler</b> (int signum)</td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="core_8module_2module_8cpp.html#9663bac24258c633a4d8df270e482a1c">SYNAPSE_REGISTER</a> (module_Init)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="9663bac24258c633a4d8df270e482a1c"></a><!-- doxytag: member="core.module/module.cpp::SYNAPSE_REGISTER" ref="9663bac24258c633a4d8df270e482a1c" args="(module_Init)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (module_Init)</td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="57cce403d9554f15c62c0b812eb88242"></a><!-- doxytag: member="core.module/module.cpp::SYNAPSE_REGISTER" ref="57cce403d9554f15c62c0b812eb88242" args="(module_Error)" -->
 &nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (module_Error)</td></tr>
@@ -48,9 +49,6 @@ void&nbsp;</td><td class="memItemRight" valign="bottom"><b>exitHandler</b> (int 
 <tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="core_8module_2module_8cpp.html#9956d09c4c7b23a26f00cbb7f3866730">SYNAPSE_REGISTER</a> (core_ChangeEvent)</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Changes the settings of an event.  <a href="#9956d09c4c7b23a26f00cbb7f3866730"></a><br></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="4d7f46622b7af9f286f5c5b0f6c2a4d1"></a><!-- doxytag: member="core.module/module.cpp::SYNAPSE_REGISTER" ref="4d7f46622b7af9f286f5c5b0f6c2a4d1" args="(core_Status)" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (core_Status)</td></tr>
-
 <tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="core_8module_2module_8cpp.html#b3b6d8db4aab5b75791a9774b6532019">SYNAPSE_REGISTER</a> (core_Login)</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Changes the user of the <code>src</code> session.  <a href="#b3b6d8db4aab5b75791a9774b6532019"></a><br></td></tr>
@@ -78,16 +76,43 @@ void&nbsp;</td><td class="memItemRight" valign="bottom"><b>exitHandler</b> (int 
 <tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="core_8module_2module_8cpp.html#2e7ff76fb82a24a173fb3f17db6663cb">SYNAPSE_REGISTER</a> (core_ChangeLogging)</td></tr>
 
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Changes the logging-setting of the synapse core.  <a href="#2e7ff76fb82a24a173fb3f17db6663cb"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="core_8module_2module_8cpp.html#4d7f46622b7af9f286f5c5b0f6c2a4d1">SYNAPSE_REGISTER</a> (core_Status)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Requests status of core.  <a href="#4d7f46622b7af9f286f5c5b0f6c2a4d1"></a><br></td></tr>
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
 The core module. 
 <p>
-This contains all the core functionality to control the plexus framework.<p>
+This contains all the core functionality to control the synapse framework.<p>
 Here are some common sends that can be emitted by all event-handers of the core: <dl class="user" compact><dt><b>Sends <code>module_Error</code>:</b></dt><dd>Sended to the requesting session if some error happend. <ul>
 <li><code>error</code> A string describing the error. </li>
 </ul>
 </dd></dl>
 <hr><h2>Function Documentation</h2>
+<a class="anchor" name="4d7f46622b7af9f286f5c5b0f6c2a4d1"></a><!-- doxytag: member="module.cpp::SYNAPSE_REGISTER" ref="4d7f46622b7af9f286f5c5b0f6c2a4d1" args="(core_Status)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">SYNAPSE_REGISTER           </td>
+          <td>(</td>
+          <td class="paramtype">core_Status&nbsp;</td>
+          <td class="paramname">          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Requests status of core. 
+<p>
+Usefull for debugging and administration.<p>
+<dl class="user" compact><dt><b>Replies <code>module_Status</code>:</b></dt><dd>Contains several status fields. </dd></dl>
+
+</div>
+</div><p>
 <a class="anchor" name="2e7ff76fb82a24a173fb3f17db6663cb"></a><!-- doxytag: member="module.cpp::SYNAPSE_REGISTER" ref="2e7ff76fb82a24a173fb3f17db6663cb" args="(core_ChangeLogging)" -->
 <div class="memitem">
 <div class="memproto">
@@ -466,51 +491,8 @@ Dynamicly loads a synapse module.
 
 </div>
 </div><p>
-<a class="anchor" name="9663bac24258c633a4d8df270e482a1c"></a><!-- doxytag: member="module.cpp::SYNAPSE_REGISTER" ref="9663bac24258c633a4d8df270e482a1c" args="(module_Init)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">SYNAPSE_REGISTER           </td>
-          <td>(</td>
-          <td class="paramtype">module_Init&nbsp;</td>
-          <td class="paramname">          </td>
-          <td>&nbsp;)&nbsp;</td>
-          <td></td>
-        </tr>
-      </table>
 </div>
-<div class="memdoc">
-
-<p>
-
-<p>
-Shutdown signal handler<p>
-SET CORE EVENT PERMISSIONS:<p>
-basic core events<p>
-SEND to module on all kinds of errors<p>
-RECV to change permissions of events<p>
-RECV to register handlers<p>
-RECV to request status of core<p>
-module loading and unloading<p>
-RECV to load a module<p>
-SEND to module after loading it<p>
-SEND because we want to unload the module cleanup<p>
-session handling<p>
-RECV to start a new session<p>
-SEND to newly started session<p>
-SEND to broadcast, on newly created session<p>
-RECV to delete src session<p>
-SEND to ended session<p>
-SEND to broadcast, on ended session<p>
-RECV to login the src session with specified user and password<p>
-SEND to session after succesfull login<p>
-RECV to change src session parameters<p>
-END OF PERMISSIONS 
-</div>
-</div><p>
-</div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Thu Mar 18 11:14:40 2010 for Synapsemoduledocumentation by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Thu Mar 18 12:45:28 2010 for Synapsemoduledocumentation by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>
