@@ -1,3 +1,9 @@
+/** \file
+Asterisk Management Interface connector.
+
+Connects to an asterisk server via the AMI.
+*/
+
 #include "cnetman.h"
 
 #include "synapse.h"

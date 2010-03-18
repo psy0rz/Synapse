@@ -1,3 +1,24 @@
+/** \file
+The core module.
+
+This contains all the core functionality to control the plexus framework.
+
+Here are some common sends that can be emitted by all event-handers of the core:
+\par Sends \c module_Error:
+	Sended to the requesting session if some error happend. 
+		\arg \c error A string describing the error.
+*/
+
+*/
+
+/** \mainpage
+Look in the files section for more info..
+
+*/
+
+
+
+
 #define SYNAPSE_HAS_INIT
 #include "synapse.h"
 #include <signal.h>
@@ -72,6 +93,11 @@ SYNAPSE_REGISTER(module_Init)
 	out["sendGroup"]=	"modules";
 	out["recvGroup"]=	"core";
 	out.send();
+
+	out["event"]=		"core_Status"; /// RECV to request status of core
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"core";
+	out["recvGroup"]=	"core";
 
 
 	/// module loading and unloading
@@ -170,6 +196,18 @@ SYNAPSE_REGISTER(module_Error)
 }
 
 
+/** Dynamicly loads a synapse module.
+	\param path The absolute pathname of the .so file.
+
+\post The module specified by path is loaded.
+
+\par Broadcasts \c modulename_Ready:
+	Sended after the module indicates its ready. 
+	All modules should indicate they're ready by sending a \c core_Ready.
+		\arg \c session The default-session of the module.
+
+\note If the module is already loaded, the modulename_Ready will only be replied to \c src instead of being broadcasted.
+*/
 SYNAPSE_REGISTER(core_LoadModule)
 {
 	string error;
@@ -221,6 +259,16 @@ SYNAPSE_REGISTER(core_LoadModule)
 
 
 
+/** Registers an event handler.
+	\param event The name of the event.
+	\param hander (optional) The function name of the handler. If not specified, the name of the event will be used. A pointer to the function is looked up via the symbol table of the dynamicly loaded object.
+
+You also can set a default handler that will be called for ALL events: Leave \c event empty and only specify \c handler.
+
+\post The handler will be called whenever a message with \c event is sended to the module.
+
+\note Normally you would use the SYNAPSE_REGISTER macro, which calls core_Register automaticly.
+*/
 SYNAPSE_REGISTER(core_Register)
 {
 	string error;
@@ -260,6 +308,17 @@ SYNAPSE_REGISTER(core_Register)
 }
 
 
+/** Changes the settings of an event.
+	\param event The event you want to change.
+	\param sendGroup The group that has permission to send the event.
+	\param recvGroup The group that has permission to receive the event.
+	\param modifyGroup The group that has permission to modify the permissions. 
+
+\post The permissions are changed.
+
+\note Messages that are already queued will be delivered without checking permissions again.
+
+*/
 SYNAPSE_REGISTER(core_ChangeEvent)
 {
 	//since permissions are very important, make sure the user didnt make a typo.
@@ -318,10 +377,71 @@ SYNAPSE_REGISTER(core_ChangeEvent)
 		msg.returnError(error);
 } 
 
-/** core_Login
- * Check username and password and changes users of src session.
- * Sends: module_Login to src
- */
+
+SYNAPSE_REGISTER(core_Status)
+{
+
+	string error;
+ 	{
+		lock_guard<mutex> lock(messageMan->threadMutex);
+		CsessionPtr session=messageMan->userMan.getSession(msg.src);
+		if (!session)
+			error="Session not found";
+		else
+		{
+			CeventPtr event=messageMan->getEvent(msg["event"]);
+			if (!event)
+				error="Event not found?";
+			else
+			{
+				if (!event->isModifyAllowed(session->user))
+					error="You're not allowed to modify this event.";
+				else
+				{
+					CgroupPtr group;
+
+					if (msg.isSet("modifyGroup"))
+					{
+						if (!(group=messageMan->userMan.getGroup(msg["modifyGroup"])))
+							error+="Cant find modifygroup " +(string)msg["modifyGroup"]+ " ";
+						else
+							event->setModifyGroup(group);
+					}
+
+					if (msg.isSet("recvGroup"))
+					{
+						if (!(group=messageMan->userMan.getGroup(msg["recvGroup"])))
+							error="Cant find recvgroup " + (string)msg["recvGroup"]+ " ";
+						else
+							event->setRecvGroup(group);
+					}
+
+					if (msg.isSet("sendGroup"))
+					{
+						if (!(group=messageMan->userMan.getGroup(msg["sendGroup"])))
+							error+="Cant find sendgroup " + (string)msg["sendGroup"]+ " ";
+						else
+							event->setSendGroup(group);
+					}
+				}
+			}
+		}
+	}
+
+	if (error!="")
+		msg.returnError(error);
+} 
+
+/** Changes the user of the \c src session.
+	\param username The username of the user you want to become.
+	\param password The password to authenticate you.
+
+\post The \c src session has changed user. (e.g. has different permissions)
+
+\par Replies \c module_Login:
+	To indicate a succesfull login.
+		\arg \c username The username the session has become.
+*/
 SYNAPSE_REGISTER(core_Login)
 {
 	string error;
@@ -346,12 +466,22 @@ SYNAPSE_REGISTER(core_Login)
 	}
 }
 
-/** core_NewSession
- * Starts new session with the src user as owner
- * Sends: 		module_SessionStart to new session 
- * Sends: 		module_SessionStarted to broadcast
- * On failure:	module_NewSession_Error
- */
+
+/** Starts a new session, with the same user as \c src.
+	\param username (optional) 
+	\param password (optional) If specified will create a session with a different user instead of the \c src user.
+	\param maxThreads (optional) Max threads of new session.
+
+\post A new session is created.
+
+\par Sends \c module_SessionStart:
+	to the new session, within the same module. This is to let the module know about its new session.
+		\arg \c * Contains all specified arguments. (without password)
+
+\par Broadcasts \c module_SessionStarted:
+	to let the rest of the word know of the new session.
+		\arg \c session The session id of the new session. 
+*/
 SYNAPSE_REGISTER(core_NewSession)
 {
 	string error;
@@ -386,6 +516,7 @@ SYNAPSE_REGISTER(core_NewSession)
 	
 					//send startmessage to the new session, copy all parameters.
 					startmsg=msg;
+					startmsg.erase("password");
 					startmsg.event="module_SessionStart";
 					startmsg.dst=sessionId;
 					startmsg.src=0;
@@ -419,6 +550,21 @@ SYNAPSE_REGISTER(core_NewSession)
 }
 
 
+/** Shuts down synapse.
+
+\post Deleted all sessions, including the core-session: You cant call any core-functions after sending this.
+
+\par Broadcasts \c module_Shutdown:
+	To let all modules know they should cleanup/shutdown and end all their threads.
+
+\par Sends \c module_SessionEnd:
+	To all sessions.
+
+\par Broadcasts \c module_SessionEnded:
+	For all sessions, to indicate to the rest of the world that the sessions have been ended.
+		\arg \c session The session that has been ended.
+
+*/
 SYNAPSE_REGISTER(core_Shutdown)
 {
 	//this ends all sessions, so that all modules are eventually unloaded and the core shuts down.
@@ -478,6 +624,18 @@ SYNAPSE_REGISTER(core_Shutdown)
 }
 
 
+/** Delete \c src session.
+	\param path The absolute pathname of the .so file.
+
+\post The module specified by path is loaded.
+
+\par Replies \c module_SessionEnd:
+	To \c src to indicate session has ended.
+
+\par Broadcasts \c module_SessionEnded:
+	To indicate to the rest of the world that the session has been ended.
+		\arg \c session The session that has been ended.
+*/
 SYNAPSE_REGISTER(core_DelSession)
 {
 	string error;
@@ -514,6 +672,12 @@ SYNAPSE_REGISTER(core_DelSession)
 }
 
 
+/** Changes the settings of the \c src module.
+	\param maxThreads (optional) The maximum number of threads for the module. (default 1, e.g. single threaded)
+	\param broadcastMulti (optional) Deliver broadcasts to every session specific, instead of only to the default session of the module.
+
+\post Settings have been changed.
+*/
 SYNAPSE_REGISTER(core_ChangeModule)
 {
 	string error;
@@ -537,6 +701,11 @@ SYNAPSE_REGISTER(core_ChangeModule)
 }
 
 
+/** Changes the settings of \c src session.
+	\param maxThreads (optional) The maximum number of threads for the module. (default 1, e.g. single threaded)
+
+\post Settings have been changed.
+*/
 SYNAPSE_REGISTER(core_ChangeSession)
 {
 	string error;
@@ -556,6 +725,15 @@ SYNAPSE_REGISTER(core_ChangeSession)
 		msg.returnError(error);
 }
 
+/** Indicates the \c src module is ready to be used.
+	Its mandatory for a module to call this when its ready.
+
+\post The module is marked as ready, so that a future \c core_LoadModule can return modulename_Ready immediatly.
+
+\par Broadcasts \c modulename_Ready:
+	To indicate to other modules that the module with name "modulename" is ready.
+		\arg \c session The default session of the ready module.
+*/
 //Indicates the module is ready with its init stuff.
 //This results in a modulename_ready-broadcast to inform the other modules this one is ready to be used.
 SYNAPSE_REGISTER(core_Ready)
@@ -583,7 +761,20 @@ SYNAPSE_REGISTER(core_Ready)
 		out.send();
 }
 
-//Sends a thread.interrupt() to a executing call, or removes it from the call queue if its not executing yet.
+//
+/** Sends a thread.interrupt() to a executing call that was previously send from \c src. It removes the call form the queue if its not executing yet.
+	\param event The event you want to interupt or cancel.
+	\param dst The destination session the event was send to.
+
+
+\post The event wont be delivered anymore, or a interrupt is send to the thread.
+
+\par Replies \c core_InterruptSent
+	To indicate the interrupt is send OR the call is removed.
+		\arg \c pars The above specified parameters.
+
+\note The thread must define boost interruption points for this to have effect.
+*/
 SYNAPSE_REGISTER(core_Interrupt)
 {
 	Cmsg out;
@@ -605,7 +796,15 @@ SYNAPSE_REGISTER(core_Interrupt)
 		out.send();
 }
 
+/** Changes the logging-setting of the synapse core.
+	\param logSends Boolean to control the printing of Send messages.
+	\param logReceives Boolean to control the printing of the receiving of messages.
 
+\post Settings have been changed.
+
+\note Logging takes a lot of performance, but is usefull for debugging and testing.
+
+*/
 SYNAPSE_REGISTER(core_ChangeLogging)
 {
 	{
