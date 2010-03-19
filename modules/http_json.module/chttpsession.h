@@ -20,7 +20,9 @@ class ChttpSession
 	bool expired;
 
 	ChttpSession();
-	
+
+	//admin/debugging
+	string getStatusStr();	
 
 };
 

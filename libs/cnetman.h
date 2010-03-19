@@ -85,6 +85,9 @@ class CnetMan
 	bool doWrite(int id, string & data);
 	void doShutdown();
 
+	//debugging/admin
+	string getStatusStr();
+
 	typedef shared_ptr<Tnet> CnetPtr;
 	typedef map<int, CnetPtr > CnetMap;
 	typedef map<int, CacceptorPtr> CacceptorMap;

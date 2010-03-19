@@ -213,3 +213,30 @@ void CnetMan<Tnet>::doShutdown()
 	}
 }
 
+template <class Tnet> 
+string CnetMan<Tnet>::getStatusStr()
+{
+	{
+		lock_guard<mutex> lock(threadMutex);
+		stringstream s;
+
+		for (CacceptorMap::iterator acceptorI=acceptors.begin(); acceptorI!=acceptors.end(); acceptorI++)
+		{
+			s << "Listening on: " << acceptorI->first << "/tcp\n";
+		}
+
+		s << "Open connections: \n";
+		for (typename CnetMap::iterator netI=nets.begin(); netI!=nets.end(); netI++)
+		{
+			string status;
+			status=netI->second->getStatusStr();
+			if (status!="")
+			{	
+				s << status << "\n";
+			}
+		}
+
+		return (s.str());
+	}
+
+};

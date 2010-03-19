@@ -35,12 +35,6 @@
 	The browser uses XMLhttprequest GET to receive events.
 	We try to use multipart/x-mixed-replace to use peristent connections.
 
-fout:
--broadcast multi moet aan, omdat we anders niet weten of een sessien wel permissies heeft om een event te ontvangen.
-
--queueing kan niet op connectie basis. 
-
--queueing op cookie of "instance" of "lastMessage-id" of sessie basis?
 
 	
 
@@ -572,51 +566,25 @@ class CnetHttp : public Cnet
 		}
 	}
 
-	/** We receive this from synapse, with a message that COULD be for the connected client.
-	* We might to write, queue or drop it.
-    * We receive this call via the IOservice thread, so it runs in the same thread.
-	*/
-// 	void writeMessage(int dstSessionId, string & jsonStr)
-// 	{
-// 		if (!wantsMessages)
-// 		{
-// 			WARNING(id << " dropping message for session " << dstSessionId << ": connection " << id << " doesnt want messages.");
-// 			return;
-// 		}
-// 
-// 		//resolving a httpCookie to a session is an expensive call that involves locking, so cache it:
-// 		if (cachedSessionId==SESSION_DISABLED)
-// 		{
-// 			cachedSessionId=httpSessionMan.getSessionId(httpCookie);
-// 		}
-// 
-// 		if (cachedSessionId==SESSION_DISABLED)
-// 		{
-// 			WARNING(id << " dropping message for session " << dstSessionId << ": httpSession " << httpCookie << " at connection " << id << " doesnt have a sessionId yet.");
-// 			return;
-// 		}
-// 
-// 		if (cachedSessionId!=dstSessionId && dstSessionId!=0)
-// 		{
-// 			//this normally shouldnt happen, so its a warning:
-// 			WARNING(id << " dropping message for session " << dstSessionId << ": httpSession " << httpCookie << " at connection " << id << " only wants " << cachedSessionId);
-// 			return;
-// 		}
-// 
-// 		enqueueJson(jsonStr);
-// 
-// 		//is the client waiting for json stuff?
-// 		if (state==WAIT_LONGPOLL)
-// 		{	
-// 			//respond now!
-// 			respond();
-// 			DEB(id << " QUEUED and WROTE message for session " << dstSessionId << " for httpSession " << httpCookie );
-// 		}
-// 		else
-// 		{
-// 			DEB(id << " QUEUED message for session " << dstSessionId << " for httpSession " << httpCookie);
-// 		}		
-// 	}
+	//for admin/debugging
+	string getStatusStr()
+	{
+		stringstream status;
+		status << Cnet::getStatusStr();
+		if (status.str()!="")
+		{
+			status << " HTTP status: ";
+			if (state==REQUEST)
+				status << "WAIT FOR REQUEST ";
+			else if (state==CONTENT)
+				status << "RECEIVE CONTENT  ";
+			else if (state==WAIT_LONGPOLL)
+				status << "WAIT FOR LONGPOLL";
+			status << " authCookie=" << authCookie;		
+		}
+
+		return (status.str());
+	}
 
 };
 
@@ -766,6 +734,17 @@ SYNAPSE_REGISTER(module_SessionEnd)
 	httpSessionMan.sessionEnd(msg);
 	//we cant: enqueueMessage(msg,dst);
 }
+
+SYNAPSE_REGISTER(http_json_GetStatus)
+{
+	Cmsg out;
+	out.dst=msg.src;
+	out.event="http_json_Status";
+	out["net"]=net.getStatusStr();
+	out["httpSessionMan"]=httpSessionMan.getStatusStr();
+	out.send();
+}
+
 
 /** This handler is called for all events that:
  * -dont have a specific handler, 

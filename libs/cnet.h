@@ -52,6 +52,8 @@ class Cnet
 	void doWrite(shared_ptr<asio::streambuf> bufferPtr);	
 	void run();
 
+	//admin/debugging
+	virtual string getStatusStr();
 
 	//this needs to be public, in case someone overrides startAsyncRead():
 	void readHandler(
@@ -69,6 +71,9 @@ class Cnet
 
 	string host;
 	int port;
+	
+	//just stuff for getStatusStr, not neccesary for anything else.
+	int statusServer;
 
 	protected:
 
@@ -124,7 +129,7 @@ class Cnet
 	void reset(const boost::system::error_code& ec);
 
 	//you might want to override this if you need more flexible reading.
-	//(usefull for http servers)
+	//(usefull for http servers etc)
 	virtual void startAsyncRead();
 
 	//end-user "hooks" for server

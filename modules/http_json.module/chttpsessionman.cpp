@@ -324,6 +324,20 @@ void ChttpSessionMan::expireCheckAll()
 	}
 }
 
+string ChttpSessionMan::getStatusStr()
+{
+	lock_guard<mutex> lock(threadMutex);
 
+	stringstream s;
 
+	ChttpSessionMap::iterator httpSessionI=httpSessionMap.begin();
+	while (httpSessionI!=httpSessionMap.end())
+	{
+		s << "synapseId " << httpSessionI->first << ": ";
+		s << httpSessionI->second.getStatusStr();
+		s << "\n";
+		httpSessionI++;
+	}
+	return (s.str());
+}
 

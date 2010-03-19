@@ -46,7 +46,8 @@
  		synapse_register("http_json_Status",function(msg_src, msg_dst, msg_event, msg)
  		{
  			$('#http_json_Status').html(
-				"Call queue:\n"+msg["callMan"]+"\nThreads:\n"+msg["threads"]+"\nSessions:\n"+msg["userMan"]
+				"Network status:\n"+msg["net"] + "\nHTTP sessions:\n"+msg["httpSessionMan"]
+
 			);
  		});
 
@@ -60,6 +61,11 @@
  		synapse_register("module_Error",function(msg_src, msg_dst, msg_event, msg)
  		{
  			$('#module_Error').html(msg["description"]);
+ 		});
+
+ 		synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+ 			$('#module_Login').html("Logged in as " + msg["username"]);
  		});
 
 		lastCounter=0;
@@ -200,9 +206,11 @@
 	Username: <input type="text" id="username"><br>
 	Password: <input type="text" id="password"><br>
 	<input type='submit' value='Login' id='login'>
+	<span id='module_Login'	></span>
 
 
 	<h2>Application level (tests)</h2>
+
 
 	<h3>Core status</h3>
 
@@ -212,6 +220,15 @@
 	<input type='checkbox' id='core_GetStatus_queue'>Get queue<br> 
 	<input type='checkbox' id='core_GetStatus_verbose'>Verbose<br>
 	<input type='submit' value='Get...' id='core_GetStatus'>
+
+
+	<h3>HTTP json server status</h3>
+
+	<pre>
+	<div id='http_json_Status'	></div>
+	</pre>
+	<input type='submit' value='Get...' id='http_json_GetStatus'>
+
 
 	<h3>Counter testing</h3>
 

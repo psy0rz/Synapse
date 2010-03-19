@@ -20,6 +20,7 @@ void Cnet::doAccept(int id, CacceptorPtr acceptorPtr)
 
 	reconnectTime=0;
 	DEB("Starting acceptor for port " << acceptorPtr->local_endpoint().port()<< " into id " << id);
+	statusServer=acceptorPtr->local_endpoint().port();
 
 	//start the accept
 	asio::io_service::work work(ioService);
@@ -361,4 +362,20 @@ void Cnet::received(int id, asio::streambuf &readBuffer, std::size_t bytesTransf
 	readBuffer.consume(bytesTransferred);
 }
 
+
+//should return one line without enters
+string Cnet::getStatusStr()
+{
+	stringstream s;
+
+
+	if (tcpSocket.is_open())
+	{
+		s << "netId " << id << ": ";
+		s << tcpSocket.local_endpoint().address().to_string() << ":" << tcpSocket.local_endpoint().port() << " <-> ";
+		s << tcpSocket.remote_endpoint().address().to_string() << ":" << tcpSocket.remote_endpoint().port();
+	}
+
+	return (s.str());
+}
 
