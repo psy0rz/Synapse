@@ -26,12 +26,13 @@ public:
 	CcallMan();
 	
 	~CcallMan();
-	bool addCall(const CmsgPtr & msg, const CsessionPtr & dst, FsoHandler soHandler);
+	void addCall(const CmsgPtr & msg, const CsessionPtr & dst, FsoHandler soHandler);
 	CcallList::iterator startCall(const CthreadPtr & threadPtr);
 	void endCall(CcallList::iterator callI);
 	bool interruptCall(string event, int src, int dst);
 	bool interruptAll();
-    void print(int verbose=1);
+	string getStatusStr(bool queue, bool verbose);
+
 	int statsTotal;
 
 	CcallList callList;

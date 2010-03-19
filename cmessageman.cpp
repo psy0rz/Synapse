@@ -406,7 +406,6 @@ int CmessageMan::run(string coreName, string moduleName)
 		//lock core and do our stuff
 		{
 			lock_guard<mutex> lock(threadMutex);
-//TODO: make this appear on keypress, or via an event?
 // 			DEB(maxActiveThreads << "/" << wantCurrentThreads << " threads active."); 
 // 			callMan.print();
 // 			userMan.print();
@@ -548,4 +547,12 @@ void CmessageMan::doShutdown(int exit=0)
 	userMan.doShutdown();
 	this->exit=exit;
 	threadCond.notify_all();
+}
+
+string CmessageMan::getStatusStr()
+{
+	stringstream s;
+	s << maxActiveThreads << "/" << wantCurrentThreads << " threads running. ";
+
+	return(s.str());
 }

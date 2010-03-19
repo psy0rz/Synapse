@@ -29,7 +29,7 @@ CcallMan::~CcallMan()
 /*!
     \fn CcallMan::addCall(CmsgPtr msg, CsessionPtr dst)
  */
-bool CcallMan::addCall(const CmsgPtr & msg, const CsessionPtr & dst, FsoHandler soHandler)
+void CcallMan::addCall(const CmsgPtr & msg, const CsessionPtr & dst, FsoHandler soHandler)
 {
 	callList.push_back(Ccall(msg,dst,soHandler));
 	statsTotal++;
@@ -75,28 +75,37 @@ void CcallMan::endCall(CcallList::iterator callI)
 /*!
     \fn CcallMan::print()
  */
-void CcallMan::print(int verbose)
+string CcallMan::getStatusStr(bool queue, bool verbose)
 {
-	if (verbose)
-		DEB( statsTotal << " calls processed, " << callList.size() << " calls queued" );
-	string status;
+	stringstream status;
+	int running=0;
+
 	for (CcallList::iterator callI=callList.begin(); callI!=callList.end(); callI++)
 	{
-		if (callI->started)
-			status="RUNNING";
-		else if (!verbose)
-			continue;
-		else
-			status="QUEUED ";
-
-		DEB(" |" << status << " " << callI->msg->event << " FROM " << callI->msg->src << " TO " <<
-			callI->dst->id << ":" << callI->dst->user->getName() << "@" << callI->dst->module->name 
-			<< callI->msg->getPrint("  |")
-		);
-	}
+		if (queue)
+		{
+			status << " |";
+			if (callI->started)
+				status << "RUNNING";
+			else if (!verbose)
+				continue;
+			else
+				status << "QUEUED ";
 	
-	statsTotal=0;
+			status << " " << callI->msg->event << 
+					" FROM " << callI->msg->src << 
+					" TO " << callI->dst->id << ":" << callI->dst->user->getName() << 
+					"@" << callI->dst->module->name << callI->msg->getPrint("  |") <<
+					"\n";
+		}
 
+		if (callI->started)
+			running++;
+	}
+
+	status << statsTotal << " calls processed, " << running << "/" << callList.size() << " calls running.\n";
+
+	return (status.str());
 }
 
 bool CcallMan::interruptCall(string event, int src, int dst)

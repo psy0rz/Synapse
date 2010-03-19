@@ -323,8 +323,12 @@ SYNAPSE_REGISTER(core_ChangeEvent)
 {
 	//since permissions are very important, make sure the user didnt make a typo.
 	//(normally we dont care about typo's since then something just wouldn't work, but this function will work if the user doesnt specify one or more parameters.)
-	if (msg.returnIfOtherThan("sendGroup","event","recvGroup","modifyGroup",NULL))
-		return;
+	if (msg.returnIfOtherThan(
+		(char *)"sendGroup",
+		(char *)"event",
+		(char *)"recvGroup",
+		(char *)"modifyGroup",NULL))
+			return;
 
 	string error;
  	{
@@ -766,14 +770,20 @@ SYNAPSE_REGISTER(core_ChangeLogging)
 /** Requests status of core.
 Usefull for debugging and administration.
 
-\par Replies \c module_Status:
+\par Replies \c core_Status:
 	Contains several status fields.
 */
-SYNAPSE_REGISTER(core_Status)
+SYNAPSE_REGISTER(core_GetStatus)
 {
+	Cmsg out;
 	{
 		lock_guard<mutex> lock(messageMan->threadMutex);
-		messageMan->logSends=msg["logSends"];
-		messageMan->logReceives=msg["logReceives"];
+		out.event="core_Status";
+		out.dst=out.src;
+		out["callMan"]=messageMan->callMan.getStatusStr(msg["queue"], msg["verbose"]);
+		out["userMan"]=messageMan->userMan.getStatusStr();
+		out["threads"]=messageMan->getStatusStr();
+
 	}
+	out.send();
 } 

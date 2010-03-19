@@ -38,7 +38,7 @@ public:
 	int addSession( CsessionPtr session);
 	CsessionPtr getSession(const int & sessionId);
 	bool delSession(const int id);
-    void print();
+    string getStatusStr();
 	void doShutdown();
 	string login(const int & sessionId, const string & userName, const string & password);
 

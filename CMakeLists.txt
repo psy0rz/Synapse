@@ -11,7 +11,7 @@ SET(CMAKE_BUILD_TYPE Debug)
 SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 #add definitions, compiler switches, etc.
-ADD_DEFINITIONS(-Wall -O2 -pthread -pg)
+ADD_DEFINITIONS(-Wall -O2 -pthread -pg -Werror)
 
 #list all source files here
 file(GLOB sources *.cpp)

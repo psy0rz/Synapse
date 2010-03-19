@@ -241,20 +241,17 @@ bool CuserMan::delSession(const int sessionId)
 
 
 
-
-/*!
-    \fn CuserMan::print()
- */
-void CuserMan::print()
+string CuserMan::getStatusStr()
 {
+	stringstream s;
 	for (int sessionId=0; sessionId<MAX_SESSIONS; sessionId++)
 	{
 		if (sessions[sessionId])
 		{
-			DEB("session " << sessionId << " = " << sessions[sessionId]->user->getName() << "@" << sessions[sessionId]->module->name );
+			s << "session " << sessionId << " = " << sessions[sessionId]->user->getName() << "@" << sessions[sessionId]->module->name << "\n";
 		}
 	}
-
+	return (s.str());
 }
 
 void CuserMan::doShutdown()

@@ -70,6 +70,10 @@ public:
 	//initial module that user want to start, after the coremodule is started:
 	string firstModuleName;
 
+	//for administrator/debugging
+	string getStatusStr();
+
+
 private:
 	condition_variable threadCond;
 
@@ -90,6 +94,8 @@ private:
 
 	bool idleThread();
 	void activeThread();
+
+	
 
 	CgroupPtr defaultRecvGroup;
 	CgroupPtr defaultSendGroup;

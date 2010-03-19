@@ -12,6 +12,8 @@
 	<script type="text/javascript" src="synapse.js"></script>
 	<script type="text/javascript">
 
+		/// SYNAPSE EVENT HANDLERS
+
 		synapse_register("error",function(errortxt)
 		{
 			$('#error').html(errortxt);
@@ -33,6 +35,21 @@
 			}
 
 		});
+
+ 		synapse_register("core_Status",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+ 			$('#core_Status').html(
+				"Call queue:\n"+msg["callMan"]+"\nThreads:\n"+msg["threads"]+"\nSessions:\n"+msg["userMan"]
+			);
+ 		});
+
+ 		synapse_register("http_json_Status",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+ 			$('#http_json_Status').html(
+				"Call queue:\n"+msg["callMan"]+"\nThreads:\n"+msg["threads"]+"\nSessions:\n"+msg["userMan"]
+			);
+ 		});
+
 
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
@@ -59,12 +76,12 @@
 
  		synapse_register("test_CounterStatus",function(msg_src, msg_dst, msg_event, msg)
  		{
-			console.info("asdf"+msg["counterSleep"]);
 			$("#counterSlider").slider('value', msg["counterSleep"]);
 			$('#counterSleep').html(msg["counterSleep"]);
 	
 		});
 
+		/// JAVA SCRIPT EVENT HANDLERS
 		$(document).ready(function(){
 
 			$('#username').val("admin");
@@ -121,6 +138,18 @@
 				});				
 			});
 
+			$('#core_GetStatus').click(function(event){
+				send(0,"core_GetStatus", { 
+					"queue": $('#core_GetStatus_queue').is(':checked')?1:0,
+					"verbose": $('#core_GetStatus_verbose').is(':checked')?1:0
+				});				
+			});
+
+			$('#http_json_GetStatus').click(function(event){
+				send(0,"http_json_GetStatus", { 
+				});				
+			});
+
 		});
 
 
@@ -174,7 +203,15 @@
 
 
 	<h2>Application level (tests)</h2>
-	
+
+	<h3>Core status</h3>
+
+	<pre>
+	<div id='core_Status'	></div>
+	</pre>
+	<input type='checkbox' id='core_GetStatus_queue'>Get queue<br> 
+	<input type='checkbox' id='core_GetStatus_verbose'>Verbose<br>
+	<input type='submit' value='Get...' id='core_GetStatus'>
 
 	<h3>Counter testing</h3>
 
@@ -191,10 +228,6 @@
 	<p>
 	<input type='submit' value='Counter faster' id='counterFaster'>
 	<input type='submit' value='Counter slower' id='counterSlower'>
-
-
-
-	<h3>Status</h3>
 
 </body>
 </html>
