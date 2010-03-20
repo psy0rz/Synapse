@@ -1,0 +1,176 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<title>Synapse realtime chat demo</title>
+	<link type="text/css" href="css/smoothness/jquery-ui-1.7.2.custom.css" rel="Stylesheet">
+	<script type="text/javascript" src="jquery.js"></script>
+	<script type="text/javascript" src="jquery-ui.js"></script>
+	<script type="text/javascript" src="json2.js"></script>
+	<script type="text/javascript" src="synapse.js"></script>
+	<script type="text/javascript">
+
+
+		/// SYNAPSE EVENT HANDLERS
+		synapse_register("error",function(errortxt)
+		{
+			$('#error').html(errortxt);
+		});	
+				
+ 		synapse_register("module_Error",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+ 			$('#error').html(msg["description"]);
+ 		});
+
+		function getColor(s)
+		{
+			return (s.substr(1) % 11);
+		}
+
+ 		synapse_register("chat_Text",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			nicks["n"+msg_src]={
+				"nick": msg["nick"],
+				"text": msg["text"],
+				"enter": msg["enter"]
+			};
+			
+			//render nick overview
+			var s=String();
+			for (var nickI in nicks)
+			{
+				s=s+"<tr><td class='color"+getColor(nickI)+"'>"+nicks[nickI]["nick"];
+				if (nicks[nickI]["enter"]==1)
+					s=s+"<td class='entered'>";
+				else
+					s=s+"<td>";
+	
+				s=s+nicks[nickI]["text"]+"</tr>";
+			}
+
+			$('#chatTyping').html(s);
+
+			//add to chat 
+			if (msg["enter"] == "1")
+			{
+				$('#chatLines').append(msg["text"]+"<br>");
+				
+			}			
+
+		});
+
+		/// JAVA SCRIPT EVENT HANDLERS
+		$(document).ready(function(){
+	
+			nicks=new Array();
+			lines=new Array();
+
+			function sendinput(event)
+			{
+				if ($('#text').val()=="")
+				{
+					return;
+				}
+
+				//pressed enter
+				if (event.which==13)
+				{
+					send(0,"chat_Text", { 
+						"text": $('#text').val(),
+						"nick": $('#nick').val(),
+						"enter": 1
+					});
+					$('#text').val("");
+				}
+				else
+				{
+					send(0,"chat_Text", { 
+						"text": $('#text').val(),
+						"nick": $('#nick').val(),
+					});
+				}
+			}
+
+			$('#text').keyup(sendinput);
+			$('#nick').keyup(sendinput);
+
+		});
+
+
+	</script>
+
+	<style>
+		.entered
+		{
+			color: #aaaaaa;
+		}
+		.color1  { color: #ff0000; } 
+		.color2  { color: #00ff00; } 
+		.color3  { color: #0000ff; } 
+		.color4  { color: #ffff00; } 
+		.color5  { color: #ff00ff; } 
+		.color6  { color: #00ffff; } 
+		.color7  { color: #aaff00; } 
+		.color8  { color: #00ffaa; } 
+		.color9  { color: #aa00aa; } 
+		.color10 { color: #aa00ff; } 
+
+		#chatLines
+		{
+		}
+
+
+		#chatBox
+		{
+		}
+
+		#chatTyping
+		{
+		}
+
+		#nickListBox
+		{
+			float: left;
+		}
+
+		#chatBox
+		{
+			float: right;
+		}
+
+		#nickInputBox
+		{
+		}
+
+	</style>
+
+</head>
+
+
+<body>
+	<p>
+
+	<span id='nickListBox'>
+		<table id='chatTyping'>
+		</table>
+	</span>
+
+	<span id='chatBox'>
+		<div id='chatLines'>
+		</div>
+	</span>
+
+	<span id='nickInputBox'>
+		Nickname: <input type='text' id='nick' size=15 maxlength=15>
+	</span>
+
+
+	<span id='chatInputBox'>
+		Chat: <input type='text' id='text' size=50 maxlength=200>
+	</span>
+
+	
+</body>
+</html>
