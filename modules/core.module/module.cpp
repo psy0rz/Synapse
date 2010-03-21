@@ -467,7 +467,8 @@ SYNAPSE_REGISTER(core_NewSession)
 	
 					//send startmessage to the new session, copy all parameters.
 					startmsg=msg;
-					startmsg.erase("password");
+					if (startmsg.isSet("password"))
+						startmsg.erase("password");
 					startmsg.event="module_SessionStart";
 					startmsg.dst=sessionId;
 					startmsg.src=0;
