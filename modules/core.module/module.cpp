@@ -154,7 +154,7 @@ SYNAPSE_REGISTER(module_Init)
 	out["event"]=		"module_SessionEnded"; // SEND to broadcast, on ended session
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"core";
-	out["recvGroup"]=	"everyone";
+	out["recvGroup"]=	"anonymous"; //no harm in allowing anonymous users to see it?
 	out.send();
 
 	out["event"]=		"core_Login"; // RECV to login the src session with specified user and password

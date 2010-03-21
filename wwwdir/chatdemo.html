@@ -5,9 +5,7 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
 	<title>Synapse realtime chat demo</title>
-	<link type="text/css" href="css/smoothness/jquery-ui-1.7.2.custom.css" rel="Stylesheet">
 	<script type="text/javascript" src="jquery.js"></script>
-	<script type="text/javascript" src="jquery-ui.js"></script>
 	<script type="text/javascript" src="json2.js"></script>
 	<script type="text/javascript" src="synapse.js"></script>
 	<script type="text/javascript">
@@ -26,22 +24,17 @@
 
 		function getColor(s)
 		{
-			return (s.substr(1) % 11);
+			return (s % 11);
 		}
 
- 		synapse_register("chat_Text",function(msg_src, msg_dst, msg_event, msg)
- 		{
-			nicks["n"+msg_src]={
-				"nick": msg["nick"],
-				"text": msg["text"],
-				"enter": msg["enter"]
-			};
-			
+		//render the html of the nicklist, from the nicks-array.
+		function renderNickList()
+		{
 			//render nick overview
 			var s=String();
 			for (var nickI in nicks)
 			{
-				s=s+"<tr><td class='color"+getColor(nickI)+"'>"+nicks[nickI]["nick"];
+				s=s+"<tr><td class='color"+getColor(nickI.substr(1))+"'>"+nicks[nickI]["nick"];
 				if (nicks[nickI]["enter"]==1)
 					s=s+"<td class='entered'>";
 				else
@@ -49,17 +42,57 @@
 	
 				s=s+nicks[nickI]["text"]+"</tr>";
 			}
-
 			$('#chatTyping').html(s);
+		}
+
+		//we've received chat text from other people
+		//(and ourself)
+ 		synapse_register("chat_Text",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			msg["nick"]=msg["nick"].replace("<", "&lt;");
+			msg["text"]=msg["text"].replace("<", "&lt;");
+
+			nicks["n"+msg_src]={
+				"nick": msg["nick"],
+				"text": msg["text"],
+				"enter": msg["enter"]
+			};
+
+			renderNickList();			
 
 			//add to chat 
 			if (msg["enter"] == "1")
 			{
-				$('#chatLines').append(msg["text"]+"<br>");
-				
-			}			
+				$('#chatLines').append("&lt;<span class='color"+getColor(msg_src)+"'>"+msg["nick"]+"</span>&gt; "+msg["text"]+"<br>");
+				$('#chatBox').scrollTop(1000000);				
+			}
 
 		});
+
+		//on start, we broadcast a poll to the other clients to get the initial nicklist:
+ 		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			send(0,"chat_Poll", { 
+			});
+		});
+
+		//someone is requesting a poll, respond with a normal chat_Text event.
+ 		synapse_register("chat_Poll",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			send(msg_src,"chat_Text", { 
+				"text": $('#text').val(),
+				"nick": $('#nick').val(),
+			});
+		});
+
+		//a session has ended.. remove it from the nicklist
+ 		synapse_register("module_SessionEnded",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			//remove
+			delete nicks["n"+msg["session"]];
+			renderNickList();
+		});
+
 
 		/// JAVA SCRIPT EVENT HANDLERS
 		$(document).ready(function(){
@@ -69,10 +102,6 @@
 
 			function sendinput(event)
 			{
-				if ($('#text').val()=="")
-				{
-					return;
-				}
 
 				//pressed enter
 				if (event.which==13)
@@ -102,6 +131,13 @@
 	</script>
 
 	<style>
+		body 
+		{
+			margin:0;
+			padding:0;
+			height:100%;
+		} 
+
 		.entered
 		{
 			color: #aaaaaa;
@@ -121,28 +157,35 @@
 		{
 		}
 
-
-		#chatBox
-		{
-		}
-
-		#chatTyping
-		{
-		}
-
 		#nickListBox
 		{
-			float: left;
+			position:absolute; 
+			left:0;
+			bottom: 0;
+			width: 100%;
+			border-style:solid;
 		}
 
 		#chatBox
 		{
-			float: right;
+			overflow:scroll;
+			position:absolute; 
+			left:0%;
+			top: 0;
+			width: 100%;
+			height: 50%;
+			border-style:solid;
 		}
 
-		#nickInputBox
+		#InputBox
 		{
+			position:absolute; 
+			left:0;
+			top: 50%;
+			width:100%;
+			border-style:solid;
 		}
+
 
 	</style>
 
@@ -152,24 +195,26 @@
 <body>
 	<p>
 
-	<span id='nickListBox'>
-		<table id='chatTyping'>
-		</table>
-	</span>
-
-	<span id='chatBox'>
+	<div id='chatBox'>
+		<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
 		<div id='chatLines'>
 		</div>
-	</span>
-
-	<span id='nickInputBox'>
-		Nickname: <input type='text' id='nick' size=15 maxlength=15>
-	</span>
+	</div>
 
 
-	<span id='chatInputBox'>
-		Chat: <input type='text' id='text' size=50 maxlength=200>
-	</span>
+	<div id='InputBox'>
+		Nick: <input type='text' id='nick' size=15 maxlength=15>
+		Chat: <input type='text' id='text' size=50 maxlength=200 witdh=100%>
+	</div>
+
+
+	<div id='chatInputBox'>
+	</div>
+
+	<div id='nickListBox'>
+		<table id='chatTyping'>
+		</table>
+	</div>
 
 	
 </body>

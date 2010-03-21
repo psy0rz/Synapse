@@ -68,6 +68,14 @@ SYNAPSE_REGISTER(module_Init)
 	out["recvGroup"]=	"anonymous";
 	out.send();
 
+	out.clear();
+	out.event="core_ChangeEvent";
+	out["event"]=		"chat_Poll"; 
+	out["modifyGroup"]=	"modules";
+	out["sendGroup"]=	"anonymous";
+	out["recvGroup"]=	"anonymous";
+	out.send();
+
 }
 
 SYNAPSE_REGISTER(test_Counter)
