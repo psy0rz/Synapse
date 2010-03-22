@@ -269,6 +269,13 @@ SYNAPSE_REGISTER(ami_Event_Hangup)
 
 }
 
+SYNAPSE_REGISTER(ami_Event_PeerStatus)
+{
+	
+	servers[msg.dst].getDevicePtr(msg["Peer"]);
+	INFO("\n" << servers[msg.dst].getStatusStr());
+}
+
 
 // SYNAPSE_REGISTER(ami_Event_Newstate)
 // {
