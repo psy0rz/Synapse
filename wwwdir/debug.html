@@ -151,6 +151,11 @@
 				});				
 			});
 
+			$('#core_Shutdown').click(function(event){
+				send(0,"core_Shutdown", { 
+				});				
+			});
+
 			$('#http_json_GetStatus').click(function(event){
 				send(0,"http_json_GetStatus", { 
 				});				
@@ -220,6 +225,7 @@
 	<input type='checkbox' id='core_GetStatus_queue'>Get queue<br> 
 	<input type='checkbox' id='core_GetStatus_verbose'>Verbose<br>
 	<input type='submit' value='Get...' id='core_GetStatus'>
+	<input type='submit' value='Shutdown...' id='core_Shutdown'>
 
 
 	<h3>HTTP json server status</h3>

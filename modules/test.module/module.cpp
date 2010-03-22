@@ -39,9 +39,11 @@ SYNAPSE_REGISTER(module_Init)
 	out["path"]="modules/http_json.module/libhttp_json.so";
 	out.send();
 
- 	out["path"]="modules/ami.module/libami.so";
- 	out.send();
+//  	out["path"]="modules/ami.module/libami.so";
+//  	out.send();
 
+ 	out["path"]="modules/asterisk.module/libasterisk.so";
+ 	out.send();
 
 	// Counter that ever counterSleep seconds emits a message.
 	// Speed can be changed with appropriate messages
@@ -54,7 +56,7 @@ SYNAPSE_REGISTER(module_Init)
 	out.send();
 
 	counter=0;
-	counterSleep=5000000;
+	counterSleep=10000000;
 	out.clear();
 	out.event="test_Counter";
 	out.send();
@@ -74,6 +76,44 @@ SYNAPSE_REGISTER(module_Init)
 	out["modifyGroup"]=	"modules";
 	out["sendGroup"]=	"anonymous";
 	out["recvGroup"]=	"anonymous";
+	out.send();
+
+}
+
+SYNAPSE_REGISTER(asterisk_Ready)
+{
+	Cmsg out;
+
+	out.clear();
+	out.event="asterisk_Connect";
+	out["username"]="admin";
+	out["password"]="s3xl1jn";
+	out["host"]="192.168.13.1";
+	out["port"]="5038";
+	out.send();
+
+	out.clear();
+	out.event="asterisk_Connect";
+	out["username"]="manager";
+	out["password"]="insecure";
+	out["host"]="localhost";
+	out["port"]="5038";
+	out.send();
+
+	out.clear();
+	out.event="asterisk_Connect";
+	out["username"]="manager";
+	out["password"]="insecure";
+	out["host"]="localhost";
+	out["port"]="5039";
+	out.send();
+
+	out.clear();
+	out.event="asterisk_Connect";
+	out["username"]="manager";
+	out["password"]="insecure";
+	out["host"]="localhost";
+	out["port"]="5040";
 	out.send();
 
 }
@@ -136,32 +176,6 @@ SYNAPSE_REGISTER(http_json_Ready)
 	out.send();
 }
 
-SYNAPSE_REGISTER(ami_Ready)
-{
-	Cmsg out;
-	out.clear();
-	out.event="ami_Connect";
-	out["host"]="192.168.13.1";
-	out["port"]="5038";
-	out.send();
-}
-
-SYNAPSE_REGISTER(ami_Connected)
-{
-	Cmsg out;
-	out.clear();
-	out.event="ami_Action";
-	out["Action"]="Login";
-	out["UserName"]="admin";
-	out["Secret"]="s3xl1jn";
-	out["ActionID"]="Login";
-	out["Events"]="on";
-	out.send();
-}
-
-SYNAPSE_REGISTER(ami_Response_Success)
-{
-}
 
 
 SYNAPSE_REGISTER(loop)

@@ -2,48 +2,59 @@
 Asterisk Management Interface connector.
 
 Connects to an asterisk server via the AMI.
+
+\code
+
+To login to an asterisk server define these two handlers:
+	SYNAPSE_REGISTER(ami_Ready)
+	{
+		Cmsg out;
+		out.clear();
+		out.event="ami_Connect";
+		out["host"]="192.168.13.1";
+		out["port"]="5038";
+		out.send();
+	}
+	
+	SYNAPSE_REGISTER(ami_Connected)
+	{
+		Cmsg out;
+		out.clear();
+		out.event="ami_Action";
+		out["Action"]="Login";
+		out["UserName"]="admin";
+		out["Secret"]="yourpassword";
+		out["ActionID"]="Login";
+		out["Events"]="on";
+		out.send();
+	}
+
+	SYNAPSE_REGISTER(ami_Response_Success)
+	{
+		...called on successfull login with msg["ActionID"] == "Login".
+ 	}
+
+	SYNAPSE_REGISTER(ami_Response_Error)
+	{
+		...called on failed login with msg["ActionID"] == "Login".
+	}
+
+Sending actions can be done with ami_Action. 
+
+Received events are converted to messages with event: ami_Event_"eventname" .
+
+Received responses are converted to messages with event: ami_Response_"responsename" .
+
+All parameters are copied from/to asterisk without modification.
+\endcode
 */
+
 
 #include "cnetman.h"
 
 #include "synapse.h"
 #include <boost/regex.hpp>
 
-/**
-	Documentation: 
-
-	To login to an asterisk server define these two handlers:
-		SYNAPSE_REGISTER(ami_Ready)
-		{
-			Cmsg out;
-			out.clear();
-			out.event="ami_Connect";
-			out["host"]="192.168.13.1";
-			out["port"]="5038";
-			out.send();
-		}
-		
-		SYNAPSE_REGISTER(ami_Connected)
-		{
-			Cmsg out;
-			out.clear();
-			out.event="ami_Action";
-			out["Action"]="Login";
-			out["UserName"]="admin";
-			out["Secret"]="yourpassword";
-			out["ActionID"]="Login";
-			out["Events"]="on";
-			out.send();
-		}
-
-	Sending actions can be done with ami_Action. 
-
-	Received events are converted to messages with event: ami_Event_"eventname" .
-
-	Received responses are converted to messages with event: ami_Response_"responsename" .
-
-	All parameters are copied from/to asterisk without modification.
-*/
 
 SYNAPSE_REGISTER(module_Init)
 {
@@ -129,6 +140,7 @@ class CnetAmi : public Cnet
 
 			regexI++;
 		}
+		out.dst=id;
 		out.send();
 
 		readBuffer.consume(dataStr.length());
@@ -148,11 +160,34 @@ class CnetAmi : public Cnet
 
 CnetMan<CnetAmi> net;
 
+/** Connects to a asterisk servers managment interface, and links it to \c src.
+	\param host Hostname of the asterisk server.
+	\param port AMI port (normally 5038)
+
+\post The ami module connects to the server.
+
+\par Replies \c ami_Connected:
+	To indicate a succesfull connection.
+
+\par Replies \c ami_Disconnected:
+	To indicate a failed connection, or a later disconnect.
+
+\par Replies \c ami_Event_...:
+	On received asterisk events.
+		\arg \c ... Received ami-parameters.
+
+*/
 SYNAPSE_REGISTER(ami_Connect)
 {
-	net.runConnect(msg.src, msg["host"], msg["port"], 5);
+	if (msg["port"]==0)
+		net.runConnect(msg.src, msg["host"], 5038, 5);
+	else
+		net.runConnect(msg.src, msg["host"], msg["port"], 5);
+
 }
 
+/** Disconnects ami connection belonging to \c src.
+*/
 SYNAPSE_REGISTER(ami_Disconnect)
 {
 	net.doDisconnect(msg.src);
@@ -166,7 +201,7 @@ SYNAPSE_REGISTER(module_SessionEnded)
 	net.doDisconnect(msg["session"]);
 }
 
-/** Called when synapse whats the module to shutdown completely
+/* Called when synapse whats the module to shutdown completely
  * This makes sure that all ports and network connections are closed, so there wont be any 'hanging' threads left.
  * If you care about data-ordering, send this to session-id that sended you the net_Connected.
  */
@@ -177,8 +212,14 @@ SYNAPSE_REGISTER(module_Shutdown)
 	net.doShutdown();
 }
 
-/** Send an action to asterisk
- */
+/** Sends a asterisk action to the connection belonging to \c src.
+	\param ... The ami-parameters you want to send.
+
+
+\par Replies \c ami_Response_...:
+	if the asterisk server responds with something.
+		\arg \c ... Received ami-parameters.
+*/
 SYNAPSE_REGISTER(ami_Action)
 {
 	string amiString;
