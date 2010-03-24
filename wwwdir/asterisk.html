@@ -1,0 +1,186 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<title>Synapse asterisk test</title>
+	<script type="text/javascript" src="jquery.js"></script>
+	<script type="text/javascript" src="jquery-ui.js"></script>
+	<script type="text/javascript" src="json2.js"></script>
+	<script type="text/javascript" src="synapse.js"></script>
+	<script type="text/javascript">
+
+
+		/// SYNAPSE EVENT HANDLERS
+		synapse_register("error",function(errortxt)
+		{
+			$('#error').html(errortxt);
+		});	
+				
+ 		synapse_register("module_Error",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+ 			$('#error').html(msg["description"]);
+ 		});
+
+
+ 		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			//request a refresh, to learn about all objects
+			send(0,"asterisk_refresh", { 
+			});
+
+		});
+
+ 		synapse_register("asterisk_reset",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			//reset all known state info
+			//(new info probably follows because we send a asterisk_refresh request)
+			$('#deviceList').empty();
+
+		});
+
+		function escapeId(myid) { 
+			//escape stuff to make it jquery compatible. asterisk channel ids look like this:
+			// Local/10@from-inside-TR_Dozy-6829,2
+			return '#' + myid.replace(/([,@\/.])/g,'\\$1');
+		}
+
+ 		synapse_register("asterisk_addDevice",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			html="<div class='device' id='"+msg["id"]+"'>";
+			html+="<div class='channelList'></div>";
+			html+="Device " + msg["id"];
+			html+="</div>";
+			$(html).appendTo('#deviceList');
+		});
+
+
+ 		synapse_register("asterisk_addChannel",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+
+
+			html="<div class='channel' id='";
+			html+=msg["id"];
+			html+="'>";
+			//html+=msg["id"];
+			html+="<div class='channelInfo'>maiii</div>";
+			html+="</div>";
+			$(html).appendTo(escapeId(msg["deviceId"])+' .channelList');
+
+			$(escapeId(msg["id"])).hover(
+					function ()	{ $(this).children(".channelInfo").show(); },
+					function () { $(this).children(".channelInfo").hide(); }
+			);
+
+		});
+
+
+ 		synapse_register("asterisk_delChannel",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			$(escapeId(msg["id"])).remove();
+		});
+
+ 		synapse_register("module_SessionEnded",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+		});
+
+
+		/// JAVA SCRIPT EVENT HANDLERS
+		$(document).ready(function(){
+
+			$("#deviceList").sortable();
+			$("#deviceList").disableSelection();
+
+		});
+
+
+	</script>
+
+	<style>
+		body 
+		{
+			margin:0;
+			padding:0;
+			height:100%;
+			width: 100%;
+		} 
+	
+		#deviceList
+		{
+			position:absolute; 
+			left:0;
+			bottom: 0;
+			border-style:solid;
+			height:100%;
+			width: 100%;
+			overflow: scroll;
+		}
+
+		.device
+		{
+			background-color: #eeeeee;
+			float: left;
+			border-style:solid;
+			width: 20em;
+			min-height: 5em;
+			margin: 5px;
+			padding: 5px;
+		}
+
+		.channelList
+		{
+			border-style:solid;
+			border-color: #aaaaaa;
+			border-width: 1px;
+			width:100%;
+			min-height: 2em;
+			float: left;
+		}
+
+		.channel
+		{
+			border-style:solid;
+			border-color:#eeeeee;
+			background: red;
+			float:left;
+			min-width:2em;
+			min-height:2em;
+			margin:1px;
+			position: relative;
+		}
+		.channel:hover
+		{
+			border-color:yellow;
+			
+		}
+
+		.channelInfo
+		{
+			border-style:solid;
+			border-color:yellow;
+			background-color: #ffffff;
+			display: none;
+			min-width:10em;
+			min-height:10em;
+			position: absolute;
+			top: 1.9em;
+			left: 1.9em;
+			z-index: 1;
+		}
+
+	</style>
+
+</head>
+
+
+<body>
+
+	<div id='deviceList'>
+	</div>
+
+
+
+	
+</body>
+</html>

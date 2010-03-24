@@ -84,36 +84,50 @@ SYNAPSE_REGISTER(asterisk_Ready)
 {
 	Cmsg out;
 
+// 
+// 	out.clear();
+// 	out.event="asterisk_Connect";
+// 	out["username"]="manager";
+// 	out["password"]="insecure";
+// 	out["host"]="localhost";
+// 	out["port"]="5038";
+// 	out.send();
+// 
+// 	out.clear();
+// 	out.event="asterisk_Connect";
+// 	out["username"]="manager";
+// 	out["password"]="insecure";
+// 	out["host"]="localhost";
+// 	out["port"]="5039";
+// 	out.send();
+// 
+// 	out.clear();
+// 	out.event="asterisk_Connect";
+// 	out["username"]="manager";
+// 	out["password"]="insecure";
+// 	out["host"]="localhost";
+// 	out["port"]="5040";
+// 	out.send();
+
+
+	//replay server with:
+	//tcpserver 0.0.0.0 5555 scriptreplay mt2.timing mt2.txt
+
+	out.clear();
+	out.event="asterisk_Connect";
+	out["username"]="bla";
+	out["password"]="bla";
+	out["host"]="localhost";
+	out["port"]="5555";
+	out.send();
+
+
 	out.clear();
 	out.event="asterisk_Connect";
 	out["username"]="admin";
 	out["password"]="s3xl1jn";
 	out["host"]="192.168.13.1";
 	out["port"]="5038";
-	out.send();
-
-	out.clear();
-	out.event="asterisk_Connect";
-	out["username"]="manager";
-	out["password"]="insecure";
-	out["host"]="localhost";
-	out["port"]="5038";
-	out.send();
-
-	out.clear();
-	out.event="asterisk_Connect";
-	out["username"]="manager";
-	out["password"]="insecure";
-	out["host"]="localhost";
-	out["port"]="5039";
-	out.send();
-
-	out.clear();
-	out.event="asterisk_Connect";
-	out["username"]="manager";
-	out["password"]="insecure";
-	out["host"]="localhost";
-	out["port"]="5040";
 	out.send();
 
 }

@@ -2,6 +2,29 @@
 Asterisk Control Module.
 
 Uses the AMI module (and maybe others) to track and control asterisk.
+
+\code
+To capture test-data from a asterisk server:
+  script -c telnet 1.2.3.4 5038 -t ami.txt 2> ami.timing
+
+and login with:
+ Action: Login
+ ActionID: Login
+ Events: on
+ Secret: password
+ UserName: username
+
+
+
+To setup a fake server replaying this:
+
+ tcpserver 0.0.0.0 5555 scriptreplay ami.timing ami.txt
+ 
+
+\endcode
+
+
+
 */
 
 #include "synapse.h"
@@ -29,6 +52,28 @@ SYNAPSE_REGISTER(module_Init)
  	out["path"]="modules/ami.module/libami.so";
  	out.send();
 
+	//FIXME
+	out.clear();
+	out.event="core_ChangeEvent";
+	out["modifyGroup"]=	"modules";
+	out["sendGroup"]=	"anonymous";
+	out["recvGroup"]=	"anonymous";
+
+
+	out["event"]=		"asterisk_addChannel"; 
+	out.send();
+
+	out["event"]=		"asterisk_addDevice"; 
+	out.send();
+
+	out["event"]=		"asterisk_delChannel"; 
+	out.send();
+
+	out["event"]=		"asterisk_refresh"; 
+	out.send();
+
+	out["event"]=		"asterisk_reset"; 
+	out.send();
 
 }
 
@@ -37,11 +82,46 @@ SYNAPSE_REGISTER(module_Init)
 
 namespace ami
 {
+
+	string getDeviceId(string channelId)
+	{
+		smatch what;
+		if (!regex_search(
+			channelId,
+			what, 
+			boost::regex("^(.*)-([^-]*)$")
+		))
+		{
+			WARNING("Invalid channelId: " << channelId << ", using 'unknown' instead");
+			return (string("unknown"));
+		}
+		else
+		{
+			return (what[1]);
+		}
+	}
+
 	
 	class Cchannel
 	{
 		public:
-		string name;
+		string id;
+
+		void sendAdd(int dst)
+		{
+			Cmsg out;
+			out.event="asterisk_addChannel";
+			out.dst=dst;
+			out["id"]=id;
+			out["deviceId"]=getDeviceId(id);
+			out.send();
+		}
+
+		void sendRefresh(int dst)
+		{
+			sendAdd(dst);
+		}
+
 	};
 	typedef shared_ptr<Cchannel> CchannelPtr;
 	typedef map<string, CchannelPtr> CchannelMap;
@@ -53,26 +133,32 @@ namespace ami
 		CchannelMap channelMap;
 	
 		public:
-		string name;
+		string id;
 	
 		CchannelPtr getChannelPtr(string channelId)
 		{
 			if (channelMap[channelId]==NULL)
 			{
 				channelMap[channelId]=CchannelPtr(new Cchannel());
-				channelMap[channelId]->name=channelId;
+				channelMap[channelId]->id=channelId;
 				DEB("created channel " << channelId);
-			};
+
+				channelMap[channelId]->sendAdd(0);				
+
+			}
 			return (channelMap[channelId]);
 		}
 	
 		void delChannel(string channelId)
 		{
-			if (channelMap[channelId]!=NULL)
-			{
-				channelMap.erase(channelId);
-				DEB("removed channel " << channelId);
-			}
+			channelMap.erase(channelId);
+			DEB("removed channel " << channelId);
+
+			Cmsg out;
+			out.event="asterisk_delChannel";
+			out.dst=0; //FIXME
+			out["id"]=channelId;
+			out.send();
 		}
 	
 		string getStatusStr()
@@ -80,9 +166,38 @@ namespace ami
 			stringstream s;
 			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
 			{
-				s << "  Channel " << I->second->name << "\n";
+				if (I->second !=NULL)
+				{
+					s << "  Channel " << I->second->id << "\n";
+				}
+				else
+				{
+					s << "  Channel NULL? :" << I->first << "\n";
+				}
 			}
 			return (s.str());
+		}
+
+		void sendAdd(int dst)
+		{
+			Cmsg out;
+			out.event="asterisk_addDevice";
+			out.dst=dst;
+			out["id"]=id;
+			out.send();
+		}
+
+		void sendRefresh(int dst)
+		{
+			//refresh device
+			sendAdd(dst);
+
+			//let all channels send their refresh info
+			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
+			{
+				I->second->sendRefresh(dst);
+			}
+
 		}
 	};
 	
@@ -96,48 +211,54 @@ namespace ami
 		CdeviceMap deviceMap;
 
 		public:	
-		string name;
+		string id;
 		string username;
 		string password;
 
-		string getDeviceId(string channelId)
-		{
-			smatch what;
-			if (!regex_search(
-				channelId,
-				what, 
-				boost::regex("^(.*)-([^-]*)$")
-			))
-			{
-				WARNING("Invalid channelId: " << channelId << ", using 'unknown' instead");
-				return (string("unknown"));
-			}
-			else
-			{
-				return (what[1]);
-			}
-		}
 	
 		CdevicePtr getDevicePtr(string deviceId)
 		{
 			if (deviceMap[deviceId]==NULL)
 			{
 				deviceMap[deviceId]=CdevicePtr(new Cdevice());
-				deviceMap[deviceId]->name=deviceId;
+				deviceMap[deviceId]->id=deviceId;
 				DEB("created device " << deviceId);
+
+				deviceMap[deviceId]->sendAdd(0);		
+
 			}
 			return (deviceMap[deviceId]);
 		}
 		
-	
-		string getStatusStr()
+		void sendRefresh(int dst)
 		{
-			stringstream s;
-			s << "Server " << name << ":\n";
+			//let all devices send their refresh info
 			for (CdeviceMap::iterator I=deviceMap.begin(); I!=deviceMap.end(); I++)
 			{
-				s << " Device " << I->second->name << ":\n";
-				s << I->second->getStatusStr();
+				I->second->sendRefresh(dst);
+			}
+		}
+	
+		string getStatusStr(bool verbose=false)
+		{
+			stringstream s;
+			s << "Server " << id << ":\n";
+			for (CdeviceMap::iterator I=deviceMap.begin(); I!=deviceMap.end(); I++)
+			{
+				if (I->second !=NULL)
+				{
+					//filter idle devices
+					string devStr=I->second->getStatusStr();
+					if (verbose || devStr!="")
+					{
+						s << " Device " << I->second->id << ":\n";
+						s << devStr;
+					}
+				}
+				else
+				{
+					s << " Device NULL? :" << I->first << "\n";
+				}
 			}
 			return (s.str());
 		}
@@ -165,11 +286,13 @@ namespace ami
 	};
 	
 
-	map<int, Cserver> servers;
+	typedef map<int, Cserver> CserverMap;
+	CserverMap serverMap;
 
 }
 
 using namespace ami;
+
 
 
 SYNAPSE_REGISTER(ami_Ready)
@@ -204,12 +327,12 @@ SYNAPSE_REGISTER(asterisk_Connect)
 SYNAPSE_REGISTER(module_SessionStart)
 {
 
-	servers[msg.dst].name=msg["server"]["username"].str()+
+	serverMap[msg.dst].id=msg["server"]["username"].str()+
 							"@"+msg["server"]["host"].str()+
 							":"+msg["server"]["port"].str();
 	
-	servers[msg.dst].username=msg["server"]["username"].str();
-	servers[msg.dst].password=msg["server"]["password"].str();
+	serverMap[msg.dst].username=msg["server"]["username"].str();
+	serverMap[msg.dst].password=msg["server"]["password"].str();
 
 	Cmsg out;
 	out.clear();
@@ -230,12 +353,37 @@ SYNAPSE_REGISTER(ami_Connected)
 	out.src=msg.dst;
 	out.event="ami_Action";
 	out["Action"]="Login";
-	out["UserName"]=servers[msg.dst].username;
-	out["Secret"]=servers[msg.dst].password;
+	out["UserName"]=serverMap[msg.dst].username;
+	out["Secret"]=serverMap[msg.dst].password;
 	out["ActionID"]="Login";
 	out["Events"]="on";
 	out.send();
+
+	//te snel, pas doen na login succes!
+	//learn all SIP peers as soon as we connect
+/*	out.clear();
+	out.src=msg.dst;
+	out.event="ami_Action";
+	out["Action"]="SIPPeers";
+	out.send();*/
 }
+
+SYNAPSE_REGISTER(ami_Response_Success)
+{
+	
+/*	if (msg["Action"]=="Login")
+	{*/
+/*	}*/
+		
+	
+}
+
+SYNAPSE_REGISTER(ami_Response_Error)
+{
+	ERROR("ERROR");
+
+}
+
 
 SYNAPSE_REGISTER(ami_Disconnected)
 {
@@ -246,34 +394,57 @@ SYNAPSE_REGISTER(ami_Disconnected)
 SYNAPSE_REGISTER(module_SessionEnd)
 {
 	
-	servers.erase(msg.dst);
+	serverMap.erase(msg.dst);
 }
 
-SYNAPSE_REGISTER(ami_Response_Success)
+
+SYNAPSE_REGISTER(asterisk_refresh)
 {
-	
-	
+	//indicate start of a refresh, deletes all known state-info in client
+	Cmsg out;
+	out.event="asterisk_reset";
+	out.dst=dst; 
+	out.send();
+
+	for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+	{
+		I->second.sendRefresh(msg.src);
+	}
+
 }
+
+SYNAPSE_REGISTER(ami_Event_PeerEntry)
+{
+	serverMap[msg.dst].getDevicePtr(msg["Channeltype"].str()+"/"+msg["ObjectName"].str());
+//	INFO("\n" << serverMap[msg.dst].getStatusStr());
+
+}
+
 
 SYNAPSE_REGISTER(ami_Event_Newchannel)
 {
 	
-	servers[msg.dst].getChannelPtr(msg["Channel"]);
-	INFO("\n" << servers[msg.dst].getStatusStr());
+	serverMap[msg.dst].getChannelPtr(msg["Channel"]);
+//	serverMap[msg.dst].getDevicePtr(getDeviceId(msg["Channel"]))->sendStatus();
+
+//	INFO("NEWCHANNEL UPDATE:\n" << serverMap[msg.dst].getStatusStr());
+	
+	//serverMap[msg.dst].sendStatus();
 }
 
 SYNAPSE_REGISTER(ami_Event_Hangup)
 {
-	servers[msg.dst].delChannel(msg["Channel"]);
-	INFO("\n" << servers[msg.dst].getStatusStr());
+	serverMap[msg.dst].delChannel(msg["Channel"]);
+//	serverMap[msg.dst].getDevicePtr(getDeviceId(msg["Channel"]))->sendStatus();
+//	INFO("\n" << serverMap[msg.dst].getStatusStr());
 
 }
 
 SYNAPSE_REGISTER(ami_Event_PeerStatus)
 {
 	
-	servers[msg.dst].getDevicePtr(msg["Peer"]);
-	INFO("\n" << servers[msg.dst].getStatusStr());
+	serverMap[msg.dst].getDevicePtr(msg["Peer"]);
+//	INFO("\n" << serverMap[msg.dst].getStatusStr());
 }
 
 
