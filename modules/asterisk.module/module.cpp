@@ -52,7 +52,8 @@ SYNAPSE_REGISTER(module_Init)
  	out["path"]="modules/ami.module/libami.so";
  	out.send();
 
-	//FIXME
+	//FIXME  clean/permissions
+
 	out.clear();
 	out.event="core_ChangeEvent";
 	out["modifyGroup"]=	"modules";
@@ -60,16 +61,17 @@ SYNAPSE_REGISTER(module_Init)
 	out["recvGroup"]=	"anonymous";
 
 
-	out["event"]=		"asterisk_addChannel"; 
-	out.send();
 
 	out["event"]=		"asterisk_updateChannel"; 
 	out.send();
 
-	out["event"]=		"asterisk_addDevice"; 
+	out["event"]=		"asterisk_delChannel"; 
 	out.send();
 
-	out["event"]=		"asterisk_delChannel"; 
+	out["event"]=		"asterisk_updateDevice"; 
+	out.send();
+
+	out["event"]=		"asterisk_delDevice"; 
 	out.send();
 
 	out["event"]=		"asterisk_refresh"; 
@@ -107,24 +109,51 @@ namespace ami
 	
 	class Cchannel
 	{
-		public:
+		private:
+
 		string id;
+		bool changed;
 
-		void sendAdd(int dst)
+		public:
+
+		Cchannel()
 		{
-			Cmsg out;
-			out.event="asterisk_addChannel";
-			out.dst=dst;
-			out["id"]=id;
-			out["deviceId"]=getDeviceId(id);
-			out.send();
-
-
+			changed=true;
 		}
 
-		void sendRefresh(int dst)
+		void setId(string id)
 		{
-			sendAdd(dst);
+			if (id!=this->id)
+			{
+				this->id=id;
+				changed=true;
+			}
+			sendUpdate();
+		}
+
+		void sendUpdate(int forceDst=0)
+		{
+			if (changed || forceDst)
+			{	
+				Cmsg out;
+				out.event="asterisk_updateChannel";
+				out.dst=forceDst;
+				out["id"]=id;
+				out["deviceId"]=getDeviceId(id);
+				out.send();
+			}
+
+			if (!forceDst)
+				changed=false;
+		}
+
+		~Cchannel()
+		{
+			Cmsg out;
+			out.event="asterisk_delChannel";
+			out.dst=0; 
+			out["id"]=id;
+			out.send();
 		}
 
 	};
@@ -136,76 +165,123 @@ namespace ami
 	{
 		private: 
 		CchannelMap channelMap;
-	
-		public:
-		string id;
+
 		string status;
 		string callerId;
+		string id;
+		bool changed;
 	
+		public:
+
+		Cdevice()
+		{
+			changed=true;
+			id="";
+		}
+
+		void setId(string id)
+		{
+			if (id!=this->id)
+			{
+				this->id=id;
+				changed=true;
+			}
+			sendUpdate();
+		}
+	
+		void setInfo(string status, string callerId)
+		{
+			if (status!="" && status!=this->status)
+			{
+				this->status=status;
+				changed=true;
+			}
+
+			if (callerId!="" && callerId!=this->callerId)
+			{
+				this->callerId=callerId;
+				changed=true;
+			}
+			sendUpdate();
+		}
+
 		CchannelPtr getChannelPtr(string channelId)
 		{
 			if (channelMap[channelId]==NULL)
 			{
 				channelMap[channelId]=CchannelPtr(new Cchannel());
-				channelMap[channelId]->id=channelId;
+				channelMap[channelId]->setId(channelId);
 				DEB("created channel " << channelId);
-
-				channelMap[channelId]->sendAdd(0);				
-
 			}
 			return (channelMap[channelId]);
 		}
 	
 		void delChannel(string channelId)
 		{
+			CchannelPtr channelPtr=getChannelPtr(channelId);
 			channelMap.erase(channelId);
-			DEB("removed channel " << channelId);
+			DEB("deleted channel " << channelId);
 
-			Cmsg out;
-			out.event="asterisk_delChannel";
-			out.dst=0; //FIXME
-			out["id"]=channelId;
-			out.send();
 		}
 	
-		string getStatusStr()
+// 		string getStatusStr()
+// 		{
+// 			stringstream s;
+// 			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
+// 			{
+// 				if (I->second !=NULL)
+// 				{
+// 					s << "  Channel " << I->second->id << "\n";
+// 				}
+// 				else
+// 				{
+// 					s << "  Channel NULL? :" << I->first << "\n";
+// 				}
+// 			}
+// 			return (s.str());
+// 		}
+
+		void sendUpdate(int forceDst=0)
 		{
-			stringstream s;
-			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
-			{
-				if (I->second !=NULL)
-				{
-					s << "  Channel " << I->second->id << "\n";
-				}
-				else
-				{
-					s << "  Channel NULL? :" << I->first << "\n";
-				}
+			if (changed || forceDst)
+			{	
+				Cmsg out;
+				out.event="asterisk_updateDevice";
+				out.dst=forceDst;
+				out["id"]=id;
+				out["callerId"]=callerId;
+				out["status"]=status;
+				out.send();
 			}
-			return (s.str());
+
+			if (!forceDst)
+				changed=false;
+
 		}
 
-		void sendAdd(int dst)
-		{
-			Cmsg out;
-			out.event="asterisk_addDevice";
-			out.dst=dst;
-			out["id"]=id;
-			out.send();
-		}
 
 		void sendRefresh(int dst)
 		{
 			//refresh device
-			sendAdd(dst);
+			sendUpdate(dst);
 
-			//let all channels send their refresh info
+			//let all channels send a update
 			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
 			{
-				I->second->sendRefresh(dst);
+				I->second->sendUpdate(dst);
 			}
-
 		}
+
+		~Cdevice()
+		{
+			Cmsg out;
+			out.event="asterisk_delDevice";
+			out.dst=0; 
+			out["id"]=id;
+			out.send();
+		}
+
+		
 	};
 	
 	typedef shared_ptr<Cdevice> CdevicePtr;
@@ -233,26 +309,22 @@ namespace ami
 			if (deviceMap[deviceId]==NULL)
 			{
 				deviceMap[deviceId]=CdevicePtr(new Cdevice());
-				deviceMap[deviceId]->id=deviceId;
+				deviceMap[deviceId]->setId(deviceId);
 				DEB("created device " << deviceId);
-
-				deviceMap[deviceId]->sendAdd(0);
-
-
 			}
 			return (deviceMap[deviceId]);
 		}
 		
 		void sendRefresh(int dst)
 		{
-			//let all devices send their refresh info
+			//let all devices send their  info
 			for (CdeviceMap::iterator I=deviceMap.begin(); I!=deviceMap.end(); I++)
 			{
-				I->second->sendRefresh(dst);
+				I->second->sendUpdate(dst);
 			}
 		}
 	
-		string getStatusStr(bool verbose=false)
+/*		string getStatusStr(bool verbose=false)
 		{
 			stringstream s;
 			s << "Server " << id << ":\n";
@@ -274,7 +346,7 @@ namespace ami
 				}
 			}
 			return (s.str());
-		}
+		}*/
 	
 		CchannelPtr getChannelPtr(string channelId)
 		{
@@ -294,11 +366,8 @@ namespace ami
 			CdevicePtr devicePtr=getDevicePtr(deviceId);
 			devicePtr->delChannel(channelId);
 		}
-
-
 	};
 	
-
 	typedef map<int, Cserver> CserverMap;
 	CserverMap serverMap;
 
@@ -383,12 +452,9 @@ SYNAPSE_REGISTER(ami_Response_Success)
 		//SIPshowPeer response
 		string deviceId=msg["Channeltype"].str()+"/"+msg["ObjectName"].str();
 		CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(deviceId);
-		devicePtr->callerId=msg["Callerid"].str();
-		devicePtr->status=msg["Status"].str(); 
-		devicePtr->sendUpdates();
+		devicePtr->setInfo(msg["Status"].str(), msg["Callerid"].str());
 	}
-	else
-	if (msg["ActionID"].str()=="Login")
+	else if (msg["ActionID"].str()=="Login")
 	{
 		//login response
 
@@ -438,7 +504,7 @@ SYNAPSE_REGISTER(asterisk_refresh)
 	//indicate start of a refresh, deletes all known state-info in client
 	Cmsg out;
 	out.event="asterisk_reset";
-	out.dst=dst; 
+	out.dst=msg.src; 
 	out.send();
 
 	for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
@@ -453,7 +519,6 @@ SYNAPSE_REGISTER(asterisk_refresh)
 SYNAPSE_REGISTER(ami_Event_PeerEntry)
 {
 	serverMap[msg.dst].getDevicePtr(msg["Channeltype"].str()+"/"+msg["ObjectName"].str());
-//	INFO("\n" << serverMap[msg.dst].getStatusStr());
 
 	//request additional device info for this SIP peer
 	//example: "SIP/604"
@@ -479,14 +544,6 @@ void ChannelStatus(Cmsg & msg)
 {
 	Cmsg out;
 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel"]);
-	out=msg;
-	out.dst=0;
-	out.src=0;
-	out["deviceId"]=getDeviceId(msg["Channel"]);
-	out.event="asterisk_updateChannel";
-	out.send();
-	
-
 }
 
 SYNAPSE_REGISTER(ami_Event_Status)
@@ -518,7 +575,6 @@ SYNAPSE_REGISTER(ami_Event_PeerStatus)
 {
 	
 	serverMap[msg.dst].getDevicePtr(msg["Peer"]);
-//	INFO("\n" << serverMap[msg.dst].getStatusStr());
 }
 
 

@@ -46,37 +46,68 @@
 			return '#' + myid.replace(/([,@\/.])/g,'\\$1');
 		}
 
- 		synapse_register("asterisk_addDevice",function(msg_src, msg_dst, msg_event, msg)
+ 		synapse_register("asterisk_updateDevice",function(msg_src, msg_dst, msg_event, msg)
  		{
-			html="<div class='device' id='"+msg["id"]+"'>";
-			html+="<div class='channelList'></div>";
-			html+="Device " + msg["id"];
-			html+="</div>";
-			$(html).appendTo('#deviceList');
+
+			//device doesnt exist yet?
+			if ($(escapeId(msg["id"])).length==0)
+			{
+				//add dom objects
+				html="<div class='device' id='"+msg["id"]+"'>";
+				html+="<div class='channelList'></div>";
+				html+="<div class='deviceInfo'>"+msg["id"]+"</div>";
+				html+="</div>";
+				$(html).appendTo('#deviceList');
+			}
+
+			//info for device?
+			if (msg["status"]!="")
+			{
+				//set html of device deviceInfo dom object:
+				$(escapeId(msg["id"])+" .deviceInfo").html(
+					msg["callerId"] + ": "+ msg["status"]
+				);
+			}
+
+		
+
+
 		});
 
-
- 		synapse_register("asterisk_addChannel",function(msg_src, msg_dst, msg_event, msg)
+ 		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
  		{
+			//channel doesnt exist yet?
+			if ($(escapeId(msg["id"])).length==0)
+			{
+				//add dom objects
+				html="<div class='channel' id='";
+				html+=msg["id"];
+				html+="'>";
+				html+="<div class='channelInfo'>"+msg["id"]+"</div>";
+				html+="</div>";
+				//add the channel to the corresponding device:
+				$(html).appendTo(escapeId(msg["deviceId"])+' .channelList');
+			}
 
-
-			html="<div class='channel' id='";
-			html+=msg["id"];
-			html+="'>";
-			//html+=msg["id"];
-			html+="<div class='channelInfo'>maiii</div>";
-			html+="</div>";
-			$(html).appendTo(escapeId(msg["deviceId"])+' .channelList');
-
+			//on hover show the info
 			$(escapeId(msg["id"])).hover(
 					function ()	{ $(this).children(".channelInfo").show(); },
 					function () { $(this).children(".channelInfo").hide(); }
 			);
 
+			//info for the channel?
+// 			if (msg[".."]!="")
+// 			{
+// 				//set html of device deviceInfo dom object:
+// 				$(escapeId(msg["id"])+" .channelInfo").html(
+// 					...
+// 				);
+// 			}
+
 		});
 
 //		soms heeft een Channel <ZOMBIE> erachter1#@!#!
-
+/*
  		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
  		{
 //			console.info(msg);
@@ -88,14 +119,7 @@
 				msg["CallerIDName"]+", "+
 				msg["CallerID"]+"<br></div>"
 			).appendTo($(escapeId(msg["Channel"])+' .channelInfo'));
-/*			$(escapeId(msg["Channel"])+' .channelInfo').html(	
-				msg["Channel"]+", "+
-				msg["State"]+", "+
-				msg["CallerIDNum"]+", "+
-				msg["CallerIDName"]+", "+
-				msg["CallerID"]+"<br>"
-			);*/
-		});
+		});*/
 
  		synapse_register("asterisk_delChannel",function(msg_src, msg_dst, msg_event, msg)
  		{

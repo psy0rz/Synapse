@@ -463,7 +463,7 @@ SYNAPSE_REGISTER(core_NewSession)
 				{
 					//set max threads?
 					if (msg.isSet("maxThreads") && msg["maxThreads"] > 0)
-						newSession->maxThreads=msg["maxThreads"];
+						messageMan->setSessionThreads(newSession, msg["maxThreads"]);
 	
 					//send startmessage to the new session, copy all parameters.
 					startmsg=msg;
@@ -641,8 +641,8 @@ SYNAPSE_REGISTER(core_ChangeModule)
 			error="Can't find session";
 		else
 		{
-			if (msg.isSet("maxThreads") > 0)
-				session->module->maxThreads=msg["maxThreads"];	
+			if (msg.isSet("maxThreads"))
+				messageMan->setModuleThreads(session->module, msg["maxThreads"]);
 
 			if (msg.isSet("broadcastMulti"))
 				session->module->broadcastMulti=msg["broadcastMulti"];	
@@ -669,8 +669,8 @@ SYNAPSE_REGISTER(core_ChangeSession)
 			error="Can't find session";
 		else
 		{
-			if (msg["maxThreads"] > 0)
-				session->maxThreads=msg["maxThreads"];	
+			if (msg.isSet("maxThreads"))
+				messageMan->setSessionThreads(session, msg["maxThreads"]);
 		}
 	}
 	if (error!="")

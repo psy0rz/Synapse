@@ -556,3 +556,19 @@ string CmessageMan::getStatusStr()
 
 	return(s.str());
 }
+
+
+void CmessageMan::setModuleThreads(CmodulePtr module, int maxThreads)
+{
+	module->maxThreads=maxThreads;
+	//TODO:optimize
+	threadCond.notify_all();
+}
+
+void CmessageMan::setSessionThreads(CsessionPtr session, int maxThreads)
+{
+	session->maxThreads=maxThreads;
+	//TODO:optimize
+	threadCond.notify_all();
+
+}

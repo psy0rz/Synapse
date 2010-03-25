@@ -73,6 +73,8 @@ public:
 	//for administrator/debugging
 	string getStatusStr();
 
+	void setModuleThreads(CmodulePtr module, int maxThreads);
+	void setSessionThreads(CsessionPtr session, int maxThreads);
 
 private:
 	condition_variable threadCond;
