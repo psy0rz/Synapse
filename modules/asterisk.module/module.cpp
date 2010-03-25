@@ -147,6 +147,11 @@ namespace ami
 				changed=false;
 		}
 
+		void sendRefresh(int dst)
+		{
+			sendUpdate(dst);
+		}
+
 		~Cchannel()
 		{
 			Cmsg out;
@@ -268,7 +273,7 @@ namespace ami
 			//let all channels send a update
 			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
 			{
-				I->second->sendUpdate(dst);
+				I->second->sendRefresh(dst);
 			}
 		}
 
@@ -317,10 +322,10 @@ namespace ami
 		
 		void sendRefresh(int dst)
 		{
-			//let all devices send their  info
+			//let all devices send a refresh
 			for (CdeviceMap::iterator I=deviceMap.begin(); I!=deviceMap.end(); I++)
 			{
-				I->second->sendUpdate(dst);
+				I->second->sendRefresh(dst);
 			}
 		}
 	
