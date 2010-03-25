@@ -75,6 +75,27 @@
 
 		});
 
+//		soms heeft een Channel <ZOMBIE> erachter1#@!#!
+
+ 		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+//			console.info(msg);
+			$(	
+				"<div>"+
+				msg["Channel"]+", "+
+				msg["State"]+", "+
+				msg["CallerIDNum"]+", "+
+				msg["CallerIDName"]+", "+
+				msg["CallerID"]+"<br></div>"
+			).appendTo($(escapeId(msg["Channel"])+' .channelInfo'));
+/*			$(escapeId(msg["Channel"])+' .channelInfo').html(	
+				msg["Channel"]+", "+
+				msg["State"]+", "+
+				msg["CallerIDNum"]+", "+
+				msg["CallerIDName"]+", "+
+				msg["CallerID"]+"<br>"
+			);*/
+		});
 
  		synapse_register("asterisk_delChannel",function(msg_src, msg_dst, msg_event, msg)
  		{
@@ -161,7 +182,7 @@
 			border-color:yellow;
 			background-color: #ffffff;
 			display: none;
-			min-width:10em;
+			min-width:20em;
 			min-height:10em;
 			position: absolute;
 			top: 1.9em;

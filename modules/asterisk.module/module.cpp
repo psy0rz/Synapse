@@ -63,6 +63,9 @@ SYNAPSE_REGISTER(module_Init)
 	out["event"]=		"asterisk_addChannel"; 
 	out.send();
 
+	out["event"]=		"asterisk_updateChannel"; 
+	out.send();
+
 	out["event"]=		"asterisk_addDevice"; 
 	out.send();
 
@@ -115,6 +118,8 @@ namespace ami
 			out["id"]=id;
 			out["deviceId"]=getDeviceId(id);
 			out.send();
+
+
 		}
 
 		void sendRefresh(int dst)
@@ -134,6 +139,8 @@ namespace ami
 	
 		public:
 		string id;
+		string status;
+		string callerId;
 	
 		CchannelPtr getChannelPtr(string channelId)
 		{
@@ -214,6 +221,11 @@ namespace ami
 		string id;
 		string username;
 		string password;
+		int sessionId;
+
+		Cserver()
+		{	
+		}
 
 	
 		CdevicePtr getDevicePtr(string deviceId)
@@ -224,7 +236,8 @@ namespace ami
 				deviceMap[deviceId]->id=deviceId;
 				DEB("created device " << deviceId);
 
-				deviceMap[deviceId]->sendAdd(0);		
+				deviceMap[deviceId]->sendAdd(0);
+
 
 			}
 			return (deviceMap[deviceId]);
@@ -359,28 +372,50 @@ SYNAPSE_REGISTER(ami_Connected)
 	out["Events"]="on";
 	out.send();
 
-	//te snel, pas doen na login succes!
-	//learn all SIP peers as soon as we connect
-/*	out.clear();
-	out.src=msg.dst;
-	out.event="ami_Action";
-	out["Action"]="SIPPeers";
-	out.send();*/
 }
 
 SYNAPSE_REGISTER(ami_Response_Success)
 {
 	
-/*	if (msg["Action"]=="Login")
-	{*/
-/*	}*/
+	//AMI is broken by design: why didnt they just use a Event, instead of defining the format of a Response exception. Now we need to use the ActionID and do extra marshhalling:
+	if (msg["ActionID"].str()=="SIPshowPeer")
+	{
+		//SIPshowPeer response
+		string deviceId=msg["Channeltype"].str()+"/"+msg["ObjectName"].str();
+		CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(deviceId);
+		devicePtr->callerId=msg["Callerid"].str();
+		devicePtr->status=msg["Status"].str(); 
+		devicePtr->sendUpdates();
+	}
+	else
+	if (msg["ActionID"].str()=="Login")
+	{
+		//login response
+
+		//learn all SIP peers as soon as we login
+		Cmsg out;
+		out.clear();
+		out.src=msg.dst;
+		out.event="ami_Action";
+		out["Action"]="SIPPeers";
+		out.send();
+
+		//learn current channel status as soon as we login
+		out.clear();
+		out.src=msg.dst;
+		out.event="ami_Action";
+		out["Action"]="Status";
+		out.send();
+
+	}
 		
 	
 }
 
 SYNAPSE_REGISTER(ami_Response_Error)
 {
-	ERROR("ERROR");
+	ERROR("ERROR:" << msg["Message"].str());
+	//TODO: pass to clients?
 
 }
 
@@ -413,24 +448,63 @@ SYNAPSE_REGISTER(asterisk_refresh)
 
 }
 
+
+//we got a response to our SIPPeers request.
 SYNAPSE_REGISTER(ami_Event_PeerEntry)
 {
 	serverMap[msg.dst].getDevicePtr(msg["Channeltype"].str()+"/"+msg["ObjectName"].str());
 //	INFO("\n" << serverMap[msg.dst].getStatusStr());
 
+	//request additional device info for this SIP peer
+	//example: "SIP/604"
+	if (msg["Channeltype"].str()=="SIP")
+	{
+		//(peerEntrys should be ALWAYS of type SIP?)
+		Cmsg out;
+		out.clear();
+		out.src=msg.dst;
+		out.dst=msg.src;
+		out.event="ami_Action";
+		out["Action"]="SIPshowPeer";
+		out["ActionID"]="SIPshowPeer";
+		out["Peer"]=msg["ObjectName"].str();
+		out.send();
+	}
+
 }
 
+
+
+void ChannelStatus(Cmsg & msg)
+{
+	Cmsg out;
+	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel"]);
+	out=msg;
+	out.dst=0;
+	out.src=0;
+	out["deviceId"]=getDeviceId(msg["Channel"]);
+	out.event="asterisk_updateChannel";
+	out.send();
+	
+
+}
+
+SYNAPSE_REGISTER(ami_Event_Status)
+{
+	ChannelStatus(msg);
+
+}
 
 SYNAPSE_REGISTER(ami_Event_Newchannel)
 {
-	
-	serverMap[msg.dst].getChannelPtr(msg["Channel"]);
-//	serverMap[msg.dst].getDevicePtr(getDeviceId(msg["Channel"]))->sendStatus();
-
-//	INFO("NEWCHANNEL UPDATE:\n" << serverMap[msg.dst].getStatusStr());
-	
-	//serverMap[msg.dst].sendStatus();
+	ChannelStatus(msg);
 }
+
+SYNAPSE_REGISTER(ami_Event_Newstate)
+{
+	ChannelStatus(msg);
+}
+
 
 SYNAPSE_REGISTER(ami_Event_Hangup)
 {
@@ -448,11 +522,6 @@ SYNAPSE_REGISTER(ami_Event_PeerStatus)
 }
 
 
-// SYNAPSE_REGISTER(ami_Event_Newstate)
-// {
-
-// 
-// }
 // 
 // SYNAPSE_REGISTER(ami_Event_Newexten)
 // {

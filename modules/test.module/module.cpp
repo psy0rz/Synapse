@@ -85,13 +85,13 @@ SYNAPSE_REGISTER(asterisk_Ready)
 	Cmsg out;
 
 // 
-// 	out.clear();
-// 	out.event="asterisk_Connect";
-// 	out["username"]="manager";
-// 	out["password"]="insecure";
-// 	out["host"]="localhost";
-// 	out["port"]="5038";
-// 	out.send();
+/*	out.clear();
+	out.event="asterisk_Connect";
+	out["username"]="manager";
+	out["password"]="insecure";
+	out["host"]="localhost";
+	out["port"]="5038";
+	out.send();*/
 // 
 // 	out.clear();
 // 	out.event="asterisk_Connect";
