@@ -63,15 +63,23 @@
 			//info for device?
 			if (msg["status"]!="")
 			{
+				html=msg["callerId"];
+
+				if (msg["status"]!="OK")
+				{
+					html+="<br><b>OFFLINE</b>";
+				}
 				//set html of device deviceInfo dom object:
-				$(escapeId(msg["id"])+" .deviceInfo").html(
-					msg["callerId"] + ": "+ msg["status"]
-				);
+				$(escapeId(msg["id"])+" .deviceInfo").html(html);
+
 			}
 
-		
+		});
 
 
+ 		synapse_register("asterisk_delDevice",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			$(escapeId(msg["id"])).remove();
 		});
 
  		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
@@ -107,19 +115,6 @@
 		});
 
 //		soms heeft een Channel <ZOMBIE> erachter1#@!#!
-/*
- 		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
- 		{
-//			console.info(msg);
-			$(	
-				"<div>"+
-				msg["Channel"]+", "+
-				msg["State"]+", "+
-				msg["CallerIDNum"]+", "+
-				msg["CallerIDName"]+", "+
-				msg["CallerID"]+"<br></div>"
-			).appendTo($(escapeId(msg["Channel"])+' .channelInfo'));
-		});*/
 
  		synapse_register("asterisk_delChannel",function(msg_src, msg_dst, msg_event, msg)
  		{
@@ -189,9 +184,9 @@
 			border-color:#eeeeee;
 			background: red;
 			float:left;
-			min-width:2em;
-			min-height:2em;
-			margin:1px;
+			min-width:1.9em;
+			min-height:1.9em;
+			margin:0;
 			position: relative;
 		}
 		.channel:hover

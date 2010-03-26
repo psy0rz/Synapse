@@ -371,6 +371,19 @@ namespace ami
 			CdevicePtr devicePtr=getDevicePtr(deviceId);
 			devicePtr->delChannel(channelId);
 		}
+
+		//on a disconnect this is called to remove all channels/devices.
+		void clear()
+		{
+			//this should send out automated delChannel/delDevice events, on destruction of the objects
+			deviceMap.clear();
+		}
+
+		~Cserver()
+		{
+
+		}
+
 	};
 	
 	typedef map<int, Cserver> CserverMap;
@@ -493,6 +506,8 @@ SYNAPSE_REGISTER(ami_Response_Error)
 
 SYNAPSE_REGISTER(ami_Disconnected)
 {
+	//since we're disconnected, clear all devices/channels
+	serverMap[msg.dst].clear();
 	
 	//ami reconnects automaticly
 }
