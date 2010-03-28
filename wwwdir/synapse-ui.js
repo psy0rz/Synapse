@@ -73,7 +73,7 @@ synapse_register("module_Error",function(msg_src, msg_dst, msg_event, msg)
 
 synapse_register("error",function(description)
 {
-	synapse_showError("Fatal error: "+description);
+	synapse_showError(description);
 });
 
 synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)

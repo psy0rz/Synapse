@@ -73,7 +73,7 @@ function synapse_callHandlers(event)
 
 function synapse_handleError(request, status, e)
 {
-	errorTxt="Error while processing request: " + request.responseText;
+	errorTxt="Send/recieve error: " + request.responseText;
 	console.error(errorTxt);
 	synapse_callHandlers("error", errorTxt);
 }
@@ -113,7 +113,14 @@ function synapse_handleMessages(messages, status, XMLHttpRequest)
 	}
 }
 
-
+// function synapse_handleSent(result, status, XMLHttpRequest)
+// {
+// 	console.info("KJO",result,status);
+// 	if (result==null)
+// 	{
+// 		synapse_callHandlers("error", "Connection error while sending message. Please reload page.");
+// 	}
+// }
 
 function send(msg_dst, msg_event, msg)
 {
@@ -126,11 +133,11 @@ function send(msg_dst, msg_event, msg)
 		"dataType":		"text",
 		"url":			'/synapse/send',
 		"error": 		synapse_handleError,
+/*		"success":		synapse_handleSent,*/
 		"type":			"post",
 		"contentType":	"application/json",
 		"beforeSend":	function (XMLHttpRequest) { XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); },
 		"processData":	false,
-		"error": 		synapse_handleError,
 		"cache":		false,
 		"data":			jsonStr
 	});
