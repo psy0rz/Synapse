@@ -65,7 +65,7 @@
 			{
 				html=msg["callerId"];
 
-				if (msg["status"]!="OK")
+				if (msg["status"].search("OK")==-1)
 				{
 					html+="<br><b>OFFLINE</b>";
 				}
