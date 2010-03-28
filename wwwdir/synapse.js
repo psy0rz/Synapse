@@ -89,7 +89,7 @@ function synapse_handleMessages(messages, status, XMLHttpRequest)
 
 	if (messages==null)
 	{
-		synapse_callHandlers("error", "Connection error with server");
+		synapse_callHandlers("error", "Connection error with server. Please reload page.");
 		synapse_stop=true;
 		return;
 	}

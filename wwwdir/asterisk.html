@@ -7,8 +7,10 @@
 	<title>Synapse asterisk test</title>
 	<script type="text/javascript" src="jquery.js"></script>
 	<script type="text/javascript" src="jquery-ui.js"></script>
+	<link href="css/redmond/jquery-ui.css" rel="stylesheet" type="text/css"/>
 	<script type="text/javascript" src="json2.js"></script>
 	<script type="text/javascript" src="synapse.js"></script>
+	<script type="text/javascript" src="synapse-ui.js"></script>
 	<script type="text/javascript">
 
 
@@ -26,6 +28,7 @@
 
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
+			synapse_login();
 			//request a refresh, to learn about all objects
 			send(0,"asterisk_refresh", { 
 			});
@@ -57,7 +60,7 @@
 				html+="<div class='channelList'></div>";
 				html+="<div class='deviceInfo'>"+msg["id"]+"</div>";
 				html+="</div>";
-				$(html).appendTo('#deviceList');
+				$('#deviceList').append(html);
 			}
 
 			//info for device?
@@ -94,7 +97,7 @@
 				html+="<div class='channelInfo'>"+msg["id"]+"</div>";
 				html+="</div>";
 				//add the channel to the corresponding device:
-				$(html).appendTo(escapeId(msg["deviceId"])+' .channelList');
+				$(escapeId(msg["deviceId"])+' .channelList').append(html);
 			}
 
 			//on hover show the info
@@ -215,6 +218,7 @@
 
 
 <body>
+
 
 	<div id='deviceList'>
 	</div>

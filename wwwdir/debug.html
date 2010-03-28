@@ -5,11 +5,12 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
 	<title>Synapse debug page</title>
-	<link type="text/css" href="css/smoothness/jquery-ui-1.7.2.custom.css" rel="Stylesheet">
 	<script type="text/javascript" src="jquery.js"></script>
 	<script type="text/javascript" src="jquery-ui.js"></script>
+	<link href="css/redmond/jquery-ui.css" rel="stylesheet" type="text/css"/>
 	<script type="text/javascript" src="json2.js"></script>
 	<script type="text/javascript" src="synapse.js"></script>
+	<script type="text/javascript" src="synapse-ui.js"></script>
 	<script type="text/javascript">
 
 		/// SYNAPSE EVENT HANDLERS
@@ -161,6 +162,10 @@
 				});				
 			});
 
+			$('#login_dialog').click(function(event){
+				synapse_login();
+			});
+
 		});
 
 
@@ -213,6 +218,8 @@
 	<input type='submit' value='Login' id='login'>
 	<span id='module_Login'	></span>
 
+	<p>
+	<input type='submit' value='Show login dialog...' id='login_dialog'>
 
 	<h2>Application level (tests)</h2>
 
