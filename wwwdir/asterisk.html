@@ -63,20 +63,13 @@
 				$('#deviceList').append(html);
 			}
 
-			//info for device?
-			if (msg["status"]!="")
+			html=msg["callerId"];
+			if (!msg["online"])
 			{
-				html=msg["callerId"];
-
-				if (msg["status"].search("OK")==-1)
-				{
-					html+="<br><b>OFFLINE</b>";
-				}
-				//set html of device deviceInfo dom object:
-				$(escapeId(msg["id"])+" .deviceInfo").html(html);
-
+				html+="<br><b>OFFLINE</b>";
 			}
-
+			//set html of device deviceInfo dom object:
+			$(escapeId(msg["id"])+" .deviceInfo").html(html);
 		});
 
 
@@ -94,27 +87,34 @@
 				html="<div class='channel' id='";
 				html+=msg["id"];
 				html+="'>";
-				html+="<div class='channelInfo'>"+msg["id"]+"</div>";
+				html+="<div class='channelInfo'></div>";
 				html+="</div>";
 				//add the channel to the corresponding device:
 				$(escapeId(msg["deviceId"])+' .channelList').append(html);
+
+				//on hover show the info
+				$(escapeId(msg["id"])).hover(
+						function ()	{ $(this).children(".channelInfo").show(); },
+						function () { $(this).children(".channelInfo").hide(); }
+				);
 			}
 
-			//on hover show the info
-			$(escapeId(msg["id"])).hover(
-					function ()	{ $(this).children(".channelInfo").show(); },
-					function () { $(this).children(".channelInfo").hide(); }
-			);
+			//set channel status
+			if  ( msg["state"] == "Up" )
+			{
+				$(escapeId(msg["id"])).css("background", "green");
+			}
+			else if ( msg["state"] == "Ringing" )
+			{
+				$(escapeId(msg["id"])).css("background", "red");
+			}
+			else
+			{
+				$(escapeId(msg["id"])).css("background", "black");
+			}
 
-			//info for the channel?
-// 			if (msg[".."]!="")
-// 			{
-// 				//set html of device deviceInfo dom object:
-// 				$(escapeId(msg["id"])+" .channelInfo").html(
-// 					...
-// 				);
-// 			}
-
+			//set html of channelInfo dom object:
+			$(escapeId(msg["id"])+" .channelInfo").html(msg["id"]+"<br>"+msg["state"]);
 		});
 
 //		soms heeft een Channel <ZOMBIE> erachter1#@!#!
@@ -185,7 +185,6 @@
 		{
 			border-style:solid;
 			border-color:#eeeeee;
-			background: red;
 			float:left;
 			min-width:1.9em;
 			min-height:1.9em;

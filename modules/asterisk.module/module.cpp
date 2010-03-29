@@ -113,6 +113,7 @@ namespace ami
 
 		string id;
 		bool changed;
+		string state;
 
 		public:
 
@@ -131,6 +132,16 @@ namespace ami
 			sendUpdate();
 		}
 
+		void setState(string state)
+		{
+			if (state!=this->state)
+			{
+				this->state=state;
+				changed=true;
+			}
+			sendUpdate();
+		}
+
 		void sendUpdate(int forceDst=0)
 		{
 			if (changed || forceDst)
@@ -140,6 +151,7 @@ namespace ami
 				out.dst=forceDst;
 				out["id"]=id;
 				out["deviceId"]=getDeviceId(id);
+				out["state"]=state;
 				out.send();
 			}
 
@@ -171,7 +183,7 @@ namespace ami
 		private: 
 		CchannelMap channelMap;
 
-		string status;
+		bool online;
 		string callerId;
 		string id;
 		bool changed;
@@ -182,6 +194,7 @@ namespace ami
 		{
 			changed=true;
 			id="";
+			online=false;
 		}
 
 		void setId(string id)
@@ -189,19 +202,17 @@ namespace ami
 			if (id!=this->id)
 			{
 				this->id=id;
+				if (callerId=="")
+				{
+					callerId=id;
+				}
 				changed=true;
 			}
 			sendUpdate();
 		}
 	
-		void setInfo(string status, string callerId)
+		void setCallerId(string callerId)
 		{
-			if (status!="" && status!=this->status)
-			{
-				this->status=status;
-				changed=true;
-			}
-
 			if (callerId!="" && callerId!=this->callerId)
 			{
 				this->callerId=callerId;
@@ -209,6 +220,17 @@ namespace ami
 			}
 			sendUpdate();
 		}
+
+		void setOnline(bool online)
+		{
+			if (online!=this->online)
+			{
+				this->online=online;
+				changed=true;
+			}
+			sendUpdate();
+		}
+
 
 		CchannelPtr getChannelPtr(string channelId)
 		{
@@ -255,7 +277,7 @@ namespace ami
 				out.dst=forceDst;
 				out["id"]=id;
 				out["callerId"]=callerId;
-				out["status"]=status;
+				out["online"]=online;
 				out.send();
 			}
 
@@ -470,7 +492,14 @@ SYNAPSE_REGISTER(ami_Response_Success)
 		//SIPshowPeer response
 		string deviceId=msg["Channeltype"].str()+"/"+msg["ObjectName"].str();
 		CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(deviceId);
-		devicePtr->setInfo(msg["Status"].str(), msg["Callerid"].str());
+
+		//NOTE: we handle Unmonitored sip peers as online, while we dont actually know if its online or not.		
+		if (msg["Status"].str().find("OK")==0 || msg["Status"].str().find("Unmonitored")==0)
+			devicePtr->setOnline(true);
+		else
+			devicePtr->setOnline(false);
+
+		devicePtr->setCallerId(msg["Callerid"].str());
 	}
 	else if (msg["ActionID"].str()=="Login")
 	{
@@ -564,6 +593,7 @@ void ChannelStatus(Cmsg & msg)
 {
 	Cmsg out;
 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel"]);
+	channelPtr->setState(msg["State"]);
 }
 
 SYNAPSE_REGISTER(ami_Event_Status)
@@ -594,16 +624,42 @@ SYNAPSE_REGISTER(ami_Event_Hangup)
 SYNAPSE_REGISTER(ami_Event_PeerStatus)
 {
 	
-	serverMap[msg.dst].getDevicePtr(msg["Peer"]);
+	CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(msg["Peer"]);
+	if (msg["PeerStatus"].str()=="Reachable" || msg["PeerStatus"].str()=="Registered" )
+		devicePtr->setOnline(true);
+	else
+		devicePtr->setOnline(false);
+
 }
 
 
-// 
-// SYNAPSE_REGISTER(ami_Event_Newexten)
-// {
 
-// 
-// }
+SYNAPSE_REGISTER(ami_Event_Newexten)
+{
+// Event: Newexten
+// Privilege: call,all
+// Channel: SIP/604-00000007
+// Context: DLPN_DatuX
+// Extension: 9991234
+// Priority: 1
+// Application: Macro
+// AppData: trunkdial-failover-0.3|SIP/0858784323/9991234|mISDN/g:trunk_m1/9991234|0858784323|trunk_m1
+// Uniqueid: 1269802539.12
+	if (msg["Extension"].str() == "9991234" )
+	{
+/*		Cmsg out;
+		out.event="ami_Action";
+		out.dst=msg.src;
+		out.src=msg.dst;
+		out["Action"]="Hangup";
+		out["Channel"]=msg["Channel"].str();
+		out.send();*/
+	}
+
+
+}
+
+
 // 
 // SYNAPSE_REGISTER(ami_Event_ExtensionStatus)
 // {
