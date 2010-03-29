@@ -11,6 +11,8 @@
 	<script type="text/javascript" src="json2.js"></script>
 	<script type="text/javascript" src="synapse.js"></script>
 	<script type="text/javascript" src="synapse-ui.js"></script>
+	<script type="text/javascript" src="jquery.svg.js"></script>
+	<script type="text/javascript" src="jquery.drawinglibrary.js"></script>
 	<script type="text/javascript">
 
 
@@ -28,7 +30,7 @@
 
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
-			synapse_login();
+//			synapse_login();
 			//request a refresh, to learn about all objects
 			send(0,"asterisk_refresh", { 
 			});
@@ -94,8 +96,15 @@
 
 				//on hover show the info
 				$(escapeId(msg["id"])).hover(
-						function ()	{ $(this).children(".channelInfo").show(); },
-						function () { $(this).children(".channelInfo").hide(); }
+						//show ...
+						function ()	
+						{ 
+							 $(this).children(".channelInfo").show(); 
+						},
+						//hide ...
+						function () {
+							 $(this).children(".channelInfo").hide(); 
+						}
 				);
 			}
 
@@ -114,7 +123,19 @@
 			}
 
 			//set html of channelInfo dom object:
-			$(escapeId(msg["id"])+" .channelInfo").html(msg["id"]+"<br>"+msg["state"]);
+			$(escapeId(msg["id"])+" .channelInfo").text(msg["id"]+"\n"+msg["state"]+" link="+msg["linkId"]+" incoming="+msg["incoming"]+" callerId="+msg["callerId"]+" callerIdLink="+msg["callerIdLink"]);
+
+// 			//linked to something we know, so we can draw a line?
+// 			if (msg["linkId"] != "" && $(escapeId(msg["linkId"])).length!=0)
+// 			{
+// 				$(escapeId(msg["id"])+" .channelLink").drawLine(
+// 					$(escapeId(msg["id"])).offset().left,
+// 					$(escapeId(msg["id"])).offset().top,
+// 					$(escapeId(msg["linkId"])).offset().left,
+// 					$(escapeId(msg["linkId"])).offset().top
+// 				);
+// 			}
+
 		});
 
 //		soms heeft een Channel <ZOMBIE> erachter1#@!#!
@@ -210,6 +231,7 @@
 			left: 1.9em;
 			z-index: 1;
 		}
+
 
 	</style>
 

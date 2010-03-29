@@ -114,12 +114,17 @@ namespace ami
 		string id;
 		bool changed;
 		string state;
+		string linkId;
+		string callerIdLink;
+		string callerId;
+		bool incoming;
 
 		public:
 
 		Cchannel()
 		{
 			changed=true;
+			incoming=false;
 		}
 
 		void setId(string id)
@@ -132,8 +137,50 @@ namespace ami
 			sendUpdate();
 		}
 
+		void setLink(string channelId)
+		{
+			if (channelId!=this->linkId)
+			{
+				this->linkId=channelId;
+				changed=true;
+			}
+			sendUpdate();
+
+		}
+
+		string getLink()
+		{
+			return(linkId);
+		}
+
+		void setCallerIdLink(string callerIdLink)
+		{
+			if (callerIdLink!=this->callerIdLink)
+			{
+				this->callerIdLink=this->callerIdLink;
+				changed=true;
+			}
+			sendUpdate();
+		}
+
+		void setCallerId(string callerId)
+		{
+			if (callerId!=this->callerId)
+			{
+				this->callerId=callerId;
+				changed=true;
+			}
+			sendUpdate();
+
+		}
+
 		void setState(string state)
 		{
+			if (state=="Ring")
+				incoming=false;
+			else if (state=="Ringing")
+				incoming=true;
+	
 			if (state!=this->state)
 			{
 				this->state=state;
@@ -152,6 +199,10 @@ namespace ami
 				out["id"]=id;
 				out["deviceId"]=getDeviceId(id);
 				out["state"]=state;
+				out["linkId"]=linkId;
+				out["incoming"]=incoming;
+				out["callerId"]=callerId;
+				out["callerIdLink"]=callerIdLink;
 				out.send();
 			}
 
@@ -609,6 +660,16 @@ SYNAPSE_REGISTER(ami_Event_Newchannel)
 
 SYNAPSE_REGISTER(ami_Event_Newstate)
 {
+	/*
+	|CallerID = 605 (string)
+	|CallerIDName = <unknown> (string)
+	|Channel = SIP/605-0000005b (string)
+	|Event = Newstate (string)
+	|Privilege = call,all (string)
+	|State = Ringing (string)
+	|Uniqueid = 1269870185.119 (string)                                                                                                     */
+
+
 	ChannelStatus(msg);
 }
 
@@ -634,6 +695,44 @@ SYNAPSE_REGISTER(ami_Event_PeerStatus)
 
 
 
+SYNAPSE_REGISTER(ami_Event_Link)
+{
+/*	Event: Link
+	Privilege: call,all
+	Channel1: SIP/604-00000022
+	Channel2: SIP/605-00000023
+	Uniqueid1: 1269864649.42
+	Uniqueid2: 1269864649.43
+	CallerID1: 604
+	CallerID2: 605*/
+	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel1"]);
+	channelPtr->setLink(msg["Channel2"]);
+
+	channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel2"]);
+	channelPtr->setLink(msg["Channel1"]);
+
+}
+
+
+SYNAPSE_REGISTER(ami_Event_Unlink)
+{
+	/*Event: Unlink
+	Privilege: call,all
+	Channel1: SIP/604-00000020
+	Channel2: SIP/605-00000021
+	Uniqueid1: 1269864479.40
+	Uniqueid2: 1269864479.41
+	CallerID1: 604
+	CallerID2: 605*/
+	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel1"]);
+	channelPtr->setLink("");
+
+	channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel2"]);
+	channelPtr->setLink("");
+
+}
+
+
 SYNAPSE_REGISTER(ami_Event_Newexten)
 {
 // Event: Newexten
@@ -645,6 +744,21 @@ SYNAPSE_REGISTER(ami_Event_Newexten)
 // Application: Macro
 // AppData: trunkdial-failover-0.3|SIP/0858784323/9991234|mISDN/g:trunk_m1/9991234|0858784323|trunk_m1
 // Uniqueid: 1269802539.12
+
+/* |AppData = SIP/605 (string)
+ |Application = Dial (string)
+ |Channel = SIP/604-0000002f (string)
+ |Context = DLPN_DatuX (string)
+ |Event = Newexten (string)
+ |Extension = 605 (string)
+ |Priority = 1 (string)
+ |Privilege = call,all (string)
+ |Uniqueid = 1269866053.55 (string)*/
+
+
+// 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel"]);
+// 	channelPtr->setCallingTo(msg["Extension"]);
+
 	if (msg["Extension"].str() == "9991234" )
 	{
 /*		Cmsg out;
@@ -666,30 +780,84 @@ SYNAPSE_REGISTER(ami_Event_Newexten)
 
 // }
 // 
-// SYNAPSE_REGISTER(ami_Event_Dial)
-// {
 
-// 
-// }
-// 
-// SYNAPSE_REGISTER(ami_Event_Newcallerid)
-// {
+SYNAPSE_REGISTER(ami_Event_Dial)
+{
+// 	Event: Dial
+// 	Privilege: call,all
+// 	Source: SIP/604-0000002f
+// 	Destination: SIP/605-00000030
+// 	CallerID: 604
+// 	CallerIDName: Edwin (draadloos)
+// 	SrcUniqueID: 1269866053.55
+// 	DestUniqueID: 1269866053.56
 
-// 
-// }
-// 
-// 
-// SYNAPSE_REGISTER(ami_Event_Link)
-// {
-// 
+// 	Event: Dial
+// 	Privilege: call,all
+// 	Source: SIP/604-00000031
+// 	Destination: mISDN/0-u5
+// 	CallerID: 0858784323
+// 	CallerIDName: <unknown>
+// 	SrcUniqueID: 1269866267.57
+// 	DestUniqueID: 1269866267.58
 
-// }
-// 
-// SYNAPSE_REGISTER(ami_Event_Unlink)
-// {
 
-// 
-// }
+	//NOTE: a "link" for us, is something different then a link for asterisk.
+	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Source"]);
+	channelPtr->setLink(msg["Destination"]);
+
+	channelPtr=serverMap[msg.dst].getChannelPtr(msg["Destination"]);
+	channelPtr->setLink(msg["Source"]);
+
+// 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Destination"]);
+// 	channelPtr->setCallerId("gettingcalled\"" + msg["CallerIDName"].str() + "\" <" + msg["CallerID"].str() + ">" );
+
+// 	channelPtr=serverMap[msg.dst].getChannelPtr(msg["Source"]);
+// 	channelPtr->setCallerId("calling\"" + msg["CallerIDName"].str() + "\" <" + msg["CallerID"].str() + ">" );
+
+}
+
+
+SYNAPSE_REGISTER(ami_Event_Newcallerid)
+{
+// 	Event: Newcallerid
+// 	Privilege: call,all
+// 	Channel: SIP/605-00000033
+// 	CallerID: 605
+// 	CallerIDName: <Unknown>
+// 	Uniqueid: 1269866486.60
+// 	CID-CallingPres: 0 (Presentation Allowed, Not Screened)
+
+// Event: Newcallerid
+// Privilege: call,all
+// Channel: mISDN/0-u5
+// CallerID: 0622588835
+// CallerIDName: <Unknown>
+// Uniqueid: 1269866267.58
+// CID-CallingPres: 0 (Presentation Allowed, Not Screened)
+
+// Event: Newcallerid
+// Privilege: call,all
+// Channel: SIP/604-00000031
+// CallerID: 0858784323
+// CallerIDName: <Unknown>
+// Uniqueid: 1269866267.57
+// CID-CallingPres: 0 (Presentation Allowed, Not Screened)
+
+	string callerId="\"" + msg["CallerIDName"].str() + "\" <" + msg["CallerID"].str() + ">";
+
+ 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel"]);
+ 	channelPtr->setCallerId(callerId);
+
+	//do we know the channel we are Dialing to? if so, set the callerIdLink of that channel so we can show who's calling.
+	if (channelPtr->getLink()!="")
+	{
+		channelPtr=serverMap[msg.dst].getChannelPtr(channelPtr->getLink());
+		channelPtr->setCallerIdLink(callerId);
+	}
+}
+
+
 // 
 // 
 // SYNAPSE_REGISTER(ami_Event_PeerStatus)
