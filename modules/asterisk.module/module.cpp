@@ -62,6 +62,9 @@ SYNAPSE_REGISTER(module_Init)
 
 
 
+	out["event"]=		"asterisk_debugChannel"; 
+	out.send();
+
 	out["event"]=		"asterisk_updateChannel"; 
 	out.send();
 
@@ -237,6 +240,16 @@ namespace ami
 			changesSent=0;
 			linkChangesSent=0;
 			incoming=false;
+		}
+
+		void sendDebug(Cmsg msg, int serverId)
+		{
+			msg.event="asterisk_debugChannel";
+			msg["serverId"]=serverId;
+			msg["id"]=id;
+			msg.dst=0;
+			msg.src=0;
+			msg.send();
 		}
 
 		int getChanges()
@@ -694,6 +707,8 @@ void channelStatus(Cmsg & msg)
 	devicePtr->sendChanges();
 	channelPtr->sendChanges();
 
+	channelPtr->sendDebug(msg, msg.dst);
+	
 }
 
 
@@ -767,6 +782,8 @@ SYNAPSE_REGISTER(ami_Event_Newstate)
 
 SYNAPSE_REGISTER(ami_Event_Hangup)
 {
+	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+	channelPtr->sendDebug(msg, msg.dst);
 	serverMap[msg.dst].delChannel(msg["Uniqueid"]);
 //	serverMap[msg.dst].getDevicePtr(getDeviceId(msg["Channel"]))->sendStatus();
 //	INFO("\n" << serverMap[msg.dst].getStatusStr());
@@ -806,6 +823,9 @@ SYNAPSE_REGISTER(ami_Event_Link)
 
 	//this will automagically send updates to BOTH channels, sinces they're linked now:
 	channelPtr1->sendChanges();
+
+	channelPtr1->sendDebug(msg, msg.dst);
+	channelPtr2->sendDebug(msg, msg.dst);
 }
 
 
@@ -822,10 +842,12 @@ SYNAPSE_REGISTER(ami_Event_Unlink)
 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid1"]);
 	channelPtr->delLink();
 	channelPtr->sendChanges();
+	channelPtr->sendDebug(msg, msg.dst);
 
 	channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid2"]);
 	channelPtr->delLink();
 	channelPtr->sendChanges();
+	channelPtr->sendDebug(msg, msg.dst);
 
 
 
@@ -855,7 +877,8 @@ SYNAPSE_REGISTER(ami_Event_Newexten)
  |Uniqueid = 1269866053.55 (string)*/
 
 
-// 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel"]);
+	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+	channelPtr->sendDebug(msg, msg.dst);
 // 	channelPtr->setCallingTo(msg["Extension"]);
 
 	if (msg["Extension"].str() == "9991234" )
@@ -911,6 +934,8 @@ SYNAPSE_REGISTER(ami_Event_Dial)
 
 	//this will automagically send updates to BOTH channels, sinces they're linked now:
 	channelPtr1->sendChanges();
+	channelPtr1->sendDebug(msg, msg.dst);
+	channelPtr2->sendDebug(msg, msg.dst);
 
 /*
 	channelPtr=serverMap[msg.dst].getChannelPtr(msg["DestUniqueID"]);
@@ -942,6 +967,7 @@ SYNAPSE_REGISTER(ami_Event_Rename)
 	channelPtr->setState("Up");
 	channelPtr->setDevice(devicePtr);
 	channelPtr->sendChanges();
+	channelPtr->sendDebug(msg, msg.dst);
 }
 
 SYNAPSE_REGISTER(ami_Event_Newcallerid)
@@ -977,6 +1003,7 @@ SYNAPSE_REGISTER(ami_Event_Newcallerid)
 	 	channelPtr->setCallerIdName(msg["CallerIDName"]);
 	
 	channelPtr->sendChanges();
+	channelPtr->sendDebug(msg, msg.dst);
 
 }
 

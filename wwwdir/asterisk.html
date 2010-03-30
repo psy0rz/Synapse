@@ -80,8 +80,46 @@
 			$(escapeId(msg["id"])).remove();
 		});
 
+
+
+
+ 		synapse_register("asterisk_debugChannel",function(msg_src, msg_dst, msg_event, msg)
+		{
+			$(escapeId(msg["id"])+" .channelDebug").append(
+				"<br><b>"+msg["Event"]+"</b><br>"
+			);
+			for (var msgI in msg)
+			{
+				if (msgI!="id" && msgI!="serverId" && msgI!="Event")
+				{
+					$(escapeId(msg["id"])+" .channelDebug").append(
+						msgI+":"+msg[msgI]+"<br>"
+					);
+				}
+			}
+			
+
+		});
+
+
+		function prettyCallerId( callerId, callerIdName)
+		{
+			var txt="";
+			if (callerId!="")
+				txt=txt+callerId;
+			else
+				txt="(unknown number)";
+
+			if (callerIdName!="")
+				txt=txt+" '"+callerIdName+"'";
+
+			return txt;					
+		}
+
  		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
  		{
+			var oldDebug="";
+
 			//does the channel exist?
 			if ($(escapeId(msg["id"])).length!=0)
 			{
@@ -89,6 +127,7 @@
 				if ($(escapeId(msg["deviceId"]) + " " + escapeId(msg["id"])).length==0)
 				{
 					//then it probably has been moved/renamed, so delete the channel and recreate it below.
+					oldDebug=$(escapeId(msg["id"])+" .channelDebug").html();
 					$(escapeId(msg["id"])).remove();			
 				}
 			}
@@ -102,6 +141,7 @@
 				html+=msg["id"];
 				html+="'>";
 				html+="<div class='channelInfo'></div>";
+				html+="<div class='channelDebug'>"+oldDebug+"</div>";
 				html+="</div>";
 				//add the channel to the corresponding device:
 				$(escapeId(msg["deviceId"])+' .channelList').append(html);
@@ -134,31 +174,22 @@
 				$(escapeId(msg["id"])).css("background", "black");
 			}
 
-			function prettyCallerId( callerId, callerIdName)
-			{
-				var txt="";
-				if (callerId!="")
-					txt=txt+callerId;
-				else
-					txt="(unknown number)";
-
-				if (callerIdName!="")
-					txt=txt+" '"+callerIdName+"'";
-
-				return txt;					
-			}
 
 			//set html of channelInfo dom object:
 			if (msg["incoming"]==1)
 			{
 				$(escapeId(msg["id"])+" .channelInfo").text(
-					"Incoming call from " + prettyCallerId(msg["linkCallerId"],msg["linkCallerIdName"]) + " for " + prettyCallerId(msg["callerId"], msg["callerIdName"])
+					msg["state"] + ": "+ 
+					"Incoming call from " + prettyCallerId(msg["linkCallerId"],msg["linkCallerIdName"]) + 
+					" for " + prettyCallerId(msg["callerId"], msg["callerIdName"])
 				)
 			}
 			else
 			{
 				$(escapeId(msg["id"])+" .channelInfo").text(
-					"Outgoing call to " + prettyCallerId(msg["linkCallerId"],msg["linkCallerIdName"]) + " from " + prettyCallerId(msg["callerId"], msg["callerIdName"])
+					msg["state"] + ": "+ 
+					"Outgoing call to " + prettyCallerId(msg["linkCallerId"],msg["linkCallerIdName"]) + 
+					" from " + prettyCallerId(msg["callerId"], msg["callerIdName"])
 				)
 			}
 
@@ -268,6 +299,15 @@
 			z-index: 1;
 		}
 
+		.channelDebug
+		{
+			background-color: #ffffff;
+			color: #000000;	
+			top: 1.9em;
+			left: 1.9em;
+			position: absolute;
+			border-style: solid;
+		}
 
 	</style>
 
