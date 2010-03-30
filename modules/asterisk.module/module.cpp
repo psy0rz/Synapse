@@ -222,6 +222,7 @@ namespace ami
 		string state;
 		CchannelPtr linkChannelPtr;
 		string callerId;
+		string callerIdName;
 		bool incoming;
 		CdevicePtr devicePtr;
 
@@ -293,9 +294,24 @@ namespace ami
 			}
 		}
 
+		void setCallerIdName(string callerIdName)
+		{
+			if (callerIdName!=this->callerIdName)
+			{
+				this->callerIdName=callerIdName;
+				changes++;
+			}
+		}
+
+
 		string getCallerId()
 		{
 			return (callerId);
+		}
+
+		string getCallerIdName()
+		{
+			return (callerIdName);
 		}
 
 		void setState(string state)
@@ -352,6 +368,7 @@ namespace ami
 			out["state"]=state;
 			out["incoming"]=incoming;
 			out["callerId"]=callerId;
+			out["callerIdName"]=callerIdName;
 
 			if (devicePtr!=CdevicePtr())
 			{
@@ -360,7 +377,8 @@ namespace ami
 
 			if (linkChannelPtr!=CchannelPtr())
 			{
-				out["callerIdLink"]=linkChannelPtr->getCallerId();
+				out["linkCallerId"]=linkChannelPtr->getCallerId();
+				out["linkCallerIdName"]=linkChannelPtr->getCallerIdName();
 			}
 
 			out.send();
@@ -662,9 +680,16 @@ void channelStatus(Cmsg & msg)
 	channelPtr->setDevice(devicePtr);
 	channelPtr->setState(msg["State"]);
 
-	string callerId="\"" + msg["CallerIDName"].str() + "\" <" + msg["CallerID"].str() + ">";
+	//NOTE: whats with all the different namings and <unknown> vs <Unknown> in Newcallerid?
 
- 	channelPtr->setCallerId(callerId);
+	if (msg.isSet("CallerIDNum") && msg["CallerIDNum"].str() != "<unknown>")
+	 	channelPtr->setCallerId(msg["CallerIDNum"]);
+
+	if (msg.isSet("CallerID") && msg["CallerID"].str() != "<unknown>")
+	 	channelPtr->setCallerId(msg["CallerID"]);
+
+	if (msg.isSet("CallerIDName") && msg["CallerIDName"].str() != "<unknown>")
+	 	channelPtr->setCallerIdName(msg["CallerIDName"]);
 
 	devicePtr->sendChanges();
 	channelPtr->sendChanges();
@@ -882,6 +907,8 @@ SYNAPSE_REGISTER(ami_Event_Dial)
 	channelPtr1->setLink(channelPtr2);
 	channelPtr2->setLink(channelPtr1);
 
+	
+
 	//this will automagically send updates to BOTH channels, sinces they're linked now:
 	channelPtr1->sendChanges();
 
@@ -943,10 +970,12 @@ SYNAPSE_REGISTER(ami_Event_Newcallerid)
 // Uniqueid: 1269866267.57
 // CID-CallingPres: 0 (Presentation Allowed, Not Screened)
 
-	string callerId="\"" + msg["CallerIDName"].str() + "\" <" + msg["CallerID"].str() + ">";
+	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+ 	channelPtr->setCallerId(msg["CallerID"]);
 
- 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
- 	channelPtr->setCallerId(callerId);
+	if (msg["CallerIDName"].str() != "<Unknown>")
+	 	channelPtr->setCallerIdName(msg["CallerIDName"]);
+	
 	channelPtr->sendChanges();
 
 }

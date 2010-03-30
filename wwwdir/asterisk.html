@@ -134,8 +134,33 @@
 				$(escapeId(msg["id"])).css("background", "black");
 			}
 
+			function prettyCallerId( callerId, callerIdName)
+			{
+				var txt="";
+				if (callerId!="")
+					txt=txt+callerId;
+				else
+					txt="(unknown number)";
+
+				if (callerIdName!="")
+					txt=txt+" '"+callerIdName+"'";
+
+				return txt;					
+			}
+
 			//set html of channelInfo dom object:
-			$(escapeId(msg["id"])+" .channelInfo").text(msg["id"]+"\n"+msg["state"]+" link="+msg["linkId"]+" incoming="+msg["incoming"]+" callerId="+msg["callerId"]+" callerIdLink="+msg["callerIdLink"]);
+			if (msg["incoming"]==1)
+			{
+				$(escapeId(msg["id"])+" .channelInfo").text(
+					"Incoming call from " + prettyCallerId(msg["linkCallerId"],msg["linkCallerIdName"]) + " for " + prettyCallerId(msg["callerId"], msg["callerIdName"])
+				)
+			}
+			else
+			{
+				$(escapeId(msg["id"])+" .channelInfo").text(
+					"Outgoing call to " + prettyCallerId(msg["linkCallerId"],msg["linkCallerIdName"]) + " from " + prettyCallerId(msg["callerId"], msg["callerIdName"])
+				)
+			}
 
 // 			//linked to something we know, so we can draw a line?
 // 			if (msg["linkId"] != "" && $(escapeId(msg["linkId"])).length!=0)
