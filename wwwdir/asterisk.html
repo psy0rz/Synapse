@@ -82,7 +82,19 @@
 
  		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
  		{
-			//channel doesnt exist yet?
+			//does the channel exist?
+			if ($(escapeId(msg["id"])).length!=0)
+			{
+				//doesnt it exist under the specified device?
+				if ($(escapeId(msg["deviceId"]) + " " + escapeId(msg["id"])).length==0)
+				{
+					//then it probably has been moved/renamed, so delete the channel and recreate it below.
+					$(escapeId(msg["id"])).remove();			
+				}
+			}
+
+
+			//channel doesnt exist?
 			if ($(escapeId(msg["id"])).length==0)
 			{
 				//add dom objects
@@ -138,7 +150,6 @@
 
 		});
 
-//		soms heeft een Channel <ZOMBIE> erachter1#@!#!
 
  		synapse_register("asterisk_delChannel",function(msg_src, msg_dst, msg_event, msg)
  		{

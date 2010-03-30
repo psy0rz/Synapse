@@ -88,16 +88,16 @@ SYNAPSE_REGISTER(module_Init)
 namespace ami
 {
 
-	string getDeviceId(string channelId)
+	string getDeviceIdFromChannel(string channel)
 	{
 		smatch what;
 		if (!regex_search(
-			channelId,
+			channel,
 			what, 
 			boost::regex("^(.*)-([^-]*)$")
 		))
 		{
-			WARNING("Invalid channelId: " << channelId << ", using 'unknown' instead");
+			WARNING("Invalid channel: " << channel << ", using 'unknown' instead");
 			return (string("unknown"));
 		}
 		else
@@ -106,25 +106,30 @@ namespace ami
 		}
 	}
 
-	
-	class Cchannel
-	{
-		private:
+	typedef shared_ptr<class Cdevice> CdevicePtr;
+	typedef map<string, CdevicePtr> CdeviceMap;
+	typedef shared_ptr<class Cchannel> CchannelPtr;
+	typedef map<string, CchannelPtr> CchannelMap;
 
+	
+	
+	
+	class Cdevice
+	{
+		private: 
+
+		bool online;
+		string callerId;
 		string id;
 		bool changed;
-		string state;
-		string linkId;
-		string callerIdLink;
-		string callerId;
-		bool incoming;
-
+	
 		public:
 
-		Cchannel()
+		Cdevice()
 		{
 			changed=true;
-			incoming=false;
+			id="";
+			online=true;
 		}
 
 		void setId(string id)
@@ -132,46 +137,165 @@ namespace ami
 			if (id!=this->id)
 			{
 				this->id=id;
+				if (callerId=="")
+				{
+					callerId=id;
+				}
 				changed=true;
 			}
-			sendUpdate();
 		}
 
-		void setLink(string channelId)
+		string getId()
 		{
-			if (channelId!=this->linkId)
+			return (id);
+		}
+	
+		void setCallerId(string callerId)
+		{
+			if (callerId!="" && callerId!=this->callerId)
 			{
-				this->linkId=channelId;
+				this->callerId=callerId;
 				changed=true;
 			}
-			sendUpdate();
-
 		}
 
-		string getLink()
+		void setOnline(bool online)
 		{
-			return(linkId);
-		}
-
-		void setCallerIdLink(string callerIdLink)
-		{
-			if (callerIdLink!=this->callerIdLink)
+			if (online!=this->online)
 			{
-				this->callerIdLink=this->callerIdLink;
+				this->online=online;
 				changed=true;
 			}
-			sendUpdate();
 		}
+
+
+	
+
+		void sendUpdate(int forceDst=0)
+		{
+			Cmsg out;
+			out.event="asterisk_updateDevice";
+			out.dst=forceDst;
+			out["id"]=id;
+			out["callerId"]=callerId;
+			out["online"]=online;
+			out.send();
+		}
+
+
+		void sendChanges()
+		{
+			if (changed)
+			{	
+				sendUpdate();
+
+				changed=false;
+			}
+		}
+
+
+		void sendRefresh(int dst)
+		{
+			//refresh device
+			sendUpdate(dst);
+
+		}
+
+		~Cdevice()
+		{
+			Cmsg out;
+			out.event="asterisk_delDevice";
+			out.dst=0; 
+			out["id"]=id;
+			out.send();
+		}
+
+		
+	};
+	
+	class Cchannel
+	{
+		private:
+
+		string id;
+		int changes;
+		string state;
+		CchannelPtr linkChannelPtr;
+		string callerId;
+		bool incoming;
+		CdevicePtr devicePtr;
+
+		int linkChangesSent;		
+		int changesSent;		
+
+		public:
+
+		Cchannel()
+		{
+			changes=1;
+			changesSent=0;
+			linkChangesSent=0;
+			incoming=false;
+		}
+
+		int getChanges()
+		{
+			return (changes);
+		}
+
+		void setDevice(CdevicePtr devicePtr)
+		{
+			if (devicePtr!=this->devicePtr)
+			{
+				this->devicePtr=devicePtr;
+				changes++;
+			}
+
+		}
+
+		void setId(string id)
+		{
+			if (id!=this->id)
+			{
+				this->id=id;
+				changes++;
+			}
+		}
+
+		void setLink(CchannelPtr channelPtr)
+		{
+			if (channelPtr!=this->linkChannelPtr)
+			{
+				this->linkChannelPtr=channelPtr;
+				changes++;
+				linkChangesSent=0;
+			}
+		}
+
+		void delLink()
+		{
+			//unset our link
+			setLink(CchannelPtr());
+		}
+
+		CchannelPtr getLink()
+		{
+			return(linkChannelPtr);
+		}
+
 
 		void setCallerId(string callerId)
 		{
 			if (callerId!=this->callerId)
 			{
 				this->callerId=callerId;
-				changed=true;
+				changes++;
 			}
-			sendUpdate();
+		}
 
+		string getCallerId()
+		{
+			return (callerId);
 		}
 
 		void setState(string state)
@@ -184,30 +308,62 @@ namespace ami
 			if (state!=this->state)
 			{
 				this->state=state;
-				changed=true;
+				changes++;
 			}
-			sendUpdate();
+		}
+
+		void sendChanges(bool recursing=false)
+		{
+			bool sendIt=false;
+
+			// are there changes we didnt send yet?
+			if (changes>changesSent)
+			{
+				sendIt=true;
+				changesSent=changes;
+			}	
+
+			//are we linked?
+			if (linkChannelPtr!=CchannelPtr())
+			{
+				//are there changes on the linked channel we (THIS channel) didnt send yet?
+				if (linkChannelPtr->getChanges() > linkChangesSent)
+				{
+					linkChangesSent=changes;
+					sendIt=true;
+				}
+
+				//let the other channel check for changes as well?
+				//(prevent endless recursion)
+				if (!recursing)
+					linkChannelPtr->sendChanges(true);
+			}
+
+			if (sendIt)
+				sendUpdate();
 		}
 
 		void sendUpdate(int forceDst=0)
 		{
-			if (changed || forceDst)
-			{	
-				Cmsg out;
-				out.event="asterisk_updateChannel";
-				out.dst=forceDst;
-				out["id"]=id;
-				out["deviceId"]=getDeviceId(id);
-				out["state"]=state;
-				out["linkId"]=linkId;
-				out["incoming"]=incoming;
-				out["callerId"]=callerId;
-				out["callerIdLink"]=callerIdLink;
-				out.send();
+			Cmsg out;
+			out.event="asterisk_updateChannel";
+			out.dst=forceDst;
+			out["id"]=id;
+			out["state"]=state;
+			out["incoming"]=incoming;
+			out["callerId"]=callerId;
+
+			if (devicePtr!=CdevicePtr())
+			{
+				out["deviceId"]=devicePtr->getId();
 			}
 
-			if (!forceDst)
-				changed=false;
+			if (linkChannelPtr!=CchannelPtr())
+			{
+				out["callerIdLink"]=linkChannelPtr->getCallerId();
+			}
+
+			out.send();
 		}
 
 		void sendRefresh(int dst)
@@ -225,151 +381,14 @@ namespace ami
 		}
 
 	};
-	typedef shared_ptr<Cchannel> CchannelPtr;
-	typedef map<string, CchannelPtr> CchannelMap;
-	
-	
-	class Cdevice
-	{
-		private: 
-		CchannelMap channelMap;
-
-		bool online;
-		string callerId;
-		string id;
-		bool changed;
-	
-		public:
-
-		Cdevice()
-		{
-			changed=true;
-			id="";
-			online=false;
-		}
-
-		void setId(string id)
-		{
-			if (id!=this->id)
-			{
-				this->id=id;
-				if (callerId=="")
-				{
-					callerId=id;
-				}
-				changed=true;
-			}
-			sendUpdate();
-		}
-	
-		void setCallerId(string callerId)
-		{
-			if (callerId!="" && callerId!=this->callerId)
-			{
-				this->callerId=callerId;
-				changed=true;
-			}
-			sendUpdate();
-		}
-
-		void setOnline(bool online)
-		{
-			if (online!=this->online)
-			{
-				this->online=online;
-				changed=true;
-			}
-			sendUpdate();
-		}
-
-
-		CchannelPtr getChannelPtr(string channelId)
-		{
-			if (channelMap[channelId]==NULL)
-			{
-				channelMap[channelId]=CchannelPtr(new Cchannel());
-				channelMap[channelId]->setId(channelId);
-				DEB("created channel " << channelId);
-			}
-			return (channelMap[channelId]);
-		}
-	
-		void delChannel(string channelId)
-		{
-			CchannelPtr channelPtr=getChannelPtr(channelId);
-			channelMap.erase(channelId);
-			DEB("deleted channel " << channelId);
-
-		}
-	
-// 		string getStatusStr()
-// 		{
-// 			stringstream s;
-// 			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
-// 			{
-// 				if (I->second !=NULL)
-// 				{
-// 					s << "  Channel " << I->second->id << "\n";
-// 				}
-// 				else
-// 				{
-// 					s << "  Channel NULL? :" << I->first << "\n";
-// 				}
-// 			}
-// 			return (s.str());
-// 		}
-
-		void sendUpdate(int forceDst=0)
-		{
-			if (changed || forceDst)
-			{	
-				Cmsg out;
-				out.event="asterisk_updateDevice";
-				out.dst=forceDst;
-				out["id"]=id;
-				out["callerId"]=callerId;
-				out["online"]=online;
-				out.send();
-			}
-
-			if (!forceDst)
-				changed=false;
-
-		}
-
-
-		void sendRefresh(int dst)
-		{
-			//refresh device
-			sendUpdate(dst);
-
-			//let all channels send a update
-			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
-			{
-				I->second->sendRefresh(dst);
-			}
-		}
-
-		~Cdevice()
-		{
-			Cmsg out;
-			out.event="asterisk_delDevice";
-			out.dst=0; 
-			out["id"]=id;
-			out.send();
-		}
-
-		
-	};
-	
-	typedef shared_ptr<Cdevice> CdevicePtr;
-	typedef map<string, CdevicePtr> CdeviceMap;
 	
 	
 	
 	class Cserver
 	{
+		private:
 		CdeviceMap deviceMap;
+		CchannelMap channelMap;
 
 		public:	
 		string id;
@@ -400,54 +419,46 @@ namespace ami
 			{
 				I->second->sendRefresh(dst);
 			}
-		}
-	
-/*		string getStatusStr(bool verbose=false)
-		{
-			stringstream s;
-			s << "Server " << id << ":\n";
-			for (CdeviceMap::iterator I=deviceMap.begin(); I!=deviceMap.end(); I++)
+
+			//let all channels send a update
+			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
 			{
-				if (I->second !=NULL)
-				{
-					//filter idle devices
-					string devStr=I->second->getStatusStr();
-					if (verbose || devStr!="")
-					{
-						s << " Device " << I->second->id << ":\n";
-						s << devStr;
-					}
-				}
-				else
-				{
-					s << " Device NULL? :" << I->first << "\n";
-				}
+				I->second->sendRefresh(dst);
 			}
-			return (s.str());
-		}*/
+
+		}
 	
 		CchannelPtr getChannelPtr(string channelId)
 		{
-			string deviceId;
-			deviceId=getDeviceId(channelId);
-			
-			CdevicePtr devicePtr=getDevicePtr(deviceId);
-	
-			return(devicePtr->getChannelPtr(channelId));
+			if (channelMap[channelId]==NULL)
+			{
+				channelMap[channelId]=CchannelPtr(new Cchannel());
+				channelMap[channelId]->setId(channelId);
+				DEB("created channel " << channelId);
+			}
+			return (channelMap[channelId]);
 		}
-
+	
 		void delChannel(string channelId)
 		{
-			string deviceId;
-			deviceId=getDeviceId(channelId);
-			
-			CdevicePtr devicePtr=getDevicePtr(deviceId);
-			devicePtr->delChannel(channelId);
+			CchannelPtr channelPtr=getChannelPtr(channelId);
+			//delete the link, to prevent "hanging" shared_ptrs
+			channelPtr->delLink();
+			channelMap.erase(channelId);
+			DEB("deleted channel " << channelId);
+
 		}
+
 
 		//on a disconnect this is called to remove all channels/devices.
 		void clear()
 		{
+			//unlink all channels to prevent dangling shared_ptrs
+			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
+			{
+				I->second->delLink();
+			}
+
 			//this should send out automated delChannel/delDevice events, on destruction of the objects
 			deviceMap.clear();
 		}
@@ -551,6 +562,8 @@ SYNAPSE_REGISTER(ami_Response_Success)
 			devicePtr->setOnline(false);
 
 		devicePtr->setCallerId(msg["Callerid"].str());
+
+		devicePtr->sendChanges();
 	}
 	else if (msg["ActionID"].str()=="Login")
 	{
@@ -594,7 +607,8 @@ SYNAPSE_REGISTER(ami_Disconnected)
 
 SYNAPSE_REGISTER(module_SessionEnd)
 {
-	
+		
+	serverMap[msg.dst].clear();
 	serverMap.erase(msg.dst);
 }
 
@@ -638,26 +652,79 @@ SYNAPSE_REGISTER(ami_Event_PeerEntry)
 
 }
 
-
-
-void ChannelStatus(Cmsg & msg)
+void channelStatus(Cmsg & msg)
 {
-	Cmsg out;
-	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel"]);
+	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+	CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(
+		getDeviceIdFromChannel(msg["Channel"])
+	);
+
+	channelPtr->setDevice(devicePtr);
 	channelPtr->setState(msg["State"]);
+
+	string callerId="\"" + msg["CallerIDName"].str() + "\" <" + msg["CallerID"].str() + ">";
+
+ 	channelPtr->setCallerId(callerId);
+
+	devicePtr->sendChanges();
+	channelPtr->sendChanges();
+
 }
 
-SYNAPSE_REGISTER(ami_Event_Status)
-{
-	ChannelStatus(msg);
 
-}
-
+// new channel created
 SYNAPSE_REGISTER(ami_Event_Newchannel)
 {
-	ChannelStatus(msg);
+
+/*	Event: Newchannel
+	Privilege: call,all
+	Channel: SIP/604-00000069
+	State: Down
+	CallerIDNum: 604
+	CallerIDName: Edwin (draadloos)
+	Uniqueid: 1269871368.143
+
+	Event: Newchannel
+	Privilege: call,all
+	Channel: SIP/605-0000006a
+	State: Down
+	CallerIDNum: <unknown>
+	CallerIDName: <unknown>
+	Uniqueid: 1269871368.144*/
+
+	channelStatus(msg);
 }
 
+// initial channel status event, requested just after connecting to an asterisk server.
+SYNAPSE_REGISTER(ami_Event_Status)
+{
+// 	Event: Status
+// 	Privilege: Call
+// 	Channel: SIP/601-00000048
+// 	CallerID: 601
+// 	CallerIDNum: 601
+// 	CallerIDName: <unknown>
+// 	Account:
+// 	State: Ringing
+// 	Uniqueid: 1269958019.99
+// 
+// 	Event: Status
+// 	Privilege: Call
+// 	Channel: SIP/605-00000047
+// 	CallerID: 605
+// 	CallerIDNum: 605
+// 	CallerIDName: <unknown>
+// 	Account:
+// 	State: Up
+// 	Link: SIP/604-00000046
+// 	Uniqueid: 1269958018.98
+
+
+	channelStatus(msg);
+
+}
+
+// channel status is changing
 SYNAPSE_REGISTER(ami_Event_Newstate)
 {
 	/*
@@ -669,14 +736,13 @@ SYNAPSE_REGISTER(ami_Event_Newstate)
 	|State = Ringing (string)
 	|Uniqueid = 1269870185.119 (string)                                                                                                     */
 
-
-	ChannelStatus(msg);
+	channelStatus(msg);
 }
 
 
 SYNAPSE_REGISTER(ami_Event_Hangup)
 {
-	serverMap[msg.dst].delChannel(msg["Channel"]);
+	serverMap[msg.dst].delChannel(msg["Uniqueid"]);
 //	serverMap[msg.dst].getDevicePtr(getDeviceId(msg["Channel"]))->sendStatus();
 //	INFO("\n" << serverMap[msg.dst].getStatusStr());
 
@@ -690,6 +756,8 @@ SYNAPSE_REGISTER(ami_Event_PeerStatus)
 		devicePtr->setOnline(true);
 	else
 		devicePtr->setOnline(false);
+
+	devicePtr->sendChanges();
 
 }
 
@@ -705,12 +773,14 @@ SYNAPSE_REGISTER(ami_Event_Link)
 	Uniqueid2: 1269864649.43
 	CallerID1: 604
 	CallerID2: 605*/
-	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel1"]);
-	channelPtr->setLink(msg["Channel2"]);
+	CchannelPtr channelPtr1=serverMap[msg.dst].getChannelPtr(msg["Uniqueid1"]);
+	CchannelPtr channelPtr2=serverMap[msg.dst].getChannelPtr(msg["Uniqueid2"]);
 
-	channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel2"]);
-	channelPtr->setLink(msg["Channel1"]);
+	channelPtr1->setLink(channelPtr2);
+	channelPtr2->setLink(channelPtr1);
 
+	//this will automagically send updates to BOTH channels, sinces they're linked now:
+	channelPtr1->sendChanges();
 }
 
 
@@ -724,11 +794,15 @@ SYNAPSE_REGISTER(ami_Event_Unlink)
 	Uniqueid2: 1269864479.41
 	CallerID1: 604
 	CallerID2: 605*/
-	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel1"]);
-	channelPtr->setLink("");
+	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid1"]);
+	channelPtr->delLink();
+	channelPtr->sendChanges();
 
-	channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel2"]);
-	channelPtr->setLink("");
+	channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid2"]);
+	channelPtr->delLink();
+	channelPtr->sendChanges();
+
+
 
 }
 
@@ -803,11 +877,17 @@ SYNAPSE_REGISTER(ami_Event_Dial)
 
 
 	//NOTE: a "link" for us, is something different then a link for asterisk.
-	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Source"]);
-	channelPtr->setLink(msg["Destination"]);
+	CchannelPtr channelPtr1=serverMap[msg.dst].getChannelPtr(msg["SrcUniqueID"]);
+	CchannelPtr channelPtr2=serverMap[msg.dst].getChannelPtr(msg["DestUniqueID"]);
+	channelPtr1->setLink(channelPtr2);
+	channelPtr2->setLink(channelPtr1);
 
-	channelPtr=serverMap[msg.dst].getChannelPtr(msg["Destination"]);
-	channelPtr->setLink(msg["Source"]);
+	//this will automagically send updates to BOTH channels, sinces they're linked now:
+	channelPtr1->sendChanges();
+
+/*
+	channelPtr=serverMap[msg.dst].getChannelPtr(msg["DestUniqueID"]);
+	channelPtr->setLink(msg["SrcUniqueID"]);*/
 
 // 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Destination"]);
 // 	channelPtr->setCallerId("gettingcalled\"" + msg["CallerIDName"].str() + "\" <" + msg["CallerID"].str() + ">" );
@@ -817,6 +897,25 @@ SYNAPSE_REGISTER(ami_Event_Dial)
 
 }
 
+// renaming usually happens on things like call-transfers
+
+SYNAPSE_REGISTER(ami_Event_Rename)
+{
+	// Event: Rename
+	// Privilege: call,all
+	// Oldname: SIP/604-00000044
+	// Newname: SIP/605-00000043
+	// Uniqueid: 1269956933.94
+	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+	CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(
+		getDeviceIdFromChannel(msg["Newname"])
+	);
+
+	//we assume a rename only is possible for channels that are already up?
+	channelPtr->setState("Up");
+	channelPtr->setDevice(devicePtr);
+	channelPtr->sendChanges();
+}
 
 SYNAPSE_REGISTER(ami_Event_Newcallerid)
 {
@@ -846,15 +945,10 @@ SYNAPSE_REGISTER(ami_Event_Newcallerid)
 
 	string callerId="\"" + msg["CallerIDName"].str() + "\" <" + msg["CallerID"].str() + ">";
 
- 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Channel"]);
+ 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
  	channelPtr->setCallerId(callerId);
+	channelPtr->sendChanges();
 
-	//do we know the channel we are Dialing to? if so, set the callerIdLink of that channel so we can show who's calling.
-	if (channelPtr->getLink()!="")
-	{
-		channelPtr=serverMap[msg.dst].getChannelPtr(channelPtr->getLink());
-		channelPtr->setCallerIdLink(callerId);
-	}
 }
 
 
