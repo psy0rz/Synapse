@@ -93,7 +93,7 @@
 				if (msgI!="id" && msgI!="serverId" && msgI!="Event")
 				{
 					$(escapeId(msg["id"])+" .channelDebug").append(
-						msgI+":"+msg[msgI]+"<br>"
+						msgI+":"+msg[msgI].replace("<","&lt;").replace(">","&gt;")+"<br>"
 					);
 				}
 			}
@@ -176,22 +176,27 @@
 
 
 			//set html of channelInfo dom object:
-			if (msg["incoming"]==1)
-			{
-				$(escapeId(msg["id"])+" .channelInfo").text(
-					msg["state"] + ": "+ 
-					"Incoming call from " + prettyCallerId(msg["linkCallerId"],msg["linkCallerIdName"]) + 
-					" for " + prettyCallerId(msg["callerId"], msg["callerIdName"])
-				)
-			}
-			else
-			{
-				$(escapeId(msg["id"])+" .channelInfo").text(
-					msg["state"] + ": "+ 
-					"Outgoing call to " + prettyCallerId(msg["linkCallerId"],msg["linkCallerIdName"]) + 
-					" from " + prettyCallerId(msg["callerId"], msg["callerIdName"])
-				)
-			}
+// 			if (msg["incoming"]==1)
+// 			{
+// 				$(escapeId(msg["id"])+" .channelInfo").text(
+// 					msg["state"] + ": "+ 
+// 					"Incoming call from " + prettyCallerId(msg["linkCallerId"],msg["linkCallerIdName"]) + 
+// 					" for " + prettyCallerId(msg["callerId"], msg["callerIdName"])
+// 				)
+// 			}
+// 			else
+// 			{
+// 				$(escapeId(msg["id"])+" .channelInfo").text(
+// 					msg["state"] + ": "+ 
+// 					"Outgoing call to " + prettyCallerId(msg["linkCallerId"],msg["linkCallerIdName"]) + 
+// 					" from " + prettyCallerId(msg["callerId"], msg["callerIdName"])
+// 				)
+// 			}
+			$(escapeId(msg["id"])+" .channelInfo").text(
+				"ik ben "+ prettyCallerId(msg["callerId"], msg["callerIdName"]) +
+				"EN andere kant is "+ prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"])
+			)
+
 
 // 			//linked to something we know, so we can draw a line?
 // 			if (msg["linkId"] != "" && $(escapeId(msg["linkId"])).length!=0)

@@ -358,7 +358,7 @@ namespace ami
 				//are there changes on the linked channel we (THIS channel) didnt send yet?
 				if (linkChannelPtr->getChanges() > linkChangesSent)
 				{
-					linkChangesSent=changes;
+					linkChangesSent=linkChannelPtr->getChanges();
 					sendIt=true;
 				}
 
@@ -592,7 +592,11 @@ SYNAPSE_REGISTER(ami_Response_Success)
 		else
 			devicePtr->setOnline(false);
 
-		devicePtr->setCallerId(msg["Callerid"].str());
+		if (msg["Callerid"].str() != "\"\" <>")
+			devicePtr->setCallerId(msg["Callerid"].str());
+		else
+			devicePtr->setCallerId(msg["ObjectName"]);
+
 
 		devicePtr->sendChanges();
 	}
@@ -997,7 +1001,9 @@ SYNAPSE_REGISTER(ami_Event_Newcallerid)
 // CID-CallingPres: 0 (Presentation Allowed, Not Screened)
 
 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
- 	channelPtr->setCallerId(msg["CallerID"]);
+
+	if (msg["CallerID"].str() != "<Unknown>")
+	 	channelPtr->setCallerId(msg["CallerID"]);
 
 	if (msg["CallerIDName"].str() != "<Unknown>")
 	 	channelPtr->setCallerIdName(msg["CallerIDName"]);
