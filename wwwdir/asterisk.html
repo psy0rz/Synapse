@@ -121,7 +121,7 @@
 
  		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
  		{
-			var oldDebug="";
+//			var oldDebug="";
 
 			//does the channel exist?
 			if ($(escapeId(msg["id"])).length!=0)
@@ -130,7 +130,7 @@
 				if ($(escapeId(msg["deviceId"]) + " " + escapeId(msg["id"])).length==0)
 				{
 					//then it probably has been moved/renamed, so delete the channel and recreate it below.
-					oldDebug=$(escapeId(msg["id"])+" .channelDebug").html();
+//					oldDebug=$(escapeId(msg["id"])+" .channelDebug").html();
 					$(escapeId(msg["id"])).remove();			
 				}
 			}
@@ -144,7 +144,7 @@
 				html+=msg["id"];
 				html+="'>";
 				html+="<div class='channelInfo'></div>";
-				html+="<div class='channelDebug'>"+oldDebug+"</div>";
+//				html+="<div class='channelDebug'>"+oldDebug+"</div>";
 				html+="</div>";
 				//add the channel to the corresponding device:
 				$(escapeId(msg["deviceId"])+' .channelList').append(html);
@@ -163,12 +163,12 @@
 				);
 
 				//on click toggle debug info
-				$(escapeId(msg["id"])).click(
-					function ()	
-					{ 
-						$(this).children(".channelDebug").toggle(); 
-					}
-				);
+// 				$(escapeId(msg["id"])).click(
+// 					function ()	
+// 					{ 
+// 						$(this).children(".channelDebug").toggle(); 
+// 					}
+// 				);
 
 			}
 
