@@ -148,16 +148,25 @@
 
 				//on hover show the info
 				$(escapeId(msg["id"])).hover(
-						//show ...
-						function ()	
-						{ 
-							 $(this).children(".channelInfo").show(); 
-						},
-						//hide ...
-						function () {
-							 $(this).children(".channelInfo").hide(); 
-						}
+					//show ...
+					function ()	
+					{ 
+							$(this).children(".channelInfo").show(); 
+					},
+					//hide ...
+					function () {
+							$(this).children(".channelInfo").hide(); 
+					}
 				);
+
+				//on click toggle debug info
+				$(escapeId(msg["id"])).click(
+					function ()	
+					{ 
+						$(this).children(".channelDebug").toggle(); 
+					}
+				);
+
 			}
 
 			//set channel status
@@ -171,51 +180,69 @@
 			}
 			else
 			{
-				$(escapeId(msg["id"])).css("background", "black");
+				$(escapeId(msg["id"])).css("background", "blue");
 			}
 
 
-			//set html of channelInfo dom object:
-// 			if (msg["incoming"]==1)
-// 			{
-// 				$(escapeId(msg["id"])+" .channelInfo").text(
-// 					msg["state"] + ": "+ 
-// 					"Incoming call from " + prettyCallerId(msg["linkCallerId"],msg["linkCallerIdName"]) + 
-// 					" for " + prettyCallerId(msg["callerId"], msg["callerIdName"])
-// 				)
-// 			}
-// 			else
-// 			{
-// 				$(escapeId(msg["id"])+" .channelInfo").text(
-// 					msg["state"] + ": "+ 
-// 					"Outgoing call to " + prettyCallerId(msg["linkCallerId"],msg["linkCallerIdName"]) + 
-// 					" from " + prettyCallerId(msg["callerId"], msg["callerIdName"])
-// 				)
-// 			}
-			$(escapeId(msg["id"])+" .channelInfo").text(
-				"ik ben "+ prettyCallerId(msg["callerId"], msg["callerIdName"]) +
-				"EN andere kant is "+ prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"])
-			)
+			//determin caller info
+			var callerInfo="";
+			callerInfo="CallerID " + prettyCallerId(msg["callerId"], msg["callerIdName"]);
+			if (typeof msg["linkCallerId"] != 'undefined')
+			{
+				callerInfo+=", connected to " + prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);
+			}
 
+/*			if (msg["initiator"]==1)
+			{
+				if (typeof msg["linkCallerId"] == 'undefined')
+				{
+					callerInfo="Calling to " + prettyCallerId(msg["callerId"], msg["callerIdName"]);
+				}
+				else
+				{
+					callerInfo="Outgoing call to " + prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);
+				}
+			}
+			else
+			{
+				if (typeof msg["linkCallerId"] == 'undefined')
+				{
+					callerInfo="Getting called by " + prettyCallerId(msg["callerId"], msg["callerIdName"]);
+				}
+				else
+				{
+					callerInfo="Incoming call from " + prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);
+				}
+			}*/
+			$(escapeId(msg["id"])+" .channelInfo").text(callerInfo);
 
-// 			//linked to something we know, so we can draw a line?
-// 			if (msg["linkId"] != "" && $(escapeId(msg["linkId"])).length!=0)
-// 			{
-// 				$(escapeId(msg["id"])+" .channelLink").drawLine(
-// 					$(escapeId(msg["id"])).offset().left,
-// 					$(escapeId(msg["id"])).offset().top,
-// 					$(escapeId(msg["linkId"])).offset().left,
-// 					$(escapeId(msg["linkId"])).offset().top
-// 				);
-// 			}
+			//add the update-info to the debug object
+			$(escapeId(msg["id"])+" .channelDebug").append(
+				"<br><b>asterisk_updateChannel</b><br>"
+			);
+			for (var msgI in msg)
+			{
+				if (msgI!="id" )
+				{
+					$(escapeId(msg["id"])+" .channelDebug").append(
+						msgI+"="+msg[msgI]+"<br>"
+					);
+				}
+			}
+
 
 		});
 
 
  		synapse_register("asterisk_delChannel",function(msg_src, msg_dst, msg_event, msg)
  		{
-			$(escapeId(msg["id"])).remove();
+			$(escapeId(msg["id"])+" .channelInfo").prepend("<b>ENDED</b><br>");
+
+			$(escapeId(msg["id"])).css("background", "gray");
+			//let the channel exist a while after hanging up
+			setTimeout(function() { $(escapeId(msg["id"])).remove() } , 30000);
 		});
+
 
  		synapse_register("module_SessionEnded",function(msg_src, msg_dst, msg_event, msg)
  		{
@@ -312,6 +339,8 @@
 			left: 1.9em;
 			position: absolute;
 			border-style: solid;
+			z-index:2;
+			display: none;
 		}
 
 	</style>

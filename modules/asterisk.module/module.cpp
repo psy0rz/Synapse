@@ -93,6 +93,10 @@ namespace ami
 
 	string getDeviceIdFromChannel(string channel)
 	{
+		//a channel can be either:
+		// technology/number-random
+		//or
+		// agent/number
 		smatch what;
 		if (!regex_search(
 			channel,
@@ -100,8 +104,10 @@ namespace ami
 			boost::regex("^(.*)-([^-]*)$")
 		))
 		{
-			WARNING("Invalid channel: " << channel << ", using 'unknown' instead");
-			return (string("unknown"));
+			//return whole string, appearently there is no random channel identifier added. (happens with agents)
+			return (channel);
+//			WARNING("Invalid channel: " << channel << ", using 'unknown' instead");
+//	/		return (string("unknown"));
 		}
 		else
 		{
@@ -226,7 +232,7 @@ namespace ami
 		CchannelPtr linkChannelPtr;
 		string callerId;
 		string callerIdName;
-		bool incoming;
+		bool initiator;
 		CdevicePtr devicePtr;
 
 		int linkChangesSent;		
@@ -239,7 +245,7 @@ namespace ami
 			changes=1;
 			changesSent=0;
 			linkChangesSent=0;
-			incoming=false;
+			initiator=true;
 		}
 
 		void sendDebug(Cmsg msg, int serverId)
@@ -255,6 +261,16 @@ namespace ami
 		int getChanges()
 		{
 			return (changes);
+		}
+
+		void setInitiator(bool initiator)
+		{
+			if (initiator!=this->initiator)
+			{
+				this->initiator=initiator;
+				changes++;
+			}
+
 		}
 
 		void setDevice(CdevicePtr devicePtr)
@@ -329,10 +345,6 @@ namespace ami
 
 		void setState(string state)
 		{
-			if (state=="Ring")
-				incoming=false;
-			else if (state=="Ringing")
-				incoming=true;
 	
 			if (state!=this->state)
 			{
@@ -379,7 +391,7 @@ namespace ami
 			out.dst=forceDst;
 			out["id"]=id;
 			out["state"]=state;
-			out["incoming"]=incoming;
+			out["initiator"]=initiator;
 			out["callerId"]=callerId;
 			out["callerIdName"]=callerIdName;
 
@@ -699,19 +711,34 @@ void channelStatus(Cmsg & msg)
 
 	//NOTE: whats with all the different namings and <unknown> vs <Unknown> in Newcallerid?
 
-	if (msg.isSet("CallerIDNum") && msg["CallerIDNum"].str() != "<unknown>")
-	 	channelPtr->setCallerId(msg["CallerIDNum"]);
+	if (msg.isSet("CallerIDNum"))
+	{
+		if (msg["CallerIDNum"].str() == "<unknown>")
+		 	;//channelPtr->setCallerId("");
+		else
+		 	channelPtr->setCallerId(msg["CallerIDNum"]);
+	}
 
-	if (msg.isSet("CallerID") && msg["CallerID"].str() != "<unknown>")
-	 	channelPtr->setCallerId(msg["CallerID"]);
+	if (msg.isSet("CallerID"))
+	{
+		if (msg["CallerID"].str() == "<unknown>")
+		 	;//channelPtr->setCallerId("");
+		else
+		 	channelPtr->setCallerId(msg["CallerID"]);
+	}
 
-	if (msg.isSet("CallerIDName") && msg["CallerIDName"].str() != "<unknown>")
-	 	channelPtr->setCallerIdName(msg["CallerIDName"]);
+	if (msg.isSet("CallerIDName"))
+	{
+		if (msg["CallerIDName"].str() == "<unknown>")
+		 	channelPtr->setCallerIdName("");
+		else
+			channelPtr->setCallerIdName(msg["CallerIDName"]);
+	}
 
 	devicePtr->sendChanges();
 	channelPtr->sendChanges();
-
 	channelPtr->sendDebug(msg, msg.dst);
+
 	
 }
 
@@ -881,9 +908,8 @@ SYNAPSE_REGISTER(ami_Event_Newexten)
  |Uniqueid = 1269866053.55 (string)*/
 
 
-	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
-	channelPtr->sendDebug(msg, msg.dst);
-// 	channelPtr->setCallingTo(msg["Extension"]);
+// 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+// 	channelPtr->sendDebug(msg, msg.dst);
 
 	if (msg["Extension"].str() == "9991234" )
 	{
@@ -934,7 +960,21 @@ SYNAPSE_REGISTER(ami_Event_Dial)
 	channelPtr1->setLink(channelPtr2);
 	channelPtr2->setLink(channelPtr1);
 
+	channelPtr1->setInitiator(true);
+	channelPtr2->setInitiator(false);
 	
+	//in case of followme and other situation its important we use the Dial callerId as well, for SrcUniqueID:
+	if (msg["CallerID"].str() == "<unknown>")
+	 	;//channelPtr->setCallerId("");
+	else
+	 	channelPtr1->setCallerId(msg["CallerID"]);
+
+	if (msg["CallerIDName"].str() == "<unknown>")
+	 	channelPtr1->setCallerIdName("");
+	else
+		channelPtr1->setCallerIdName(msg["CallerIDName"]);
+
+
 
 	//this will automagically send updates to BOTH channels, sinces they're linked now:
 	channelPtr1->sendChanges();
@@ -1002,10 +1042,14 @@ SYNAPSE_REGISTER(ami_Event_Newcallerid)
 
 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
 
-	if (msg["CallerID"].str() != "<Unknown>")
+	if (msg["CallerID"].str() == "<Unknown>")
+	 	;//channelPtr->setCallerId("");
+	else
 	 	channelPtr->setCallerId(msg["CallerID"]);
 
-	if (msg["CallerIDName"].str() != "<Unknown>")
+	if (msg["CallerIDName"].str() == "<Unknown>")
+	 	channelPtr->setCallerIdName("");
+	else
 	 	channelPtr->setCallerIdName(msg["CallerIDName"]);
 	
 	channelPtr->sendChanges();
