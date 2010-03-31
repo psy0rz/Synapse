@@ -48,7 +48,10 @@
 		function escapeId(myid) { 
 			//escape stuff to make it jquery compatible. asterisk channel ids look like this:
 			// Local/10@from-inside-TR_Dozy-6829,2
-			return '#' + myid.replace(/([,@\/.])/g,'\\$1');
+			if (typeof myid != 'undefined')
+				return '#' + myid.replace(/([,@\/.])/g,'\\$1');
+			else
+				return '#undefined';
 		}
 
  		synapse_register("asterisk_updateDevice",function(msg_src, msg_dst, msg_event, msg)
@@ -184,9 +187,17 @@
 			}
 
 
-			//determin caller info
+			//determine caller info
 			var callerInfo="";
-			callerInfo="CallerID " + prettyCallerId(msg["callerId"], msg["callerIdName"]);
+			
+			calllerInfo+=msg["state"]+" ";
+
+			if (msg["firstExtension"]!="")
+			{
+				callerInfo+="Calling to "+msg["firstExtension"]+". ";
+			}
+
+			callerInfo+="CallerID " + prettyCallerId(msg["callerId"], msg["callerIdName"]);
 			if (typeof msg["linkCallerId"] != 'undefined')
 			{
 				callerInfo+=", connected to " + prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);

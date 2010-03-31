@@ -608,7 +608,7 @@ SYNAPSE_REGISTER(http_json_Listen)
 		else
 		{
 			//default is 100 connections
-			connections=10;		
+			connections=100;		
 		}
 
 

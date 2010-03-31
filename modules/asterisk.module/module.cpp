@@ -232,10 +232,12 @@ namespace ami
 		CchannelPtr linkChannelPtr;
 		string callerId;
 		string callerIdName;
+		string linkCallerId;
+		string linkCallerIdName;
+		string firstExtension;
 		bool initiator;
 		CdevicePtr devicePtr;
 
-		int linkChangesSent;		
 		int changesSent;		
 
 		public:
@@ -244,7 +246,6 @@ namespace ami
 		{
 			changes=1;
 			changesSent=0;
-			linkChangesSent=0;
 			initiator=true;
 		}
 
@@ -261,6 +262,22 @@ namespace ami
 		int getChanges()
 		{
 			return (changes);
+		}
+
+
+		void setFirstExtension(string firstExtension)
+		{
+			if (firstExtension!=this->firstExtension)
+			{
+				this->firstExtension=firstExtension;
+				changes++;
+			}
+
+		}
+
+		string getFirstExtension()
+		{
+			return(firstExtension);
 		}
 
 		void setInitiator(bool initiator)
@@ -297,8 +314,12 @@ namespace ami
 			if (channelPtr!=this->linkChannelPtr)
 			{
 				this->linkChannelPtr=channelPtr;
+				if (linkChannelPtr!=CchannelPtr())
+				{
+					linkChannelPtr->setLinkCallerId(callerId);
+					linkChannelPtr->setLinkCallerIdName(callerIdName);
+				}
 				changes++;
-				linkChangesSent=0;
 			}
 		}
 
@@ -319,6 +340,8 @@ namespace ami
 			if (callerId!=this->callerId)
 			{
 				this->callerId=callerId;
+				if (linkChannelPtr!=CchannelPtr())
+					linkChannelPtr->setLinkCallerId(callerId);
 				changes++;
 			}
 		}
@@ -328,6 +351,26 @@ namespace ami
 			if (callerIdName!=this->callerIdName)
 			{
 				this->callerIdName=callerIdName;
+				if (linkChannelPtr!=CchannelPtr())
+					linkChannelPtr->setLinkCallerIdName(callerIdName);
+				changes++;
+			}
+		}
+
+		void setLinkCallerId(string callerId)
+		{
+			if (callerId!=this->linkCallerId)
+			{
+				this->linkCallerId=callerId;
+				changes++;
+			}
+		}
+
+		void setLinkCallerIdName(string callerIdName)
+		{
+			if (callerIdName!=this->linkCallerIdName)
+			{
+				this->linkCallerIdName=callerIdName;
 				changes++;
 			}
 		}
@@ -367,14 +410,7 @@ namespace ami
 			//are we linked?
 			if (linkChannelPtr!=CchannelPtr())
 			{
-				//are there changes on the linked channel we (THIS channel) didnt send yet?
-				if (linkChannelPtr->getChanges() > linkChangesSent)
-				{
-					linkChangesSent=linkChannelPtr->getChanges();
-					sendIt=true;
-				}
-
-				//let the other channel check for changes as well?
+				//let the other channel check for changes as well
 				//(prevent endless recursion)
 				if (!recursing)
 					linkChannelPtr->sendChanges(true);
@@ -400,11 +436,10 @@ namespace ami
 				out["deviceId"]=devicePtr->getId();
 			}
 
-			if (linkChannelPtr!=CchannelPtr())
-			{
-				out["linkCallerId"]=linkChannelPtr->getCallerId();
-				out["linkCallerIdName"]=linkChannelPtr->getCallerIdName();
-			}
+			out["linkCallerId"]=linkCallerId;
+			out["linkCallerIdName"]=linkCallerIdName;
+
+			out["firstExtension"]=firstExtension;
 
 			out.send();
 		}
@@ -908,19 +943,15 @@ SYNAPSE_REGISTER(ami_Event_Newexten)
  |Uniqueid = 1269866053.55 (string)*/
 
 
-// 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
-// 	channelPtr->sendDebug(msg, msg.dst);
-
-	if (msg["Extension"].str() == "9991234" )
+	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+	if (channelPtr->getFirstExtension()=="")
 	{
-/*		Cmsg out;
-		out.event="ami_Action";
-		out.dst=msg.src;
-		out.src=msg.dst;
-		out["Action"]="Hangup";
-		out["Channel"]=msg["Channel"].str();
-		out.send();*/
+		channelPtr->setFirstExtension(msg["Extension"]);
+		channelPtr->sendChanges();
 	}
+
+	channelPtr->sendDebug(msg, msg.dst);
+
 
 
 }
@@ -1010,6 +1041,15 @@ SYNAPSE_REGISTER(ami_Event_Rename)
 	//we assume a rename only is possible for channels that are already up?
 	channelPtr->setState("Up");
 	channelPtr->setDevice(devicePtr);
+
+	if (channelPtr->getLink()==CchannelPtr())
+	{
+		//when we get renamed while NOT linked, we store the current callerids in the linkedcallerids.
+		//after the rename we usually receive our new caller id immeadiatly
+		channelPtr->setLinkCallerId(channelPtr->getCallerId());
+		channelPtr->setLinkCallerIdName(channelPtr->getCallerIdName());
+	}
+
 	channelPtr->sendChanges();
 	channelPtr->sendDebug(msg, msg.dst);
 }
