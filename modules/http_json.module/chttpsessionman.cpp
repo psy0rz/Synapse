@@ -14,9 +14,9 @@ ChttpSessionMan::ChttpSessionMan()
 	srand48_r(time(NULL), &randomBuffer);
 
 	//important limits:
-	maxSessionIdle=10;
+	maxSessionIdle=20;
 	maxSessions=200;
-	maxSessionQueue=100000;
+	maxSessionQueue=500000;
 }
 
 

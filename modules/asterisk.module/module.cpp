@@ -39,7 +39,7 @@ SYNAPSE_REGISTER(module_Init)
 
 	out.clear();
 	out.event="core_ChangeModule";
-	out["maxThreads"]=1; //NOTE: this module is single threaded only!
+	out["maxThreads"]=1; //NOTE: this module is single threaded only, but we need one thread for the change interval
 	out.send();
 
 	out.clear();
@@ -52,6 +52,12 @@ SYNAPSE_REGISTER(module_Init)
  	out["path"]="modules/ami.module/libami.so";
  	out.send();
 
+
+	out.clear();
+	out.event="core_LoadModule";
+ 	out["path"]="modules/timer.module/libtimer.so";
+ 	out.send();
+
 	//FIXME  clean/permissions
 
 	out.clear();
@@ -62,8 +68,8 @@ SYNAPSE_REGISTER(module_Init)
 
 
 
-	out["event"]=		"asterisk_debugChannel"; 
-	out.send();
+// 	out["event"]=		"asterisk_debugChannel"; 
+// 	out.send();
 
 	out["event"]=		"asterisk_updateChannel"; 
 	out.send();
@@ -88,7 +94,7 @@ SYNAPSE_REGISTER(module_Init)
 
 
 
-namespace ami
+namespace asterisk
 {
 
 	string getDeviceIdFromChannel(string channel)
@@ -408,13 +414,13 @@ namespace ami
 			}	
 
 			//are we linked?
-			if (linkChannelPtr!=CchannelPtr())
-			{
-				//let the other channel check for changes as well
-				//(prevent endless recursion)
-				if (!recursing)
-					linkChannelPtr->sendChanges(true);
-			}
+// 			if (linkChannelPtr!=CchannelPtr())
+// 			{
+// 				//let the other channel check for changes as well
+// 				//(prevent endless recursion)
+// 				if (!recursing)
+// 					linkChannelPtr->sendChanges(true);
+// 			}
 
 			if (sendIt)
 				sendUpdate();
@@ -505,6 +511,18 @@ namespace ami
 			}
 
 		}
+
+		void sendChanges()
+		{
+			//NOTE: usually there are many more devices then channels. and the channels change the most, while devices almost never have changes.
+			//This is why we choose to batch channel changes every second, but send device changes realtime.
+
+			//let all channels send their changes, if they have them.
+			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
+			{
+				I->second->sendChanges();
+			}
+		}
 	
 		CchannelPtr getChannelPtr(string channelId)
 		{
@@ -539,6 +557,7 @@ namespace ami
 
 			//this should send out automated delChannel/delDevice events, on destruction of the objects
 			deviceMap.clear();
+			channelMap.clear();
 		}
 
 		~Cserver()
@@ -553,8 +572,29 @@ namespace ami
 
 }
 
-using namespace ami;
+using namespace asterisk;
 
+SYNAPSE_REGISTER(timer_Ready)
+{
+	Cmsg out;
+	out.clear();
+	out.event="timer_Set";
+	out["seconds"]=1;
+	out["repeat"]=-1;
+	out["dst"]=dst;
+	out["event"]="asterisk_sendChanges";
+	out.send();
+}
+
+SYNAPSE_REGISTER(asterisk_sendChanges)
+{
+	//let all servers send their changes 
+	for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+	{
+		I->second.sendChanges();
+	}
+
+}
 
 
 SYNAPSE_REGISTER(ami_Ready)
@@ -771,7 +811,6 @@ void channelStatus(Cmsg & msg)
 	}
 
 	devicePtr->sendChanges();
-	channelPtr->sendChanges();
 	channelPtr->sendDebug(msg, msg.dst);
 
 	
@@ -887,8 +926,6 @@ SYNAPSE_REGISTER(ami_Event_Link)
 	channelPtr1->setLink(channelPtr2);
 	channelPtr2->setLink(channelPtr1);
 
-	//this will automagically send updates to BOTH channels, sinces they're linked now:
-	channelPtr1->sendChanges();
 
 	channelPtr1->sendDebug(msg, msg.dst);
 	channelPtr2->sendDebug(msg, msg.dst);
@@ -907,12 +944,10 @@ SYNAPSE_REGISTER(ami_Event_Unlink)
 	CallerID2: 605*/
 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid1"]);
 	channelPtr->delLink();
-	channelPtr->sendChanges();
 	channelPtr->sendDebug(msg, msg.dst);
 
 	channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid2"]);
 	channelPtr->delLink();
-	channelPtr->sendChanges();
 	channelPtr->sendDebug(msg, msg.dst);
 
 
@@ -947,7 +982,6 @@ SYNAPSE_REGISTER(ami_Event_Newexten)
 	if (channelPtr->getFirstExtension()=="")
 	{
 		channelPtr->setFirstExtension(msg["Extension"]);
-		channelPtr->sendChanges();
 	}
 
 	channelPtr->sendDebug(msg, msg.dst);
@@ -1008,7 +1042,6 @@ SYNAPSE_REGISTER(ami_Event_Dial)
 
 
 	//this will automagically send updates to BOTH channels, sinces they're linked now:
-	channelPtr1->sendChanges();
 	channelPtr1->sendDebug(msg, msg.dst);
 	channelPtr2->sendDebug(msg, msg.dst);
 
@@ -1050,7 +1083,6 @@ SYNAPSE_REGISTER(ami_Event_Rename)
 		channelPtr->setLinkCallerIdName(channelPtr->getCallerIdName());
 	}
 
-	channelPtr->sendChanges();
 	channelPtr->sendDebug(msg, msg.dst);
 }
 
@@ -1092,7 +1124,6 @@ SYNAPSE_REGISTER(ami_Event_Newcallerid)
 	else
 	 	channelPtr->setCallerIdName(msg["CallerIDName"]);
 	
-	channelPtr->sendChanges();
 	channelPtr->sendDebug(msg, msg.dst);
 
 }

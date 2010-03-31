@@ -546,6 +546,7 @@ class CnetHttp : public Cnet
 
 
 	/// //////////////// PUBLIC INTERFACE FOR NETWORK CONNECTIONS
+	/// these are called via io_service posts.
 	public:
 
 	/** We receive this when the queue is changed and we are (probably) waiting for a message.

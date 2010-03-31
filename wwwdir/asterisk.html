@@ -190,7 +190,7 @@
 			//determine caller info
 			var callerInfo="";
 			
-			calllerInfo+=msg["state"]+" ";
+			callerInfo+=msg["state"]+" ";
 
 			if (msg["firstExtension"]!="")
 			{
@@ -203,43 +203,21 @@
 				callerInfo+=", connected to " + prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);
 			}
 
-/*			if (msg["initiator"]==1)
-			{
-				if (typeof msg["linkCallerId"] == 'undefined')
-				{
-					callerInfo="Calling to " + prettyCallerId(msg["callerId"], msg["callerIdName"]);
-				}
-				else
-				{
-					callerInfo="Outgoing call to " + prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);
-				}
-			}
-			else
-			{
-				if (typeof msg["linkCallerId"] == 'undefined')
-				{
-					callerInfo="Getting called by " + prettyCallerId(msg["callerId"], msg["callerIdName"]);
-				}
-				else
-				{
-					callerInfo="Incoming call from " + prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);
-				}
-			}*/
 			$(escapeId(msg["id"])+" .channelInfo").text(callerInfo);
 
-			//add the update-info to the debug object
-			$(escapeId(msg["id"])+" .channelDebug").append(
-				"<br><b>asterisk_updateChannel</b><br>"
-			);
-			for (var msgI in msg)
-			{
-				if (msgI!="id" )
-				{
-					$(escapeId(msg["id"])+" .channelDebug").append(
-						msgI+"="+msg[msgI]+"<br>"
-					);
-				}
-			}
+// 			//add the update-info to the debug object
+// 			$(escapeId(msg["id"])+" .channelDebug").append(
+// 				"<br><b>asterisk_updateChannel</b><br>"
+// 			);
+// 			for (var msgI in msg)
+// 			{
+// 				if (msgI!="id" )
+// 				{
+// 					$(escapeId(msg["id"])+" .channelDebug").append(
+// 						msgI+"="+msg[msgI]+"<br>"
+// 					);
+// 				}
+// 			}
 
 
 		});

@@ -25,13 +25,47 @@
 <p>
 <code>#include &quot;synapse.h&quot;</code><br>
 <code>#include &lt;boost/regex.hpp&gt;</code><br>
+<code>#include &lt;boost/foreach.hpp&gt;</code><br>
 <table border="0" cellpadding="0" cellspacing="0">
 <tr><td></td></tr>
-<tr><td colspan="2"><br><h2>Functions</h2></td></tr>
-<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="asterisk_8module_2module_8cpp.html#9663bac24258c633a4d8df270e482a1c">SYNAPSE_REGISTER</a> (module_Init)</td></tr>
+<tr><td colspan="2"><br><h2>Classes</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><b>ami::Cdevice</b></td></tr>
 
-<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="86a662ae95db11c263a95474f1ff9acf"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="86a662ae95db11c263a95474f1ff9acf" args="(ami_Ready)" -->
-&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Ready)</td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><b>ami::Cchannel</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top">class &nbsp;</td><td class="memItemRight" valign="bottom"><b>ami::Cserver</b></td></tr>
+
+<tr><td colspan="2"><br><h2>Typedefs</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="3e0956e42fff49342b461a58c9752108"></a><!-- doxytag: member="asterisk.module/module.cpp::CdevicePtr" ref="3e0956e42fff49342b461a58c9752108" args="" -->
+typedef shared_ptr&lt; class Cdevice &gt;&nbsp;</td><td class="memItemRight" valign="bottom"><b>ami::CdevicePtr</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="436c5e65f69c1c83c93f30d787989e7e"></a><!-- doxytag: member="asterisk.module/module.cpp::CdeviceMap" ref="436c5e65f69c1c83c93f30d787989e7e" args="" -->
+typedef map&lt; string, CdevicePtr &gt;&nbsp;</td><td class="memItemRight" valign="bottom"><b>ami::CdeviceMap</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f935628d6077ae4a0595c8af4ffe142f"></a><!-- doxytag: member="asterisk.module/module.cpp::CchannelPtr" ref="f935628d6077ae4a0595c8af4ffe142f" args="" -->
+typedef shared_ptr&lt; class <br class="typebreak">
+Cchannel &gt;&nbsp;</td><td class="memItemRight" valign="bottom"><b>ami::CchannelPtr</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="8bdc83700af9010b16e1ad0bcf10613c"></a><!-- doxytag: member="asterisk.module/module.cpp::CchannelMap" ref="8bdc83700af9010b16e1ad0bcf10613c" args="" -->
+typedef map&lt; string, CchannelPtr &gt;&nbsp;</td><td class="memItemRight" valign="bottom"><b>ami::CchannelMap</b></td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="60d3f2e57ecaed304e8295d318338c4d"></a><!-- doxytag: member="asterisk.module/module.cpp::CserverMap" ref="60d3f2e57ecaed304e8295d318338c4d" args="" -->
+typedef map&lt; int, Cserver &gt;&nbsp;</td><td class="memItemRight" valign="bottom"><b>ami::CserverMap</b></td></tr>
+
+<tr><td colspan="2"><br><h2>Functions</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="9663bac24258c633a4d8df270e482a1c"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="9663bac24258c633a4d8df270e482a1c" args="(module_Init)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (module_Init)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="6f6c85e5ffd964948ff1702d84b879c7"></a><!-- doxytag: member="asterisk.module/module.cpp::getDeviceIdFromChannel" ref="6f6c85e5ffd964948ff1702d84b879c7" args="(string channel)" -->
+string&nbsp;</td><td class="memItemRight" valign="bottom"><b>ami::getDeviceIdFromChannel</b> (string channel)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="asterisk_8module_2module_8cpp.html#86a662ae95db11c263a95474f1ff9acf">SYNAPSE_REGISTER</a> (ami_Ready)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top">&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="asterisk_8module_2module_8cpp.html#3a04e5239862f2f47d71c9277973376e">SYNAPSE_REGISTER</a> (asterisk_Connect)</td></tr>
+
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Connects to specified asterisk server.  <a href="#3a04e5239862f2f47d71c9277973376e"></a><br></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="b64cea831acc27e9a410187c79be1e0a"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="b64cea831acc27e9a410187c79be1e0a" args="(module_SessionStart)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (module_SessionStart)</td></tr>
 
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="f1e5e7b77a038618e7faa3a89cf61772"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="f1e5e7b77a038618e7faa3a89cf61772" args="(ami_Connected)" -->
 &nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Connected)</td></tr>
@@ -39,19 +73,120 @@
 <tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="538d32c071bb14c50333893986749434"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="538d32c071bb14c50333893986749434" args="(ami_Response_Success)" -->
 &nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Response_Success)</td></tr>
 
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="9f690e3b94f31a25e7db569b80b54d1c"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="9f690e3b94f31a25e7db569b80b54d1c" args="(ami_Response_Error)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Response_Error)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e2586237008907aadc036de8f9274928"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="e2586237008907aadc036de8f9274928" args="(ami_Disconnected)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Disconnected)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="fc659b01dcb0bb40242c72ad9e9f552a"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="fc659b01dcb0bb40242c72ad9e9f552a" args="(module_SessionEnd)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (module_SessionEnd)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="bbc220037582f9b356fc6a6652d314fc"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="bbc220037582f9b356fc6a6652d314fc" args="(asterisk_refresh)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (asterisk_refresh)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="0594337df5381ae05ca00048370d7852"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="0594337df5381ae05ca00048370d7852" args="(ami_Event_PeerEntry)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Event_PeerEntry)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="fd941457e5910dd82d0bf95f7dbb99ad"></a><!-- doxytag: member="asterisk.module/module.cpp::channelStatus" ref="fd941457e5910dd82d0bf95f7dbb99ad" args="(Cmsg &amp;msg)" -->
+void&nbsp;</td><td class="memItemRight" valign="bottom"><b>channelStatus</b> (Cmsg &amp;msg)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="7c723b309e8caa99f2779bf798901bc1"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="7c723b309e8caa99f2779bf798901bc1" args="(ami_Event_Newchannel)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Event_Newchannel)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="e8423bcd2e4a6f94fabae5147e77950e"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="e8423bcd2e4a6f94fabae5147e77950e" args="(ami_Event_Status)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Event_Status)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="218d53ad1a19e26d4990e9cdeeff64e8"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="218d53ad1a19e26d4990e9cdeeff64e8" args="(ami_Event_Newstate)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Event_Newstate)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a3b6ecbaa10a823a55c3f04fe82a3bae"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="a3b6ecbaa10a823a55c3f04fe82a3bae" args="(ami_Event_Hangup)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Event_Hangup)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a2fb104044529b4308ca894f51c18206"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="a2fb104044529b4308ca894f51c18206" args="(ami_Event_PeerStatus)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Event_PeerStatus)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="5da1dcd4eede5ad511b1637110b8f3ef"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="5da1dcd4eede5ad511b1637110b8f3ef" args="(ami_Event_Link)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Event_Link)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="14d4d68ac8b557d7dde6d19fe2cc696d"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="14d4d68ac8b557d7dde6d19fe2cc696d" args="(ami_Event_Unlink)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Event_Unlink)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="a02897e4ec6effc9ae7a431a100d7043"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="a02897e4ec6effc9ae7a431a100d7043" args="(ami_Event_Newexten)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Event_Newexten)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="93371d57d615e6cbe8e1b28e5d969e2c"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="93371d57d615e6cbe8e1b28e5d969e2c" args="(ami_Event_Dial)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Event_Dial)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="4687c7c14ccbce8d47df13d8fa26d06c"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="4687c7c14ccbce8d47df13d8fa26d06c" args="(ami_Event_Rename)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Event_Rename)</td></tr>
+
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="70fe2fc1318f73da40f33a3e7c92dc90"></a><!-- doxytag: member="asterisk.module/module.cpp::SYNAPSE_REGISTER" ref="70fe2fc1318f73da40f33a3e7c92dc90" args="(ami_Event_Newcallerid)" -->
+&nbsp;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (ami_Event_Newcallerid)</td></tr>
+
+<tr><td colspan="2"><br><h2>Variables</h2></td></tr>
+<tr><td class="memItemLeft" nowrap align="right" valign="top"><a class="anchor" name="82b9e49515bdc14afb2050341232a217"></a><!-- doxytag: member="asterisk.module/module.cpp::serverMap" ref="82b9e49515bdc14afb2050341232a217" args="" -->
+CserverMap&nbsp;</td><td class="memItemRight" valign="bottom"><b>ami::serverMap</b></td></tr>
+
 </table>
 <hr><a name="_details"></a><h2>Detailed Description</h2>
 Asterisk Control Module. 
 <p>
-Uses the AMI module (and maybe others) to track and control asterisk. <hr><h2>Function Documentation</h2>
-<a class="anchor" name="9663bac24258c633a4d8df270e482a1c"></a><!-- doxytag: member="module.cpp::SYNAPSE_REGISTER" ref="9663bac24258c633a4d8df270e482a1c" args="(module_Init)" -->
+Uses the AMI module (and maybe others) to track and control asterisk.<p>
+<div class="fragment"><pre class="fragment">To capture test-data from a asterisk server:
+  script -c telnet 1.2.3.4 5038 -t ami.txt 2&gt; ami.timing
+
+and login with:
+ Action: Login
+ ActionID: Login
+ Events: on
+ Secret: password
+ UserName: username
+
+
+
+To setup a fake server replaying <span class="keyword">this</span>:
+
+ tcpserver 0.0.0.0 5555 scriptreplay ami.timing ami.txt
+</pre></div> <hr><h2>Function Documentation</h2>
+<a class="anchor" name="3a04e5239862f2f47d71c9277973376e"></a><!-- doxytag: member="module.cpp::SYNAPSE_REGISTER" ref="3a04e5239862f2f47d71c9277973376e" args="(asterisk_Connect)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
           <td class="memname">SYNAPSE_REGISTER           </td>
           <td>(</td>
-          <td class="paramtype">module_Init&nbsp;</td>
+          <td class="paramtype">asterisk_Connect&nbsp;</td>
+          <td class="paramname">          </td>
+          <td>&nbsp;)&nbsp;</td>
+          <td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>
+Connects to specified asterisk server. 
+<p>
+<dl compact><dt><b>Parameters:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>host</em>&nbsp;</td><td>Hostname of the asterisk server. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>port</em>&nbsp;</td><td>AMI port (normally 5038) </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>username</em>&nbsp;</td><td>Asterisk manager username </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>password</em>&nbsp;</td><td>Asterisk manager password </td></tr>
+  </table>
+</dl>
+
+</div>
+</div><p>
+<a class="anchor" name="86a662ae95db11c263a95474f1ff9acf"></a><!-- doxytag: member="module.cpp::SYNAPSE_REGISTER" ref="86a662ae95db11c263a95474f1ff9acf" args="(ami_Ready)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">SYNAPSE_REGISTER           </td>
+          <td>(</td>
+          <td class="paramtype">ami_Ready&nbsp;</td>
           <td class="paramname">          </td>
           <td>&nbsp;)&nbsp;</td>
           <td></td>
@@ -63,11 +198,11 @@ Uses the AMI module (and maybe others) to track and control asterisk. <hr><h2>Fu
 <p>
 
 <p>
-tell the rest of the world we are ready for duty 
+if ami is ready, we are ready ;) 
 </div>
 </div><p>
 </div>
-<hr size="1"><address style="text-align: right;"><small>Generated on Mon Mar 22 12:59:42 2010 for Synapsemoduledocumentation by&nbsp;
+<hr size="1"><address style="text-align: right;"><small>Generated on Wed Mar 31 18:10:58 2010 for Synapsemoduledocumentation by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img src="doxygen.png" alt="doxygen" align="middle" border="0"></a> 1.5.8 </small></address>
 </body>
