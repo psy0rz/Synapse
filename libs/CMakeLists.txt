@@ -6,6 +6,7 @@ ENDIF("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 INCLUDE_DIRECTORIES(.. json_spirit)
 SUBDIRS(json_spirit)
 ADD_LIBRARY(synapse_json STATIC synapse_json.cpp)
+TARGET_LINK_LIBRARIES(synapse_json json_spirit)
 
 
 
