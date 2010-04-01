@@ -69,7 +69,7 @@ SYNAPSE_REGISTER(timer_Set)
 		}
 		struct timespec abstime;
 		abstime.tv_sec=((int)msg["time"]);
-		abstime.tv_nsec=((long double)msg["time"] - (int)msg["time"]  )*1000000000;
+		abstime.tv_nsec=(long int)((long double)msg["time"] - (int)msg["time"]  )*1000000000;
 		clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &abstime ,NULL);
 
 		Cmsg out(msg);
@@ -104,7 +104,7 @@ SYNAPSE_REGISTER(timer_Set)
 		{
 			struct timespec reltime;
 			reltime.tv_sec=((int)msg["seconds"]);
-			reltime.tv_nsec=((long double)msg["seconds"] - (int)msg["seconds"]  )*1000000000;
+			reltime.tv_nsec=(long int)((long double)msg["seconds"] - (int)msg["seconds"]  )*1000000000;
 			clock_nanosleep(CLOCK_REALTIME, 0, &reltime ,NULL);
 			out.send();
 			count++;
