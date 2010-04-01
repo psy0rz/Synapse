@@ -42,7 +42,7 @@ class Cnet
 	public:
 
 	Cnet();
-	~Cnet();
+	virtual ~Cnet();
 
 	//end-user api to ask us to DO stuff: (usually called from CnetMan)
 	void doDisconnect();
