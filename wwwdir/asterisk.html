@@ -63,12 +63,12 @@
 				//add dom objects
 				html="<div class='device' id='"+msg["id"]+"'>";
 				html+="<div class='channelList'></div>";
-				html+="<div class='deviceInfo'>"+msg["id"]+"</div>";
+				html+="<div class='deviceInfo'></div>";
 				html+="</div>";
 				$('#deviceList').append(html);
 			}
 
-			html=msg["callerId"];
+			html=msg["callerId"]+"<br>"+msg["id"];
 			if (!msg["online"])
 			{
 				html+="<br><b>OFFLINE</b>";
@@ -188,22 +188,24 @@
 
 
 			//determine caller info
-			var callerInfo="";
+			var callerInfo="<ul>";
 			
-			callerInfo+=msg["state"]+" ";
+			callerInfo+="<li>Status: "+msg["state"];
 
 			if (msg["firstExtension"]!="")
 			{
-				callerInfo+="Calling to "+msg["firstExtension"]+". ";
+				callerInfo+="<li>Calling to "+msg["firstExtension"]+". ";
 			}
 
-			callerInfo+="CallerID " + prettyCallerId(msg["callerId"], msg["callerIdName"]);
+			callerInfo+="<li>CallerID " + prettyCallerId(msg["callerId"], msg["callerIdName"]);
 			if (typeof msg["linkCallerId"] != 'undefined')
 			{
-				callerInfo+=", connected to " + prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);
+				callerInfo+="<li>Connected to " + prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);
 			}
 
-			$(escapeId(msg["id"])+" .channelInfo").text(callerInfo);
+			callerInfo+="</ul>";
+
+			$(escapeId(msg["id"])+" .channelInfo").html(callerInfo);
 
 // 			//add the update-info to the debug object
 // 			$(escapeId(msg["id"])+" .channelDebug").append(
