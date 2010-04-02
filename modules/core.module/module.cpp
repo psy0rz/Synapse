@@ -577,9 +577,6 @@ SYNAPSE_REGISTER(core_Shutdown)
 
 
 /** Delete \c src session.
-	\param path The absolute pathname of the .so file.
-
-\post The module specified by path is loaded.
 
 \par Replies \c module_SessionEnd:
 	To \c src to indicate session has ended.

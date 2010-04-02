@@ -71,6 +71,13 @@ SYNAPSE_REGISTER(module_Init)
 // 	out["event"]=		"asterisk_debugChannel"; 
 // 	out.send();
 
+
+	out["event"]=		"asterisk_login"; 
+	out.send();
+
+	out["event"]=		"asterisk_auth"; 
+	out.send();
+
 	out["event"]=		"asterisk_updateChannel"; 
 	out.send();
 
@@ -121,14 +128,75 @@ namespace asterisk
 		}
 	}
 
+	
+	//sessions: ever synapse session has a corresponding session object here
+	class Csession
+	{
+		private:
+		int id;
+		bool authenticated;
+
+		public:
+		Csession()
+		{
+			authenticated=false;
+		}
+
+		void setId(int id)
+		{
+			this->id=id;
+
+		}
+
+
+	};
+
+	typedef shared_ptr<class asterisk::Csession> CsessionPtr;
+	typedef map<int, CsessionPtr> CsessionMap;
+	CsessionMap sessionMap;
+
+	typedef shared_ptr<class Cgroup> CgroupPtr;
+	typedef map<string, CgroupPtr> CgroupMap;
+	CgroupMap groupMap;
+
 	typedef shared_ptr<class Cdevice> CdevicePtr;
 	typedef map<string, CdevicePtr> CdeviceMap;
+
 	typedef shared_ptr<class Cchannel> CchannelPtr;
 	typedef map<string, CchannelPtr> CchannelMap;
 
-	
-	
-	
+	typedef map<int, class Cserver> CserverMap;
+	CserverMap serverMap;
+
+
+	//groups: mostly a tennant is considered a group. 
+	//events are only sent to Csessions that are member of the same group as the corresponding device.
+	class Cgroup
+	{
+		private:
+		string id;
+		bool changed;
+
+
+		public:
+		Cgroup()
+		{
+			changed=true;
+		}
+
+		void setId(string id)
+		{
+			if (id!=this->id)
+			{
+				this->id=id;
+				changed=true;
+			}
+		}
+
+	};	
+
+	//devices: these can be sip devices, misdn, local channels, agent-stuff etc
+	//every device points to a corresponding Cgroup. 
 	class Cdevice
 	{
 		private: 
@@ -137,14 +205,25 @@ namespace asterisk
 		string callerId;
 		string id;
 		bool changed;
+		CgroupPtr groupPtr;	
 	
 		public:
 
 		Cdevice()
 		{
+
 			changed=true;
 			id="";
 			online=true;
+		}
+
+		void setGroup(CgroupPtr groupPtr)
+		{
+			if (groupPtr!=this->groupPtr)
+			{
+				this->groupPtr=groupPtr;
+				changed=true;
+			}
 		}
 
 		void setId(string id)
@@ -228,6 +307,7 @@ namespace asterisk
 		
 	};
 	
+	//asterisk channels. these always point to a corresponding Cdevice
 	class Cchannel
 	{
 		private:
@@ -467,7 +547,7 @@ namespace asterisk
 	};
 	
 	
-	
+	//physical asterisk servers. ever server has its own device and channel map	
 	class Cserver
 	{
 		private:
@@ -567,573 +647,599 @@ namespace asterisk
 
 	};
 	
-	typedef map<int, Cserver> CserverMap;
-	CserverMap serverMap;
 
-}
-
-using namespace asterisk;
-
-SYNAPSE_REGISTER(timer_Ready)
-{
-	Cmsg out;
-	out.clear();
-	out.event="timer_Set";
-	out["seconds"]=1;
-	out["repeat"]=-1;
-	out["dst"]=dst;
-	out["event"]="asterisk_sendChanges";
-	out.send();
-}
-
-SYNAPSE_REGISTER(asterisk_sendChanges)
-{
-	//let all servers send their changes 
-	for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+	
+	SYNAPSE_REGISTER(timer_Ready)
 	{
-		I->second.sendChanges();
+		Cmsg out;
+		out.clear();
+		out.event="timer_Set";
+		out["seconds"]=1;
+		out["repeat"]=-1;
+		out["dst"]=dst;
+		out["event"]="asterisk_sendChanges";
+		out.send();
 	}
-
-}
-
-
-SYNAPSE_REGISTER(ami_Ready)
-{
-	///if ami is ready, we are ready ;)
-	Cmsg out;
-	out.clear();
-	out.event="core_Ready";
-	out.send();
-}
-
-/** Connects to specified asterisk server
-	\param host Hostname of the asterisk server.
-	\param port AMI port (normally 5038)
-	\param username Asterisk manager username
-	\param password Asterisk manager password
-
-*/
-SYNAPSE_REGISTER(asterisk_Connect)
-{
-	//ami connections are src-session based, so we need a new session for every connection.
-	Cmsg out;
-	out.event="core_NewSession";
-	out["server"]["username"]=msg["username"];
-	out["server"]["password"]=msg["password"];
-	out["server"]["port"]=msg["port"];
-	out["server"]["host"]=msg["host"];
-	out.send();
-}
-
-
-SYNAPSE_REGISTER(module_SessionStart)
-{
-
-	serverMap[msg.dst].id=msg["server"]["username"].str()+
-							"@"+msg["server"]["host"].str()+
-							":"+msg["server"]["port"].str();
 	
-	serverMap[msg.dst].username=msg["server"]["username"].str();
-	serverMap[msg.dst].password=msg["server"]["password"].str();
-
-	Cmsg out;
-	out.clear();
-	out.event="ami_Connect";
-	out.src=msg.dst;
-	out["host"]=msg["server"]["host"].str();
-	out["port"]=msg["server"]["port"].str();
-	out.send();
 	
-}
-
-
-SYNAPSE_REGISTER(ami_Connected)
-{
-	//ami is connected, now login with the right credentials for this server:
-	Cmsg out;
-	out.clear();
-	out.src=msg.dst;
-	out.event="ami_Action";
-	out["Action"]="Login";
-	out["UserName"]=serverMap[msg.dst].username;
-	out["Secret"]=serverMap[msg.dst].password;
-	out["ActionID"]="Login";
-	out["Events"]="on";
-	out.send();
-
-}
-
-SYNAPSE_REGISTER(ami_Response_Success)
-{
+	/** Registers \c src session as a potential receiver of asterisk events.
 	
-	//AMI is broken by design: why didnt they just use a Event, instead of defining the format of a Response exception. Now we need to use the ActionID and do extra marshhalling:
-	if (msg["ActionID"].str()=="SIPshowPeer")
+	\par Replys \c asterisk_auth:
+		The session should authenticate by dialing a special crafted  number. After this asterisk knows to which device the client belongs, and can determine to which group the user belongs.
+			\arg \c number The number the client should call to authenticate.
+	
+	*/
+	SYNAPSE_REGISTER(asterisk_login)
 	{
-		//SIPshowPeer response
-		string deviceId=msg["Channeltype"].str()+"/"+msg["ObjectName"].str();
-		CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(deviceId);
-
-		//NOTE: we handle Unmonitored sip peers as online, while we dont actually know if its online or not.		
-		if (msg["Status"].str().find("OK")==0 || msg["Status"].str().find("Unmonitored")==0)
+		//create a Csession object for the src session
+		sessionMap[msg.src]=CsessionPtr(new Csession());
+	
+		//tell the client how to login
+		stringstream number;
+		number << "999" << msg.src;
+	
+		Cmsg out;
+		out.event="asterisk_auth";
+		out.dst=msg.src;
+		out["number"]=number.str();
+		out.send();
+	}
+	
+	
+	SYNAPSE_REGISTER(module_SessionEnded)
+	{
+		sessionMap.erase(msg["session"]);
+	}
+	
+	SYNAPSE_REGISTER(asterisk_sendChanges)
+	{
+		//let all servers send their changes 
+		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+		{
+			I->second.sendChanges();
+		}
+	
+	}
+	
+	
+	SYNAPSE_REGISTER(ami_Ready)
+	{
+		///if ami is ready, we are ready ;)
+		Cmsg out;
+		out.clear();
+		out.event="core_Ready";
+		out.send();
+	}
+	
+	/** Connects to specified asterisk server
+		\param host Hostname of the asterisk server.
+		\param port AMI port (normally 5038)
+		\param username Asterisk manager username
+		\param password Asterisk manager password
+	
+	*/
+	SYNAPSE_REGISTER(asterisk_Connect)
+	{
+		//ami connections are src-session based, so we need a new session for every connection.
+		Cmsg out;
+		out.event="core_NewSession";
+		out["server"]["username"]=msg["username"];
+		out["server"]["password"]=msg["password"];
+		out["server"]["port"]=msg["port"];
+		out["server"]["host"]=msg["host"];
+		out.send();
+	}
+	
+	
+	SYNAPSE_REGISTER(module_SessionStart)
+	{
+	
+		serverMap[msg.dst].id=msg["server"]["username"].str()+
+								"@"+msg["server"]["host"].str()+
+								":"+msg["server"]["port"].str();
+		
+		serverMap[msg.dst].username=msg["server"]["username"].str();
+		serverMap[msg.dst].password=msg["server"]["password"].str();
+	
+		Cmsg out;
+		out.clear();
+		out.event="ami_Connect";
+		out.src=msg.dst;
+		out["host"]=msg["server"]["host"].str();
+		out["port"]=msg["server"]["port"].str();
+		out.send();
+		
+	}
+	
+	
+	SYNAPSE_REGISTER(ami_Connected)
+	{
+		//ami is connected, now login with the right credentials for this server:
+		Cmsg out;
+		out.clear();
+		out.src=msg.dst;
+		out.event="ami_Action";
+		out["Action"]="Login";
+		out["UserName"]=serverMap[msg.dst].username;
+		out["Secret"]=serverMap[msg.dst].password;
+		out["ActionID"]="Login";
+		out["Events"]="on";
+		out.send();
+	
+	}
+	
+	SYNAPSE_REGISTER(ami_Response_Success)
+	{
+		
+		//AMI is broken by design: why didnt they just use a Event, instead of defining the format of a Response exception. Now we need to use the ActionID and do extra marshhalling:
+		if (msg["ActionID"].str()=="SIPshowPeer")
+		{
+			//SIPshowPeer response
+			string deviceId=msg["Channeltype"].str()+"/"+msg["ObjectName"].str();
+			CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(deviceId);
+	
+			//NOTE: we handle Unmonitored sip peers as online, while we dont actually know if its online or not.		
+			if (msg["Status"].str().find("OK")==0 || msg["Status"].str().find("Unmonitored")==0)
+				devicePtr->setOnline(true);
+			else
+				devicePtr->setOnline(false);
+	
+			if (msg["Callerid"].str() != "\"\" <>")
+				devicePtr->setCallerId(msg["Callerid"].str());
+			else
+				devicePtr->setCallerId(msg["ObjectName"]);
+	
+	
+			devicePtr->sendChanges();
+		}
+		else if (msg["ActionID"].str()=="Login")
+		{
+			//login response
+	
+			//learn all SIP peers as soon as we login
+			Cmsg out;
+			out.clear();
+			out.src=msg.dst;
+			out.event="ami_Action";
+			out["Action"]="SIPPeers";
+			out.send();
+	
+			//learn current channel status as soon as we login
+			out.clear();
+			out.src=msg.dst;
+			out.event="ami_Action";
+			out["Action"]="Status";
+			out.send();
+	
+		}
+			
+		
+	}
+	
+	SYNAPSE_REGISTER(ami_Response_Error)
+	{
+		ERROR("ERROR:" << msg["Message"].str());
+		//TODO: pass to clients?
+	
+	}
+	
+	
+	SYNAPSE_REGISTER(ami_Disconnected)
+	{
+		//since we're disconnected, clear all devices/channels
+		serverMap[msg.dst].clear();
+		
+		//ami reconnects automaticly
+	}
+	
+	SYNAPSE_REGISTER(module_SessionEnd)
+	{
+			
+		serverMap[msg.dst].clear();
+		serverMap.erase(msg.dst);
+	}
+	
+	
+	SYNAPSE_REGISTER(asterisk_refresh)
+	{
+		//indicate start of a refresh, deletes all known state-info in client
+		Cmsg out;
+		out.event="asterisk_reset";
+		out.dst=msg.src; 
+		out.send();
+	
+		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+		{
+			I->second.sendRefresh(msg.src);
+		}
+	
+	}
+	
+	
+	//we got a response to our SIPPeers request.
+	SYNAPSE_REGISTER(ami_Event_PeerEntry)
+	{
+		serverMap[msg.dst].getDevicePtr(msg["Channeltype"].str()+"/"+msg["ObjectName"].str());
+	
+		//request additional device info for this SIP peer
+		//example: "SIP/604"
+		if (msg["Channeltype"].str()=="SIP")
+		{
+			//(peerEntrys should be ALWAYS of type SIP?)
+			Cmsg out;
+			out.clear();
+			out.src=msg.dst;
+			out.dst=msg.src;
+			out.event="ami_Action";
+			out["Action"]="SIPshowPeer";
+			out["ActionID"]="SIPshowPeer";
+			out["Peer"]=msg["ObjectName"].str();
+			out.send();
+		}
+	
+	}
+	
+	void channelStatus(Cmsg & msg)
+	{
+		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+		CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(
+			getDeviceIdFromChannel(msg["Channel"])
+		);
+	
+		channelPtr->setDevice(devicePtr);
+		channelPtr->setState(msg["State"]);
+	
+		//NOTE: whats with all the different namings and <unknown> vs <Unknown> in Newcallerid?
+	
+		if (msg.isSet("CallerIDNum"))
+		{
+			if (msg["CallerIDNum"].str() == "<unknown>")
+				;//channelPtr->setCallerId("");
+			else
+				channelPtr->setCallerId(msg["CallerIDNum"]);
+		}
+	
+		if (msg.isSet("CallerID"))
+		{
+			if (msg["CallerID"].str() == "<unknown>")
+				;//channelPtr->setCallerId("");
+			else
+				channelPtr->setCallerId(msg["CallerID"]);
+		}
+	
+		if (msg.isSet("CallerIDName"))
+		{
+			if (msg["CallerIDName"].str() == "<unknown>")
+				channelPtr->setCallerIdName("");
+			else
+				channelPtr->setCallerIdName(msg["CallerIDName"]);
+		}
+	
+		devicePtr->sendChanges();
+		channelPtr->sendDebug(msg, msg.dst);
+	
+		
+	}
+	
+	
+	// new channel created
+	SYNAPSE_REGISTER(ami_Event_Newchannel)
+	{
+	
+	/*	Event: Newchannel
+		Privilege: call,all
+		Channel: SIP/604-00000069
+		State: Down
+		CallerIDNum: 604
+		CallerIDName: Edwin (draadloos)
+		Uniqueid: 1269871368.143
+	
+		Event: Newchannel
+		Privilege: call,all
+		Channel: SIP/605-0000006a
+		State: Down
+		CallerIDNum: <unknown>
+		CallerIDName: <unknown>
+		Uniqueid: 1269871368.144*/
+	
+		channelStatus(msg);
+	}
+	
+	// initial channel status event, requested just after connecting to an asterisk server.
+	SYNAPSE_REGISTER(ami_Event_Status)
+	{
+	// 	Event: Status
+	// 	Privilege: Call
+	// 	Channel: SIP/601-00000048
+	// 	CallerID: 601
+	// 	CallerIDNum: 601
+	// 	CallerIDName: <unknown>
+	// 	Account:
+	// 	State: Ringing
+	// 	Uniqueid: 1269958019.99
+	// 
+	// 	Event: Status
+	// 	Privilege: Call
+	// 	Channel: SIP/605-00000047
+	// 	CallerID: 605
+	// 	CallerIDNum: 605
+	// 	CallerIDName: <unknown>
+	// 	Account:
+	// 	State: Up
+	// 	Link: SIP/604-00000046
+	// 	Uniqueid: 1269958018.98
+	
+	
+		channelStatus(msg);
+	
+	}
+	
+	// channel status is changing
+	SYNAPSE_REGISTER(ami_Event_Newstate)
+	{
+		/*
+		|CallerID = 605 (string)
+		|CallerIDName = <unknown> (string)
+		|Channel = SIP/605-0000005b (string)
+		|Event = Newstate (string)
+		|Privilege = call,all (string)
+		|State = Ringing (string)
+		|Uniqueid = 1269870185.119 (string)                                                                                                     */
+	
+		channelStatus(msg);
+	}
+	
+	
+	SYNAPSE_REGISTER(ami_Event_Hangup)
+	{
+		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+		channelPtr->sendDebug(msg, msg.dst);
+		serverMap[msg.dst].delChannel(msg["Uniqueid"]);
+	//	serverMap[msg.dst].getDevicePtr(getDeviceId(msg["Channel"]))->sendStatus();
+	//	INFO("\n" << serverMap[msg.dst].getStatusStr());
+	
+	}
+	
+	SYNAPSE_REGISTER(ami_Event_PeerStatus)
+	{
+		
+		CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(msg["Peer"]);
+		if (msg["PeerStatus"].str()=="Reachable" || msg["PeerStatus"].str()=="Registered" )
 			devicePtr->setOnline(true);
 		else
 			devicePtr->setOnline(false);
-
-		if (msg["Callerid"].str() != "\"\" <>")
-			devicePtr->setCallerId(msg["Callerid"].str());
-		else
-			devicePtr->setCallerId(msg["ObjectName"]);
-
-
+	
 		devicePtr->sendChanges();
-	}
-	else if (msg["ActionID"].str()=="Login")
-	{
-		//login response
-
-		//learn all SIP peers as soon as we login
-		Cmsg out;
-		out.clear();
-		out.src=msg.dst;
-		out.event="ami_Action";
-		out["Action"]="SIPPeers";
-		out.send();
-
-		//learn current channel status as soon as we login
-		out.clear();
-		out.src=msg.dst;
-		out.event="ami_Action";
-		out["Action"]="Status";
-		out.send();
-
-	}
-		
 	
-}
-
-SYNAPSE_REGISTER(ami_Response_Error)
-{
-	ERROR("ERROR:" << msg["Message"].str());
-	//TODO: pass to clients?
-
-}
-
-
-SYNAPSE_REGISTER(ami_Disconnected)
-{
-	//since we're disconnected, clear all devices/channels
-	serverMap[msg.dst].clear();
+	}
 	
-	//ami reconnects automaticly
-}
-
-SYNAPSE_REGISTER(module_SessionEnd)
-{
+	
+	
+	SYNAPSE_REGISTER(ami_Event_Link)
+	{
+	/*	Event: Link
+		Privilege: call,all
+		Channel1: SIP/604-00000022
+		Channel2: SIP/605-00000023
+		Uniqueid1: 1269864649.42
+		Uniqueid2: 1269864649.43
+		CallerID1: 604
+		CallerID2: 605*/
+		CchannelPtr channelPtr1=serverMap[msg.dst].getChannelPtr(msg["Uniqueid1"]);
+		CchannelPtr channelPtr2=serverMap[msg.dst].getChannelPtr(msg["Uniqueid2"]);
+	
+		channelPtr1->setLink(channelPtr2);
+		channelPtr2->setLink(channelPtr1);
+	
+	
+		channelPtr1->sendDebug(msg, msg.dst);
+		channelPtr2->sendDebug(msg, msg.dst);
+	}
+	
+	
+	SYNAPSE_REGISTER(ami_Event_Unlink)
+	{
+		/*Event: Unlink
+		Privilege: call,all
+		Channel1: SIP/604-00000020
+		Channel2: SIP/605-00000021
+		Uniqueid1: 1269864479.40
+		Uniqueid2: 1269864479.41
+		CallerID1: 604
+		CallerID2: 605*/
+		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid1"]);
+		channelPtr->delLink();
+		channelPtr->sendDebug(msg, msg.dst);
+	
+		channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid2"]);
+		channelPtr->delLink();
+		channelPtr->sendDebug(msg, msg.dst);
+	
+	
+	
+	}
+	
+	
+	SYNAPSE_REGISTER(ami_Event_Newexten)
+	{
+	// Event: Newexten
+	// Privilege: call,all
+	// Channel: SIP/604-00000007
+	// Context: DLPN_DatuX
+	// Extension: 9991234
+	// Priority: 1
+	// Application: Macro
+	// AppData: trunkdial-failover-0.3|SIP/0858784323/9991234|mISDN/g:trunk_m1/9991234|0858784323|trunk_m1
+	// Uniqueid: 1269802539.12
+	
+	/* |AppData = SIP/605 (string)
+	|Application = Dial (string)
+	|Channel = SIP/604-0000002f (string)
+	|Context = DLPN_DatuX (string)
+	|Event = Newexten (string)
+	|Extension = 605 (string)
+	|Priority = 1 (string)
+	|Privilege = call,all (string)
+	|Uniqueid = 1269866053.55 (string)*/
+	
+	
+		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+		if (channelPtr->getFirstExtension()=="")
+		{
+			channelPtr->setFirstExtension(msg["Extension"]);
+		}
+	
+		channelPtr->sendDebug(msg, msg.dst);
+	
+	
+	
+	}
+	
+	
+	// 
+	// SYNAPSE_REGISTER(ami_Event_ExtensionStatus)
+	// {
+	
+	// }
+	// 
+	
+	SYNAPSE_REGISTER(ami_Event_Dial)
+	{
+	// 	Event: Dial
+	// 	Privilege: call,all
+	// 	Source: SIP/604-0000002f
+	// 	Destination: SIP/605-00000030
+	// 	CallerID: 604
+	// 	CallerIDName: Edwin (draadloos)
+	// 	SrcUniqueID: 1269866053.55
+	// 	DestUniqueID: 1269866053.56
+	
+	// 	Event: Dial
+	// 	Privilege: call,all
+	// 	Source: SIP/604-00000031
+	// 	Destination: mISDN/0-u5
+	// 	CallerID: 0858784323
+	// 	CallerIDName: <unknown>
+	// 	SrcUniqueID: 1269866267.57
+	// 	DestUniqueID: 1269866267.58
+	
+	
+		//NOTE: a "link" for us, is something different then a link for asterisk.
+		CchannelPtr channelPtr1=serverMap[msg.dst].getChannelPtr(msg["SrcUniqueID"]);
+		CchannelPtr channelPtr2=serverMap[msg.dst].getChannelPtr(msg["DestUniqueID"]);
+		channelPtr1->setLink(channelPtr2);
+		channelPtr2->setLink(channelPtr1);
+	
+		channelPtr1->setInitiator(true);
+		channelPtr2->setInitiator(false);
 		
-	serverMap[msg.dst].clear();
-	serverMap.erase(msg.dst);
-}
-
-
-SYNAPSE_REGISTER(asterisk_refresh)
-{
-	//indicate start of a refresh, deletes all known state-info in client
-	Cmsg out;
-	out.event="asterisk_reset";
-	out.dst=msg.src; 
-	out.send();
-
-	for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
-	{
-		I->second.sendRefresh(msg.src);
-	}
-
-}
-
-
-//we got a response to our SIPPeers request.
-SYNAPSE_REGISTER(ami_Event_PeerEntry)
-{
-	serverMap[msg.dst].getDevicePtr(msg["Channeltype"].str()+"/"+msg["ObjectName"].str());
-
-	//request additional device info for this SIP peer
-	//example: "SIP/604"
-	if (msg["Channeltype"].str()=="SIP")
-	{
-		//(peerEntrys should be ALWAYS of type SIP?)
-		Cmsg out;
-		out.clear();
-		out.src=msg.dst;
-		out.dst=msg.src;
-		out.event="ami_Action";
-		out["Action"]="SIPshowPeer";
-		out["ActionID"]="SIPshowPeer";
-		out["Peer"]=msg["ObjectName"].str();
-		out.send();
-	}
-
-}
-
-void channelStatus(Cmsg & msg)
-{
-	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
-	CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(
-		getDeviceIdFromChannel(msg["Channel"])
-	);
-
-	channelPtr->setDevice(devicePtr);
-	channelPtr->setState(msg["State"]);
-
-	//NOTE: whats with all the different namings and <unknown> vs <Unknown> in Newcallerid?
-
-	if (msg.isSet("CallerIDNum"))
-	{
-		if (msg["CallerIDNum"].str() == "<unknown>")
-		 	;//channelPtr->setCallerId("");
-		else
-		 	channelPtr->setCallerId(msg["CallerIDNum"]);
-	}
-
-	if (msg.isSet("CallerID"))
-	{
+		//in case of followme and other situation its important we use the Dial callerId as well, for SrcUniqueID:
 		if (msg["CallerID"].str() == "<unknown>")
-		 	;//channelPtr->setCallerId("");
+			;//channelPtr->setCallerId("");
 		else
-		 	channelPtr->setCallerId(msg["CallerID"]);
-	}
-
-	if (msg.isSet("CallerIDName"))
-	{
+			channelPtr1->setCallerId(msg["CallerID"]);
+	
 		if (msg["CallerIDName"].str() == "<unknown>")
-		 	channelPtr->setCallerIdName("");
+			channelPtr1->setCallerIdName("");
+		else
+			channelPtr1->setCallerIdName(msg["CallerIDName"]);
+	
+	
+	
+		//this will automagically send updates to BOTH channels, sinces they're linked now:
+		channelPtr1->sendDebug(msg, msg.dst);
+		channelPtr2->sendDebug(msg, msg.dst);
+	
+	/*
+		channelPtr=serverMap[msg.dst].getChannelPtr(msg["DestUniqueID"]);
+		channelPtr->setLink(msg["SrcUniqueID"]);*/
+	
+	// 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Destination"]);
+	// 	channelPtr->setCallerId("gettingcalled\"" + msg["CallerIDName"].str() + "\" <" + msg["CallerID"].str() + ">" );
+	
+	// 	channelPtr=serverMap[msg.dst].getChannelPtr(msg["Source"]);
+	// 	channelPtr->setCallerId("calling\"" + msg["CallerIDName"].str() + "\" <" + msg["CallerID"].str() + ">" );
+	
+	}
+	
+	// renaming usually happens on things like call-transfers
+	
+	SYNAPSE_REGISTER(ami_Event_Rename)
+	{
+		// Event: Rename
+		// Privilege: call,all
+		// Oldname: SIP/604-00000044
+		// Newname: SIP/605-00000043
+		// Uniqueid: 1269956933.94
+		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+		CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(
+			getDeviceIdFromChannel(msg["Newname"])
+		);
+	
+		//we assume a rename only is possible for channels that are already up?
+		channelPtr->setState("Up");
+		channelPtr->setDevice(devicePtr);
+	
+		if (channelPtr->getLink()==CchannelPtr())
+		{
+			//when we get renamed while NOT linked, we store the current callerids in the linkedcallerids.
+			//after the rename we usually receive our new caller id immeadiatly
+			channelPtr->setLinkCallerId(channelPtr->getCallerId());
+			channelPtr->setLinkCallerIdName(channelPtr->getCallerIdName());
+		}
+	
+		channelPtr->sendDebug(msg, msg.dst);
+	}
+	
+	SYNAPSE_REGISTER(ami_Event_Newcallerid)
+	{
+	// 	Event: Newcallerid
+	// 	Privilege: call,all
+	// 	Channel: SIP/605-00000033
+	// 	CallerID: 605
+	// 	CallerIDName: <Unknown>
+	// 	Uniqueid: 1269866486.60
+	// 	CID-CallingPres: 0 (Presentation Allowed, Not Screened)
+	
+	// Event: Newcallerid
+	// Privilege: call,all
+	// Channel: mISDN/0-u5
+	// CallerID: 0622588835
+	// CallerIDName: <Unknown>
+	// Uniqueid: 1269866267.58
+	// CID-CallingPres: 0 (Presentation Allowed, Not Screened)
+	
+	// Event: Newcallerid
+	// Privilege: call,all
+	// Channel: SIP/604-00000031
+	// CallerID: 0858784323
+	// CallerIDName: <Unknown>
+	// Uniqueid: 1269866267.57
+	// CID-CallingPres: 0 (Presentation Allowed, Not Screened)
+	
+		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+	
+		if (msg["CallerID"].str() == "<Unknown>")
+			;//channelPtr->setCallerId("");
+		else
+			channelPtr->setCallerId(msg["CallerID"]);
+	
+		if (msg["CallerIDName"].str() == "<Unknown>")
+			channelPtr->setCallerIdName("");
 		else
 			channelPtr->setCallerIdName(msg["CallerIDName"]);
+		
+		channelPtr->sendDebug(msg, msg.dst);
+	
 	}
-
-	devicePtr->sendChanges();
-	channelPtr->sendDebug(msg, msg.dst);
-
+	
+	
+	// 
+	// 
+	// SYNAPSE_REGISTER(ami_Event_PeerStatus)
+	// {
+	
+	// 
+	// }
 	
 }
-
-
-// new channel created
-SYNAPSE_REGISTER(ami_Event_Newchannel)
-{
-
-/*	Event: Newchannel
-	Privilege: call,all
-	Channel: SIP/604-00000069
-	State: Down
-	CallerIDNum: 604
-	CallerIDName: Edwin (draadloos)
-	Uniqueid: 1269871368.143
-
-	Event: Newchannel
-	Privilege: call,all
-	Channel: SIP/605-0000006a
-	State: Down
-	CallerIDNum: <unknown>
-	CallerIDName: <unknown>
-	Uniqueid: 1269871368.144*/
-
-	channelStatus(msg);
-}
-
-// initial channel status event, requested just after connecting to an asterisk server.
-SYNAPSE_REGISTER(ami_Event_Status)
-{
-// 	Event: Status
-// 	Privilege: Call
-// 	Channel: SIP/601-00000048
-// 	CallerID: 601
-// 	CallerIDNum: 601
-// 	CallerIDName: <unknown>
-// 	Account:
-// 	State: Ringing
-// 	Uniqueid: 1269958019.99
-// 
-// 	Event: Status
-// 	Privilege: Call
-// 	Channel: SIP/605-00000047
-// 	CallerID: 605
-// 	CallerIDNum: 605
-// 	CallerIDName: <unknown>
-// 	Account:
-// 	State: Up
-// 	Link: SIP/604-00000046
-// 	Uniqueid: 1269958018.98
-
-
-	channelStatus(msg);
-
-}
-
-// channel status is changing
-SYNAPSE_REGISTER(ami_Event_Newstate)
-{
-	/*
-	|CallerID = 605 (string)
-	|CallerIDName = <unknown> (string)
-	|Channel = SIP/605-0000005b (string)
-	|Event = Newstate (string)
-	|Privilege = call,all (string)
-	|State = Ringing (string)
-	|Uniqueid = 1269870185.119 (string)                                                                                                     */
-
-	channelStatus(msg);
-}
-
-
-SYNAPSE_REGISTER(ami_Event_Hangup)
-{
-	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
-	channelPtr->sendDebug(msg, msg.dst);
-	serverMap[msg.dst].delChannel(msg["Uniqueid"]);
-//	serverMap[msg.dst].getDevicePtr(getDeviceId(msg["Channel"]))->sendStatus();
-//	INFO("\n" << serverMap[msg.dst].getStatusStr());
-
-}
-
-SYNAPSE_REGISTER(ami_Event_PeerStatus)
-{
-	
-	CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(msg["Peer"]);
-	if (msg["PeerStatus"].str()=="Reachable" || msg["PeerStatus"].str()=="Registered" )
-		devicePtr->setOnline(true);
-	else
-		devicePtr->setOnline(false);
-
-	devicePtr->sendChanges();
-
-}
-
-
-
-SYNAPSE_REGISTER(ami_Event_Link)
-{
-/*	Event: Link
-	Privilege: call,all
-	Channel1: SIP/604-00000022
-	Channel2: SIP/605-00000023
-	Uniqueid1: 1269864649.42
-	Uniqueid2: 1269864649.43
-	CallerID1: 604
-	CallerID2: 605*/
-	CchannelPtr channelPtr1=serverMap[msg.dst].getChannelPtr(msg["Uniqueid1"]);
-	CchannelPtr channelPtr2=serverMap[msg.dst].getChannelPtr(msg["Uniqueid2"]);
-
-	channelPtr1->setLink(channelPtr2);
-	channelPtr2->setLink(channelPtr1);
-
-
-	channelPtr1->sendDebug(msg, msg.dst);
-	channelPtr2->sendDebug(msg, msg.dst);
-}
-
-
-SYNAPSE_REGISTER(ami_Event_Unlink)
-{
-	/*Event: Unlink
-	Privilege: call,all
-	Channel1: SIP/604-00000020
-	Channel2: SIP/605-00000021
-	Uniqueid1: 1269864479.40
-	Uniqueid2: 1269864479.41
-	CallerID1: 604
-	CallerID2: 605*/
-	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid1"]);
-	channelPtr->delLink();
-	channelPtr->sendDebug(msg, msg.dst);
-
-	channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid2"]);
-	channelPtr->delLink();
-	channelPtr->sendDebug(msg, msg.dst);
-
-
-
-}
-
-
-SYNAPSE_REGISTER(ami_Event_Newexten)
-{
-// Event: Newexten
-// Privilege: call,all
-// Channel: SIP/604-00000007
-// Context: DLPN_DatuX
-// Extension: 9991234
-// Priority: 1
-// Application: Macro
-// AppData: trunkdial-failover-0.3|SIP/0858784323/9991234|mISDN/g:trunk_m1/9991234|0858784323|trunk_m1
-// Uniqueid: 1269802539.12
-
-/* |AppData = SIP/605 (string)
- |Application = Dial (string)
- |Channel = SIP/604-0000002f (string)
- |Context = DLPN_DatuX (string)
- |Event = Newexten (string)
- |Extension = 605 (string)
- |Priority = 1 (string)
- |Privilege = call,all (string)
- |Uniqueid = 1269866053.55 (string)*/
-
-
-	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
-	if (channelPtr->getFirstExtension()=="")
-	{
-		channelPtr->setFirstExtension(msg["Extension"]);
-	}
-
-	channelPtr->sendDebug(msg, msg.dst);
-
-
-
-}
-
-
-// 
-// SYNAPSE_REGISTER(ami_Event_ExtensionStatus)
-// {
-
-// }
-// 
-
-SYNAPSE_REGISTER(ami_Event_Dial)
-{
-// 	Event: Dial
-// 	Privilege: call,all
-// 	Source: SIP/604-0000002f
-// 	Destination: SIP/605-00000030
-// 	CallerID: 604
-// 	CallerIDName: Edwin (draadloos)
-// 	SrcUniqueID: 1269866053.55
-// 	DestUniqueID: 1269866053.56
-
-// 	Event: Dial
-// 	Privilege: call,all
-// 	Source: SIP/604-00000031
-// 	Destination: mISDN/0-u5
-// 	CallerID: 0858784323
-// 	CallerIDName: <unknown>
-// 	SrcUniqueID: 1269866267.57
-// 	DestUniqueID: 1269866267.58
-
-
-	//NOTE: a "link" for us, is something different then a link for asterisk.
-	CchannelPtr channelPtr1=serverMap[msg.dst].getChannelPtr(msg["SrcUniqueID"]);
-	CchannelPtr channelPtr2=serverMap[msg.dst].getChannelPtr(msg["DestUniqueID"]);
-	channelPtr1->setLink(channelPtr2);
-	channelPtr2->setLink(channelPtr1);
-
-	channelPtr1->setInitiator(true);
-	channelPtr2->setInitiator(false);
-	
-	//in case of followme and other situation its important we use the Dial callerId as well, for SrcUniqueID:
-	if (msg["CallerID"].str() == "<unknown>")
-	 	;//channelPtr->setCallerId("");
-	else
-	 	channelPtr1->setCallerId(msg["CallerID"]);
-
-	if (msg["CallerIDName"].str() == "<unknown>")
-	 	channelPtr1->setCallerIdName("");
-	else
-		channelPtr1->setCallerIdName(msg["CallerIDName"]);
-
-
-
-	//this will automagically send updates to BOTH channels, sinces they're linked now:
-	channelPtr1->sendDebug(msg, msg.dst);
-	channelPtr2->sendDebug(msg, msg.dst);
-
-/*
-	channelPtr=serverMap[msg.dst].getChannelPtr(msg["DestUniqueID"]);
-	channelPtr->setLink(msg["SrcUniqueID"]);*/
-
-// 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Destination"]);
-// 	channelPtr->setCallerId("gettingcalled\"" + msg["CallerIDName"].str() + "\" <" + msg["CallerID"].str() + ">" );
-
-// 	channelPtr=serverMap[msg.dst].getChannelPtr(msg["Source"]);
-// 	channelPtr->setCallerId("calling\"" + msg["CallerIDName"].str() + "\" <" + msg["CallerID"].str() + ">" );
-
-}
-
-// renaming usually happens on things like call-transfers
-
-SYNAPSE_REGISTER(ami_Event_Rename)
-{
-	// Event: Rename
-	// Privilege: call,all
-	// Oldname: SIP/604-00000044
-	// Newname: SIP/605-00000043
-	// Uniqueid: 1269956933.94
-	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
-	CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(
-		getDeviceIdFromChannel(msg["Newname"])
-	);
-
-	//we assume a rename only is possible for channels that are already up?
-	channelPtr->setState("Up");
-	channelPtr->setDevice(devicePtr);
-
-	if (channelPtr->getLink()==CchannelPtr())
-	{
-		//when we get renamed while NOT linked, we store the current callerids in the linkedcallerids.
-		//after the rename we usually receive our new caller id immeadiatly
-		channelPtr->setLinkCallerId(channelPtr->getCallerId());
-		channelPtr->setLinkCallerIdName(channelPtr->getCallerIdName());
-	}
-
-	channelPtr->sendDebug(msg, msg.dst);
-}
-
-SYNAPSE_REGISTER(ami_Event_Newcallerid)
-{
-// 	Event: Newcallerid
-// 	Privilege: call,all
-// 	Channel: SIP/605-00000033
-// 	CallerID: 605
-// 	CallerIDName: <Unknown>
-// 	Uniqueid: 1269866486.60
-// 	CID-CallingPres: 0 (Presentation Allowed, Not Screened)
-
-// Event: Newcallerid
-// Privilege: call,all
-// Channel: mISDN/0-u5
-// CallerID: 0622588835
-// CallerIDName: <Unknown>
-// Uniqueid: 1269866267.58
-// CID-CallingPres: 0 (Presentation Allowed, Not Screened)
-
-// Event: Newcallerid
-// Privilege: call,all
-// Channel: SIP/604-00000031
-// CallerID: 0858784323
-// CallerIDName: <Unknown>
-// Uniqueid: 1269866267.57
-// CID-CallingPres: 0 (Presentation Allowed, Not Screened)
-
-	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
-
-	if (msg["CallerID"].str() == "<Unknown>")
-	 	;//channelPtr->setCallerId("");
-	else
-	 	channelPtr->setCallerId(msg["CallerID"]);
-
-	if (msg["CallerIDName"].str() == "<Unknown>")
-	 	channelPtr->setCallerIdName("");
-	else
-	 	channelPtr->setCallerIdName(msg["CallerIDName"]);
-	
-	channelPtr->sendDebug(msg, msg.dst);
-
-}
-
-
-// 
-// 
-// SYNAPSE_REGISTER(ami_Event_PeerStatus)
-// {
-
-// 
-// }
-
