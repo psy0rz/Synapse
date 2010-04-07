@@ -15,6 +15,7 @@
 	<script type="text/javascript" src="jquery.drawinglibrary.js"></script>
 	<script type="text/javascript">
 
+		loginDeviceId="";
 
 		/// SYNAPSE EVENT HANDLERS
 		synapse_register("error",function(errortxt)
@@ -83,12 +84,16 @@
 			}
 
 			html=msg["callerId"]+"<br>"+msg["id"];
-			if (!msg["online"])
-			{
-				html+="<br><b>OFFLINE</b>";
-			}
+
 			//set html of device deviceInfo dom object:
 			$(escapeId(msg["id"])+" .deviceInfo").html(html);
+
+			if (msg["online"])
+				$(escapeId(msg["id"])).attr('state','');
+			else
+				$(escapeId(msg["id"])).attr('state','offline');
+
+
 
 			//is it the device of the logged in user?
 			if (msg["id"]==loginDeviceId)
@@ -344,13 +349,20 @@
 
 		.device
 		{
-			background-color: #eeeeee;
+			background-color: #CCFFCC;
 			float: left;
 			border-style:solid;
 			width: 20em;
 			min-height: 5em;
 			margin: 5px;
 			padding: 5px;
+		}
+
+
+		.device[state="offline"]
+		{
+			border-color: #dddddd;
+			background-color: #eeeeee;
 		}
 
 		.channelList
@@ -366,8 +378,7 @@
 		.channel
 		{
 			border-style:solid;
-			border-color:#eeeeee;
-			background-color: gray;
+			border-color:#eeffee; 
 			float:left;
 			min-width:1.9em;
 			min-height:1.9em;
@@ -388,7 +399,7 @@
 
 		.channel[state="deleted"] 
 		{
-			background-color: gray;
+			background: none;
 		}
 
 		.channel:hover
