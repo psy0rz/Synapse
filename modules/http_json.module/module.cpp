@@ -222,8 +222,8 @@ class CnetHttp : public Cnet
 	void respondString(int status, string data)
 	{
 		Cvar extraHeaders;
-		extraHeaders["content-length"]=data.length();
-		extraHeaders["content-type"]="text/html";
+		extraHeaders["Content-Length"]=data.length();
+		extraHeaders["Content-Type"]="text/html";
 
 		sendHeaders(status, extraHeaders);
 		sendData(asio::buffer(data));
@@ -300,7 +300,7 @@ class CnetHttp : public Cnet
 		inputFile.seekg (0, ios::beg);
 
 		
-		extraHeaders["content-length"]=fileSize;
+		extraHeaders["Content-Length"]=fileSize;
 		sendHeaders(200, extraHeaders);
 
 		DEB(id << " sending CONTENT of " << path);
@@ -365,10 +365,10 @@ class CnetHttp : public Cnet
 		{
 			//send headers
 			Cvar extraHeaders;
-			extraHeaders["content-length"]=jsonStr.length();
-			extraHeaders["cache-control"]="no-cache";
-			extraHeaders["content-type"]="application/json";
-			extraHeaders["x-synapse-authcookie"]=authCookie;
+			extraHeaders["Content-Length"]=jsonStr.length();
+			extraHeaders["Cache-Control"]="no-cache";
+			extraHeaders["Content-Type"]="application/json";
+			extraHeaders["X-Synapse-Authcookie"]=authCookie;
 			sendHeaders(200, extraHeaders);
 	
 			//write the json queue

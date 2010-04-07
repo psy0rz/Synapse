@@ -19,22 +19,36 @@
 		/// SYNAPSE EVENT HANDLERS
 		synapse_register("error",function(errortxt)
 		{
-			$('#error').html(errortxt);
+			$('#statusMsg').html("<span class='error'>"+errortxt+"</span>");
 		});	
 				
  		synapse_register("module_Error",function(msg_src, msg_dst, msg_event, msg)
  		{
- 			$('#error').html(msg["description"]);
+ 			$('#statusMsg').html("<span class='error'>"+msg["description"]+"</span>");
  		});
 
 
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
-//			synapse_login();
+			$('#statusMsg').html("Requesting login...");
+			send(0,"asterisk_authReq", { 
+			});
+
+
+		});
+
+ 		synapse_register("asterisk_authCall",function(msg_src, msg_dst, msg_event, msg)
+		{
+			$('#statusMsg').html("Login by calling this number: <b>"+msg["number"]+"</b>");
+		});
+
+ 		synapse_register("asterisk_authOk",function(msg_src, msg_dst, msg_event, msg)
+		{
+			$('#statusMsg').html("Logged in from "+msg["deviceId"]);
+			loginDeviceId=msg["deviceId"];
 			//request a refresh, to learn about all objects
 			send(0,"asterisk_refresh", { 
 			});
-
 		});
 
  		synapse_register("asterisk_reset",function(msg_src, msg_dst, msg_event, msg)
@@ -75,6 +89,12 @@
 			}
 			//set html of device deviceInfo dom object:
 			$(escapeId(msg["id"])+" .deviceInfo").html(html);
+
+			//is it the device of the logged in user?
+			if (msg["id"]==loginDeviceId)
+			{
+				$('#statusLoginUser').text(msg["callerId"]);				
+			}
 		});
 
 
@@ -175,15 +195,15 @@
 			//set channel status
 			if  ( msg["state"] == "Up" )
 			{
-				$(escapeId(msg["id"])).css("background", "green");
+				$(escapeId(msg["id"])).attr('state', 'up');
 			}
 			else if ( msg["state"] == "Ringing" )
 			{
-				$(escapeId(msg["id"])).css("background", "red");
+				$(escapeId(msg["id"])).attr('state', 'ringing');
 			}
 			else
 			{
-				$(escapeId(msg["id"])).css("background", "blue");
+				$(escapeId(msg["id"])).attr('state', '');
 			}
 
 
@@ -221,6 +241,20 @@
 // 				}
 // 			}
 
+			//is it the device of the logged in user?
+			if (msg["deviceId"]==loginDeviceId)
+			{
+				if ( msg["state"] == "Ringing" )
+				{
+					$('#statusMsg').html("Getting called by " +prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]));
+					$('#statusBar').attr('state', 'ringing');
+				}
+				else
+				{
+					$('#statusMsg').html("");
+					$('#statusBar').attr('state', '');
+				}
+			}
 
 		});
 
@@ -229,9 +263,17 @@
  		{
 			$(escapeId(msg["id"])+" .channelInfo").prepend("<b>ENDED</b><br>");
 
-			$(escapeId(msg["id"])).css("background", "gray");
+			$(escapeId(msg["id"])).attr('state', 'deleted');
 			//let the channel exist a while after hanging up
 			setTimeout(function() { $(escapeId(msg["id"])).remove() } , 30000);
+
+			//is it the device of the logged in user?
+			if (msg["deviceId"]==loginDeviceId)
+			{
+					$('#statusMsg').html("");
+					$('#statusBar').attr('state', '');
+			}
+
 		});
 
 
@@ -259,16 +301,45 @@
 			height:100%;
 			width: 100%;
 		} 
+
+		#statusBar
+		{
+			background-color: #ddddff;
+			height: 5em;
+			width: 100%;
+			float: left;
+			padding: 0.5em;
+		}
+
+		#statusBar[state="ringing"]
+		{
+			background-color: #ffaaaa;
+		}
+
+
+		#statusMsg
+		{
+			background-color: #ffffff;	
+			border-style: none;
+			display: inline;
+		}
+
+		#statusMsg .error
+		{
+			color: red;
+			font-weigth: bold;
+		}
 	
+		#statusLoginUser
+		{
+						
+			
+		}
+
 		#deviceList
 		{
-			position:absolute; 
-			left:0;
-			bottom: 0;
-			border-style:solid;
-			height:100%;
 			width: 100%;
-			overflow: scroll;
+			float: left;
 		}
 
 		.device
@@ -296,16 +367,33 @@
 		{
 			border-style:solid;
 			border-color:#eeeeee;
+			background-color: gray;
 			float:left;
 			min-width:1.9em;
 			min-height:1.9em;
 			margin:0;
 			position: relative;
+			background-color: blue;
 		}
+
+		.channel[state="up"] 
+		{
+			background-color: green;
+		}
+
+		.channel[state="ringing"] 
+		{
+			background-color: red;
+		}
+
+		.channel[state="deleted"] 
+		{
+			background-color: gray;
+		}
+
 		.channel:hover
 		{
 			border-color:yellow;
-			
 		}
 
 		.channelInfo
@@ -340,6 +428,15 @@
 
 
 <body>
+
+	<div id='statusBar'>
+		Status: <div id='statusMsg'>
+			Loading...
+		</div>
+		<div id='statusLoginUser'>
+			(Not logged in)
+		</div>
+	</div>
 
 
 	<div id='deviceList'>

@@ -30,8 +30,9 @@ To setup a fake server replaying this:
 #include "synapse.h"
 #include <boost/regex.hpp>
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 
-
+#define ASTERISK_AUTH "999"
 
 SYNAPSE_REGISTER(module_Init)
 {
@@ -75,7 +76,13 @@ SYNAPSE_REGISTER(module_Init)
 	out["event"]=		"asterisk_login"; 
 	out.send();
 
-	out["event"]=		"asterisk_auth"; 
+	out["event"]=		"asterisk_authReq"; 
+	out.send();
+
+	out["event"]=		"asterisk_authCall"; 
+	out.send();
+
+	out["event"]=		"asterisk_authOk"; 
 	out.send();
 
 	out["event"]=		"asterisk_updateChannel"; 
@@ -541,6 +548,10 @@ namespace asterisk
 			out.event="asterisk_delChannel";
 			out.dst=0; 
 			out["id"]=id;
+			if (devicePtr!=CdevicePtr())
+			{
+				out["deviceId"]=devicePtr->getId();
+			}
 			out.send();
 		}
 
@@ -621,7 +632,7 @@ namespace asterisk
 			//delete the link, to prevent "hanging" shared_ptrs
 			channelPtr->delLink();
 			channelMap.erase(channelId);
-			DEB("deleted channel " << channelId);
+			DEB("deleted channel from map: " << channelId);
 
 		}
 
@@ -662,28 +673,6 @@ namespace asterisk
 	}
 	
 	
-	/** Registers \c src session as a potential receiver of asterisk events.
-	
-	\par Replys \c asterisk_auth:
-		The session should authenticate by dialing a special crafted  number. After this asterisk knows to which device the client belongs, and can determine to which group the user belongs.
-			\arg \c number The number the client should call to authenticate.
-	
-	*/
-	SYNAPSE_REGISTER(asterisk_login)
-	{
-		//create a Csession object for the src session
-		sessionMap[msg.src]=CsessionPtr(new Csession());
-	
-		//tell the client how to login
-		stringstream number;
-		number << "999" << msg.src;
-	
-		Cmsg out;
-		out.event="asterisk_auth";
-		out.dst=msg.src;
-		out["number"]=number.str();
-		out.send();
-	}
 	
 	
 	SYNAPSE_REGISTER(module_SessionEnded)
@@ -1059,29 +1048,84 @@ namespace asterisk
 	
 	}
 	
+
+	/** Requests authentication for \c src 
+	
+	\par Replys \c asterisk_authCall
+		The session should authenticate by dialing a special crafted  number. After this asterisk knows to which device the client belongs, and can determine to which group the user belongs.
+			\arg \c number The number the client should call to authenticate.
+
+	\par Replys \c asterisk_authOk
+		After the user called the specified number.
+			\arg \c deviceId The deviceId the user was calling from.
+	
+	*/
+	SYNAPSE_REGISTER(asterisk_authReq)
+	{
+		//create a Csession object for the src session
+		sessionMap[msg.src]=CsessionPtr(new Csession());
+	
+		//tell the client how to login
+		stringstream number;
+		number << ASTERISK_AUTH << msg.src;
+	
+		Cmsg out;
+		out.event="asterisk_authCall";
+		out.dst=msg.src;
+		out["number"]=number.str();
+		out.send();
+	}
+
 	
 	SYNAPSE_REGISTER(ami_Event_Newexten)
 	{
-	// Event: Newexten
-	// Privilege: call,all
-	// Channel: SIP/604-00000007
-	// Context: DLPN_DatuX
-	// Extension: 9991234
-	// Priority: 1
-	// Application: Macro
-	// AppData: trunkdial-failover-0.3|SIP/0858784323/9991234|mISDN/g:trunk_m1/9991234|0858784323|trunk_m1
-	// Uniqueid: 1269802539.12
+		// Event: Newexten
+		// Privilege: call,all
+		// Channel: SIP/604-00000007
+		// Context: DLPN_DatuX
+		// Extension: 9991234
+		// Priority: 1
+		// Application: Macro
+		// AppData: trunkdial-failover-0.3|SIP/0858784323/9991234|mISDN/g:trunk_m1/9991234|0858784323|trunk_m1
+		// Uniqueid: 1269802539.12
+		
+		/* |AppData = SIP/605 (string)
+		|Application = Dial (string)
+		|Channel = SIP/604-0000002f (string)
+		|Context = DLPN_DatuX (string)
+		|Event = Newexten (string)
+		|Extension = 605 (string)
+		|Priority = 1 (string)
+		|Privilege = call,all (string)
+		|Uniqueid = 1269866053.55 (string)*/
 	
-	/* |AppData = SIP/605 (string)
-	|Application = Dial (string)
-	|Channel = SIP/604-0000002f (string)
-	|Context = DLPN_DatuX (string)
-	|Event = Newexten (string)
-	|Extension = 605 (string)
-	|Priority = 1 (string)
-	|Privilege = call,all (string)
-	|Uniqueid = 1269866053.55 (string)*/
-	
+		//somebody dialed the special authnumber?
+		if (msg["Extension"].str().find(ASTERISK_AUTH)==0)
+		{
+			//determine specified session number
+			int sessionId=lexical_cast<int>(msg["Extension"].str().substr(strlen(ASTERISK_AUTH)));
+			//do we know the specified session?
+			if (sessionMap.find(sessionId) != sessionMap.end())
+			{
+				//session is authenticated
+				Cmsg out;
+				out.event="asterisk_authOk";
+				out.dst=sessionId;
+				out["deviceId"]=getDeviceIdFromChannel(msg["Channel"]);
+				out.send();
+
+				//hang up
+				out.clear();
+				out.dst=msg.src;
+				out.src=msg.dst;
+				out.event="ami_Action";
+				out["Action"]="Hangup";
+				out["Channel"]=msg["Channel"].str();
+				out.send();
+
+				return;
+			}
+		}
 	
 		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
 		if (channelPtr->getFirstExtension()=="")
@@ -1089,10 +1133,7 @@ namespace asterisk
 			channelPtr->setFirstExtension(msg["Extension"]);
 		}
 	
-		channelPtr->sendDebug(msg, msg.dst);
-	
-	
-	
+		channelPtr->sendDebug(msg, msg.dst);	
 	}
 	
 	
