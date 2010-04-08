@@ -11,8 +11,7 @@
 	<script type="text/javascript" src="json2.js"></script>
 	<script type="text/javascript" src="synapse.js"></script>
 	<script type="text/javascript" src="synapse-ui.js"></script>
-	<script type="text/javascript" src="jquery.svg.js"></script>
-	<script type="text/javascript" src="jquery.drawinglibrary.js"></script>
+	<script type="text/javascript" src="jquery.cooquery.js"></script>
 	<script type="text/javascript">
 
 		loginDeviceId="";
@@ -33,9 +32,9 @@
  		{
 			$('#statusMsg').html("Requesting login...");
 			send(0,"asterisk_authReq", { 
+				authCookie: $.readCookie('asterisk_authCookie'),
+				deviceId:   $.readCookie('asterisk_deviceId')
 			});
-
-
 		});
 
  		synapse_register("asterisk_authCall",function(msg_src, msg_dst, msg_event, msg)
@@ -45,8 +44,13 @@
 
  		synapse_register("asterisk_authOk",function(msg_src, msg_dst, msg_event, msg)
 		{
-			$('#statusMsg').html("Logged in from "+msg["deviceId"]);
+			$('#statusMsg').html("Logged in from "+msg["deviceId"]+" cookie="+msg["authCookie"]);
 			loginDeviceId=msg["deviceId"];
+
+			//store the device and authcookie in a browser cookie, so the user doesnt have to relogin everytime.
+			$.setCookie('asterisk_authCookie',msg["authCookie"], {});
+			$.setCookie('asterisk_deviceId',msg["deviceId"], {});
+
 			//request a refresh, to learn about all objects
 			send(0,"asterisk_refresh", { 
 			});
@@ -292,6 +296,10 @@
 
 			$("#deviceList").sortable();
 			$("#deviceList").disableSelection();
+			$("#statusLoginUser").click(function()
+			{
+				send(0,"asterisk_authReq", {});
+			});
 
 		});
 

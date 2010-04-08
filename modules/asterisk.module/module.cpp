@@ -34,82 +34,87 @@ To setup a fake server replaying this:
 
 #define ASTERISK_AUTH "999"
 
-SYNAPSE_REGISTER(module_Init)
-{
-	Cmsg out;
-
-	out.clear();
-	out.event="core_ChangeModule";
-	out["maxThreads"]=1; //NOTE: this module is single threaded only, but we need one thread for the change interval
-	out.send();
-
-	out.clear();
-	out.event="core_ChangeSession";
-	out["maxThreads"]=1;
-	out.send();
-
-	out.clear();
-	out.event="core_LoadModule";
- 	out["path"]="modules/ami.module/libami.so";
- 	out.send();
-
-
-	out.clear();
-	out.event="core_LoadModule";
- 	out["path"]="modules/timer.module/libtimer.so";
- 	out.send();
-
-	//FIXME  clean/permissions
-
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["modifyGroup"]=	"modules";
-	out["sendGroup"]=	"anonymous";
-	out["recvGroup"]=	"anonymous";
-
-
-
-// 	out["event"]=		"asterisk_debugChannel"; 
-// 	out.send();
-
-
-	out["event"]=		"asterisk_login"; 
-	out.send();
-
-	out["event"]=		"asterisk_authReq"; 
-	out.send();
-
-	out["event"]=		"asterisk_authCall"; 
-	out.send();
-
-	out["event"]=		"asterisk_authOk"; 
-	out.send();
-
-	out["event"]=		"asterisk_updateChannel"; 
-	out.send();
-
-	out["event"]=		"asterisk_delChannel"; 
-	out.send();
-
-	out["event"]=		"asterisk_updateDevice"; 
-	out.send();
-
-	out["event"]=		"asterisk_delDevice"; 
-	out.send();
-
-	out["event"]=		"asterisk_refresh"; 
-	out.send();
-
-	out["event"]=		"asterisk_reset"; 
-	out.send();
-
-}
-
-
-
-
 namespace asterisk
 {
+	typedef long int TauthCookie;
+ 	struct drand48_data randomBuffer;
+
+
+	SYNAPSE_REGISTER(module_Init)
+	{
+		Cmsg out;
+
+
+		//FIXME: unsafe randomiser?
+		srand48_r(time(NULL), &randomBuffer);
+	
+		out.clear();
+		out.event="core_ChangeModule";
+		out["maxThreads"]=1; //NOTE: this module is single threaded only, but we need one thread for the change interval
+		out.send();
+	
+		out.clear();
+		out.event="core_ChangeSession";
+		out["maxThreads"]=1;
+		out.send();
+	
+		out.clear();
+		out.event="core_LoadModule";
+		out["path"]="modules/ami.module/libami.so";
+		out.send();
+	
+	
+		out.clear();
+		out.event="core_LoadModule";
+		out["path"]="modules/timer.module/libtimer.so";
+		out.send();
+	
+		//FIXME  clean/permissions
+	
+		out.clear();
+		out.event="core_ChangeEvent";
+		out["modifyGroup"]=	"modules";
+		out["sendGroup"]=	"anonymous";
+		out["recvGroup"]=	"anonymous";
+	
+	
+	
+	// 	out["event"]=		"asterisk_debugChannel"; 
+	// 	out.send();
+	
+	
+		out["event"]=		"asterisk_login"; 
+		out.send();
+	
+		out["event"]=		"asterisk_authReq"; 
+		out.send();
+	
+		out["event"]=		"asterisk_authCall"; 
+		out.send();
+	
+		out["event"]=		"asterisk_authOk"; 
+		out.send();
+	
+		out["event"]=		"asterisk_updateChannel"; 
+		out.send();
+	
+		out["event"]=		"asterisk_delChannel"; 
+		out.send();
+	
+		out["event"]=		"asterisk_updateDevice"; 
+		out.send();
+	
+		out["event"]=		"asterisk_delDevice"; 
+		out.send();
+	
+		out["event"]=		"asterisk_refresh"; 
+		out.send();
+	
+		out["event"]=		"asterisk_reset"; 
+		out.send();
+	
+	}
+
 
 	string getDeviceIdFromChannel(string channel)
 	{
@@ -136,7 +141,7 @@ namespace asterisk
 	}
 
 	
-	//sessions: ever synapse session has a corresponding session object here
+	//sessions: every synapse session has a corresponding session object here
 	class Csession
 	{
 		private:
@@ -177,7 +182,10 @@ namespace asterisk
 
 
 	//groups: mostly a tennant is considered a group. 
+	//After authenticating, a session points to a group.'
+	//All devices of a specific tennant also point to this group
 	//events are only sent to Csessions that are member of the same group as the corresponding device.
+	
 	class Cgroup
 	{
 		private:
@@ -213,15 +221,22 @@ namespace asterisk
 		string id;
 		bool changed;
 		CgroupPtr groupPtr;	
+		TauthCookie authCookie;
 	
 		public:
 
 		Cdevice()
 		{
+			mrand48_r(&randomBuffer, &authCookie);
 
 			changed=true;
 			id="";
 			online=true;
+		}
+
+		TauthCookie getAuthCookie()
+		{
+			return (authCookie);
 		}
 
 		void setGroup(CgroupPtr groupPtr)
@@ -576,13 +591,20 @@ namespace asterisk
 		}
 
 	
-		CdevicePtr getDevicePtr(string deviceId)
+		CdevicePtr getDevicePtr(string deviceId, bool autoCreate=true)
 		{
-			if (deviceMap[deviceId]==NULL)
+			if (deviceMap.find(deviceId)==deviceMap.end())
 			{
-				deviceMap[deviceId]=CdevicePtr(new Cdevice());
-				deviceMap[deviceId]->setId(deviceId);
-				DEB("created device " << deviceId);
+				if (autoCreate)
+				{
+					deviceMap[deviceId]=CdevicePtr(new Cdevice());
+					deviceMap[deviceId]->setId(deviceId);
+					DEB("created device " << deviceId);
+				}
+				else
+				{
+					return (CdevicePtr());
+				}
 			}
 			return (deviceMap[deviceId]);
 		}
@@ -1065,7 +1087,33 @@ namespace asterisk
 		//create a Csession object for the src session
 		sessionMap[msg.src]=CsessionPtr(new Csession());
 	
-		//tell the client how to login
+		//deviceId + correct authCookie ?
+		if (msg.isSet("deviceId") && msg.isSet("authCookie"))
+		{
+			//traverse all the servers and find the device
+			for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+			{
+				CdevicePtr devicePtr=I->second.getDevicePtr(msg["deviceId"],false);
+				//device exists?
+				if (devicePtr!=NULL)
+				{
+					//autoCookie checks out?
+					if (devicePtr->getAuthCookie()==msg["authCookie"])
+					{
+						//session is re-authenticated, by authCookie
+						Cmsg out;
+						out.event="asterisk_authOk";
+						out.dst=msg.src;
+						out["deviceId"]=msg["deviceId"].str();
+						out["authCookie"]=msg["authCookie"].str();
+						out.send();
+						return;
+					}
+				}
+			}
+		}
+
+		//tell the client which number to call, to authenticate
 		stringstream number;
 		number << ASTERISK_AUTH << msg.src;
 	
@@ -1107,11 +1155,12 @@ namespace asterisk
 			//do we know the specified session?
 			if (sessionMap.find(sessionId) != sessionMap.end())
 			{
-				//session is authenticated
+				//session is authenticated, by calling the magic ASTERISK_AUTH number
 				Cmsg out;
 				out.event="asterisk_authOk";
 				out.dst=sessionId;
 				out["deviceId"]=getDeviceIdFromChannel(msg["Channel"]);
+				out["authCookie"]=serverMap[msg.dst].getDevicePtr(out["deviceId"])->getAuthCookie();
 				out.send();
 
 				//hang up
