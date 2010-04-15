@@ -113,20 +113,20 @@ SYNAPSE_REGISTER(asterisk_Ready)
 	//replay server with:
 	//tcpserver 0.0.0.0 5555 scriptreplay mt2.timing mt2.txt
 
-	out.clear();
-	out.event="asterisk_Connect";
-	out["username"]="bla";
-	out["password"]="bla";
-	out["host"]="localhost";
-	out["port"]="5555";
-	out.send();
+// 	out.clear();
+// 	out.event="asterisk_Connect";
+// 	out["username"]="bla";
+// 	out["password"]="bla";
+// 	out["host"]="localhost";
+// 	out["port"]="5555";
+// 	out.send();
 
 
 	out.clear();
 	out.event="asterisk_Connect";
-	out["username"]="admin";
-	out["password"]="s3xl1jn";
-	out["host"]="192.168.13.1";
+	out["username"]="synapse";
+	out["password"]="f39tgvp095vcnek3";
+	out["host"]="127.0.0.1";
 	out["port"]="5038";
 	out.send();
 
@@ -185,7 +185,7 @@ SYNAPSE_REGISTER(http_json_Ready)
 	Cmsg out;
 	out.clear();
 	out.event="http_json_Listen";
-	out["port"]="10081";
+	out["port"]="10080";
 	out.dst=msg["session"];
 	out.send();
 }

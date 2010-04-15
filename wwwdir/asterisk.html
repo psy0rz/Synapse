@@ -35,6 +35,9 @@
 				authCookie: $.readCookie('asterisk_authCookie'),
 				deviceId:   $.readCookie('asterisk_deviceId')
 			});
+			send(0,"asterisk_refresh", { 
+			});
+
 		});
 
  		synapse_register("asterisk_authCall",function(msg_src, msg_dst, msg_event, msg)
