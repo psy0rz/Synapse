@@ -84,8 +84,8 @@
 			{
 				//add dom objects
 				html="<div class='device' id='"+msg["id"]+"'>";
-				html+="<div class='channelList'></div>";
 				html+="<div class='deviceInfo'></div>";
+				html+="<div class='channelList'></div>";
 				html+="</div>";
 				$('#deviceList').append(html);
 			}
@@ -205,23 +205,12 @@
 			}
 
 			//set channel status
-			if  ( msg["state"] == "Up" )
-			{
-				$(escapeId(msg["id"])).attr('state', 'up');
-			}
-			else if ( msg["state"] == "Ringing" )
-			{
-				$(escapeId(msg["id"])).attr('state', 'ringing');
-			}
-			else
-			{
-				$(escapeId(msg["id"])).attr('state', '');
-			}
+			$(escapeId(msg["id"])).attr('state', msg["state"]);
 
 
 			//determine caller info
 			var callerInfo="<ul>";
-			
+
 			callerInfo+="<li>Status: "+msg["state"];
 
 			if (msg["firstExtension"]!="")
@@ -238,6 +227,9 @@
 			callerInfo+="</ul>";
 
 			$(escapeId(msg["id"])+" .channelInfo").html(callerInfo);
+
+			$(escapeId(msg["id"])).html(callerInfo);
+
 
 // 			//add the update-info to the debug object
 // 			$(escapeId(msg["id"])+" .channelDebug").append(
@@ -376,41 +368,50 @@
 			background-color: #eeeeee;
 		}
 
-		.channelList
+		.deviceInfo
 		{
-			border-style:solid;
-			border-color: #aaaaaa;
-			border-width: 1px;
+			border-style:none;
 			width:100%;
 			min-height: 2em;
-			float: left;
+
+		}
+
+		.channelList
+		{
+			border-style:none;
+			width:100%;
+			min-height: 2em;
 		}
 
 		.channel
 		{
-			border-style:solid;
+			border-left-style:solid;
 			border-color:#eeffee; 
-			float:left;
+			margin:0.3em;
 			min-width:1.9em;
 			min-height:1.9em;
-			margin:0;
-			position: relative;
-			background-color: blue;
+			padding-left:25px;
+			background-repeat:no-repeat;
+			background-image:url('asterisk/channel_idle.png');
 		}
 
-		.channel[state="up"] 
+		.channel[state="in"] 
 		{
-			background-color: green;
+			background-image:url('asterisk/channel_in.png');
 		}
 
-		.channel[state="ringing"] 
+		.channel[state="out"] 
 		{
-			background-color: red;
+			background-image:url('asterisk/channel_out.png');
+		}
+
+		.channel[state="ring"] 
+		{
+			background-image:url('asterisk/channel_ring.png');
 		}
 
 		.channel[state="deleted"] 
 		{
-			background: none;
 		}
 
 		.channel:hover
