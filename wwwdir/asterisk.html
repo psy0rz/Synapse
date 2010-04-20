@@ -35,9 +35,10 @@
 				authCookie: $.readCookie('asterisk_authCookie'),
 				deviceId:   $.readCookie('asterisk_deviceId')
 			});
+
+			//request a refresh, to learn about all objects
 			send(0,"asterisk_refresh", { 
 			});
-
 		});
 
  		synapse_register("asterisk_authCall",function(msg_src, msg_dst, msg_event, msg)
@@ -175,24 +176,25 @@
 				html="<div class='channel' id='";
 				html+=msg["id"];
 				html+="'>";
-				html+="<div class='channelInfo'></div>";
+/*				html+="<div class='channelInfo'></div>";*/
 //				html+="<div class='channelDebug'>"+oldDebug+"</div>";
 				html+="</div>";
+
 				//add the channel to the corresponding device:
 				$(escapeId(msg["deviceId"])+' .channelList').append(html);
 
 				//on hover show the info
-				$(escapeId(msg["id"])).hover(
-					//show ...
-					function ()	
-					{ 
-							$(this).children(".channelInfo").show(); 
-					},
-					//hide ...
-					function () {
-							$(this).children(".channelInfo").hide(); 
-					}
-				);
+// 				$(escapeId(msg["id"])).hover(
+// 					//show ...
+// 					function ()	
+// 					{ 
+// 							$(this).children(".channelInfo").show(); 
+// 					},
+// 					//hide ...
+// 					function () {
+// 							$(this).children(".channelInfo").hide(); 
+// 					}
+// 				);
 
 				//on click toggle debug info
 // 				$(escapeId(msg["id"])).click(
@@ -207,26 +209,22 @@
 			//set channel status
 			$(escapeId(msg["id"])).attr('state', msg["state"]);
 
+			//set caller info
+			var callerInfo="";
 
-			//determine caller info
-			var callerInfo="<ul>";
 
-			callerInfo+="<li>Status: "+msg["state"];
 
-			if (msg["firstExtension"]!="")
+
+			//we know who's connected:
+			if (msg["linkCallerId"] != '')
 			{
-				callerInfo+="<li>Calling to "+msg["firstExtension"]+". ";
+				callerInfo+=prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);
 			}
-
-			callerInfo+="<li>CallerID " + prettyCallerId(msg["callerId"], msg["callerIdName"]);
-			if (typeof msg["linkCallerId"] != 'undefined')
+			//we dont know whos connected yet, just show extention that is being called
+			else
 			{
-				callerInfo+="<li>Connected to " + prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);
+				callerInfo+="Calling "+msg["firstExtension"];
 			}
-
-			callerInfo+="</ul>";
-
-			$(escapeId(msg["id"])+" .channelInfo").html(callerInfo);
 
 			$(escapeId(msg["id"])).html(callerInfo);
 
@@ -405,13 +403,14 @@
 			background-image:url('asterisk/channel_out.png');
 		}
 
-		.channel[state="ring"] 
+		.channel[state="ringing"] 
 		{
 			background-image:url('asterisk/channel_ring.png');
 		}
 
 		.channel[state="deleted"] 
 		{
+			text-decoration: line-through;
 		}
 
 		.channel:hover

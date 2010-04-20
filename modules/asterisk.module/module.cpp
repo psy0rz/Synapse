@@ -3,6 +3,8 @@ Asterisk Control Module.
 
 Uses the AMI module (and maybe others) to track and control asterisk.
 
+The complex flow of asterisk events is converted to a few simple events, usable in operator panels and other apps.
+
 \code
 To capture test-data from a asterisk server:
   script -c telnet 1.2.3.4 5038 -t ami.txt 2> ami.timing
@@ -494,6 +496,11 @@ namespace asterisk
 			return (callerIdName);
 		}
 
+		string getState()
+		{
+			return (state);
+		}
+	
 		void setState(string state)
 		{
 	
@@ -898,7 +905,40 @@ namespace asterisk
 		);
 	
 		channelPtr->setDevice(devicePtr);
-		channelPtr->setState(msg["State"]);
+
+		//States:
+		// ringing: somebody is calling the device
+		// in     : incoming call in progress
+		// out    : outgoing call in progress
+		// ''     : other (uninteresting) states
+
+		//device is ringing
+		if (msg["State"].str()=="Ringing")
+		{
+			channelPtr->setState("ringing");
+		}
+		//device is dialing (ringing other side)
+		else if (msg["State"].str()=="Ring")
+		{
+			channelPtr->setState("out");
+		}
+		//device is connected with other side
+		else if (msg["State"].str()=="Up")
+		{
+			if (channelPtr->getState()=="ringing")
+			{
+				channelPtr->setState("in");
+			}
+			else
+			{
+				channelPtr->setState("out");
+			}
+		}
+		//device is down/other stuff
+		else
+		{
+			channelPtr->setState("");
+		}
 	
 		//NOTE: whats with all the different namings and <unknown> vs <Unknown> in Newcallerid?
 	
@@ -1220,8 +1260,8 @@ namespace asterisk
 		channelPtr1->setLink(channelPtr2);
 		channelPtr2->setLink(channelPtr1);
 	
-		channelPtr1->setInitiator(true);
-		channelPtr2->setInitiator(false);
+/*		channelPtr1->setInitiator(true);
+		channelPtr2->setInitiator(false);*/
 		
 		//in case of followme and other situation its important we use the Dial callerId as well, for SrcUniqueID:
 		if (msg["CallerID"].str() == "<unknown>")
@@ -1267,7 +1307,7 @@ namespace asterisk
 		);
 	
 		//we assume a rename only is possible for channels that are already up?
-		channelPtr->setState("Up");
+//		channelPtr->setState("Up");
 		channelPtr->setDevice(devicePtr);
 	
 		if (channelPtr->getLink()==CchannelPtr())
