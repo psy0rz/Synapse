@@ -91,16 +91,14 @@
 				$('#deviceList').append(html);
 			}
 
-			html=msg["callerId"]+"<br>"+msg["id"];
 
-			//set html of device deviceInfo dom object:
-			$(escapeId(msg["id"])+" .deviceInfo").html(html);
+			//update the device caller id:
+			$(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]);
 
 			if (msg["online"])
 				$(escapeId(msg["id"])).attr('state','');
 			else
 				$(escapeId(msg["id"])).attr('state','offline');
-
 
 
 			//is it the device of the logged in user?
@@ -154,7 +152,7 @@
 
  		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
  		{
-//			var oldDebug="";
+			var oldDebug="";
 
 			//does the channel exist?
 			if ($(escapeId(msg["id"])).length!=0)
@@ -163,7 +161,8 @@
 				if ($(escapeId(msg["deviceId"]) + " " + escapeId(msg["id"])).length==0)
 				{
 					//then it probably has been moved/renamed, so delete the channel and recreate it below.
-//					oldDebug=$(escapeId(msg["id"])+" .channelDebug").html();
+					oldDebug=$(escapeId(msg["id"])+" .channelDebug").html();
+					oldDebug+="<br>(moved/renamed)<br>";
 					$(escapeId(msg["id"])).remove();			
 				}
 			}
@@ -172,16 +171,28 @@
 			//channel doesnt exist?
 			if ($(escapeId(msg["id"])).length==0)
 			{
-				//add dom objects
-				html="<div class='channel' id='";
-				html+=msg["id"];
-				html+="'>";
-/*				html+="<div class='channelInfo'></div>";*/
-//				html+="<div class='channelDebug'>"+oldDebug+"</div>";
-				html+="</div>";
+				//check if there is a old channel that has deleted state
+				var oldChannel=$(escapeId(msg["deviceId"]) +" .channelList [state=deleted]:first");
+				if (oldChannel.length!=0)
+				{
+					//replace a deleted channel:
+					oldChannel.attr('id',msg["id"]);
+					oldChannel.html("");
+				}
+				else
+				{
+					//add a brand new channel object
+					$(escapeId(msg["deviceId"])+' .channelList').append(
+						"<div class='channel' id='"+msg["id"]+"'</div>"
+					);
+				}
 
-				//add the channel to the corresponding device:
-				$(escapeId(msg["deviceId"])+' .channelList').append(html);
+				//give the new channel some objects to store stuff in
+				$(escapeId(msg["id"])).append(
+					"<div class='channelInfo'></div>"+
+					"<div class='channelDebug'>"+oldDebug+"</div>"
+				);
+				
 
 				//on hover show the info
 // 				$(escapeId(msg["id"])).hover(
@@ -197,12 +208,12 @@
 // 				);
 
 				//on click toggle debug info
-// 				$(escapeId(msg["id"])).click(
-// 					function ()	
-// 					{ 
-// 						$(this).children(".channelDebug").toggle(); 
-// 					}
-// 				);
+				$(escapeId(msg["id"])).click(
+					function ()	
+					{ 
+						$(this).children(".channelDebug").toggle(); 
+					}
+				);
 
 			}
 
@@ -211,9 +222,6 @@
 
 			//set caller info
 			var callerInfo="";
-
-
-
 
 			//we know who's connected:
 			if (msg["linkCallerId"] != '')
@@ -226,7 +234,7 @@
 				callerInfo+="Calling "+msg["firstExtension"];
 			}
 
-			$(escapeId(msg["id"])).html(callerInfo);
+			$(escapeId(msg["id"])+" .channelInfo").html(callerInfo);
 
 
 // 			//add the update-info to the debug object
@@ -263,7 +271,6 @@
 
  		synapse_register("asterisk_delChannel",function(msg_src, msg_dst, msg_event, msg)
  		{
-			$(escapeId(msg["id"])+" .channelInfo").prepend("<b>ENDED</b><br>");
 
 			$(escapeId(msg["id"])).attr('state', 'deleted');
 			//let the channel exist a while after hanging up
@@ -370,7 +377,6 @@
 		{
 			border-style:none;
 			width:100%;
-			min-height: 2em;
 
 		}
 
@@ -383,14 +389,15 @@
 
 		.channel
 		{
-			border-left-style:solid;
-			border-color:#eeffee; 
+			border-top-style:dashed;
+			border-color:#aaaaaa; 
+			border-width: 1px;
 			margin:0.3em;
 			min-width:1.9em;
-			min-height:1.9em;
 			padding-left:25px;
 			background-repeat:no-repeat;
 			background-image:url('asterisk/channel_idle.png');
+			position:absolute;
 		}
 
 		.channel[state="in"] 
@@ -411,25 +418,18 @@
 		.channel[state="deleted"] 
 		{
 			text-decoration: line-through;
+			color:#aaaaaa; 
 		}
 
 		.channel:hover
 		{
-			border-color:yellow;
+			background-color:yellow;
 		}
 
 		.channelInfo
 		{
-			border-style:solid;
-			border-color:yellow;
-			background-color: #ffffff;
-			display: none;
-			min-width:20em;
-			min-height:10em;
-			position: absolute;
-			top: 1.9em;
-			left: 1.9em;
-			z-index: 1;
+			margin:0;
+			padding:0;
 		}
 
 		.channelDebug
@@ -441,7 +441,7 @@
 			position: absolute;
 			border-style: solid;
 			z-index:2;
-			display: none;
+			display:none;
 		}
 
 	</style>

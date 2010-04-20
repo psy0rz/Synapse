@@ -81,8 +81,8 @@ namespace asterisk
 	
 	
 	
-	// 	out["event"]=		"asterisk_debugChannel"; 
-	// 	out.send();
+	 	out["event"]=		"asterisk_debugChannel"; 
+ 	 	out.send();
 	
 	
 		out["event"]=		"asterisk_login"; 
