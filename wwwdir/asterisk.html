@@ -129,7 +129,7 @@
 					//then it probably has been moved/renamed, so delete the channel and recreate it below.
 					oldDebug=$(escapeId(msg["id"])+" .channelDebug").html();
 					oldDebug+="<br>(moved/renamed)<br>";
-					$(escapeId(msg["id"])).remove();			
+					$(escapeId(msg["id"])).remove();
 				}
 			}
 
@@ -148,7 +148,7 @@
 				{
 					//add a brand new channel object
 					$(escapeId(msg["deviceId"])+' .channelList').append(
-						"<div class='channel' id='"+msg["id"]+"'</div>"
+						"<div class='channel' id='"+msg["id"]+"'></div>"
 					);
 				}
 
@@ -406,7 +406,7 @@
 			padding-left:25px;
 			background-repeat:no-repeat;
 			background-image:url('asterisk/channel_idle.png');
-			position:absolute;
+			position:relative;
 		}
 
 		.channel[state="in"] 
