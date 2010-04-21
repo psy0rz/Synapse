@@ -1226,7 +1226,7 @@ namespace asterisk
 			channelPtr->setFirstExtension(msg["Extension"]);
 		}
 	
-		channelPtr->sendDebug(msg, msg.dst);	
+		//TOO much info..channelPtr->sendDebug(msg, msg.dst);	
 	}
 	
 	
@@ -1311,7 +1311,14 @@ namespace asterisk
 		);
 	
 		//we assume a rename only is possible for channels that are already up?
-//		channelPtr->setState("Up");
+		if (channelPtr->getState()=="ringing")
+		{
+			channelPtr->setState("in");
+		}
+		else
+		{
+			channelPtr->setState("out");
+		}
 		channelPtr->setDevice(devicePtr);
 	
 		if (channelPtr->getLink()==CchannelPtr())

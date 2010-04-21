@@ -144,7 +144,7 @@
 
 				//check if there is a old channel that has deleted state
 				var oldChannel=$(escapeId(msg["deviceId"]) +" .channelList [state=deleted]:first");
-				if (oldChannel.length!=0)
+				if (oldChannel.length!=0 )
 				{
 					//replace a deleted channel:
 					oldChannel.replaceWith(newChannelHtml);
