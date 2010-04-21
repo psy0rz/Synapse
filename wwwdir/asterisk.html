@@ -115,46 +115,12 @@
 		});
 
 
-
-
- 		synapse_register("asterisk_debugChannel",function(msg_src, msg_dst, msg_event, msg)
+		//creates, reuses or returns an existing channel object, using info from msg
+		function getChannel(msg)
 		{
-			$(escapeId(msg["id"])+" .channelDebug").append(
-				"<br><b>"+msg["Event"]+"</b><br>"
-			);
-			for (var msgI in msg)
-			{
-				if (msgI!="id" && msgI!="serverId" && msgI!="Event")
-				{
-					$(escapeId(msg["id"])+" .channelDebug").append(
-						msgI+":"+msg[msgI].replace("<","&lt;").replace(">","&gt;")+"<br>"
-					);
-				}
-			}
-			
-
-		});
-
-
-		function prettyCallerId( callerId, callerIdName)
-		{
-			var txt="";
-			if (callerId!="")
-				txt=txt+callerId;
-			else
-				txt="(unknown number)";
-
-			if (callerIdName!="")
-				txt=txt+" '"+callerIdName+"'";
-
-			return txt;					
-		}
-
- 		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
- 		{
 			var oldDebug="";
 
-			//does the channel exist?
+			//does the channel exist already?
 			if ($(escapeId(msg["id"])).length!=0)
 			{
 				//doesnt it exist under the specified device?
@@ -166,7 +132,6 @@
 					$(escapeId(msg["id"])).remove();			
 				}
 			}
-
 
 			//channel doesnt exist?
 			if ($(escapeId(msg["id"])).length==0)
@@ -216,6 +181,50 @@
 				);
 
 			}
+			return ($(escapeId(msg["id"])));
+		}
+
+
+ 		synapse_register("asterisk_debugChannel",function(msg_src, msg_dst, msg_event, msg)
+		{
+			var channel=getChannel(msg).children(" .channelDebug");
+
+			channel.append(
+				"<br><b>"+msg["Event"]+"</b><br>"
+			);
+			for (var msgI in msg)
+			{
+				if (msgI!="id" && msgI!="serverId" && msgI!="Event")
+				{
+					channel.append(
+						msgI+":"+msg[msgI].replace("<","&lt;").replace(">","&gt;")+"<br>"
+					);
+				}
+			}
+			
+
+		});
+
+
+		function prettyCallerId( callerId, callerIdName)
+		{
+			var txt="";
+			if (callerId!="")
+				txt=txt+callerId;
+			else
+				txt="(unknown number)";
+
+			if (callerIdName!="")
+				txt=txt+" '"+callerIdName+"'";
+
+			return txt;					
+		}
+
+
+ 		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+
+			var channel=getChannel(msg);
 
 			//set channel status
 			$(escapeId(msg["id"])).attr('state', msg["state"]);
@@ -274,7 +283,7 @@
 
 			$(escapeId(msg["id"])).attr('state', 'deleted');
 			//let the channel exist a while after hanging up
-			setTimeout(function() { $(escapeId(msg["id"])).remove() } , 30000);
+			setTimeout(function() { $(escapeId(msg["id"])).remove() } , 300000);
 
 			//is it the device of the logged in user?
 			if (msg["deviceId"]==loginDeviceId)
@@ -393,7 +402,7 @@
 			border-color:#aaaaaa; 
 			border-width: 1px;
 			margin:0.3em;
-			min-width:1.9em;
+			min-width:15em;
 			padding-left:25px;
 			background-repeat:no-repeat;
 			background-image:url('asterisk/channel_idle.png');
@@ -415,7 +424,7 @@
 			background-image:url('asterisk/channel_ring.png');
 		}
 
-		.channel[state="deleted"] 
+		.channel[state="deleted"] .channelInfo
 		{
 			text-decoration: line-through;
 			color:#aaaaaa; 

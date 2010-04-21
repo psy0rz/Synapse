@@ -364,6 +364,10 @@ namespace asterisk
 			msg.event="asterisk_debugChannel";
 			msg["serverId"]=serverId;
 			msg["id"]=id;
+			if (devicePtr!=CdevicePtr())
+			{
+				msg["deviceId"]=devicePtr->getId();
+			}
 			msg.dst=0;
 			msg.src=0;
 			msg.send();
