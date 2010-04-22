@@ -93,7 +93,7 @@
 
 
 			//update the device caller id:
-			$(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]+"<br> group="+msg["groupId"]+" device="+msg["id"]);
+			$(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]+"<br> tennant="+msg["groupId"]+" ("+msg["id"]+")");
 
 			if (msg["online"])
 				$(escapeId(msg["id"])).attr('state','');
@@ -302,9 +302,10 @@
 
 			$("#deviceList").sortable();
 			$("#deviceList").disableSelection();
-			$("#statusLoginUser").click(function()
+			$("#login").click(function()
 			{
 				send(0,"asterisk_authReq", {});
+				send(0,"asterisk_reset", {});
 			});
 
 		});
@@ -464,6 +465,7 @@
 		<div id='statusLoginUser'>
 			(Not logged in)
 		</div>
+		<input id='login' type='submit' value='Change...'>
 	</div>
 
 
