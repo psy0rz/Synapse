@@ -93,7 +93,7 @@
 
 
 			//update the device caller id:
-			$(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]);
+			$(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]+"<br> group="+msg["groupId"]+" device="+msg["id"]);
 
 			if (msg["online"])
 				$(escapeId(msg["id"])).attr('state','');

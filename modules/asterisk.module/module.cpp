@@ -29,6 +29,23 @@ To setup a fake server replaying this:
 
 */
 
+/*
+    Data structure overview:
+
+    groupMap->groupPtr------------------>Cgroup
+                                          ^ ^
+    sessionMap->sessionPtr->Csession:     | |
+        groupPtr--->----------------------  |
+                                            |
+    serverMap->serverPtr->Cserver:          |
+        channelMap->channelPtr->Cchannel:   |
+            devicePtr--->--------|          | 
+                                 v          |
+        deviceMap->devicePtr->Cdevice:      |
+            groupPtr--->--------------------
+
+*/
+
 #include "synapse.h"
 #include <boost/regex.hpp>
 #include <boost/foreach.hpp>
@@ -142,33 +159,12 @@ namespace asterisk
 		}
 	}
 
-	
-	//sessions: every synapse session has a corresponding session object here
-	class Csession
-	{
-		private:
-		int id;
-		bool authenticated;
-
-		public:
-		Csession()
-		{
-			authenticated=false;
-		}
-
-		void setId(int id)
-		{
-			this->id=id;
-
-		}
-
-
-	};
-
-	typedef shared_ptr<class asterisk::Csession> CsessionPtr;
+	class Csession;
+	typedef shared_ptr<class Csession> CsessionPtr;
 	typedef map<int, CsessionPtr> CsessionMap;
 	CsessionMap sessionMap;
 
+	class Cgroup;
 	typedef shared_ptr<class Cgroup> CgroupPtr;
 	typedef map<string, CgroupPtr> CgroupMap;
 	CgroupMap groupMap;
@@ -182,6 +178,37 @@ namespace asterisk
 	typedef map<int, class Cserver> CserverMap;
 	CserverMap serverMap;
 
+	//sessions: every synapse session has a corresponding session object here
+	class Csession
+	{
+		private:
+// 		int id;
+// 		bool authenticated;
+		CgroupPtr groupPtr;
+
+		public:
+		Csession()
+		{
+//			authenticated=false;
+		}
+
+// 		void setId(int id)
+// 		{
+// 			this->id=id;
+// 
+// 		}
+
+		void setGroupPtr(CgroupPtr groupPtr)
+		{
+			this->groupPtr=groupPtr;
+		}
+
+		CgroupPtr getGroupPtr()
+		{
+			return (groupPtr);
+		}
+	};
+
 
 	//groups: mostly a tennant is considered a group. 
 	//After authenticating, a session points to a group.'
@@ -192,25 +219,62 @@ namespace asterisk
 	{
 		private:
 		string id;
-		bool changed;
 
 
 		public:
 		Cgroup()
 		{
-			changed=true;
 		}
 
 		void setId(string id)
 		{
-			if (id!=this->id)
+			this->id=id;
+		}
+
+		string getId()
+		{
+			return(id);
+		}
+
+		//sends msg after applying group filtering.
+		//message will only be sended or broadcasted to sessions that belong to this group.
+		void send(Cmsg & msg)
+		{
+			//broadcast?
+			if (msg.dst==0)
 			{
-				this->id=id;
-				changed=true;
+				//we cant simply broadcast it, we need to check group membership session by session
+				for (CsessionMap::iterator I=sessionMap.begin(); I!=sessionMap.end(); I++)
+				{
+					if (I->second->getGroupPtr().get()==this)
+					{
+						msg.dst=I->first;
+						msg.send();
+					}
+				}
+				//restore dst value:
+				msg.dst=0;
+			}
+			else
+			{
+				CsessionMap::iterator I=sessionMap.find(msg.dst);
+				if (I!=sessionMap.end())
+				{
+					if (I->second->getGroupPtr().get()!=this)
+					{
+						WARNING("Cant send message to session " << msg.dst << ", it doesnt belong to group: " << getId());
+						return;
+					}
+					msg.send();
+				}
 			}
 		}
 
 	};	
+
+	
+
+
 
 	//devices: these can be sip devices, misdn, local channels, agent-stuff etc
 	//every device points to a corresponding Cgroup. 
@@ -236,19 +300,16 @@ namespace asterisk
 			online=true;
 		}
 
+		CgroupPtr getGroupPtr()
+		{
+			return (groupPtr);
+		}
+
 		TauthCookie getAuthCookie()
 		{
 			return (authCookie);
 		}
 
-		void setGroup(CgroupPtr groupPtr)
-		{
-			if (groupPtr!=this->groupPtr)
-			{
-				this->groupPtr=groupPtr;
-				changed=true;
-			}
-		}
 
 		void setId(string id)
 		{
@@ -259,6 +320,24 @@ namespace asterisk
 				{
 					callerId=id;
 				}
+
+				//now we determine the corresponding group from the device Id string:
+				size_t pos=id.find("-");
+				string groupId;
+
+				if (pos!=string::npos)
+					groupId=id.substr(pos+1);
+
+				if (groupId=="")
+					groupId="default";
+
+				if (groupMap.find(groupId) == groupMap.end())
+				{
+					groupMap[groupId]=CgroupPtr(new Cgroup());
+					groupMap[groupId]->setId(groupId);
+				}
+				groupPtr=groupMap[groupId];
+
 				changed=true;
 			}
 		}
@@ -289,15 +368,25 @@ namespace asterisk
 
 	
 
-		void sendUpdate(int forceDst=0)
+		bool sendUpdate(int forceDst=0)
 		{
+			if (groupPtr==NULL)	
+				return(false);
+
 			Cmsg out;
 			out.event="asterisk_updateDevice";
 			out.dst=forceDst;
 			out["id"]=id;
 			out["callerId"]=callerId;
 			out["online"]=online;
-			out.send();
+
+			if (groupPtr!=NULL)
+			{
+				out["groupId"]=groupPtr->getId();
+			}
+
+			groupPtr->send(out);
+			return(true);
 		}
 
 
@@ -305,9 +394,8 @@ namespace asterisk
 		{
 			if (changed)
 			{	
-				sendUpdate();
-
-				changed=false;
+				if (sendUpdate())
+					changed=false;
 			}
 		}
 
@@ -316,7 +404,6 @@ namespace asterisk
 		{
 			//refresh device
 			sendUpdate(dst);
-
 		}
 
 		~Cdevice()
@@ -325,7 +412,9 @@ namespace asterisk
 			out.event="asterisk_delDevice";
 			out.dst=0; 
 			out["id"]=id;
-			out.send();
+
+			if (groupPtr!=NULL)
+				groupPtr->send(out);
 		}
 
 		
@@ -359,8 +448,11 @@ namespace asterisk
 			initiator=true;
 		}
 
-		void sendDebug(Cmsg msg, int serverId)
+		bool sendDebug(Cmsg msg, int serverId)
 		{
+			if (devicePtr==NULL || devicePtr->getGroupPtr()==NULL)
+				return (false);
+
 			msg.event="asterisk_debugChannel";
 			msg["serverId"]=serverId;
 			msg["id"]=id;
@@ -370,7 +462,9 @@ namespace asterisk
 			}
 			msg.dst=0;
 			msg.src=0;
-			msg.send();
+
+			devicePtr->getGroupPtr()->send(msg);
+			return (true);
 		}
 
 		int getChanges()
@@ -404,7 +498,7 @@ namespace asterisk
 
 		}
 
-		void setDevice(CdevicePtr devicePtr)
+		void setDevicePtr(CdevicePtr devicePtr)
 		{
 			if (devicePtr!=this->devicePtr)
 			{
@@ -423,7 +517,7 @@ namespace asterisk
 			}
 		}
 
-		void setLink(CchannelPtr channelPtr)
+		void setLinkPtr(CchannelPtr channelPtr)
 		{
 			if (channelPtr!=this->linkChannelPtr)
 			{
@@ -440,10 +534,10 @@ namespace asterisk
 		void delLink()
 		{
 			//unset our link
-			setLink(CchannelPtr());
+			setLinkPtr(CchannelPtr());
 		}
 
-		CchannelPtr getLink()
+		CchannelPtr getLinkPtr()
 		{
 			return(linkChannelPtr);
 		}
@@ -515,32 +609,24 @@ namespace asterisk
 			}
 		}
 
-		void sendChanges(bool recursing=false)
+		void sendChanges()
 		{
-			bool sendIt=false;
 
 			// are there changes we didnt send yet?
 			if (changes>changesSent)
 			{
-				sendIt=true;
-				changesSent=changes;
+				if (sendUpdate())
+					changesSent=changes;
 			}	
 
-			//are we linked?
-// 			if (linkChannelPtr!=CchannelPtr())
-// 			{
-// 				//let the other channel check for changes as well
-// 				//(prevent endless recursion)
-// 				if (!recursing)
-// 					linkChannelPtr->sendChanges(true);
-// 			}
 
-			if (sendIt)
-				sendUpdate();
 		}
 
-		void sendUpdate(int forceDst=0)
+		bool sendUpdate(int forceDst=0)
 		{
+			if (devicePtr==NULL || devicePtr->getGroupPtr()==NULL)
+				return (false);
+
 			Cmsg out;
 			out.event="asterisk_updateChannel";
 			out.dst=forceDst;
@@ -560,7 +646,9 @@ namespace asterisk
 
 			out["firstExtension"]=firstExtension;
 
-			out.send();
+			devicePtr->getGroupPtr()->send(out);
+
+			return (true);
 		}
 
 		void sendRefresh(int dst)
@@ -570,15 +658,19 @@ namespace asterisk
 
 		~Cchannel()
 		{
-			Cmsg out;
-			out.event="asterisk_delChannel";
-			out.dst=0; 
-			out["id"]=id;
-			if (devicePtr!=CdevicePtr())
+
+			if (devicePtr!=NULL && devicePtr->getGroupPtr()!=NULL)
 			{
-				out["deviceId"]=devicePtr->getId();
+				Cmsg out;
+				out.event="asterisk_delChannel";
+				out.dst=0; 
+				out["id"]=id;
+				if (devicePtr!=CdevicePtr())
+				{
+					out["deviceId"]=devicePtr->getId();
+				}
+				devicePtr->getGroupPtr()->send(out);
 			}
-			out.send();
 		}
 
 	};
@@ -801,7 +893,7 @@ namespace asterisk
 			CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(deviceId);
 	
 			//NOTE: we handle Unmonitored sip peers as online, while we dont actually know if its online or not.		
-			if (msg["Status"].str().find("OK")==0 || msg["Status"].str().find("Unmonitored")==0)
+			if (msg["Status"].str().find("OK")==0 || msg["Status"].str().find("Unmonitored")==0 ||  msg["Status"].str().find("UNKNOWN")==0)
 				devicePtr->setOnline(true);
 			else
 				devicePtr->setOnline(false);
@@ -812,7 +904,7 @@ namespace asterisk
 				devicePtr->setCallerId(msg["ObjectName"]);
 	
 	
-			devicePtr->sendChanges();
+//			devicePtr->sendChanges();
 		}
 		else if (msg["ActionID"].str()=="Login")
 		{
@@ -908,7 +1000,7 @@ namespace asterisk
 			getDeviceIdFromChannel(msg["Channel"])
 		);
 	
-		channelPtr->setDevice(devicePtr);
+		channelPtr->setDevicePtr(devicePtr);
 
 		//States:
 		// ringing: somebody is calling the device
@@ -970,7 +1062,7 @@ namespace asterisk
 				channelPtr->setCallerIdName(msg["CallerIDName"]);
 		}
 	
-		devicePtr->sendChanges();
+//		devicePtr->sendChanges();
 		channelPtr->sendDebug(msg, msg.dst);
 	
 		
@@ -1064,7 +1156,7 @@ namespace asterisk
 		else
 			devicePtr->setOnline(false);
 	
-		devicePtr->sendChanges();
+//		devicePtr->sendChanges();
 	
 	}
 	
@@ -1083,8 +1175,8 @@ namespace asterisk
 		CchannelPtr channelPtr1=serverMap[msg.dst].getChannelPtr(msg["Uniqueid1"]);
 		CchannelPtr channelPtr2=serverMap[msg.dst].getChannelPtr(msg["Uniqueid2"]);
 	
-		channelPtr1->setLink(channelPtr2);
-		channelPtr2->setLink(channelPtr1);
+		channelPtr1->setLinkPtr(channelPtr2);
+		channelPtr2->setLinkPtr(channelPtr1);
 	
 	
 		channelPtr1->sendDebug(msg, msg.dst);
@@ -1128,9 +1220,12 @@ namespace asterisk
 	*/
 	SYNAPSE_REGISTER(asterisk_authReq)
 	{
-		//create a Csession object for the src session
-		sessionMap[msg.src]=CsessionPtr(new Csession());
-	
+		//create a Csession object for the src session?
+		if (sessionMap.find(msg.src) == sessionMap.end())
+		{
+			sessionMap[msg.src]=CsessionPtr(new Csession());
+		}
+
 		//deviceId + correct authCookie ?
 		if (msg.isSet("deviceId") && msg.isSet("authCookie"))
 		{
@@ -1144,6 +1239,10 @@ namespace asterisk
 					//autoCookie checks out?
 					if (devicePtr->getAuthCookie()==msg["authCookie"])
 					{
+
+						//session is now authenticated, set corresponding group
+						sessionMap[msg.src]->setGroupPtr(devicePtr->getGroupPtr());
+
 						//session is re-authenticated, by authCookie
 						Cmsg out;
 						out.event="asterisk_authOk";
@@ -1155,6 +1254,11 @@ namespace asterisk
 					}
 				}
 			}
+		}
+		else
+		{
+			//de-authenticate the user (e.g. logout)
+			sessionMap[msg.src]->setGroupPtr(CgroupPtr());
 		}
 
 		//tell the client which number to call, to authenticate
@@ -1199,24 +1303,33 @@ namespace asterisk
 			//do we know the specified session?
 			if (sessionMap.find(sessionId) != sessionMap.end())
 			{
-				//session is authenticated, by calling the magic ASTERISK_AUTH number
-				Cmsg out;
-				out.event="asterisk_authOk";
-				out.dst=sessionId;
-				out["deviceId"]=getDeviceIdFromChannel(msg["Channel"]);
-				out["authCookie"]=serverMap[msg.dst].getDevicePtr(out["deviceId"])->getAuthCookie();
-				out.send();
+				//session is not yet authenticated?
+				if (sessionMap[sessionId]->getGroupPtr() == NULL)
+				{
+					//get the device
+					CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(getDeviceIdFromChannel(msg["Channel"]));
 
-				//hang up
-				out.clear();
-				out.dst=msg.src;
-				out.src=msg.dst;
-				out.event="ami_Action";
-				out["Action"]="Hangup";
-				out["Channel"]=msg["Channel"].str();
-				out.send();
+					//session is now authenticated, set corresponding group
+					sessionMap[sessionId]->setGroupPtr(devicePtr->getGroupPtr());
 
-				return;
+					Cmsg out;
+					out.event="asterisk_authOk";
+					out.dst=sessionId;
+					out["deviceId"]=getDeviceIdFromChannel(msg["Channel"]);
+					out["authCookie"]=serverMap[msg.dst].getDevicePtr(out["deviceId"])->getAuthCookie();
+					out.send();
+	
+					//hang up
+					out.clear();
+					out.dst=msg.src;
+					out.src=msg.dst;
+					out.event="ami_Action";
+					out["Action"]="Hangup";
+					out["Channel"]=msg["Channel"].str();
+					out.send();
+	
+					return;
+				}
 			}
 		}
 	
@@ -1261,8 +1374,8 @@ namespace asterisk
 		//NOTE: a "link" for us, is something different then a link for asterisk.
 		CchannelPtr channelPtr1=serverMap[msg.dst].getChannelPtr(msg["SrcUniqueID"]);
 		CchannelPtr channelPtr2=serverMap[msg.dst].getChannelPtr(msg["DestUniqueID"]);
-		channelPtr1->setLink(channelPtr2);
-		channelPtr2->setLink(channelPtr1);
+		channelPtr1->setLinkPtr(channelPtr2);
+		channelPtr2->setLinkPtr(channelPtr1);
 	
 /*		channelPtr1->setInitiator(true);
 		channelPtr2->setInitiator(false);*/
@@ -1319,9 +1432,9 @@ namespace asterisk
 		{
 			channelPtr->setState("out");
 		}
-		channelPtr->setDevice(devicePtr);
+		channelPtr->setDevicePtr(devicePtr);
 	
-		if (channelPtr->getLink()==CchannelPtr())
+		if (channelPtr->getLinkPtr()==CchannelPtr())
 		{
 			//when we get renamed while NOT linked, we store the current callerids in the linkedcallerids.
 			//after the rename we usually receive our new caller id immeadiatly
