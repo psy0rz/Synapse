@@ -19,6 +19,8 @@
 #include <dlfcn.h>
 #include "csession.h"
 #include "cmodule.h"
+#include <boost/foreach.hpp>
+#include "cevent.h"
 
 using namespace boost;
 
@@ -511,8 +513,30 @@ CeventPtr CmessageMan::getEvent(const string & name)
 	}
 }
 
+void CmessageMan::getEvents(Cmsg & msg)
+{
+	//traverse the events that have been created by calls to sendMessage
+	BOOST_FOREACH( CeventHashMap::value_type event, events)
+	{
+		msg[event.first]=1;
+	}
 
-
+	//traverse the events that have registered event handlers in a module
+	CsessionPtr session;
+	for (int sessionId=0; sessionId<MAX_SESSIONS; sessionId++)
+	{
+		session=userMan.getSession(sessionId);
+		//session exists and is still active?
+		if (session && session->isEnabled())
+		{
+			//is this the default session for the module (to prevent overhead)
+			if (session->module->defaultSessionId==sessionId)
+			{
+				session->module->getEvents(msg);
+			}
+		}
+	}
+}
 
 
 /*!

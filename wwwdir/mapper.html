@@ -1,0 +1,52 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<title>Synapse event mapper</title>
+	<script type="text/javascript" src="jquery.js"></script>
+	<script type="text/javascript" src="jquery-ui.js"></script>
+	<link href="css/redmond/jquery-ui.css" rel="stylesheet" type="text/css"/>
+	<script type="text/javascript" src="json2.js"></script>
+	<script type="text/javascript" src="synapse.js"></script>
+	<script type="text/javascript" src="synapse-ui.js"></script>
+	<script type="text/javascript">
+
+		/// SYNAPSE EVENT HANDLERS
+
+		synapse_register("error",function(errortxt)
+		{
+			$('#error').html(errortxt);
+		});	
+				
+ 		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			synapse_login();
+ 		});
+
+		/// JAVA SCRIPT EVENT HANDLERS
+		$(document).ready(function(){
+
+			$('#username').val("admin");
+			$('#password').val("bs");
+			$('#get').click(function(event){
+				send(0,"core_GetEvents", { });
+			});
+
+
+		});
+
+
+	</script>
+</head>
+
+
+<body>
+	<h1>Events</h1>
+	<p>
+	
+	<input type='submit' id='get'>
+
+</body>
+</html>

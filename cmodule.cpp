@@ -13,7 +13,7 @@
 #include "clog.h"
 #include <dlfcn.h>
 #include <boost/regex.hpp> 
-
+#include <boost/foreach.hpp>
 
 
 
@@ -239,4 +239,13 @@ string Cmodule::getName(string path)
 		return (what[1]);
 	}
 	
+}
+
+void Cmodule::getEvents(Cmsg & msg)
+{
+	//traverse the events that have been created by calls to sendMessage
+	BOOST_FOREACH( ChandlerHashMap::value_type handler, handlers)
+	{
+		msg[handler.first]=1;
+	}
 }

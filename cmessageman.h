@@ -28,8 +28,17 @@
 
 /*
 	This is the main object.
-	All the thread magic and locking happens in here.
-	The other classes are not threadsafe!
+
+	Event marshhalling happens in two places:
+
+	first to get the global Cevent object to verify the permissions:
+	CmessageMan::CeventHashMap["eventname"] -- shared_ptr --> Cevent object
+
+	secondly to get a pointer to the actual handler, per module:
+	Cmodule::ChandlerHashMap["eventname"]   -- pointer --> soHandler() function
+
+
+
 */
 
 
@@ -57,6 +66,7 @@ public:
 	void checkThread();
    	CsessionPtr loadModule(string path, string userName);
 	CeventPtr getEvent(const string & name);
+	void getEvents(Cmsg & msg);
     int isModuleReady(string path);
     void doShutdown(int exit);
 

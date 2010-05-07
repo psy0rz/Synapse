@@ -784,4 +784,22 @@ SYNAPSE_REGISTER(core_GetStatus)
 
 	}
 	out.send();
+}
+
+/** Gets a list of all registered events from core.
+Usefull for automated event mappers.
+
+\par Replies \c core_Events:
+	Contains array with all known events.
+*/
+SYNAPSE_REGISTER(core_GetEvents)
+{
+	Cmsg out;
+	{
+		lock_guard<mutex> lock(messageMan->threadMutex);
+		messageMan->getEvents(out);
+		out.event="core_Events";
+		out.dst=msg.src;
+	}
+	out.send();
 } 

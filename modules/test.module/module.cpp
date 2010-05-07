@@ -27,8 +27,8 @@ SYNAPSE_REGISTER(module_Init)
 	out.clear();
 	out.event="core_LoadModule";
 
-// 	out["path"]="modules/lirc.module/liblirc.so";
-// 	out.send();
+	out["path"]="modules/lirc.module/liblirc.so";
+	out.send();
 
 //	out["path"]="modules/net.module/libnet.so";
 //	out.send();
@@ -225,6 +225,11 @@ SYNAPSE_REGISTER(loop)
 	out["bla"]="loopback test";
 	out.dst=msg.dst;
 	out.send();
+}
+
+SYNAPSE_REGISTER(AAAAAAAAAAAA)
+{
+
 }
 
  
