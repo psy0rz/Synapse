@@ -80,7 +80,7 @@ bool Cmsg::send()
 
 	return(messageMan->sendMessage((CmodulePtr)module,CmsgPtr(new Cmsg(*this)))); 
 } 
- 
+
 
 /*!
     \fn Cmsg::returnError(string error)

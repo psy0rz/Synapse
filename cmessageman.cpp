@@ -49,9 +49,7 @@ CmessageMan::~CmessageMan()
 
 
 
-/*!
-    \fn CmessageMan::sendMessage(const Cmsg & msg) */
-bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg)
+bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  msg)
 {
 	// -module is a pointer thats set by the core and can be trusted
 	// -msg is set by the user and only containts direct objects, and NO pointers. it cant be trusted yet!
@@ -122,7 +120,7 @@ bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg)
 	FsoHandler soHandler;
 
 	//destination specified:
-	if (msg->dst!=0)
+	if (msg->dst>0)
 	{
 		CsessionPtr dst;
 		dst=userMan.getSession(msg->dst);
@@ -165,7 +163,7 @@ bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg)
 
 		return true;
 	}
-	//no destination specified == broadcast
+	//destination <=0 == broadcast
 	else
 	{
 		if (logSends)
@@ -173,8 +171,7 @@ bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg)
 			msgStr << "broadcast (";
 		}
 
-		//make a copy of the message object and keep the pointer:
-		CmsgPtr msgPtr(new Cmsg(*msg));
+
 		//TODO:optimize these broadcasting algoritms
 		CsessionPtr dst;
 		bool delivered=false;
@@ -216,6 +213,33 @@ bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg)
 
 		if (!delivered)
 			WARNING("broadcast " << msg->event << " was not received by anyone.") 
+		return (true);
+	}
+}
+
+/** Use this to send a message. 
+Internally it will result in 1 or more calls to sendMappedMessage, if the msg.dst is -1.
+*/
+
+bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg)
+{
+	if (msg->dst >= 0)
+	{
+		return(sendMappedMessage(module, msg));
+	}
+	else
+	{
+		//create or find the event in the mapper list, and traverse the list
+		BOOST_FOREACH(string event, eventMappers[msg->event])
+		{
+			//clone the message and change the event-name
+			CmsgPtr mappedMsg=CmsgPtr(new Cmsg(*msg));
+			(*mappedMsg)["synapse_mappedFrom"]=msg->event;
+			mappedMsg->event=event;
+			mappedMsg->dst=0;
+			sendMessage(module, mappedMsg);
+		}
+		//we dont care about the result of the mapped sendMessage, for now
 		return (true);
 	}
 }

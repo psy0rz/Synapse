@@ -60,6 +60,7 @@ class CnetLirc : public Cnet
 			//TODO: make a dynamicly configurable mapper, which maps lirc-events to other events.
 			//(we'll do that probably after the gui-stuff is done)
 			Cmsg out;
+			out.dst=-1;
 			out.event="lirc_Read";
 			out["code"]		=what[1];
 			out["repeat"]	=what[2];

@@ -29,8 +29,10 @@ using namespace boost;
 #define CVAR_MAP 1
 #define CVAR_LONG_DOUBLE 2
 #define CVAR_STRING 3
+#define CVAR_LIST 4
 
 typedef map< string,class Cvar> CvarMap;
+typedef list<class Cvar> CvarList;
 
 class Cvar {
 public:
@@ -53,21 +55,28 @@ public:
  	void operator=(const long double & value);
 	operator long double  ();
 
+
+	//CVAR_MAP and CVAR_LIST stuff
+	const int size();
+
 	//CVAR_MAP stuff
  	void operator=(CvarMap & value);
 	operator CvarMap & ();
 	Cvar & operator [](const string & key);
     bool isSet(const char * key);
-	iterator begin();
-	iterator end();
-	const int size();
+	CvarMap::iterator begin();
+	CvarMap::iterator end();
 	void erase(const char * key);
+
+	//CVAR_LIST stuff
+ 	void operator=(CvarList & value);
+	CvarList & list();
 
 	
 
 private:
 	
-	variant <void *,CvarMap , long double,string> value;
+	variant <void *,CvarMap , long double, string, CvarList> value;
 };
 
 #endif

@@ -30,10 +30,10 @@ public:
 
 	~Cevent();
   	bool isSendAllowed(const CuserPtr & user);
-    	bool isRecvAllowed(const CuserPtr & user);
-    	bool isSendAllowed(const CgroupPtr & group);
-    	bool isRecvAllowed(const CgroupPtr & group);
-    	bool isModifyAllowed(const CuserPtr & user);
+	bool isRecvAllowed(const CuserPtr & user);
+	bool isSendAllowed(const CgroupPtr & group);
+	bool isRecvAllowed(const CgroupPtr & group);
+	bool isModifyAllowed(const CuserPtr & user);
 
 	void setRecvGroup(const CgroupPtr & group);
 	void setSendGroup(const CgroupPtr & group);

@@ -60,7 +60,7 @@ public:
 	int dst;
 	string event;
 
-	//this function is only implemented in .so object module
+	//this function is only implemented in the .so object module
 	//so if you use it in the core you will get linker errors :)
 	bool send();
 	void returnError(string description);

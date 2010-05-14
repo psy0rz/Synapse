@@ -50,7 +50,7 @@ int Cvar::which()
 string Cvar::getPrint(string prefix)
 {
 	stringstream print;
-	switch (which())
+	switch (value.which())
 	{
 		case CVAR_EMPTY:
 			print << "(empty)";
@@ -183,6 +183,19 @@ Cvar::operator long double()
 	return (get<long double>(value));
 }
 
+///CVAR_MAP and CVAR_LIST stuff
+const int Cvar::size()
+{
+	switch (value.which())
+	{
+		case CVAR_MAP:
+			return (((CvarMap&)(*this)).size());
+		case CVAR_LIST:
+			return (((CvarList&)(*this)).size());
+		default:
+			return(0);
+	}
+}
 
 
 /// CVAR_MAP stuff
@@ -207,12 +220,12 @@ Cvar & Cvar::operator[] (const string & key)
 	return (((CvarMap&)(*this))[key]);
 }
 
-Cvar::iterator Cvar::begin()
+CvarMap::iterator Cvar::begin()
 {
 	return ((CvarMap &)(*this)).begin();
 }
 
-Cvar::iterator Cvar::end()
+CvarMap::iterator Cvar::end()
 {
 	return ((CvarMap &)(*this)).end();
 }
@@ -227,10 +240,6 @@ bool Cvar::isSet(const char * key)
 	);
 }
 
-const int Cvar::size()
-{
-	return (((CvarMap&)(*this)).size());
-}
 
 void Cvar::erase(const char * key)
 {
@@ -238,4 +247,13 @@ void Cvar::erase(const char * key)
 		((CvarMap&)(*this)).find(key)
 	);
 }
+
+/// CVAR_LIST stuff
+
+CvarList & Cvar::list()
+{
+	return (get<CvarList&>(value));
+
+}
+
 

@@ -61,6 +61,7 @@ public:
 	int run(string coreName,string moduleName);
 
 	//the rest is not thread safe, so callers are responsible for locking:
+	bool sendMappedMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg);
 	bool sendMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg);
 
 	void checkThread();
@@ -94,6 +95,9 @@ private:
 	typedef map<string, CeventPtr> CeventHashMap;
 	CeventHashMap events;
 
+	//event mapping: send another event as well. Usefull for key-bindings or lirc-bindings.
+	typedef map<string, list<string> > CeventMapperMap;
+	CeventMapperMap eventMappers;
 
 	map<thread::id,CthreadPtr> threadMap;
 	int 	currentThreads; //number of  threads in memory
@@ -112,7 +116,6 @@ private:
 	CgroupPtr defaultRecvGroup;
 	CgroupPtr defaultSendGroup;
 	CgroupPtr defaultModifyGroup;
-	//CuserPtr  defaultOwner;
 
 };
 
