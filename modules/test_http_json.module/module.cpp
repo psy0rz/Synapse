@@ -133,13 +133,12 @@ SYNAPSE_REGISTER(net_Read)
 	//received data?
 	if (msg.isSet("data"))
 	{
-		
 		//try to parse authcookie
 		smatch what;
 		if (regex_search(
 			msg["data"].str(),
 			what, 
-			boost::regex("x-synapse-authcookie: (.*)")
+			boost::regex("X-Synapse-Authcookie: (.*)")
 		))
 		{
 			string authCookie=what[1];
@@ -165,7 +164,7 @@ SYNAPSE_REGISTER(net_Read)
 			jsonStr+="}";
 
 			stringstream ss;
-			ss << "POST /synapse/send HTTP/1.1\r\nx-synapse-authcookie: "+authCookie+"\r\n";
+			ss << "POST /synapse/send HTTP/1.1\r\nX-Synapse-Authcookie: "+authCookie+"\r\n";
 			ss << "content-length: " << jsonStr.length() << "\r\n";
 			ss << "\r\n";
 			ss << jsonStr;
@@ -191,7 +190,7 @@ SYNAPSE_REGISTER(net_Read)
 			out.src=msg.dst;
 			out.dst=msg.src;
 			out.event="net_Write";
-			out["data"]="GET /synapse/longpoll HTTP/1.1\r\nx-synapse-authcookie: "+authCookie+"\r\n\r\n";
+			out["data"]="GET /synapse/longpoll HTTP/1.1\r\nX-Synapse-Authcookie: "+authCookie+"\r\n\r\n";
 			out.send();
 
 			//random disconnect after a while

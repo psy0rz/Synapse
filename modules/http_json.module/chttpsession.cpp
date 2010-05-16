@@ -2,7 +2,6 @@
 
 #include "../../csession.h"
 
-#include "synapse_json.h"
 
 ChttpSession::ChttpSession()
 {

@@ -3,7 +3,6 @@
 #include <sstream>
 #include "../../csession.h"
 
-#include "synapse_json.h"
 
 using namespace std;
 
@@ -152,7 +151,7 @@ string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonStr)
 	Cmsg msg;
 
 	//we do this unlocked, since parsing probably takes most of the time:
-	if (!json2Cmsg(jsonStr, msg))
+	if (!msg.fromJson(jsonStr))
 	{	
 		error <<  "Error while parsing JSON message:" << jsonStr;
 		return (error.str());
@@ -232,7 +231,7 @@ int ChttpSessionMan::enqueueMessage(Cmsg & msg, int dst)
 	//convert message to json
 	//we do this without lock ,since it can be a "slow" operation:
 	string jsonStr;
-	Cmsg2json(msg, jsonStr);
+	msg.toJson(jsonStr);
 
 	{
 		lock_guard<mutex> lock(threadMutex);

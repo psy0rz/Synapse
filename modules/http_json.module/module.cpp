@@ -9,7 +9,6 @@
 
 #include <cstdlib> 
 
-#include "synapse_json.h"
 
 #include "chttpsessionman.h"
 

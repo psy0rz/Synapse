@@ -1,7 +1,6 @@
 #include "cnetman.h"
 #include "synapse.h"
 
-#include "synapse_json.h"
 #define MAX_MESSAGE 2048
 
 
@@ -126,13 +125,13 @@ class CnetModule : public Cnet
 		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), readBuffer.size());
 		dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 
-		if (json2Cmsg(dataStr, out))
+		if (out.fromJson(dataStr))
 		{
 			out.send();
 		}
 		else
 		{
-			WARNING("Error while parsing incomming json message on id " << id);
+			WARNING("Error while parsing incoming json message on id " << id);
 		}
 
 		readBuffer.consume(dataStr.length());
@@ -272,8 +271,8 @@ SYNAPSE_REGISTER(module_Shutdown)
 SYNAPSE_HANDLER(all)
 {
 	string jsonStr;
-	Cmsg2json(msg, jsonStr);
-	
+	msg.toJson(jsonStr);	
+
 	//send to corresponding network connection
 	INFO("json: " << jsonStr);
 }
