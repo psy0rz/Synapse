@@ -16,9 +16,11 @@
 #include <string>
 #include "boost/variant.hpp"
 #include <map>
+#include "json_spirit.h"
 
 using namespace std;
 using namespace boost;
+using namespace json_spirit;
 
 /**
 	@author 
@@ -67,14 +69,24 @@ public:
 	CvarMap::iterator begin();
 	CvarMap::iterator end();
 	void erase(const char * key);
+	CvarMap & map();
 
 	//CVAR_LIST stuff
  	void operator=(CvarList & value);
 	CvarList & list();
 
+	//json stuff
+	void toJson(string & jsonStr);
+	void toJsonFormatted(string & jsonStr);
+	bool fromJson(string & jsonStr);
 	
 
 private:
+
+	//json spirit conversion stuff, used internally
+	void toJsonSpirit(Value &spiritValue);
+	void fromJsonSpirit(Value &spiritValue);
+
 	
 	variant <void *,CvarMap , long double, string, CvarList> value;
 };

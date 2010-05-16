@@ -214,6 +214,12 @@ Cvar::operator CvarMap & ()
 	return (get<CvarMap&>(value));
 }
 
+CvarMap & Cvar::map()
+{
+	return ((CvarMap &)(*this));
+
+}
+
 
 Cvar & Cvar::operator[] (const string & key)
 {
@@ -256,4 +262,115 @@ CvarList & Cvar::list()
 
 }
 
+/// JSON stuff
 
+/** Recursively converts a json_spirit Value to this Cvar
+*/
+void Cvar::fromJsonSpirit(Value &spiritValue)
+{
+	switch(spiritValue.type())
+	{
+		case(null_type):
+			clear();
+			break;
+		case(str_type):
+			value=spiritValue.get_str();
+			break;
+		case(real_type):
+			value=spiritValue.get_real();
+			break;
+		case(int_type):
+			value=spiritValue.get_int();
+			break;
+		case(obj_type):
+			value=CvarMap();
+			//convert the Object(string,Value) pairs to a CvarMap 
+			for (Object::iterator ObjectI=spiritValue.get_obj().begin(); ObjectI!=spiritValue.get_obj().end(); ObjectI++)
+			{
+				//recurse to convert the map-value of the CvarMap into a json_spirit Value:
+				map()[ObjectI->name_].fromJsonSpirit(ObjectI->value_);
+			}
+			break;
+		default:
+			WARNING("Cant convert json spirit variable type " << spiritValue.type() << " to Cvar");
+			break;
+	}
+}
+
+
+/** Recursively converts this Cvar to a json_spirit Value.
+*/
+void Cvar::toJsonSpirit(Value &spiritValue)
+{
+	switch(value.which())
+	{
+		case(CVAR_EMPTY):
+			spiritValue=Value();
+			break;
+		case(CVAR_STRING):
+			spiritValue=get<string&>(value);
+			break;
+		case(CVAR_LONG_DOUBLE):
+			spiritValue=(double)(get<long double>(value));
+			break;
+		case(CVAR_MAP):
+			//convert the CvarMap to a json_spirit Object with (String,Value) pairs 
+			spiritValue=Object();
+			for (CvarMap::iterator varI=begin(); varI!=end(); varI++)
+			{
+				Value subValue;
+				//recurse to convert the map-value of the CvarMap into a json_spirit Value:
+				//Cvar2Value(varI->second, subValue);
+				varI->second.toJsonSpirit(subValue);
+				
+				//push the resulting Value onto the json_spirit Object
+				spiritValue.get_obj().push_back(Pair(
+					varI->first,
+					subValue
+				));
+			}
+			break;
+		default:
+			WARNING("Cant convert Cvar type " << value.which() << " to json spirit.");
+			break;
+	}
+}
+
+
+/** converts this Cvar recursively into a json string
+*/
+void Cvar::toJson(string & jsonStr)
+{
+	Value spiritValue;
+	toJsonSpirit(spiritValue);
+
+	jsonStr=write(spiritValue);
+
+}
+
+void Cvar::toJsonFormatted(string & jsonStr)
+{
+	Value spiritValue;
+	toJsonSpirit(spiritValue);
+
+	jsonStr=write_formatted(spiritValue);
+
+}
+
+bool Cvar::fromJson(string & jsonStr)
+{
+
+	//parse json input
+	try
+	{
+		Value spiritValue;
+		//TODO:how safe is it actually to let json_spirit parse untrusted input? (regarding DoS, buffer overflows, etc)
+		json_spirit::read(jsonStr, spiritValue);
+		fromJsonSpirit(spiritValue);
+		return true;
+	}
+	catch(...)
+	{
+		return false;
+	}
+}

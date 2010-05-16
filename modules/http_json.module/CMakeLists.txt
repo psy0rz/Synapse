@@ -15,7 +15,7 @@ file(GLOB sources *.cpp ../../libs/cnet.cpp)
 ADD_LIBRARY(${module_name} MODULE ${sources})
 
 #need to link to some other libraries ? just add them here
-TARGET_LINK_LIBRARIES(${module_name} synapse_json )
+TARGET_LINK_LIBRARIES(${module_name}  )
 
 INCLUDE_DIRECTORIES(../..)
 

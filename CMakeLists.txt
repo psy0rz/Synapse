@@ -3,6 +3,15 @@ cmake_minimum_required(VERSION 2.6)
 PROJECT(synapse)
 
 
+
+
+# nodig voor json_spirit?
+# IF("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+# SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fPIC"  )
+# SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fPIC"  )
+# ENDIF("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+
+
 #uncomment this for releases or debugs
 #SET(CMAKE_BUILD_TYPE Release)
 SET(CMAKE_BUILD_TYPE Debug)
@@ -20,9 +29,9 @@ ADD_EXECUTABLE(synapse ${sources})
 
 
 #need to link to some other libraries ? just add them here
-TARGET_LINK_LIBRARIES(synapse boost_thread-mt dl boost_regex-mt boost_system-mt -pg )
+TARGET_LINK_LIBRARIES(synapse boost_thread-mt dl boost_regex-mt boost_system-mt -pg json_spirit)
 
 
-INCLUDE_DIRECTORIES(libs)
+INCLUDE_DIRECTORIES(libs libs/json_spirit)
 
-SUBDIRS(libs modules)
+SUBDIRS(libs modules libs/json_spirit)
