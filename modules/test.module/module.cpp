@@ -5,44 +5,44 @@ int counterSleep;
 
 SYNAPSE_REGISTER(module_Init)
 {
-	Cmsg test;
-	Cvar ding;
-	ding["ding1"]=1;
-	ding["ding2"]=2;
-	ding["ding3"]=3;
-
-	Cvar ding2;
-	ding2.list().push_back(1);
-	ding2.list().push_back(12);
-	ding2.list().push_back(13);
-
-
-	test["blaat"]="mai";
-//	test["lijst"].list().push_back(ding);
-	test["lijst"].list().push_back(string("text1"));
-	test["lijst"].list().push_back(string("text2"));
-	test["lijst"].list().push_back(ding);
-	test["lijst"].list().push_back(ding2);
-	test["map"]["ding1"]=1;
-	test["map"]["ding2"]=2;
-	test["map"]["ding3"]=3;
-	test["foo"]="bar";
-	
-
-	string j;
-	test.toJson(j);
-	INFO("origneel: "<<test.getPrint());
-	INFO("json "<<j);
-
-
-	Cmsg back;
-	back["kut"]=1;
-
-	if(back.fromJson(j))
-		INFO("terug geconverterd: "<<back.getPrint());	
-
-
-	return;
+// 	Cmsg test;
+// 	Cvar ding;
+// 	ding["ding1"]=1;
+// 	ding["ding2"]=2;
+// 	ding["ding3"]=3;
+// 
+// 	Cvar ding2;
+// 	ding2.list().push_back(1);
+// 	ding2.list().push_back(12);
+// 	ding2.list().push_back(13);
+// 
+// 
+// 	test["blaat"]="mai";
+// //	test["lijst"].list().push_back(ding);
+// 	test["lijst"].list().push_back(string("text1"));
+// 	test["lijst"].list().push_back(string("text2"));
+// 	test["lijst"].list().push_back(ding);
+// 	test["lijst"].list().push_back(ding2);
+// 	test["map"]["ding1"]=1;
+// 	test["map"]["ding2"]=2;
+// 	test["map"]["ding3"]=3;
+// 	test["foo"]="bar";
+// 	
+// 
+// 	string j;
+// 	test.toJson(j);
+// 	INFO("origneel: "<<test.getPrint());
+// 	INFO("json "<<j);
+// 
+// 
+// 	Cmsg back;
+// 	back["kut"]=1;
+// 
+// 	if(back.fromJson(j))
+// 		INFO("terug geconverterd: "<<back.getPrint());	
+// 
+// 
+// 	return;
 	
 	Cmsg out;
 
