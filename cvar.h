@@ -81,13 +81,13 @@ public:
 	bool fromJson(string & jsonStr);
 	
 
-private:
+protected:
 
 	//json spirit conversion stuff, used internally
 	void toJsonSpirit(Value &spiritValue);
 	void fromJsonSpirit(Value &spiritValue);
 
-	
+private:	
 	variant <void *,CvarMap , long double, string, CvarList> value;
 };
 

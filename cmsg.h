@@ -67,6 +67,10 @@ public:
 	void returnWarning(string description);
 	bool returnIfOtherThan(char * keys, ...);
 
+	//json stuff
+	void toJson(string & jsonStr);
+	bool fromJson(string & jsonStr);
+
 };
 
 typedef shared_ptr<Cmsg> CmsgPtr; 

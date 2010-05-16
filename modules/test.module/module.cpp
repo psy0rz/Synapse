@@ -5,7 +5,10 @@ int counterSleep;
 
 SYNAPSE_REGISTER(module_Init)
 {
-	Cvar test;
+	Cmsg test;
+	test.src=1;
+	test.dst=2;
+	test.event="eventje";
 	test["getal"]=13;
  	test["text"]="blaat";
  	test["sub"]["subgetal"]=42;
@@ -13,14 +16,14 @@ SYNAPSE_REGISTER(module_Init)
 
 	
 	string s;
-	test.toJsonFormatted(s);
+	test.toJson(s);
 
 	INFO("tis: " << s);
 
-	Cvar test2;
+	Cmsg test2;
 	if (!test2.fromJson(s))
 		ERROR("KUT");
-	INFO("tis: " << test2.getPrint());
+//	INFO("tis: " << test2.getPrint());
 
 	string s2;
 	test2.toJson(s2);
