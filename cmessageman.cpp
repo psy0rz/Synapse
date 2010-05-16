@@ -149,7 +149,7 @@ bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		if (logSends)
 		{
 			msgStr << msg->dst << ":" << dst->user->getName() << "@" << dst->module->name << 
-				" DATA=" << msg->getPrint(" |");
+				" " << msg->getPrint(" |");
 			LOG_SEND(msgStr.str());
 		}
 
@@ -206,7 +206,7 @@ bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		}
 		if (logSends)
 		{
-			msgStr << ") DATA=" <<  
+			msgStr << ") " <<  
 				msg->getPrint(" |");
 			LOG_SEND(msgStr.str());
 		}
@@ -306,7 +306,7 @@ void CmessageMan::operator()()
 			stringstream msgStr;
 			msgStr << "RECV " << callI->msg->event << 
 				" FROM " << callI->msg->src << 
-				" BY " << callI->dst->id << ":" << callI->dst->user->getName() << "@" << callI->dst->module->name << " DATA=" <<
+				" BY " << callI->dst->id << ":" << callI->dst->user->getName() << "@" << callI->dst->module->name << " " <<
 				callI->msg->getPrint(" |");
 
 			LOG_RECV(msgStr.str());

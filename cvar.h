@@ -49,12 +49,16 @@ public:
 	bool isEmpty();
 
 	//CVAR_STRING stuff
+    Cvar(const string & value);
+//    Cvar(const char * value);
  	void operator=(const string & value);
+ //	void operator=(const char * value);
 	operator string &();
 	string & str();
 
 	//CVAR_LONG_DOUBLE stuff
  	void operator=(const long double & value);
+	Cvar(const long double & value);
 	operator long double  ();
 
 
@@ -75,7 +79,7 @@ public:
  	void operator=(CvarList & value);
 	CvarList & list();
 
-	//json stuff
+	//json conversion stuff
 	void toJson(string & jsonStr);
 	void toJsonFormatted(string & jsonStr);
 	bool fromJson(string & jsonStr);

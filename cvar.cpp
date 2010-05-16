@@ -18,7 +18,7 @@
 
 Cvar::Cvar()
 {
-
+	clear();
 }
 
 
@@ -63,10 +63,10 @@ string Cvar::getPrint(string prefix)
 			break;
 		case CVAR_MAP:
 			//show all keys of the map, and show the values recursively
-//			print "map: " << endl;
 			if (begin()!=end())
 			{
-				for (Cvar::iterator varI=begin(); varI!=end(); varI++)
+				print << "(map:)";
+				for (CvarMap::iterator varI=begin(); varI!=end(); varI++)
 				{
 					print << endl;
 					print << prefix << varI->first << " = ";
@@ -76,6 +76,23 @@ string Cvar::getPrint(string prefix)
 			else
 			{
 				print << "(empty map)";
+			}
+
+			break;
+		case CVAR_LIST:
+			//show all items of the list recursively
+			if (list().begin()!=list().end())
+			{
+				print << "(list:)";
+				for (CvarList::iterator varI=list().begin(); varI!=list().end(); varI++)
+				{
+					print << endl;
+					print << prefix << varI->getPrint(prefix+" |");
+				}
+			}
+			else
+			{
+				print << "(empty list)";
 			}
 
 			break;
@@ -92,9 +109,17 @@ string Cvar::getPrint(string prefix)
 
 /// CVAR_STRING stuff
 
-/*!
-    \fn Cvar::operator=
- */
+
+Cvar::Cvar(const string & value)
+{
+	this->value=value;
+}
+
+// Cvar::Cvar(const char * value)
+// {
+// 	this->value=string(value);
+// }
+
 void Cvar::operator=(const string & value)
 {
 	this->value=value;
@@ -142,12 +167,18 @@ string & Cvar::str()
 	return((string &)*this);	
 }
 
+
+/// CVAR_LONG_DOUBLE stuff
+
 void Cvar::operator=(const long double & value)
 {
 	this->value=value;
 }
 
-/// CVAR_LONG_DOUBLE stuff
+ Cvar::Cvar(const long double & value)
+{
+	this->value=value;
+}
 
 Cvar::operator long double()
 {
@@ -258,6 +289,15 @@ void Cvar::erase(const char * key)
 
 CvarList & Cvar::list()
 {
+	if (value.which()==CVAR_EMPTY)
+	{
+		value=CvarList();
+	}
+	else if (value.which()!=CVAR_LIST)
+	{
+		WARNING("Cvar " << this << ": Cant convert from data-type " << value.which() << " to CVAR_LIST, creating empty list");
+		value=CvarList();
+	}
 	return (get<CvarList&>(value));
 
 }
@@ -287,8 +327,19 @@ void Cvar::fromJsonSpirit(Value &spiritValue)
 			//convert the Object(string,Value) pairs to a CvarMap 
 			for (Object::iterator ObjectI=spiritValue.get_obj().begin(); ObjectI!=spiritValue.get_obj().end(); ObjectI++)
 			{
-				//recurse to convert the map-value of the CvarMap into a json_spirit Value:
+				//recurse to convert the json_spirit pair into a CvarMap key->item.
 				map()[ObjectI->name_].fromJsonSpirit(ObjectI->value_);
+			}
+			break;
+		case(array_type):
+			value=CvarList();
+			//convert the Array items to CvarList
+			for (Array::iterator ArrayI=spiritValue.get_array().begin(); ArrayI!=spiritValue.get_array().end(); ArrayI++)
+			{
+				//recurse to convert the json_spirit value item into a CvarList item
+				Cvar v;
+				v.fromJsonSpirit(*ArrayI);
+				list().push_back(v);
 			}
 			break;
 		default:
@@ -320,7 +371,6 @@ void Cvar::toJsonSpirit(Value &spiritValue)
 			{
 				Value subValue;
 				//recurse to convert the map-value of the CvarMap into a json_spirit Value:
-				//Cvar2Value(varI->second, subValue);
 				varI->second.toJsonSpirit(subValue);
 				
 				//push the resulting Value onto the json_spirit Object
@@ -328,6 +378,19 @@ void Cvar::toJsonSpirit(Value &spiritValue)
 					varI->first,
 					subValue
 				));
+			}
+			break;
+		case(CVAR_LIST):
+			//convert the CvarList to a json_spirit Array with (String,Value) pairs 
+			spiritValue=Array();
+			for (CvarList::iterator varI=list().begin(); varI!=list().end(); varI++)
+			{
+				Value subValue;
+				//recurse to convert the list item of the CvarList into a json_spirit Value:
+				varI->toJsonSpirit(subValue);
+				
+				//push the resulting Value onto the json_spirit Object
+				spiritValue.get_array().push_back(subValue);
 			}
 			break;
 		default:
