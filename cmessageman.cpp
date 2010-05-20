@@ -229,16 +229,25 @@ bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg)
 	}
 	else
 	{
+		//when we're done send a special mapping message that shows us what is mapped.
+		//used by the mapper GUI.
+		CmsgPtr mappedMsg=CmsgPtr(new Cmsg());
+		mappedMsg->event="core_MappedEvent";
 		//create or find the event in the mapper list, and traverse the list
 		BOOST_FOREACH(string event, eventMappers[msg->event])
 		{
 			//clone the message and change the event-name
-			CmsgPtr mappedMsg=CmsgPtr(new Cmsg(*msg));
-			(*mappedMsg)["synapse_mappedFrom"]=msg->event;
-			mappedMsg->event=event;
-			mappedMsg->dst=0;
-			sendMessage(module, mappedMsg);
+			CmsgPtr mapMsg=CmsgPtr(new Cmsg(*msg));
+			(*mapMsg)["synapse_mappedFrom"]=msg->event; //long synapse-name, since we dont want it to collide with the original parameters of the message.
+			(*mappedMsg)["mappedTo"].list().push_back(event);
+			mapMsg->event=event;
+			mapMsg->dst=0;
+			sendMessage(module, mapMsg);
 		}
+
+		(*mappedMsg)["mappedFrom"]=msg->event; 
+		sendMessage(module, mappedMsg);
+
 		//we dont care about the result of the mapped sendMessage, for now
 		return (true);
 	}

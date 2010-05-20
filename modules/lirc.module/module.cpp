@@ -57,15 +57,13 @@ class CnetLirc : public Cnet
 			boost::regex("(.*?) (.*?) (.*?) (.*?)\n")
 		))
 		{
-			//TODO: make a dynamicly configurable mapper, which maps lirc-events to other events.
-			//(we'll do that probably after the gui-stuff is done)
+			//send to destination -1: this is the user configurable event mapper
+			//TODO: different events for long-presses and double presses?
 			Cmsg out;
 			out.dst=-1;
-			out.event="lirc_Read";
+			out.event="lirc_"+what[4]+"."+what[3];
 			out["code"]		=what[1];
 			out["repeat"]	=what[2];
-			out["key"]		=what[3];
-			out["remote"]	=what[4];
 			out.send();
 		}
 		else
