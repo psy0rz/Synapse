@@ -25,6 +25,26 @@
 			synapse_login();
  		});
 
+
+ 		synapse_register("core_MappedEvent",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			//mapping doesnt exist yet?
+			if ($(escapeId(msg["mappedFrom"])).length==0)
+			{
+				//add it
+				$('#eventList').append(
+					"<div id='"+msg["mappedFrom"]+"' class='event'>"+
+					msg["mappedFrom"]+
+					"</div>"
+				);
+			}
+			$(escapeId(msg["mappedFrom"])).toggleClass("glow");
+
+			//add destination-mappings list:
+//			if ($(escapeId(msg["mappedTo"])).length==0)
+			
+ 		});
+
 		/// JAVA SCRIPT EVENT HANDLERS
 		$(document).ready(function(){
 
@@ -34,19 +54,59 @@
 				send(0,"core_GetEvents", { });
 			});
 
+			$('#clear').click(function(event){
+				$('#eventList').empty();
+			});
+
 
 		});
 
 
 	</script>
+
+	<style>
+
+
+
+
+		#eventList
+		{
+			width: 100%;
+			float: left;
+		}
+
+		.event
+		{
+			background-color: #AAFFAA;
+			float: left;
+			border-style:solid;
+			width: 20em;
+			min-height: 5em;
+			margin: 5px;
+			padding: 5px;
+		}
+
+		.glow
+		{
+			background-color: #CCFFCC;
+		}
+
+
+
+
+	</style>
 </head>
 
 
 <body>
-	<h1>Events</h1>
+	<h1>Event mapper</h1>
+	Generate an event, and then click it to add a mapping. 
+
+	<button id='clear'>Clear</button>
 	<p>
 	
-	<input type='submit' id='get'>
+	<div id='eventList'></div>
+
 
 </body>
 </html>

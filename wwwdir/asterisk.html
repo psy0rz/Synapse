@@ -68,14 +68,6 @@
 
 		});
 
-		function escapeId(myid) { 
-			//escape stuff to make it jquery compatible. asterisk channel ids look like this:
-			// Local/10@from-inside-TR_Dozy-6829,2
-			if (typeof myid != 'undefined')
-				return '#' + myid.replace(/([,@\/.])/g,'\\$1');
-			else
-				return '#undefined';
-		}
 
  		synapse_register("asterisk_updateDevice",function(msg_src, msg_dst, msg_event, msg)
  		{

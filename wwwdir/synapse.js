@@ -37,6 +37,14 @@ function synapse_receive()
 	});
 }
 
+function escapeId(myid) { 
+	//escape stuff to make it jquery compatible. 
+	if (typeof myid != 'undefined')
+		return '#' + myid.replace(/([,@\/.])/g,'\\$1');
+	else
+		return '#undefined';
+}
+
 function synapse_register(event, handler)
 {
 	if (typeof synapse_handlers[event] == 'undefined')
