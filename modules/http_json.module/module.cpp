@@ -273,7 +273,6 @@ class CnetHttp : public Cnet
 		}
 
 		//determine content-type
-
 		smatch what;
 		if (regex_search(
 			path,
@@ -297,10 +296,14 @@ class CnetHttp : public Cnet
 		inputFile.seekg (0, ios::end);
 		int fileSize=inputFile.tellg();
 		inputFile.seekg (0, ios::beg);
-
-		
 		extraHeaders["Content-Length"]=fileSize;
+
+		//other headers
+		extraHeaders["Cache-Control"]="public, max-age=3600";
+
 		sendHeaders(200, extraHeaders);
+
+
 
 		DEB(id << " sending CONTENT of " << path);
 		char buf[1024];
