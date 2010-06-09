@@ -123,7 +123,16 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
 	//we add some extra information that helps us find back the client
 	out["authCookie"]=authCookie;
 	out["netId"]=netId;
-	out.send();
+
+	if (!out.send())
+	{
+		//sending fails if the user doesnt have rights to send a NewSession request. (like anonymous user)
+		//in this case we just create a new anonymous session without cloning.
+		out.src=0;
+		out["username"]="anonymous";
+		out["password"]="anonymous";
+		out.send();
+	}
 }
 
 /** Called from to indicate that the network session is not interested anymore.
