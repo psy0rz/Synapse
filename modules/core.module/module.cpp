@@ -427,6 +427,7 @@ SYNAPSE_REGISTER(core_Login)
 
 \par Sends \c module_SessionStart:
 	to the new session, within the same module. This is to let the module know about its new session.
+		\arg \c username Username of the session
 		\arg \c * Contains all specified arguments. (without password)
 
 \par Broadcasts \c module_SessionStarted:
@@ -469,7 +470,10 @@ SYNAPSE_REGISTER(core_NewSession)
 					startmsg=msg;
 					if (startmsg.isSet("password"))
 						startmsg.erase("password");
+
+					//set username
 					startmsg.event="module_SessionStart";
+					startmsg["username"]=messageMan->userMan.getSession(sessionId)->user->getName();
 					startmsg.dst=sessionId;
 					startmsg.src=0;
 				}
