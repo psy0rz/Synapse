@@ -42,7 +42,7 @@ public:
 	string getStatusStr();
 
 	//Called from http-client-side:
-	void getJsonQueue(int netId, ThttpCookie & authCookie, string & jsonStr);
+	void getJsonQueue(int netId, ThttpCookie & authCookie, string & jsonStr, ThttpCookie authCookieClone);
 	string sendMessage(ThttpCookie & authCookie, string & jsonStr);
 	void endGet(int netId, ThttpCookie & authCookie);
 

@@ -51,7 +51,7 @@ ChttpSessionMan::ChttpSessionMap::iterator ChttpSessionMan::findSessionByCookie(
 //
 //If there are messages in the queue, they are moved to jsonStr and the queue will be empty again.
 */
-void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string & jsonStr)
+void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string & jsonStr, ThttpCookie authCookieClone)
 {
 	lock_guard<mutex> lock(threadMutex);
 
@@ -100,12 +100,27 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
 		mrand48_r(&randomBuffer, &authCookie);
 	} 
 
-	//Request a new session from core.
-	//we add some extra information that helps us find back the client
+	//Request a new session from core...
 	Cmsg out;
 	out.event="core_NewSession";
-	out["username"]="anonymous";
-	out["password"]="anonymous";
+
+	//Should we try to clone the credentials from a previous authCookie?
+	ChttpSessionMap::iterator httpSessionI=findSessionByCookie(	authCookieClone);
+	if (httpSessionI!=httpSessionMap.end())
+	{
+		//request the new session from the existing session, this way it gets the same credentials:
+		out.src=httpSessionI->first;
+		out["authCookieClone"]=authCookieClone;
+		DEB("Cloning existing credentials from previous session " << authCookieClone << " to new session " << authCookie);
+	}
+	else
+	{
+		//no existing session (anymore), so just create an anonymous session
+		out["username"]="anonymous";
+		out["password"]="anonymous";
+	}
+
+	//we add some extra information that helps us find back the client
 	out["authCookie"]=authCookie;
 	out["netId"]=netId;
 	out.send();

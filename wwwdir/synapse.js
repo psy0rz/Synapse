@@ -1,5 +1,5 @@
 //disable logging if we dont have firebug.
-//we replace this with custom logging later perhaps.
+//TODO:replace this with custom logging later perhaps.
 if (typeof console == 'undefined')
 {
 	function Cconsole(){
@@ -15,7 +15,8 @@ if (typeof console == 'undefined')
 //user defined message handlers go in here:
 synapse_handlers=new Array();
 
-//synapse uses the authCookie inside the X-Synapse-Authcookie to distinguish different script-instances
+//synapse uses the authCookie inside the X-Synapse-Authcookie to distinguish different script-instances.
+//No two script instances should use the same authCookie! otherwise you will miss certain messages.
 synapse_authCookie=0;
 
 //set this to true to stop polling:
@@ -31,7 +32,17 @@ function synapse_receive()
 		"success":		synapse_handleMessages,
 		"type":			"get",
 		"contentType":	"application/json",
-		"beforeSend":	function (XMLHttpRequest) { XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); },
+		"beforeSend":	function (XMLHttpRequest) {
+			if (synapse_authCookie!=0) 
+			{
+				XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); 
+			}
+			else
+			{
+				//request to clone the credentials of an older authcookie, so the user doesnt have to re-authenticate
+				XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie-Clone", $.readCookie('synapse_lastAuthCookie')); 
+			}
+		},
 		"processData":	false,
 		"cache":		false
 	});
@@ -89,10 +100,13 @@ function synapse_handleError(request, status, e)
 //handles long poll results, which contain incoming messages
 function synapse_handleMessages(messages, status, XMLHttpRequest)
 {
-	//did we get an authcookie? 
-	if (XMLHttpRequest.getResponseHeader("X-Synapse-Authcookie"))
+	//did we get a different authcookie back? 
+	if (XMLHttpRequest.getResponseHeader("X-Synapse-Authcookie")!=synapse_authCookie)
 	{
+		//yes, store it for this session
 		synapse_authCookie=XMLHttpRequest.getResponseHeader("X-Synapse-Authcookie");
+		//also store it in a real cookie so the user doesnt have to re-authenticate on refresh
+		$.setCookie('synapse_lastAuthCookie', synapse_authCookie.toString(), {});
 	}
 
 	if (messages==null)

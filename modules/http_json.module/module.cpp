@@ -344,7 +344,7 @@ class CnetHttp : public Cnet
 		{
 			//check if there are messages in the queue, based on the authcookie from the current request:
 			//This function will change authCookie if neccesary and fill jsonStr!
-			httpSessionMan.getJsonQueue(id, authCookie, jsonStr);
+			httpSessionMan.getJsonQueue(id, authCookie, jsonStr, headers["x-synapse-authcookie-clone"]);
 	
 			//authcookie was probably expired, respond with error
 			if (!authCookie)
