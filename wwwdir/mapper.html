@@ -19,6 +19,7 @@
 				
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
+			send(0,"core_GetEvents", { });
 			if (msg["username"]=="anonymous")
 				synapse_login();
  		});
@@ -30,18 +31,31 @@
 			if ($(escapeId(msg["mappedFrom"])).length==0)
 			{
 				//add it
-				$('#eventList').append(
-					"<div id='"+msg["mappedFrom"]+"' class='event'>"+
+				$('#mappableList').append(
+					"<div id='"+msg["mappedFrom"]+"' class='mappable'>"+
 					msg["mappedFrom"]+
 					"</div>"
 				);
 			}
 			$(escapeId(msg["mappedFrom"])).toggleClass("glow");
 
-			//add destination-mappings list:
-//			if ($(escapeId(msg["mappedTo"])).length==0)
 			
  		});
+
+ 		synapse_register("core_Events",function(msg_src, msg_dst, msg_event, msg)
+		{
+			$('#eventList').empty();
+			for (var eventI in msg)
+			{
+				$('#eventList').append(
+					"<div class='event'>"+
+					eventI+
+					"</div>"
+				);
+
+			}
+		});
+
 
 		/// JAVA SCRIPT EVENT HANDLERS
 		$(document).ready(function(){
@@ -53,7 +67,7 @@
 			});
 
 			$('#clear').click(function(event){
-				$('#eventList').empty();
+				$('#mappableList').empty();
 			});
 
 
@@ -64,16 +78,29 @@
 
 	<style>
 
+		body 
+		{
+			height:100%;
+		} 
 
 
+	
+
+		#mappableList
+		{
+			border:solid;
+			float: left;
+			width: 100%;
+		}
 
 		#eventList
 		{
-			width: 100%;
+			border: solid;
 			float: left;
+			width: 100%;			
 		}
 
-		.event
+		.mappable
 		{
 			background-color: #AAFFAA;
 			float: left;
@@ -84,15 +111,22 @@
 			padding: 5px;
 		}
 
+		.event
+		{
+			background-color: #AAFFAA;
+			float: left;
+			border-style:solid;
+			width: 10em;
+			margin: 5px;
+			padding: 5px;
+		}
+
 		.glow
 		{
 			background-color: #CCFFCC;
 		}
 
-
-
-
-	</style>
+ 	</style>
 </head>
 
 
@@ -101,10 +135,10 @@
 	Generate an event, and then click it to add a mapping. 
 
 	<button id='clear'>Clear</button>
-	<p>
-	
-	<div id='eventList'></div>
+	<button id='get'>Get</button>
 
+	<div id='eventList'>eventlist</div>
+	<div id='mappableList'>gadf</div>
 
 </body>
 </html>

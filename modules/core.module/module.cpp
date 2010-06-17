@@ -781,7 +781,7 @@ SYNAPSE_REGISTER(core_GetStatus)
 	{
 		lock_guard<mutex> lock(messageMan->threadMutex);
 		out.event="core_Status";
-		out.dst=out.src;
+		out.dst=msg.src;
 		out["callMan"]=messageMan->callMan.getStatusStr(msg["queue"], msg["verbose"]);
 		out["userMan"]=messageMan->userMan.getStatusStr();
 		out["threads"]=messageMan->getStatusStr();
