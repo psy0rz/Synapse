@@ -34,7 +34,7 @@
 				$('#mappableList').append(
 					"<div id='"+msg["mappedFrom"]+"' class='mappable'>"+
 					msg["mappedFrom"]+
-					"<div class='mappings'></div>"+
+//					"<div class='mappings'></div>"+
 					"</div>"
 				);
 	
@@ -43,6 +43,7 @@
 					activeClass: "ui-state-default",
 					hoverClass: "ui-state-hover",
 					drop: function(event,ui) {
+						ui.helper.remove();
 						$(this).append(ui.draggable.clone());
 					}
 				});
@@ -65,6 +66,7 @@
 				);
 
 			}
+
 			$('.event').draggable({
 				revert: true,
 				snap: true,
@@ -164,8 +166,8 @@
 	<button id='clear'>Clear</button>
 	<button id='get'>Get</button>
 
-	<div id='eventList'>eventlist</div>
-	<div id='mappableList'>gadf</div>
+	<div id='eventList'></div>
+	<div id='mappableList'></div>
 
 </body>
 </html>
