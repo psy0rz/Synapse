@@ -34,8 +34,19 @@
 				$('#mappableList').append(
 					"<div id='"+msg["mappedFrom"]+"' class='mappable'>"+
 					msg["mappedFrom"]+
+					"<div class='mappings'></div>"+
 					"</div>"
 				);
+	
+				//make droppable
+				$(escapeId(msg["mappedFrom"])).droppable({
+					activeClass: "ui-state-default",
+					hoverClass: "ui-state-hover",
+					drop: function(event,ui) {
+						$(this).append(ui.draggable.clone());
+					}
+				});
+
 			}
 			$(escapeId(msg["mappedFrom"])).toggleClass("glow");
 
@@ -54,6 +65,13 @@
 				);
 
 			}
+			$('.event').draggable({
+				revert: true,
+				snap: true,
+				zIndex: 1,
+				snapMode: 'inner',
+				helper: 'clone',
+			});
 		});
 
 
@@ -93,6 +111,8 @@
 			width: 100%;
 		}
 
+		
+
 		#eventList
 		{
 			border: solid;
@@ -111,9 +131,16 @@
 			padding: 5px;
 		}
 
+		.mappings
+		{
+			width: 100%;
+			min-height: 2em;
+			border-style:solid;
+		}
+
 		.event
 		{
-			background-color: #AAFFAA;
+			background-color: #dddddd;
 			float: left;
 			border-style:solid;
 			width: 10em;
