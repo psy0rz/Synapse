@@ -12,10 +12,12 @@
 
 		/// SYNAPSE EVENT HANDLERS
 
+
 		synapse_register("error",function(errortxt)
 		{
 			$('#error').html(errortxt);
 		});	
+
 				
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
@@ -80,20 +82,30 @@
 			
  		});
 
+
  		synapse_register("core_Events",function(msg_src, msg_dst, msg_event, msg)
 		{
-			$('#eventList').empty();
+			$('#tabs .event').remove();
 			for (var eventI in msg)
 			{
-				$('#eventList').append(
+				//create tab for this group?
+				var group=msg[eventI]["sendGroup"];
+				if ($('#'+group).length==0)
+				{
+					$('#tabs').tabs("add", "#"+group, group);
+					$('#'+group).css("float","left");
+				}
+
+				//add event to correct tab:
+				$('#'+group).append(
 					"<div class='event'>"+
 					eventI+
 					"</div>"
 				);
-
 			}
 
-			$('.event').draggable({
+			//make all events draggable
+			$('#tabs .event').draggable({
 				revert: true,
 				snap: true,
 				zIndex: 1,
@@ -108,7 +120,7 @@
 
 			$('#username').val("admin");
 			$('#password').val("bs");
-			$('#get').click(function(event){
+			$('#refresh').click(function(event){
 				send(0,"core_GetEvents", { });
 			});
 
@@ -116,6 +128,9 @@
 				$('#mappableList').empty();
 			});
 
+			$('#tabs').tabs({
+				
+			});
 
 		});
 
@@ -186,13 +201,15 @@
 	<h1>Event mapper</h1>
 	Generate a mappable event, and then drag an event to it. Left click to remove a mapping. 
 
+	<div id="tabs" style='display:table-cell; '>
+	<button id='refresh'>Refresh</button>
+		<ul >
+		</ul>
+	</div>
 
-	<button id='get'>Refresh</button>
-	<div id='eventList'></div>
 
-
-	<div id='mappableList'></div>
 	<button id='clear'>Clear</button>
+	<div id='mappableList'></div>
 
 </body>
 </html>
