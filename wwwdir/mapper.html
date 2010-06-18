@@ -44,11 +44,37 @@
 					hoverClass: "ui-state-hover",
 					drop: function(event,ui) {
 						ui.helper.remove();
-						$(this).append(ui.draggable.clone());
+						send(0,"core_AddMapping", {
+							mapFrom: msg["mappedFrom"],
+							mapTo: ui.draggable.text(),
+						});
 					}
 				});
 
 			}
+			
+			//rebuild mapped event list
+			$(escapeId(msg["mappedFrom"])+" .event").remove();
+			for (var eventI in msg["mappedTo"])
+			{
+				$(escapeId(msg["mappedFrom"])).append(
+					"<div class='event'>"+
+					msg["mappedTo"][eventI]+
+					"</div>"
+				)
+			}
+
+			//click to remove the mapping:
+			$(escapeId(msg["mappedFrom"])).attr("event", msg["mappedFrom"]);
+			$(escapeId(msg["mappedFrom"]) + " .event").click(function() {
+				send(0,"core_DelMapping",{
+					mapFrom: $(this).parent().attr("event"),
+					mapTo: $(this).text()
+				});
+			});
+
+
+			//make it blink on change, so the user sees which event was sended
 			$(escapeId(msg["mappedFrom"])).toggleClass("glow");
 
 			

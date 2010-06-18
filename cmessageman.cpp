@@ -546,12 +546,12 @@ CeventPtr CmessageMan::getEvent(const string & name)
 	}
 }
 
-void CmessageMan::getEvents(Cmsg & msg)
+void CmessageMan::getEvents(Cvar & var)
 {
 	//traverse the events that have been created by calls to sendMessage
 	BOOST_FOREACH( CeventHashMap::value_type event, events)
 	{
-		msg[event.first]=1;
+		var[event.first]=1;
 	}
 
 	//traverse the events that have registered event handlers in a module
@@ -565,7 +565,7 @@ void CmessageMan::getEvents(Cmsg & msg)
 			//is this the default session for the module (to prevent overhead)
 			if (session->module->defaultSessionId==sessionId)
 			{
-				session->module->getEvents(msg);
+				session->module->getEvents(var);
 			}
 		}
 	}
@@ -628,4 +628,43 @@ void CmessageMan::setSessionThreads(CsessionPtr session, int maxThreads)
 	//TODO:optimize
 	threadCond.notify_all();
 
+}
+
+string CmessageMan::addMapping(string mapFrom, string mapTo)
+{
+	if (eventMappers.find(mapFrom)!=eventMappers.end())
+	{
+		if (find(eventMappers[mapFrom].begin(), eventMappers[mapFrom].end(), mapTo)!=eventMappers[mapFrom].end())
+		{
+			return("This mapping already exists!");
+		}
+	}
+
+	eventMappers[mapFrom].push_back(mapTo);
+	return ("");
+}
+
+string CmessageMan::delMapping(string mapFrom, string mapTo)
+{
+	if (eventMappers.find(mapFrom)!=eventMappers.end())
+	{
+		if (find(eventMappers[mapFrom].begin(), eventMappers[mapFrom].end(), mapTo)!=eventMappers[mapFrom].end())
+		{
+			eventMappers[mapFrom].remove(mapTo);
+			return ("");
+		}
+	}
+
+	return("Mapping does not exist!");
+}
+
+void CmessageMan::getMapping(string mapFrom, Cvar & var)
+{
+		if (eventMappers.find(mapFrom)==eventMappers.end())
+			return;
+
+		BOOST_FOREACH(string event, eventMappers[mapFrom])
+		{
+			var.list().push_back(event);
+		}
 }

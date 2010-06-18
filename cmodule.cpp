@@ -241,11 +241,11 @@ string Cmodule::getName(string path)
 	
 }
 
-void Cmodule::getEvents(Cmsg & msg)
+void Cmodule::getEvents(Cvar & var)
 {
 	//traverse the events that have been created by calls to sendMessage
 	BOOST_FOREACH( ChandlerHashMap::value_type handler, handlers)
 	{
-		msg[handler.first]=1;
+		var[handler.first]=1;
 	}
 }

@@ -64,7 +64,7 @@ public:
 	string path;
 	int readySession;
 
-	void getEvents(Cmsg & msg);
+	void getEvents(Cvar & var);
 
 	//event handling stuff,
 	//converting an event string into an actual function call.

@@ -67,7 +67,7 @@ public:
 	void checkThread();
    	CsessionPtr loadModule(string path, string userName);
 	CeventPtr getEvent(const string & name);
-	void getEvents(Cmsg & msg);
+	void getEvents(Cvar & var);
     int isModuleReady(string path);
     void doShutdown(int exit);
 
@@ -87,6 +87,9 @@ public:
 	void setModuleThreads(CmodulePtr module, int maxThreads);
 	void setSessionThreads(CsessionPtr session, int maxThreads);
 
+	string addMapping(string mapFrom, string mapTo);
+	string delMapping(string mapFrom, string mapTo);
+	void getMapping(string mapFrom, Cvar & var);
 private:
 	condition_variable threadCond;
 

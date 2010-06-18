@@ -175,6 +175,23 @@ SYNAPSE_REGISTER(module_Init)
 	out["recvGroup"]="core";
 	out.send();
 
+	out["event"]="core_MappedEvent"; 
+	out["modifyGroup"]="core";
+	out["sendGroup"]="modules";
+	out["recvGroup"]="core";
+	out.send();
+
+	out["event"]="core_AddMapping"; 
+	out["modifyGroup"]="core";
+	out["sendGroup"]="core";
+	out["recvGroup"]="core";
+	out.send();
+
+	out["event"]="core_DelMapping"; 
+	out["modifyGroup"]="core";
+	out["sendGroup"]="core";
+	out["recvGroup"]="core";
+	out.send();
 
 	// END OF PERMISSIONS
 
@@ -807,3 +824,66 @@ SYNAPSE_REGISTER(core_GetEvents)
 	}
 	out.send();
 } 
+
+/** Adds a new event mapping.
+	\param mapFrom Event to map from
+	\param mapTo Event to map to
+
+\post Whenever event mapFrom is sent to destination -1, it will be remapped to mapTo. Multiple mappings per event are possible. Whenever the core maps an event, a core_MappedEvent is broadcasted. The end users should use mapper.html to remap events for things like remote controls or keyboard input.
+
+\par Broadcasts \c core_MappedEvent:
+	Informs of the new mapping status.
+	\param mappedFrom Event which got mapped
+	\param mappedTo List of target events we map to.
+
+*/
+SYNAPSE_REGISTER(core_AddMapping)
+{
+	Cmsg out;
+	string error;
+	{
+		lock_guard<mutex> lock(messageMan->threadMutex);
+		error=messageMan->addMapping(msg["mapFrom"], msg["mapTo"]);
+
+		//send a updated core_MappedEvent
+		out.event="core_MappedEvent";
+		out["mappedFrom"]=msg["mapFrom"];
+		messageMan->getMapping(msg["mapFrom"],out["mappedTo"]);
+	}
+
+	if (error!="")
+		msg.returnError(error);
+	else
+		out.send();
+}
+
+/** Deletes an event mapping.
+	\param mapFrom Event that is mapped from
+	\param mapTo Event that is mapped to
+
+\post Mapping is removed.
+
+\par Broadcasts \c core_MappedEvent.
+	(see core_AddMapping)
+
+*/
+SYNAPSE_REGISTER(core_DelMapping)
+{
+	Cmsg out;
+	string error;
+	{
+		lock_guard<mutex> lock(messageMan->threadMutex);
+		error=messageMan->delMapping(msg["mapFrom"], msg["mapTo"]);
+
+		//send a updated core_MappedEvent
+		out.event="core_MappedEvent";
+		out["mappedFrom"]=msg["mapFrom"];
+		messageMan->getMapping(msg["mapFrom"],out["mappedTo"]);
+	}
+
+	if (error!="")
+		msg.returnError(error);
+	else
+		out.send();
+}
+ 
