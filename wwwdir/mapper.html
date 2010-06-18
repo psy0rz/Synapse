@@ -130,11 +130,9 @@
 		} 
 
 
-	
 
 		#mappableList
 		{
-			border:solid;
 			float: left;
 			width: 100%;
 		}
@@ -143,7 +141,6 @@
 
 		#eventList
 		{
-			border: solid;
 			float: left;
 			width: 100%;			
 		}
@@ -187,13 +184,15 @@
 
 <body>
 	<h1>Event mapper</h1>
-	Generate an event, and then click it to add a mapping. 
+	Generate a mappable event, and then drag an event to it. Left click to remove a mapping. 
 
-	<button id='clear'>Clear</button>
-	<button id='get'>Get</button>
 
+	<button id='get'>Refresh</button>
 	<div id='eventList'></div>
+
+
 	<div id='mappableList'></div>
+	<button id='clear'>Clear</button>
 
 </body>
 </html>

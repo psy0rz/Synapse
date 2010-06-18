@@ -73,18 +73,12 @@ bool Cevent::isModifyAllowed(const CuserPtr & user)
 }
 
 
-/*!
-    \fn Cevent::setSendGroup(CgroupPtr group)
- */
 void Cevent::setSendGroup(const CgroupPtr & group)
 {
     sendGroup=group;
 }
 
 
-/*!
-    \fn Cevent::setRecvGroup(CgroupPtr group)
- */
 void Cevent::setRecvGroup(const CgroupPtr & group)
 {
     recvGroup=group;
@@ -95,23 +89,22 @@ void Cevent::setModifyGroup(const CgroupPtr & group)
     modifyGroup=group;
 }
 
-
-/*!
-    \fn Cevent::setOwner(CuserPtr user)
- */
-// void Cevent::setOwner(const CuserPtr & user)
-// {
-//     owner=user;
-// }
+CgroupPtr Cevent::getSendGroup()
+{
+	return(sendGroup);
+}
 
 
-/*!
-    \fn Cevent::isOwner(const CuserPtr user)
- */
-// bool Cevent::isOwner(const CuserPtr user)
-// {
-// 	return (owner==user);
-// }
+CgroupPtr Cevent::getRecvGroup()
+{
+	return(recvGroup);
+}
+
+CgroupPtr Cevent::getModifyGroup()
+{
+	return(modifyGroup);
+}
+
 
 
 /*!

@@ -569,6 +569,18 @@ void CmessageMan::getEvents(Cvar & var)
 			}
 		}
 	}
+	
+	ERROR(var.getPrint());
+
+	//get more information for each event
+	for (Cvar::iterator eventI=var.begin();  eventI!=var.end(); eventI++)
+	{
+		string s=eventI->first;
+		CeventPtr eventPtr=getEvent(s);
+		eventI->second["recvGroup"]=eventPtr->getRecvGroup()->getName();
+		eventI->second["sendGroup"]=eventPtr->getSendGroup()->getName();	
+		eventI->second["modifyGroup"]=eventPtr->getModifyGroup()->getName();
+	}
 }
 
 

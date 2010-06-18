@@ -41,6 +41,10 @@ public:
     void print();
 
 
+	CgroupPtr getRecvGroup();
+	CgroupPtr getSendGroup();
+	CgroupPtr getModifyGroup();
+
 private:	
 
 	CgroupPtr sendGroup;
