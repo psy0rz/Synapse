@@ -21,10 +21,16 @@
 				
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
-			send(0,"core_GetEvents", { });
 			if (msg["username"]=="anonymous")
 				synapse_login();
+			else
+				send(0,"core_GetEvents", { });
  		});
+
+		synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
+		{
+			send(0,"core_GetEvents", { });
+		});
 
 
  		synapse_register("core_MappedEvent",function(msg_src, msg_dst, msg_event, msg)
