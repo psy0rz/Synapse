@@ -81,8 +81,8 @@ SYNAPSE_REGISTER(module_Init)
 //  	out["path"]="modules/ami.module/libami.so";
 //  	out.send();
 
-//  	out["path"]="modules/asterisk.module/libasterisk.so";
-//  	out.send();
+  	out["path"]="modules/asterisk.module/libasterisk.so";
+  	out.send();
 
 	// Counter that ever counterSleep seconds emits a message.
 	// Speed can be changed with appropriate messages
