@@ -105,8 +105,11 @@ function synapse_handleMessages(messages, status, XMLHttpRequest)
 	{
 		//yes, store it for this session
 		synapse_authCookie=XMLHttpRequest.getResponseHeader("X-Synapse-Authcookie");
-		//also store it in a real cookie so the user doesnt have to re-authenticate on refresh
-		$.setCookie('synapse_lastAuthCookie', synapse_authCookie.toString(), {});
+		if (synapse_authCookie!=null)
+		{
+			//also store it in a real cookie so the user doesnt have to re-authenticate on refresh
+			$.setCookie('synapse_lastAuthCookie', synapse_authCookie.toString(), {});
+		}
 	}
 
 	if (messages==null)
