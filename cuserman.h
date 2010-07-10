@@ -38,6 +38,7 @@ public:
 	int addSession( CsessionPtr session);
 	CsessionPtr getSession(const int & sessionId);
 	bool delSession(const int id);
+	list<int> delCookieSessions(int cookie, CmodulePtr module);
     string getStatusStr();
 	void doShutdown();
 	string login(const int & sessionId, const string & userName, const string & password);

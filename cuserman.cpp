@@ -239,6 +239,26 @@ bool CuserMan::delSession(const int sessionId)
 	}
 }
 
+list<int> CuserMan::delCookieSessions(int cookie, CmodulePtr module)
+{
+	list<int> deletedIds;
+
+	if (cookie!=0)
+	{
+		for (int sessionId=1; sessionId<MAX_SESSIONS; sessionId++)
+		{
+			if (sessions[sessionId])
+			{
+				if (sessions[sessionId]->cookie==cookie && sessions[sessionId]->module==module)
+				{
+					delSession(sessionId);
+					deletedIds.push_back(sessionId);
+				}
+			}
+		}
+	}
+	return (deletedIds);
+}
 
 
 string CuserMan::getStatusStr()

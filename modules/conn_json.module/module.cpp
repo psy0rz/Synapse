@@ -92,18 +92,16 @@ class CnetModule : public Cnet
 		readBuffer.consume(dataStr.length());
 	}
 
-//	/** Connection 'id' is disconnected, or a connect-attempt has failed.
-//	* Sends: conn_Disconnected
-//	*/
-// 	void disconnected(int id, const boost::system::error_code& ec)
-//	{
-//		Cmsg out;
-//		out.dst=id;
-//		out.event="conn_Disconnected";
-//		out["reason"]=ec.message();
-//		out["type"]="json";
-//		out.send();
-//	}
+	/** Connection 'id' is disconnected, or a connect-attempt has failed.
+	* Sends: conn_Disconnected
+	*/
+ 	void disconnected(int id, const boost::system::error_code& ec)
+	{
+		Cmsg out;
+		out.event="core_DelCookieSessions";
+		out["cookie"]=id;
+		out.send();
+	}
 };
 
 CnetMan<CnetModule> net;

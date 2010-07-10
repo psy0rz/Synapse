@@ -145,6 +145,12 @@ SYNAPSE_REGISTER(module_Init)
 	out["recvGroup"]=	"core";
 	out.send();
 
+	out["event"]=		"core_DelCookieSessions"; // RECV to delete src sessions by cookie
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"modules";
+	out["recvGroup"]=	"core";
+	out.send();
+
 	out["event"]=		"module_SessionEnd"; // SEND to ended session
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"core";
@@ -638,6 +644,45 @@ SYNAPSE_REGISTER(core_DelSession)
 			lock_guard<mutex> lock(messageMan->threadMutex);
 			if (!messageMan->userMan.delSession(msg.src))
 				ERROR("cant delete session" << msg.src);
+		}
+	}
+}
+
+/** Delete all sessions with cookie specified by \c cookie.
+
+Only deletes sessions belonging to \c src module.
+
+\par Broadcasts \c module_SessionEnded:
+	To indicate to the rest of the world that the sessions have been ended.
+		\arg \c session The session that has been ended.
+*/
+SYNAPSE_REGISTER(core_DelCookieSessions)
+{
+	string error;
+	list<int> deletedIds;
+
+	{
+		lock_guard<mutex> lock(messageMan->threadMutex);
+		CsessionPtr session=messageMan->userMan.getSession(msg.src);
+		if (!session)
+			error="Session not found";
+
+		deletedIds=messageMan->userMan.delCookieSessions(msg["cookie"], session->module);
+	}
+
+	if (error!="")
+		msg.returnError(error);
+	else
+	{
+		Cmsg out;
+		BOOST_FOREACH(int id, deletedIds)
+		{
+
+			//inform the rest of the world
+			out.event="module_SessionEnded";
+			out["session"]=id;
+			out.dst=0;
+			out.send();
 		}
 	}
 }
