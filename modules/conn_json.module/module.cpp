@@ -4,18 +4,6 @@
 #define MAX_MESSAGE 2048
 
 
-/**
-	THIS MODULE IS UNFINISHED - DO NOT USE
-
-	-New connections are handled in a session with user anonymous
-	-Received network message are send to the core.
-	-Received core messages are send to the network.
-
-	-The session should do a core_Login
-
-
-*/
-
 
 
 int moduleSessionId=0;
@@ -94,8 +82,7 @@ class CnetModule : public Cnet
 
 		if (out.fromJson(dataStr))
 		{
-			//FIXME check if src belongs to this network thing, ook sendcheck met cookies? :D
-			out.send();
+			out.send(id);
 		}
 		else
 		{
@@ -130,22 +117,6 @@ void writeMessage(int id, Cmsg & msg)
 	net.doWrite(id,msgStr);
 }
 
-///** New session started
-// * Make sure its registered to the corresponding net object (if any)
-// */
-//SYNAPSE_REGISTER(module_SessionStart)
-//{
-//	writeMessage(cookie,msg);
-//}
-//
-//
-///** Session ended
-// * Unregister it from the corresponding net object.
-// */
-//SYNAPSE_REGISTER(module_SessionEnded)
-//{
-//	writeMessage(cookie,msg);
-//}
 
 
 
@@ -210,8 +181,6 @@ SYNAPSE_REGISTER(module_Shutdown)
 
 
 
-
-
 /** This handler is called for all events that:
  * -dont have a specific handler, 
  * -are send to broadcast or to a session we manage.
@@ -220,12 +189,8 @@ SYNAPSE_HANDLER(all)
 {
 	if (cookie)
 		writeMessage(cookie,msg);
-//	string jsonStr;
-//	msg.toJson(jsonStr);
-//
-//	//send to corresponding network connection
-//	INFO("json: " << jsonStr);
 }
+
 
 
 

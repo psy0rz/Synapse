@@ -49,7 +49,7 @@ CmessageMan::~CmessageMan()
 
 
 
-bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  msg)
+bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie)
 {
 	// -module is a pointer thats set by the core and can be trusted
 	// -msg is set by the user and only containts direct objects, and NO pointers. it cant be trusted yet!
@@ -94,6 +94,13 @@ bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		return false;
 	}
 
+	//this cookie matches with src session cookie?
+	//cookies are just used to make the programming and security of network modules easier
+	if (cookie!=0 && cookie!=src->cookie)
+	{
+		ERROR("send: module " << module->name << " tries to send from session " << msg->src << ", but cookie " << cookie << " doesnt match session cookie " << src->cookie);
+		return false;
+	}
 
 	//resolve or create the event:
 	CeventPtr event=getEvent(msg->event);
@@ -221,11 +228,11 @@ bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 Internally it will result in 1 or more calls to sendMappedMessage, if the msg.dst is -1.
 */
 
-bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg)
+bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie)
 {
 	if (msg->dst >= 0)
 	{
-		return(sendMappedMessage(module, msg));
+		return(sendMappedMessage(module, msg, cookie));
 	}
 	else
 	{
@@ -242,11 +249,11 @@ bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg)
 			(*mappedMsg)["mappedTo"].list().push_back(event);
 			mapMsg->event=event;
 			mapMsg->dst=0;
-			sendMessage(module, mapMsg);
+			sendMessage(module, mapMsg, cookie);
 		}
 
 		(*mappedMsg)["mappedFrom"]=msg->event; 
-		sendMessage(module, mappedMsg);
+		sendMessage(module, mappedMsg, cookie);
 
 		//we dont care about the result of the mapped sendMessage, for now
 		return (true);
