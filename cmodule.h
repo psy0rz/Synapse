@@ -31,9 +31,9 @@ typedef shared_ptr<class Cmodule> CmodulePtr;
 
 //defition of the default handler functions that modules have:
 //TODO: can we optimize this be preventing the copy of msg? by using something const Cmsg & msg perhaps? we tried this but then msg["bla"] gave a compiler error.
-#define SYNAPSE_HANDLER(s) extern "C" void synapse_##s( Cmsg msg, int dst )
+#define SYNAPSE_HANDLER(s) extern "C" void synapse_##s( Cmsg msg, int dst, int cookie )
 
-typedef  void (*FsoHandler) ( Cmsg msg , int dst );
+typedef  void (*FsoHandler) ( Cmsg msg , int dst, int cookie );
 typedef  int (*FsoVersion)();
 typedef bool (*FsoInit)(class CmessageMan * initMessageMan, CmodulePtr initModule);
 typedef void (*FsoCleanup)();

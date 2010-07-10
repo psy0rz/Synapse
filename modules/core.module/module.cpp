@@ -439,6 +439,7 @@ SYNAPSE_REGISTER(core_Login)
 	\param username (optional) 
 	\param password (optional) If specified will create a session with a different user instead of the \c src user.
 	\param maxThreads (optional) Max threads of new session.
+	\param cookie (optional) Cookie, can be used internally by module. This value is passed every time a handler the session is called.
 
 \post A new session is created.
 
@@ -463,7 +464,7 @@ SYNAPSE_REGISTER(core_NewSession)
 			error="Session not found";
 		else
 		{
-			CsessionPtr newSession=CsessionPtr(new Csession(session->user,session->module));
+			CsessionPtr newSession=CsessionPtr(new Csession(session->user,session->module,msg["synapse_cookie"]));
 			int sessionId=messageMan->userMan.addSession(newSession);
 			if (sessionId==SESSION_DISABLED)
 				error="cant create new session";

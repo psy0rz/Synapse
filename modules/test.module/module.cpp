@@ -5,44 +5,6 @@ int counterSleep;
 
 SYNAPSE_REGISTER(module_Init)
 {
-// 	Cmsg test;
-// 	Cvar ding;
-// 	ding["ding1"]=1;
-// 	ding["ding2"]=2;
-// 	ding["ding3"]=3;
-// 
-// 	Cvar ding2;
-// 	ding2.list().push_back(1);
-// 	ding2.list().push_back(12);
-// 	ding2.list().push_back(13);
-// 
-// 
-// 	test["blaat"]="mai";
-// //	test["lijst"].list().push_back(ding);
-// 	test["lijst"].list().push_back(string("text1"));
-// 	test["lijst"].list().push_back(string("text2"));
-// 	test["lijst"].list().push_back(ding);
-// 	test["lijst"].list().push_back(ding2);
-// 	test["map"]["ding1"]=1;
-// 	test["map"]["ding2"]=2;
-// 	test["map"]["ding3"]=3;
-// 	test["foo"]="bar";
-// 	
-// 
-// 	string j;
-// 	test.toJson(j);
-// 	INFO("origneel: "<<test.getPrint());
-// 	INFO("json "<<j);
-// 
-// 
-// 	Cmsg back;
-// 	back["kut"]=1;
-// 
-// 	if(back.fromJson(j))
-// 		INFO("terug geconverterd: "<<back.getPrint());	
-// 
-// 
-// 	return;
 	
 	Cmsg out;
 
@@ -66,8 +28,8 @@ SYNAPSE_REGISTER(module_Init)
 	out.clear();
 	out.event="core_LoadModule";
 
-	out["path"]="modules/lirc.module/liblirc.so";
-	out.send();
+//	out["path"]="modules/lirc.module/liblirc.so";
+//	out.send();
 
 //	out["path"]="modules/net.module/libnet.so";
 //	out.send();
@@ -75,14 +37,17 @@ SYNAPSE_REGISTER(module_Init)
 // 	out["path"]="modules/conn_json.module/libconn_json.so";
 // 	out.send();
 
-	out["path"]="modules/http_json.module/libhttp_json.so";
-	out.send();
+//	out["path"]="modules/http_json.module/libhttp_json.so";
+//	out.send();
 
 //  	out["path"]="modules/ami.module/libami.so";
 //  	out.send();
 
   	out["path"]="modules/asterisk.module/libasterisk.so";
   	out.send();
+
+	  	out["path"]="modules/conn_json.module/libconn_json.so";
+	  	out.send();
 
 	// Counter that ever counterSleep seconds emits a message.
 	// Speed can be changed with appropriate messages
@@ -118,6 +83,8 @@ SYNAPSE_REGISTER(module_Init)
 	out.send();
 
 }
+
+
 
 SYNAPSE_REGISTER(asterisk_Ready)
 {

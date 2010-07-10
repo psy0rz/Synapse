@@ -32,7 +32,7 @@ list<string> synapseAutoReg::handlers;
 
 //This stores the handler in a list by constructing a dummy object:
 #define SYNAPSE_REGISTER(name) \
-    synapseAutoReg BOOST_PP_CAT(synapseAutoRegDummy, __LINE__)(#name); \
+    synapseAutoReg BOOST_PP_CAT(synapse_autoreg_, name)(#name); \
     SYNAPSE_HANDLER(name)
 
 

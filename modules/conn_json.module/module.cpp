@@ -18,54 +18,37 @@
 
 
 
-int networkSessionId=0;
+int moduleSessionId=0;
 
 SYNAPSE_REGISTER(module_Init)
 {
 	Cmsg out;
 
-	//max number of parallel module threads
+	moduleSessionId=msg.dst;
+
+	//change module settings. 
+	//especially broadcastMulti is important for our "all"-handler
 	out.clear();
 	out.event="core_ChangeModule";
 	out["maxThreads"]=100;
+	out["broadcastMulti"]=1;
 	out.send();
 
-	//The default session will be used to receive broadcasts that need to be transported via json.
-	//Make sure we only process 1 message at a time, so they stay in order.
 	out.clear();
 	out.event="core_ChangeSession";
-	out["maxThreads"]=1;
+	out["maxThreads"]=100;
 	out.send();
-
-	//We use a ANONYMOUS session that run the threads for network connection handeling.
-	//new connections will be anonymous and have to login with core_Login.
-	out.clear();
-	out.event="core_NewSession";
-	out["maxThreads"]=1;
-	out.send();
-
-	//make sure the anonymous session has the right to receive the basic stuff:
-	out.clear();
-	out.event="core_ChangeEvent";
-	out["event"]="conn_json_Connect";
-	out["recvGroup"]="anonymous";
-	out.send();
-
-	out["event"]="conn_json_Listen";
-	out.send();
-
-	out["event"]="conn_json_Disconnect";
-	out.send();
- 
-	out["event"]="conn_json_Close";
-	out.send();
-
 
 	//register a special handler without specified event
 	//this will receive all events that are not handled elsewhere in this module.
 	out.clear();
 	out.event="core_Register";
 	out["handler"]="all";
+	out.send();
+
+	//tell the rest of the world we are ready for duty
+	//Cmsg out;
+	out.event="core_Ready";
 	out.send();
 
 }
@@ -78,36 +61,20 @@ SYNAPSE_REGISTER(module_Init)
 // This stuff basically runs as anonymous, until a user uses core_login to change the user.
 class CnetModule : public Cnet
 {
-	/** Connection 'id' is trying to connect to host:port
-	* Sends: net_Connecting
-	*/
- 	void connecting(int id, const string &host, int port)
-	{
-		Cmsg out;
-		out.dst=id;
-		out.event="conn_Connecting";
-		out["host"]=host;
-		out["port"]=port;
-		out["type"]="json";
-		out.send();
-	}
 
-	/** Client connection 'id' is established.
-	*/
- 	void connected_client(int id, const string &host, int port)
-	{
-		Cmsg out;
-		out.dst=id;
-		out.event="conn_Connected";
-		out["type"]="json";
-		out.send();
-	}
 
 	/** Server connection 'id' is established.
 	*/
  	void connected_server(int id, const string &host, int port)
 	{
-		//someone is connecting us..
+		//someone is connecting us, create a new session initial session for this connection
+		Cmsg out;
+		out.event="core_NewSession";
+		out["synapse_cookie"]=id;
+		out["username"]="anonymous";
+		out["password"]="anonymous";
+		out.send();
+
 	}
 
 
@@ -127,6 +94,7 @@ class CnetModule : public Cnet
 
 		if (out.fromJson(dataStr))
 		{
+			//FIXME check if src belongs to this network thing, ook sendcheck met cookies? :D
 			out.send();
 		}
 		else
@@ -137,87 +105,75 @@ class CnetModule : public Cnet
 		readBuffer.consume(dataStr.length());
 	}
 
-	/** Connection 'id' is disconnected, or a connect-attempt has failed.
-	* Sends: conn_Disconnected
-	*/
- 	void disconnected(int id, const boost::system::error_code& ec)
-	{
-		Cmsg out;
-		out.dst=id;
-		out.event="conn_Disconnected";
-		out["reason"]=ec.message();
-		out["type"]="json";
-		out.send();
-	}
+//	/** Connection 'id' is disconnected, or a connect-attempt has failed.
+//	* Sends: conn_Disconnected
+//	*/
+// 	void disconnected(int id, const boost::system::error_code& ec)
+//	{
+//		Cmsg out;
+//		out.dst=id;
+//		out.event="conn_Disconnected";
+//		out["reason"]=ec.message();
+//		out["type"]="json";
+//		out.send();
+//	}
 };
 
 CnetMan<CnetModule> net;
 
 
-
-
-SYNAPSE_REGISTER(module_SessionStart)
+void writeMessage(int id, Cmsg & msg)
 {
-
-	//first new session, this is the network thread session
-	if (!networkSessionId)
-	{
-		networkSessionId=msg.dst;
-
-		//tell the rest of the world we are ready for duty
-		Cmsg out;
-		out.event="core_Ready";
-		out.src=networkSessionId;
-		out.send();
-
-		return;
-	}
-
-	//new session that was started to run the acceptor for a port:
-	if (msg.isSet("port"))
-	{
-		//keep accepting until shutdown or some other error
-		while(net.runAccept(msg["port"], msg.dst));
-		
-		//we're done, delete our session
-		Cmsg out;
-		out.event="core_DelSession";
-		out.src=msg.dst;
-		out.send();
-	}
-
+	string msgStr;
+	msg.toJson(msgStr);
+	msgStr+="\n";
+	net.doWrite(id,msgStr);
 }
 
-/** Client-only: Create a new json connection, connects to host:port for session src
- */
-SYNAPSE_REGISTER(conn_json_Connect)
-{
-	if (msg.dst==networkSessionId)
-		net.runConnect(msg.src, msg["host"], msg["port"]);
-	else
-		ERROR("Send to the wrong session id");
-}
+///** New session started
+// * Make sure its registered to the corresponding net object (if any)
+// */
+//SYNAPSE_REGISTER(module_SessionStart)
+//{
+//	writeMessage(cookie,msg);
+//}
+//
+//
+///** Session ended
+// * Unregister it from the corresponding net object.
+// */
+//SYNAPSE_REGISTER(module_SessionEnded)
+//{
+//	writeMessage(cookie,msg);
+//}
+
+
+
+
 
 /** Server only: Creates a new server and listens specified port
  */
 SYNAPSE_REGISTER(conn_json_Listen)
 {
-	if (msg.dst==networkSessionId)
+	if (msg.dst==moduleSessionId)
 	{
- 		//start a new anonymous acceptors to accept new incoming connections and handle the incomming data
+		//starts a new thread to accept and handle the incomming connection.
 		Cmsg out;
- 		out.event="core_NewSession";
- 		out["username"]="anonymous";
- 		out["password"]="anonymous";
- 		out["port"]=msg["port"];
- 		out.send();
+		
+		//fire off acceptor threads
+		out.clear();
+		out.dst=msg.dst;
+		out.event="conn_json_Accept";
+		out["port"]=msg["port"];
+		for (int i=0; i<10; i++)
+	 		out.send();
 
+		//become the listening thread
 		net.runListen(msg["port"]);
+
 	}
 	else
 		ERROR("Send to the wrong session id");
-
-	
 }
 
 
@@ -225,30 +181,22 @@ SYNAPSE_REGISTER(conn_json_Listen)
  */
 SYNAPSE_REGISTER(conn_json_Close)
 {
-	if (msg.dst==networkSessionId)
-		net.doClose(msg["port"]);
-	else
-		ERROR("Send to the wrong session id");
+	net.doClose(msg["port"]);
 }
 
-
-	
-
-/** Disconnections the connection related to src 
+/** Runs an acceptor thread (only used internally)
  */
-SYNAPSE_REGISTER(conn_json_Disconnect)
+SYNAPSE_REGISTER(conn_json_Accept)
 {
-	net.doDisconnect(msg.src);
+	if (msg.dst==moduleSessionId)
+	{
+		//keep accepting until shutdown or some other error
+		while(net.runAccept(msg["port"], 0));
+	}
+
 }
 
 
-/** When a session ends, make sure the corresponding network connection is disconnected as well.
- *
- */
-SYNAPSE_REGISTER(module_SessionEnded)
-{
-	net.doDisconnect(msg["session"]);
-}
 
 /** Called when synapse whats the module to shutdown completely
  * This makes sure that all ports and network connections are closed, so there wont be any 'hanging' threads left.
@@ -270,11 +218,13 @@ SYNAPSE_REGISTER(module_Shutdown)
  */
 SYNAPSE_HANDLER(all)
 {
-	string jsonStr;
-	msg.toJson(jsonStr);	
-
-	//send to corresponding network connection
-	INFO("json: " << jsonStr);
+	if (cookie)
+		writeMessage(cookie,msg);
+//	string jsonStr;
+//	msg.toJson(jsonStr);
+//
+//	//send to corresponding network connection
+//	INFO("json: " << jsonStr);
 }
 
 

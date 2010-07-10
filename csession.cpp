@@ -14,10 +14,11 @@
 #include "cmodule.h"
 #include <iostream>
 
-Csession::Csession(const CuserPtr &user, const CmodulePtr &module)
+Csession::Csession(const CuserPtr &user, const CmodulePtr &module, int cookie)
 {
 	this->user=user;
 	this->module=module;
+	this->cookie=cookie;
 	id=SESSION_DISABLED;
 	maxThreads=1;
 	currentThreads=0;

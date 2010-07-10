@@ -133,6 +133,8 @@ SYNAPSE_REGISTER(net_Connected)
 
 SYNAPSE_REGISTER(net_Read)
 {
+
+
 	if (msg["data"].str() == "eof")
 	{
 		INFO("GOT TO EOF FOR " << msg.dst);

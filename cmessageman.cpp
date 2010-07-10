@@ -324,7 +324,7 @@ void CmessageMan::operator()()
 		//handle call
 		try
 		{
-			callI->soHandler(*(callI->msg), callI->dst->id);
+			callI->soHandler(*(callI->msg), callI->dst->id, callI->dst->cookie);
 		}
 	  	catch (std::exception& e)
   		{

@@ -36,7 +36,7 @@ typedef shared_ptr<class Csession> CsessionPtr;
 */
 class Csession{
 public:
-    Csession(const CuserPtr &user, const CmodulePtr &module);
+    Csession(const CuserPtr &user, const CmodulePtr &module, int cookie=0);
 
     ~Csession();
     bool isEnabled();
@@ -46,6 +46,7 @@ public:
 	CuserPtr user;
 	CmodulePtr module;
 	int	id;
+	int cookie; //random value, set by module for internal use
 	int maxThreads;
 	int currentThreads;
 
