@@ -355,7 +355,7 @@ SYNAPSE_REGISTER(core_ChangeEvent)
 			error="Session not found";
 		else
 		{
-			CeventPtr event=messageMan->getEvent(msg["event"]);
+			CeventPtr event=messageMan->getEvent(msg["event"],CuserPtr());
 			if (!event)
 				error="Event not found?";
 			else

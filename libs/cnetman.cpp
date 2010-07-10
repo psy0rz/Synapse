@@ -35,7 +35,7 @@ bool CnetMan<Tnet>::runConnect(int id, string host, int port, int reconnectTime,
 		}
 		else if (nets.find(id)!=nets.end())
 		{
-			ERROR("id " << id << " is already busy, ignoring connect-request");
+			ERROR("net id " << id << " is already busy, ignoring connect-request");
 			return false;
 		}
 
@@ -66,7 +66,7 @@ bool CnetMan<Tnet>::runListen(int port)
 		lock_guard<mutex> lock(threadMutex);
 		if (acceptors.find(port)!=acceptors.end())
 		{
-			ERROR("port " << port << " is already listening, ignoring listen-request");
+			ERROR("net port " << port << " is already listening, ignoring listen-request");
 			return false;
 		}
 
@@ -99,7 +99,7 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
 		lock_guard<mutex> lock(threadMutex);
 		if (acceptors.find(port)==acceptors.end())
 		{
-			ERROR("port " << port << " is not listening (anymore), ignoring accept-request");
+			ERROR("net port " << port << " is not listening (anymore), ignoring accept-request");
 			return false;
 		}
 
@@ -109,7 +109,7 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
 		}
 		else if (nets.find(id)!=nets.end())
 		{
-			ERROR("id " << id << " is already busy, ignoring accept-request on port " << port);
+			ERROR("net id " << id << " is already busy, ignoring accept-request on port " << port);
 			return false;
 		}
 		//create a new net-object that will async_accept the next connection from acceptors[port]
@@ -138,7 +138,7 @@ bool CnetMan<Tnet>::doClose(int port)
 		lock_guard<mutex> lock(threadMutex);
 		if (acceptors.find(port)==acceptors.end())
 		{
-			ERROR("port " << port << " is not listening, ignoring close-request");
+			ERROR("net port " << port << " is not listening, ignoring close-request");
 			return false;
 		}
 
@@ -180,7 +180,7 @@ bool CnetMan<Tnet>::doWrite(int id, string & data)
 		lock_guard<mutex> lock(threadMutex);
 		if (nets.find(id)==nets.end())
 		{
-			ERROR("id " << id << " does not exist, ignoring write request");
+			ERROR("net id " << id << " does not exist, ignoring write request");
 			return false;
 		}
 		nets[id]->doWrite(data);

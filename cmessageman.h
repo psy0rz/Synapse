@@ -66,7 +66,7 @@ public:
 
 	void checkThread();
    	CsessionPtr loadModule(string path, string userName);
-	CeventPtr getEvent(const string & name);
+	CeventPtr getEvent(const string & name, const CuserPtr & user);
 	void getEvents(Cvar & var);
     int isModuleReady(string path);
     void doShutdown(int exit);

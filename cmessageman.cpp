@@ -102,11 +102,9 @@ bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		return false;
 	}
 
-	//resolve or create the event:
-	CeventPtr event=getEvent(msg->event);
-
-	//check if src is allowed to SEND:
-	if (!event->isSendAllowed(src->user))
+	//resolve or create the event and check send-permissions:
+	CeventPtr event=getEvent(msg->event, src->user);
+	if (!event)
 	{
 		ERROR("send: session " << msg->src << " with user " << src->user->getName() << " is not allowed to send event " << msg->event);
 		return false;
@@ -535,7 +533,7 @@ CsessionPtr CmessageMan::loadModule(string path, string userName)
 /*!
     \fn CmessageMan::getEvent(const & string name)
  */
-CeventPtr CmessageMan::getEvent(const string & name)
+CeventPtr CmessageMan::getEvent(const string & name, const CuserPtr & user)
 {
 	CeventHashMap::iterator eventI;
 	eventI=events.find(name);
@@ -544,11 +542,22 @@ CeventPtr CmessageMan::getEvent(const string & name)
 	{
 		DEB("adding new event: " << name);
 		CeventPtr event(new Cevent(defaultModifyGroup, defaultSendGroup, defaultRecvGroup));
+
+		//if sending is not allowed, then dont add it to the list to prevent DOS attacks by anonymous users
+		if (user && !event->isSendAllowed(user))
+		{
+			return (CeventPtr());
+		}
+
 		events[name]=event;
 		return (event);
 	}
 	else
 	{
+		if (user && !eventI->second->isSendAllowed(user))
+		{
+			return (CeventPtr());
+		}
 		return eventI->second;
 	}
 }
@@ -583,7 +592,7 @@ void CmessageMan::getEvents(Cvar & var)
 	for (Cvar::iterator eventI=var.begin();  eventI!=var.end(); eventI++)
 	{
 		string s=eventI->first;
-		CeventPtr eventPtr=getEvent(s);
+		CeventPtr eventPtr=getEvent(s, CuserPtr());
 		eventI->second["recvGroup"]=eventPtr->getRecvGroup()->getName();
 		eventI->second["sendGroup"]=eventPtr->getSendGroup()->getName();	
 		eventI->second["modifyGroup"]=eventPtr->getModifyGroup()->getName();
