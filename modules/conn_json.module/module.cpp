@@ -82,6 +82,11 @@ class CnetModule : public Cnet
 
 		if (out.fromJson(dataStr))
 		{
+			//if its requesting a new session, make sure the correct cookie is sended along:
+			if (out.event=="core_NewSession")
+			{
+				out["synapse_cookie"]=id;
+			}
 			out.send(id);
 		}
 		else

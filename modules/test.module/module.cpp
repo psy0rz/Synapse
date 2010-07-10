@@ -63,9 +63,10 @@ SYNAPSE_REGISTER(module_Init)
 	counterSleep=10000000;
 	out.clear();
 	out.event="test_Counter";
-	out.send();
+	//out.send();
 
 
+	//chat demo stuff
 	out.clear();
 	out.event="core_ChangeEvent";
 	out["event"]=		"chat_Text"; 
@@ -231,11 +232,6 @@ SYNAPSE_REGISTER(loop)
 	out["bla"]="loopback test";
 	out.dst=msg.dst;
 	out.send();
-}
-
-SYNAPSE_REGISTER(AAAAAAAAAAAA)
-{
-
 }
 
  
