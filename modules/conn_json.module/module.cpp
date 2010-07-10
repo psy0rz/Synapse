@@ -190,6 +190,7 @@ SYNAPSE_REGISTER(module_Shutdown)
  */
 SYNAPSE_HANDLER(all)
 {
+	msg.dst=dst;
 	if (cookie)
 		writeMessage(cookie,msg);
 }
