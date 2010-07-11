@@ -41,6 +41,7 @@ SYNAPSE_REGISTER(module_Init)
 
 }
 
+void writeMessage(int id, Cmsg & msg);
 
 
 // We extent the Cnet class with our own network handlers.
@@ -72,7 +73,12 @@ class CnetModule : public Cnet
 	{
 		if (bytesTransferred > MAX_MESSAGE)
 		{
-			WARNING("Json message on id " << id << " is " << bytesTransferred << " bytes. (max=" << MAX_MESSAGE << ")");
+			stringstream s;
+			s << "Json message on id " << id << " is " << bytesTransferred << " bytes. (max=" << MAX_MESSAGE << ")";
+			Cmsg errMsg;
+			errMsg["description"]=s.str();
+			errMsg.event="error";
+			writeMessage(id,errMsg);
 			return ;
 		}
 
@@ -87,11 +93,22 @@ class CnetModule : public Cnet
 			{
 				out["synapse_cookie"]=id;
 			}
-			out.send(id);
+			//send it and handle send errors
+			string error=out.send(id);
+			if (error!="")
+			{
+				Cmsg errMsg;
+				errMsg["description"]=error;
+				errMsg.event="error";
+				writeMessage(id,errMsg);
+			}
 		}
 		else
 		{
-			WARNING("Error while parsing incoming json message on id " << id);
+			Cmsg errMsg;
+			errMsg["description"]="Error while parsing incoming json message";
+			errMsg.event="error";
+			writeMessage(id,errMsg);
 		}
 
 		readBuffer.consume(dataStr.length());
@@ -109,8 +126,8 @@ class CnetModule : public Cnet
 	}
 };
 
-CnetMan<CnetModule> net;
 
+CnetMan<CnetModule> net;
 
 void writeMessage(int id, Cmsg & msg)
 {
@@ -119,8 +136,6 @@ void writeMessage(int id, Cmsg & msg)
 	msgStr+="\n";
 	net.doWrite(id,msgStr);
 }
-
-
 
 
 
