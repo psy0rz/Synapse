@@ -61,8 +61,8 @@ public:
 	int run(string coreName,string moduleName);
 
 	//the rest is not thread safe, so callers are responsible for locking:
-	bool sendMappedMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg,int cookie);
-	bool sendMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg, int cookie=0);
+	string sendMappedMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg,int cookie);
+	string sendMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg, int cookie=0);
 
 	void checkThread();
    	CsessionPtr loadModule(string path, string userName);

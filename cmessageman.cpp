@@ -49,7 +49,7 @@ CmessageMan::~CmessageMan()
 
 
 
-bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie)
+string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie)
 {
 	// -module is a pointer thats set by the core and can be trusted
 	// -msg is set by the user and only containts direct objects, and NO pointers. it cant be trusted yet!
@@ -57,7 +57,7 @@ bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 	// -internally the core only works with smartpointers, so most stuff thats not in msg will be a smartpointer.
 
 	if (shutdown)
-		return false;
+		return ("Shutting down, ignored message");
 
 	//no src session specified means use default session of module:
 	//NOTE: this is the only case where modify the actual msg object.
@@ -69,8 +69,9 @@ bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		}
 		else
 		{
-			ERROR("send: module " << module->name << " want to send " << msg->event << " from its default session, but is doesnt have one." );
-			return false;
+			stringstream s;
+			s << "send: module " << module->name << " want to send " << msg->event << " from its default session, but is doesnt have one.";
+			return (s.str());
 		}
 	}
 
@@ -82,32 +83,36 @@ bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 	if (!src)
 	{
 		//not found. we cant send an error back yet, so just return false
-		ERROR("send: module " << module->name << " want to send " << msg->event << " from non-existing session " << msg->src );
-		return false;
+		stringstream s;
+		s << "send: module " << module->name << " want to send " << msg->event << " from non-existing session " << msg->src;
+		return (s.str());
 	}
 
 	//source session belongs to this module?
 	if (src->module!=module)
 	{
 		//module is not the session owner. we cant send an error back yet, so just return false
-		ERROR("send: module " << module->name << " wants to send " << msg->event << " from session " << msg->src << ", but isnt the owner of this session.");
-		return false;
+		stringstream s;
+		s << "send: module " << module->name << " wants to send " << msg->event << " from session " << msg->src << ", but isnt the owner of this session.";
+		return (s.str());
 	}
 
 	//this cookie matches with src session cookie?
 	//cookies are just used to make the programming and security of network modules easier
 	if (cookie!=0 && cookie!=src->cookie)
 	{
-		ERROR("send: module " << module->name << " tries to send from session " << msg->src << ", but cookie " << cookie << " doesnt match session cookie " << src->cookie);
-		return false;
+		stringstream s;
+		s << "send: module " << module->name << " tries to send from session " << msg->src << ", but cookie " << cookie << " doesnt match session cookie " << src->cookie;
+		return (s.str());
 	}
 
 	//resolve or create the event and check send-permissions:
 	CeventPtr event=getEvent(msg->event, src->user);
 	if (!event)
 	{
-		ERROR("send: session " << msg->src << " with user " << src->user->getName() << " is not allowed to send event " << msg->event);
-		return false;
+		stringstream s;
+		s << "send: session " << msg->src << " with user " << src->user->getName() << " is not allowed to send event " << msg->event;
+		return (s.str());
 	}
 
 
@@ -132,8 +137,9 @@ bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		//found it?
 		if (!dst)
 		{
-			ERROR("send: destination session " << msg->dst << " not found");
-			return false;
+			stringstream s;
+			s << "send: destination session " << msg->dst << " not found";
+			return (s.str());
 		}
 
 		//get the handler, and does it exist?
@@ -141,14 +147,15 @@ bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		if (soHandler==NULL)
 		{
 			WARNING("send ignored message: no handler for " << msg->event << " found in " << dst->module->name );
-			return false;
+			return("");
 		}
 
 		//is specified destination allowed?
 		if (!event->isRecvAllowed(dst->user))
 		{
-			ERROR("send: session " << msg->dst << " with user " << dst->user->getName() << " is not allowed to receive event " << msg->event);
-			return false;
+			stringstream s;
+			s <<  "send: session " << msg->dst << " with user " << dst->user->getName() << " is not allowed to receive event " << msg->event;
+			return (s.str());
 		}
 
 		if (logSends)
@@ -166,7 +173,7 @@ bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		threadCond.notify_one();
 
 
-		return true;
+		return("");
 	}
 	//destination <=0 == broadcast
 	else
@@ -218,7 +225,7 @@ bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 
 		if (!delivered)
 			WARNING("broadcast " << msg->event << " was not received by anyone.") 
-		return (true);
+		return ("");
 	}
 }
 
@@ -226,7 +233,7 @@ bool CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 Internally it will result in 1 or more calls to sendMappedMessage, if the msg.dst is -1.
 */
 
-bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie)
+string CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie)
 {
 	if (msg->dst >= 0)
 	{
@@ -254,7 +261,7 @@ bool CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg, in
 		sendMessage(module, mappedMsg, cookie);
 
 		//we dont care about the result of the mapped sendMessage, for now
-		return (true);
+		return ("");
 	}
 }
 

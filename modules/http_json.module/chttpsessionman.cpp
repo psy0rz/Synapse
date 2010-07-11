@@ -124,7 +124,7 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
 	out["authCookie"]=authCookie;
 	out["netId"]=netId;
 
-	if (!out.send())
+	if (out.send()!="")
 	{
 		//sending fails if the user doesnt have rights to send a NewSession request. (like anonymous user)
 		//in this case we just create a new anonymous session without cloning.
@@ -196,13 +196,7 @@ string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonStr)
 		msg.src=httpSessionI->first;
 	}
 
-	if (!msg.send())
-	{
-		error << "Error while sending message. (no permission?)";
-		return (error.str());
-	}
-
-	return ("");
+	return(msg.send());
 }
 
 //core informs us of a new session that is started, probably for a client of us:

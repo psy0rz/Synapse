@@ -62,7 +62,7 @@ public:
 
 	//this function is only implemented in the .so object module
 	//so if you use it in the core you will get linker errors :)
-	bool send(int cookie=0);
+	string send(int cookie=0);
 	void returnError(string description);
 	void returnWarning(string description);
 	bool returnIfOtherThan(char * keys, ...);
