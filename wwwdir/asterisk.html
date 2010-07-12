@@ -18,7 +18,7 @@
 
 	<script type="text/javascript" src="synapse.js"></script>
 
-	<script type="text/javascript">
+	<script type="text/javascript"><!--
 
 		loginDeviceId="";
 
@@ -70,7 +70,7 @@
  		{
 			//reset all known state info
 			//(new info probably follows because we send a asterisk_refresh request)
-			$('#deviceList').empty();
+			$('.device').remove();
 
 		});
 
@@ -86,7 +86,12 @@
 				html+="<div class=' deviceInfo'></div>";
 				html+="<div class='channelList'></div>";
 				html+="</div>";
-				$('#deviceList').append(html);
+
+				//is it the device of the logged in user?
+				if (msg["id"]==loginDeviceId)
+					$('#statusUser').append(html);
+				else
+					$('#deviceList').append(html);
 			}
 
 			//make devices without callerID name hidden:
@@ -259,20 +264,6 @@
 // 				}
 // 			}
 
-			//is it the device of the logged in user?
-			if (msg["deviceId"]==loginDeviceId)
-			{
-				if ( msg["state"] == "Ringing" )
-				{
-					$('#statusMsg').html("Getting called by " +prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]));
-					$('#statusBar').attr('state', 'ringing');
-				}
-				else
-				{
-					$('#statusMsg').html("");
-					$('#statusBar').attr('state', '');
-				}
-			}
 
 		});
 
@@ -317,7 +308,7 @@
 		});
 
 
-	</script>
+	--></script>
 
 	<style>
 		
@@ -336,9 +327,9 @@
 			margin:0;
 			padding:0;
 			position:	absolute;
-			height: 	5em;
+			height: 	10em;
 			left: 		0em;
-			width: 		20em;
+			width: 		21em;
 		}
 
 		#statusBar
@@ -346,9 +337,9 @@
 			margin:0;
 			padding:0;
 			position:	absolute;
-			height: 	5em;
+			height: 	10em;
 			right: 		0em;
-			left: 		20em;
+			left: 		21em;
 			
 		}
 
@@ -358,9 +349,9 @@
 			padding:0;
 			position:	absolute;
 			left: 		0em;
-			top:		5.1em;
-			width: 		20em;
-			bottom:		50%;
+			top:		10em;
+			width: 		21em;
+			height:		10em;
 			overflow: auto;
 		}
 
@@ -370,8 +361,8 @@
 			padding:0;
 			position:	absolute;
 			left: 		0em;
-			top:		50%;
-			width: 		20em;
+			top:		20em;
+			width: 		21em;
 			bottom:		0em;
 			overflow: auto;
 		}
@@ -383,8 +374,8 @@
 			padding:0;
 			position:	absolute;
 			right: 		0em;
-			top:		5em;
-			left: 		20em;
+			top:		10em;
+			left: 		21em;
 			bottom:		0em;
 			overflow: auto;
 		}
@@ -505,13 +496,10 @@
 </head>
 
 
-<body class='ui-widget'>
+<body class='ui-widget' style='font-size:1em'>
 
 	<div class='ui-widget-content' id='statusUser'>
-		<div class='ui-widget-header'>You are:</div>
-		<div id='statusLoginUser'>
-			(Not logged in)
-		</div>
+		<div class='ui-widget-header'>My phone:</div>
 			
 		<input id='login' type='submit' value='Change...'>
 	</div>
@@ -541,7 +529,6 @@
 	<div class='ui-widget-content' id='deviceList'>
 		<div class='ui-widget-header'>Phone overview:</div>
 	</div>
-
 	
 </body>
 </html>
