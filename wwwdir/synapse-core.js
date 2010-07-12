@@ -56,6 +56,14 @@ function escapeId(myid) {
 		return '#undefined';
 }
 
+function escapeClass(myclass) { 
+	//escape stuff to make it jquery compatible. 
+	if (typeof myclass != 'undefined')
+		return '.' + myclass.replace(/([,@\/.])/g,'\\$1');
+	else
+		return '.undefined';
+}
+
 function synapse_register(event, handler)
 {
 	if (typeof synapse_handlers[event] == 'undefined')

@@ -122,35 +122,35 @@
 		});
 
 
-		//creates, reuses or returns an existing channel object, using info from msg
-		function getChannel(msg)
+		//creates, reuses or returns an existing channel object under a device object, using info from msg
+		function getDeviceChannel(msg)
 		{
 			var oldDebug="";
 
 			//does the channel exist already?
-			if ($(escapeId(msg["id"])).length!=0)
+			if ($("#deviceList "+escapeClass(msg["id"])).length!=0)
 			{
 				//doesnt it exist under the specified device?
-				if ($(escapeId(msg["deviceId"]) + " " + escapeId(msg["id"])).length==0)
+				if ($("#deviceList " + escapeId(msg["deviceId"]) + " " + escapeClass(msg["id"])).length==0)
 				{
 					//then it probably has been moved/renamed, so delete the channel and recreate it below.
-					oldDebug=$(escapeId(msg["id"])+" .channelDebug").html();
+					oldDebug=$("#deviceList "+escapeClass(msg["id"])+" .channelDebug").html();
 					oldDebug+="<br>(moved/renamed)<br>";
-					$(escapeId(msg["id"])).remove();
+					$("#deviceList "+escapeClass(msg["id"])).remove();
 				}
 			}
 
 			//channel doesnt exist?
-			if ($(escapeId(msg["id"])).length==0)
+			if ($("#deviceList "+escapeClass(msg["id"])).length==0)
 			{
 				var newChannelHtml="";
-				newChannelHtml+="<div class='channel' id='"+msg["id"]+"'>";
+				newChannelHtml+="<div class='channel "+msg["id"]+"'>";
 				newChannelHtml+="<div class='channelInfo ui-state-highlight'></div>";
 				newChannelHtml+="<div class='channelDebug'>"+oldDebug+"</div>";
 				newChannelHtml+="</div>";
 
 				//check if there is a old channel that has deleted state
-				var oldChannel=$(escapeId(msg["deviceId"]) +" .channelList [state=deleted]:first");
+				var oldChannel=$("#deviceList "+escapeId(msg["deviceId"]) +" .channelList [state=deleted]:first");
 				if (oldChannel.length!=0 )
 				{
 					//replace a deleted channel:
@@ -159,7 +159,7 @@
 				else
 				{
 					//add a brand new channel object
-					$(escapeId(msg["deviceId"])+' .channelList').append(newChannelHtml);
+					$("#deviceList "+escapeId(msg["deviceId"])+' .channelList').append(newChannelHtml);
 				}
 				
 
@@ -177,7 +177,7 @@
 // 				);
 
 				//on click toggle debug info
-				$(escapeId(msg["id"])).click(
+				$("#deviceList "+escapeClass(msg["id"])).click(
 					function ()	
 					{ 
 						$(this).children(".channelDebug").toggle(); 
@@ -185,13 +185,13 @@
 				);
 
 			}
-			return ($(escapeId(msg["id"])));
+			return ($("#deviceList "+escapeClass(msg["id"])));
 		}
 
 
  		synapse_register("asterisk_debugChannel",function(msg_src, msg_dst, msg_event, msg)
 		{
-			var channel=getChannel(msg).children(" .channelDebug");
+			var channel=getDeviceChannel(msg).children(" .channelDebug");
 
 			channel.append(
 				"<br><b>"+msg["Event"]+"</b><br>"
@@ -228,10 +228,8 @@
  		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
  		{
 
-			var channel=getChannel(msg);
-
-			//set channel status
-			$(escapeId(msg["id"])).attr('state', msg["state"]);
+			/////////// DeviceList-only stuff:
+			var channel=getDeviceChannel(msg);
 
 			//set caller info
 			var callerInfo="";
@@ -247,7 +245,7 @@
 				callerInfo+="Calling "+msg["firstExtension"];
 			}
 
-			$(escapeId(msg["id"])+" .channelInfo").html(callerInfo);
+			$("#deviceList "+escapeClass(msg["id"])+" .channelInfo").html(callerInfo);
 
 
 // 			//add the update-info to the debug object
@@ -264,23 +262,38 @@
 // 				}
 // 			}
 
+			////////////////////// activeCallList-only stuff:
+			//add new channel to active call list?
+			if ($("#activeCallList "+escapeClass(msg["id"])).length==0)
+			{
+				var newChannelHtml="";
+				newChannelHtml+="<div class='channel "+msg["id"]+"'>";
+				newChannelHtml+="<div class='channelInfo'></div>";
+				newChannelHtml+="</div>";
+				$("#activeCallList").append(newChannelHtml);
+			}
+			//update active call list
+ 			$("#activeCallList "+escapeClass(msg["id"])+" .channelInfo").html(
+ 		 		prettyCallerId(msg["callerId"], msg["callerIdName"])+"..."+callerInfo
+ 		 	);
+
+			///////////////////// Stuff for all channels
+			$(escapeClass(msg["id"])).attr('state', msg["state"]);
+			
 
 		});
 
 
  		synapse_register("asterisk_delChannel",function(msg_src, msg_dst, msg_event, msg)
  		{
-
-			$(escapeId(msg["id"])).attr('state', 'deleted');
-			//let the channel exist a while after hanging up
-			setTimeout(function() { $(escapeId(msg["id"])).remove() } , 300000);
-
-			//is it the device of the logged in user?
-			if (msg["deviceId"]==loginDeviceId)
-			{
-					$('#statusMsg').html("");
-					$('#statusBar').attr('state', '');
-			}
+			//remove channel from device
+			$("#deviceList "+escapeClass(msg["id"])).remove();
+ 			
+			//move channel from active call list to history:
+			var oldChannel=$("#activeCallList "+escapeClass(msg["id"])).clone();
+			$("#activeCallList "+escapeClass(msg["id"])).remove();
+			oldChannel.attr('state', 'deleted');
+			$("#historyCallList").append(oldChannel);
 
 		});
 
