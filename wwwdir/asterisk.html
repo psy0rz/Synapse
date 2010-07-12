@@ -6,6 +6,16 @@
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
 	<title>Synapse asterisk test</title>
 
+	<!-- Jquery theme switcher  --> 
+	<link type="text/css" rel="stylesheet" href="http://jqueryui.com/themes/base/ui.all.css" />
+	<script type="text/javascript" src="http://jqueryui.com/js/jquery.js"></script>
+	<script>
+	$(document).ready(function(){
+	  $('#switcher').themeswitcher();
+	});
+	</script>
+	
+
 	<script type="text/javascript" src="synapse.js"></script>
 
 	<script type="text/javascript">
@@ -72,8 +82,8 @@
 			if ($(escapeId(msg["id"])).length==0)
 			{
 				//add dom objects
-				html="<div class='device' id='"+msg["id"]+"'>";
-				html+="<div class='deviceInfo'></div>";
+				html="<div class='ui-state-default ui-widget-content ui-corner-all device' id='"+msg["id"]+"'>";
+				html+="<div class=' deviceInfo'></div>";
 				html+="<div class='channelList'></div>";
 				html+="</div>";
 				$('#deviceList').append(html);
@@ -130,7 +140,7 @@
 			{
 				var newChannelHtml="";
 				newChannelHtml+="<div class='channel' id='"+msg["id"]+"'>";
-				newChannelHtml+="<div class='channelInfo'></div>";
+				newChannelHtml+="<div class='channelInfo ui-state-highlight'></div>";
 				newChannelHtml+="<div class='channelDebug'>"+oldDebug+"</div>";
 				newChannelHtml+="</div>";
 
@@ -310,6 +320,8 @@
 	</script>
 
 	<style>
+		
+	
 		body 
 		{
 			margin:0;
@@ -318,14 +330,65 @@
 			width: 100%;
 		} 
 
+
+		#statusUser
+		{
+			margin:0;
+			padding:0;
+			position:	absolute;
+			height: 	5em;
+			left: 		0em;
+			width: 		20em;
+		}
+
 		#statusBar
 		{
-			background-color: #ddddff;
-			height: 5em;
-			width: 100%;
-			float: left;
-			padding: 0.5em;
+			margin:0;
+			padding:0;
+			position:	absolute;
+			height: 	5em;
+			right: 		0em;
+			left: 		20em;
+			
 		}
+
+		#historyCallList
+		{
+			margin:0;
+			padding:0;
+			position:	absolute;
+			left: 		0em;
+			top:		5.1em;
+			width: 		20em;
+			bottom:		50%;
+			overflow: auto;
+		}
+
+		#activeCallList
+		{
+			margin:0;
+			padding:0;
+			position:	absolute;
+			left: 		0em;
+			top:		50%;
+			width: 		20em;
+			bottom:		0em;
+			overflow: auto;
+		}
+
+
+		#deviceList
+		{
+			margin:0;
+			padding:0;
+			position:	absolute;
+			right: 		0em;
+			top:		5em;
+			left: 		20em;
+			bottom:		0em;
+			overflow: auto;
+		}
+
 
 		#statusBar[state="ringing"]
 		{
@@ -352,21 +415,13 @@
 			
 		}
 
-		#deviceList
-		{
-			width: 100%;
-			float: left;
-		}
 
 		.device
 		{
-			background-color: #CCFFCC;
 			float: left;
-			border-style:solid;
 			width: 20em;
 			min-height: 3em;
 			margin: 5px;
-			padding: 5px;
 		}
 
 
@@ -378,8 +433,6 @@
 
 		.deviceInfo
 		{
-			border-style:none;
-			width:100%;
 
 		}
 
@@ -452,25 +505,42 @@
 </head>
 
 
-<body>
+<body class='ui-widget'>
 
-	<div id='statusBar'>
-		Status: <div id='statusMsg'>
-			Loading...
-		</div>
+	<div class='ui-widget-content' id='statusUser'>
+		<div class='ui-widget-header'>You are:</div>
 		<div id='statusLoginUser'>
 			(Not logged in)
 		</div>
 			
 		<input id='login' type='submit' value='Change...'>
-		
+	</div>
+
+	<div class='ui-widget-content' id='statusBar'>
+		<div class='ui-widget-header'>Status:</div>
+		<div id='statusMsg'>
+			Loading...
+		</div>
+
+		<script type="text/javascript"
+		  src="http://jqueryui.com/themeroller/themeswitchertool/">
+		</script>
+		<div id="switcher"></div>	
+
 	</div>
 
 
-	<div id='deviceList'>
+	<div class='ui-widget-content' id='activeCallList'>
+		<div class='ui-widget-header'>Active calls:</div>
 	</div>
 
+	<div class='ui-widget-content' id='historyCallList'>
+		<div class='ui-widget-header'>History:</div>
+	</div>
 
+	<div class='ui-widget-content' id='deviceList'>
+		<div class='ui-widget-header'>Phone overview:</div>
+	</div>
 
 	
 </body>
