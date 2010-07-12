@@ -34,20 +34,17 @@ SYNAPSE_REGISTER(module_Init)
 //	out["path"]="modules/net.module/libnet.so";
 //	out.send();
 
-// 	out["path"]="modules/conn_json.module/libconn_json.so";
-// 	out.send();
-
 	out["path"]="modules/http_json.module/libhttp_json.so";
 	out.send();
 
-//  	out["path"]="modules/ami.module/libami.so";
-//  	out.send();
+  	out["path"]="modules/ami.module/libami.so";
+  	out.send();
 
-//  	out["path"]="modules/asterisk.module/libasterisk.so";
-//  	out.send();
+  	out["path"]="modules/asterisk.module/libasterisk.so";
+  	out.send();
 
-	  	out["path"]="modules/conn_json.module/libconn_json.so";
-	  	out.send();
+	out["path"]="modules/conn_json.module/libconn_json.so";
+	out.send();
 
 	// Counter that ever counterSleep seconds emits a message.
 	// Speed can be changed with appropriate messages

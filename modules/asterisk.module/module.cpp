@@ -210,7 +210,7 @@ namespace asterisk
 	};
 
 
-	//groups: mostly a tennant is considered a group. 
+	//groups: most times a tennant is considered a group.
 	//After authenticating, a session points to a group.'
 	//All devices of a specific tennant also point to this group
 	//events are only sent to Csessions that are member of the same group as the corresponding device.

@@ -79,9 +79,13 @@
 				$('#deviceList').append(html);
 			}
 
+			//make devices without callerID name hidden:
+			if (msg["callerId"].substr(0,2)=='""')
+				$(escapeId(msg["id"])).css('display', 'none');
 
 			//update the device caller id:
-			$(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]+"<br> tennant="+msg["groupId"]+" ("+msg["id"]+")");
+//			$(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]+"<br> tennant="+msg["groupId"]+" ("+msg["id"]+")");
+			$(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]);
 
 			if (msg["online"])
 				$(escapeId(msg["id"])).attr('state','');
@@ -293,9 +297,13 @@
 			$("#login").click(function()
 			{
 				send(0,"asterisk_authReq", {});
-				send(0,"asterisk_reset", {});
+				//send(0,"asterisk_reset", {});
 			});
 
+			$("#loginUser").click(function()
+			{
+				synapse_login();
+			});
 		});
 
 
@@ -356,7 +364,7 @@
 			float: left;
 			border-style:solid;
 			width: 20em;
-			min-height: 5em;
+			min-height: 3em;
 			margin: 5px;
 			padding: 5px;
 		}
@@ -387,7 +395,7 @@
 			border-top-style:dashed;
 			border-color:#aaaaaa; 
 			border-width: 1px;
-			margin:0.3em;
+			margin:0;
 			min-width:15em;
 			padding-left:25px;
 			background-repeat:no-repeat;
@@ -453,7 +461,9 @@
 		<div id='statusLoginUser'>
 			(Not logged in)
 		</div>
+			
 		<input id='login' type='submit' value='Change...'>
+		
 	</div>
 
 

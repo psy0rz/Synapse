@@ -14,7 +14,8 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
-		printf("Usage: ./synapse <initialmodule.so>\n"); 
+		INFO("Usage: ./synapse <initialmodule.so>\n");
 		return (1);
 	}
 }
+
