@@ -7,6 +7,7 @@
 	<title>Synapse asterisk test</title>
 
 	<!-- Jquery theme switcher  --> 
+	<!-- 
 	<link type="text/css" rel="stylesheet" href="http://jqueryui.com/themes/base/ui.all.css" />
 	<script type="text/javascript" src="http://jqueryui.com/js/jquery.js"></script>
 	<script>
@@ -14,7 +15,7 @@
 	  $('#switcher').themeswitcher();
 	});
 	</script>
-	
+	 -->
 
 	<script type="text/javascript" src="synapse.js"></script>
 
@@ -71,6 +72,7 @@
 			//reset all known state info
 			//(new info probably follows because we send a asterisk_refresh request)
 			$('.device').remove();
+			$('.channel').remove();
 
 		});
 
@@ -92,6 +94,7 @@
 					$('#statusUser').append(html);
 				else
 					$('#deviceList').append(html);
+
 			}
 
 			//make devices without callerID name hidden:
@@ -113,12 +116,17 @@
 			{
 				$('#statusLoginUser').text(msg["callerId"]);				
 			}
-		});
+
+			$(escapeId(msg["id"])+":hidden").slideDown();
+
+ 		});
 
 
  		synapse_register("asterisk_delDevice",function(msg_src, msg_dst, msg_event, msg)
  		{
-			$(escapeId(msg["id"])).remove();
+			$(escapeId(msg["id"])).slideUp("",function() {
+			    $(this).remove();
+			});
 		});
 
 
@@ -128,20 +136,24 @@
 			var oldDebug="";
 
 			//does the channel exist already?
-			if ($("#deviceList "+escapeClass(msg["id"])).length!=0)
+			if ($(".device "+escapeClass(msg["id"])).length!=0)
 			{
 				//doesnt it exist under the specified device?
-				if ($("#deviceList " + escapeId(msg["deviceId"]) + " " + escapeClass(msg["id"])).length==0)
+				if ($(escapeId(msg["deviceId"]) + " " + escapeClass(msg["id"])).length==0)
 				{
 					//then it probably has been moved/renamed, so delete the channel and recreate it below.
-					oldDebug=$("#deviceList "+escapeClass(msg["id"])+" .channelDebug").html();
+					oldDebug=$(".device "+escapeClass(msg["id"])+" .channelDebug").html();
 					oldDebug+="<br>(moved/renamed)<br>";
-					$("#deviceList "+escapeClass(msg["id"])).remove();
+					$(".device "+escapeClass(msg["id"])).slideUp("",function() {
+					    $(this).remove();
+					});
+							
+					
 				}
 			}
 
 			//channel doesnt exist?
-			if ($("#deviceList "+escapeClass(msg["id"])).length==0)
+			if ($(".device "+escapeClass(msg["id"])).length==0)
 			{
 				var newChannelHtml="";
 				newChannelHtml+="<div class='channel "+msg["id"]+"'>";
@@ -150,7 +162,7 @@
 				newChannelHtml+="</div>";
 
 				//check if there is a old channel that has deleted state
-				var oldChannel=$("#deviceList "+escapeId(msg["deviceId"]) +" .channelList [state=deleted]:first");
+				var oldChannel=$(escapeId(msg["deviceId"]) +" .channelList [state=deleted]:first");
 				if (oldChannel.length!=0 )
 				{
 					//replace a deleted channel:
@@ -159,9 +171,9 @@
 				else
 				{
 					//add a brand new channel object
-					$("#deviceList "+escapeId(msg["deviceId"])+' .channelList').append(newChannelHtml);
+					$(escapeId(msg["deviceId"])+' .channelList').append(newChannelHtml);
 				}
-				
+
 
 				//on hover show the info
 // 				$(escapeId(msg["id"])).hover(
@@ -177,7 +189,7 @@
 // 				);
 
 				//on click toggle debug info
-				$("#deviceList "+escapeClass(msg["id"])).click(
+				$(".device "+escapeClass(msg["id"])).click(
 					function ()	
 					{ 
 						$(this).children(".channelDebug").toggle(); 
@@ -185,7 +197,7 @@
 				);
 
 			}
-			return ($("#deviceList "+escapeClass(msg["id"])));
+			return ($(".device "+escapeClass(msg["id"])));
 		}
 
 
@@ -245,7 +257,7 @@
 				callerInfo+="Calling "+msg["firstExtension"];
 			}
 
-			$("#deviceList "+escapeClass(msg["id"])+" .channelInfo").html(callerInfo);
+			$(".device "+escapeClass(msg["id"])+" .channelInfo").html(callerInfo);
 
 
 // 			//add the update-info to the debug object
@@ -270,7 +282,9 @@
 				newChannelHtml+="<div class='channel "+msg["id"]+"'>";
 				newChannelHtml+="<div class='channelInfo'></div>";
 				newChannelHtml+="</div>";
-				$("#activeCallList").append(newChannelHtml);
+				$("#activeCallList .list").prepend(newChannelHtml);
+				show=1;
+				
 			}
 			//update active call list
  			$("#activeCallList "+escapeClass(msg["id"])+" .channelInfo").html(
@@ -279,6 +293,7 @@
 
 			///////////////////// Stuff for all channels
 			$(escapeClass(msg["id"])).attr('state', msg["state"]);
+			$(escapeClass(msg["id"])+":hidden").slideDown();
 			
 
 		});
@@ -287,13 +302,19 @@
  		synapse_register("asterisk_delChannel",function(msg_src, msg_dst, msg_event, msg)
  		{
 			//remove channel from device
-			$("#deviceList "+escapeClass(msg["id"])).remove();
+			$(".device "+escapeClass(msg["id"])).slideUp("",function() {
+			    $(this).remove();
+			});
  			
-			//move channel from active call list to history:
-			var oldChannel=$("#activeCallList "+escapeClass(msg["id"])).clone();
-			$("#activeCallList "+escapeClass(msg["id"])).remove();
-			oldChannel.attr('state', 'deleted');
-			$("#historyCallList").append(oldChannel);
+			//hide it from the call list with a nice effect 
+			$("#activeCallList "+escapeClass(msg["id"])).slideUp("",function() {
+				//change attributes and move it to the history
+	 			$(this).attr('state', 'deleted');
+	 			//yes, this will actually MOVE the object, not copy it:
+	 			$("#historyCallList .list").prepend($(this));
+	 			//show it again with a nice effect
+				$("#historyCallList " + escapeClass(msg["id"])).slideDown("");
+			});
 
 		});
 
@@ -362,10 +383,10 @@
 			padding:0;
 			position:	absolute;
 			left: 		0em;
-			top:		10em;
 			width: 		21em;
-			height:		10em;
 			overflow: auto;
+			top:		30em;
+			bottom:		0em;
 		}
 
 		#activeCallList
@@ -374,9 +395,9 @@
 			padding:0;
 			position:	absolute;
 			left: 		0em;
-			top:		20em;
 			width: 		21em;
-			bottom:		0em;
+			top:		10em;
+			height:		20em;
 			overflow: auto;
 		}
 
@@ -422,6 +443,7 @@
 
 		.device
 		{
+			display: none;
 			float: left;
 			width: 20em;
 			min-height: 3em;
@@ -449,6 +471,7 @@
 
 		.channel
 		{
+			display: none;
 			border-top-style:dashed;
 			border-color:#aaaaaa; 
 			border-width: 1px;
@@ -523,20 +546,22 @@
 			Loading...
 		</div>
 
-		<script type="text/javascript"
+<!--  	<script type="text/javascript"
 		  src="http://jqueryui.com/themeroller/themeswitchertool/">
 		</script>
-		<div id="switcher"></div>	
+		<div id="switcher"></div>-->		
 
 	</div>
 
 
 	<div class='ui-widget-content' id='activeCallList'>
 		<div class='ui-widget-header'>Active calls:</div>
+		<div class='list'></div>
 	</div>
 
 	<div class='ui-widget-content' id='historyCallList'>
 		<div class='ui-widget-header'>History:</div>
+		<div class='list'></div>
 	</div>
 
 	<div class='ui-widget-content' id='deviceList'>

@@ -85,10 +85,17 @@ function synapse_callHandlers(event)
 			}
 			catch(e)
 			{
-				console.error("Error while calling handler", e);
+				if (typeof e.stack != 'undefined')
+					console.error("Error while calling handler:", e.stack);
+				else
+					console.error("Error while calling handler:", e);
+					
 				if (event!="error")
 				{
-					synapse_callHandlers("error", "Exception error: "+e.message);
+					if (typeof e.stack != 'undefined')
+						synapse_callHandlers("error", "Exception error: "+e.stack);
+					else
+						synapse_callHandlers("error", "Exception error: "+e.message);
 				}
 			}
 
@@ -179,8 +186,8 @@ function send(msg_dst, msg_event, msg)
 $(document).ready(function(){
 	//need to start ansyncroniously, otherwise some browsers (android) keep loading:
 	//(hmm this not always prevents the problem, we will figure out a better way later)
-//	setTimeout("synapse_receive()",1000);
-	synapse_receive();
+	setTimeout("synapse_receive()",1000);
+	//synapse_receive();
 });
 
 
