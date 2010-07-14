@@ -65,11 +65,13 @@ public:
 	string sendMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg, int cookie=0);
 
 	void checkThread();
-   	CsessionPtr loadModule(string path, string userName);
+
 	CeventPtr getEvent(const string & name, const CuserPtr & user);
 	void getEvents(Cvar & var);
-    int isModuleReady(string path);
     void doShutdown(int exit);
+
+   	CsessionPtr loadModule(string path, string userName);
+    CmodulePtr getModule(string path);
 
 	mutex threadMutex;
 	CuserMan userMan;

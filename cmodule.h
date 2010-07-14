@@ -62,7 +62,20 @@ public:
 	int defaultSessionId;
 	string name;
 	string path;
+
+	/* indicating when a module is ready is a tricky thing. Here is how it works:
+		-a session calls core_LoadModule to load a module.
+		-the session requesting the load is added to the requestingSessions list
+		-the loading and initalizing of the module can take any amount of time.
+		-other sessions that also call core_LoadModule in the meantime are added to the list as well.
+		-as soon as the module sends out a core_Ready event, all the requesting sessions are informed with a modulename_Ready event.
+		-the session id of the session that sended the core_LoadModule is stored in readySession. This also indicates the module is ready for future references.
+		-if after this point someone does another core_LoadModule, they get back a modulename_Ready event instantly.
+		 (they are also added to the requestingSessions for completeness sake, for now)
+
+	*/
 	int readySession;
+	list<int> requestingSessions;
 
 	void getEvents(Cvar & var);
 

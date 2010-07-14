@@ -498,9 +498,8 @@ int CmessageMan::run(string coreName, string moduleName)
 
 
 
-
-/*!
-    \fn CmessageMan::loadModule(string name)
+/** Loads a module an returns a pointer to the newly created default-session for the module.
+ * Only call this once!
  */
 CsessionPtr CmessageMan::loadModule(string path, string userName)
 {
@@ -534,6 +533,26 @@ CsessionPtr CmessageMan::loadModule(string path, string userName)
 	}
 
 	return CsessionPtr();
+}
+
+/** Return a pointer to the specified module, if its loaded.
+ */
+CmodulePtr CmessageMan::getModule(string path)
+{
+	CsessionPtr session;
+	string name;
+	name=Cmodule().getName(path);
+
+	for (int sessionId=0; sessionId<MAX_SESSIONS; sessionId++)
+	{
+		session=userMan.getSession(sessionId);
+		//does the session point to the module we're looking for?
+		if (session && session->module && session->module->name==name)
+		{
+			return (session->module);
+		}
+	}
+	return CmodulePtr();
 }
 
 
@@ -607,26 +626,6 @@ void CmessageMan::getEvents(Cvar & var)
 }
 
 
-/*!
-    \fn CmessageMan::isModuleReady(string name)
- */
-int CmessageMan::isModuleReady(string path)
-{
-	CsessionPtr session;
-	string name;
-	name=Cmodule().getName(path);
-	
-	for (int sessionId=0; sessionId<MAX_SESSIONS; sessionId++)
-	{
-		session=userMan.getSession(sessionId);
-		//session exists and is still active, and its the module?
-		if (session && session->isEnabled() && session->module->name==name && session->module->readySession==session->id)
-		{
-			return (session->module->readySession);
-		}
-	}
-	return SESSION_DISABLED;	
-}
 
 
 /*!

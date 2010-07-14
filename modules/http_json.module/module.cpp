@@ -654,7 +654,7 @@ SYNAPSE_REGISTER(http_json_Accept)
 	if (msg.dst==moduleSessionId)
 	{
 		//race condition with net.runlisten..
-		sleep(1);
+		//fixed? sleep(1);
 		//keep accepting until shutdown or some other error
 		while(net.runAccept(msg["port"], 0));
 	}

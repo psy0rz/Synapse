@@ -224,12 +224,11 @@ SYNAPSE_REGISTER(module_Error)
 
 \post The module specified by path is loaded.
 
-\par Broadcasts \c modulename_Ready:
-	Sended after the module indicates its ready. 
-	All modules should indicate they're ready by sending a \c core_Ready.
-		\arg \c session The default-session of the module.
+\par Replys \c modulename_Ready:
+	Sended to all the sessions that requested the load, after the module indicates its ready.
+	A module should always send a \c core_Ready when its ready.
+		\arg \c session The original session id that sended the core_Ready.
 
-\note If the module is already loaded, the modulename_Ready will only be replied to \c src instead of being broadcasted.
 */
 SYNAPSE_REGISTER(core_LoadModule)
 {
@@ -237,39 +236,42 @@ SYNAPSE_REGISTER(core_LoadModule)
 	Cmsg out;
 	{
 		lock_guard<mutex> lock(messageMan->threadMutex);
-		CsessionPtr session;
-		Cmodule module;
+		CmodulePtr module;
 	
-		//its already loaded?
-		if (module.isLoaded(msg["path"]))
+		module=messageMan->getModule(msg["path"]);
+
+		//is it already loaded?
+		if (module!=NULL)
 		{
 			DEB("module " << (string)msg["path"] << " is already loaded");
-			//is it ready as well?
-			int readySession=messageMan->isModuleReady(msg["path"]);
-			if (readySession!=SESSION_DISABLED)
+			//is it already ready?
+			if (module->readySession!=SESSION_DISABLED)
 			{
 				//send out a modulename_ready to the requesting session to inform the module is already ready:
-				out.event=module.getName((string)msg["path"])+"_Ready";
+				out.event=module->name+"_Ready";
 				DEB("module is already ready, sending a " << out.event);
 				out.dst=msg.src;
-				out["session"]=readySession;
-			}
-			else
-			{
-				return;
+				out["session"]=module->readySession;
 			}
 		}
+		//not loaded yet, request load
 		else
 		{
+			CsessionPtr session;
 			session=messageMan->loadModule(msg["path"],"module");
 			if (!session)
 				error="Error while loading module.";
 			else
 			{
+				//call the init function of the module
 				out.event="module_Init";
 				out.dst=session->id;
 			}
+			module=session->module;
 		}
+
+		//add the requesting session to the list of requesters, so it gets informed when the module becomes ready.
+		module->requestingSessions.push_back(msg.src);
 	}
 
 	if (error!="")
@@ -277,6 +279,49 @@ SYNAPSE_REGISTER(core_LoadModule)
 	else
 	{
 		out.send();
+	}
+}
+
+
+/** Indicates the \c src module is ready to be used.
+	Its mandatory for a module to call this when its ready.
+
+\post The module is marked as ready, so that a future \c core_LoadModule can return modulename_Ready immediatly.
+
+\par Sends \c modulename_Ready to all modules that requested the module:
+		\arg \c session The default session of the ready module.
+*/
+SYNAPSE_REGISTER(core_Ready)
+{
+	Cmsg out;
+	string error;
+	list<int> requestingSessions;
+	{
+		lock_guard<mutex> lock(messageMan->threadMutex);
+
+		CsessionPtr session=messageMan->userMan.getSession(msg.src);
+		if (!session)
+			error="Can't find session";
+		else
+		{
+			out.event=session->module->name+"_Ready";
+			out["session"]=session->id;;
+			session->module->readySession=session->id;
+			//make a copy to use outside the lockscope
+			requestingSessions=session->module->requestingSessions;
+		}
+	}
+
+	if (error!="")
+		msg.returnError(error);
+	else
+	{
+		//now send the module_Ready to all sessions that requested the module.
+		BOOST_FOREACH(int dst, requestingSessions)
+		{
+			out.dst=dst;
+			out.send();
+		}
 	}
 }
 
@@ -741,41 +786,6 @@ SYNAPSE_REGISTER(core_ChangeSession)
 		msg.returnError(error);
 }
 
-/** Indicates the \c src module is ready to be used.
-	Its mandatory for a module to call this when its ready.
-
-\post The module is marked as ready, so that a future \c core_LoadModule can return modulename_Ready immediatly.
-
-\par Broadcasts \c modulename_Ready:
-	To indicate to other modules that the module with name "modulename" is ready.
-		\arg \c session The default session of the ready module.
-*/
-//Indicates the module is ready with its init stuff.
-//This results in a modulename_ready-broadcast to inform the other modules this one is ready to be used.
-SYNAPSE_REGISTER(core_Ready)
-{
-	Cmsg out;
-	string error;
-
-	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
-
-		CsessionPtr session=messageMan->userMan.getSession(msg.src);
-		if (!session)
-			error="Can't find session";
-		else
-		{
-			out.event=session->module->name+"_Ready";
-			out["session"]=session->id;;
-			session->module->readySession=session->id;
-		}
-	}
-
-	if (error!="")
-		msg.returnError(error);
-	else
-		out.send();
-}
 
 //
 /** Sends a thread.interrupt() to a executing call that was previously send from \c src. It removes the call form the queue if its not executing yet.
