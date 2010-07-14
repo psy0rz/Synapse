@@ -83,7 +83,6 @@ SYNAPSE_REGISTER(module_Init)
 }
 
 
-
 SYNAPSE_REGISTER(asterisk_Ready)
 {
 	Cmsg out;

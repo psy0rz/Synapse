@@ -39,7 +39,7 @@ To setup a fake server replaying this:
                                             |
     serverMap->serverPtr->Cserver:          |
         channelMap->channelPtr->Cchannel:   |
-            devicePtr--->--------|          | 
+            devicePtr--->-------\           |
                                  v          |
         deviceMap->devicePtr->Cdevice:      |
             groupPtr--->--------------------
@@ -262,12 +262,20 @@ namespace asterisk
 				{
 					if (I->second->getGroupPtr().get()!=this)
 					{
-						WARNING("Cant send message to session " << msg.dst << ", it doesnt belong to group: " << getId());
+						//dont: WARNING("Cant send message to session " << msg.dst << ", it doesnt belong to group: " << getId());
 						return;
 					}
 					msg.send();
 				}
 			}
+
+		}
+
+		string getStatus(string prefix)
+		{
+			return (
+				prefix+"Group "+id
+			);
 		}
 
 	};	
@@ -405,6 +413,15 @@ namespace asterisk
 			//refresh device
 			sendUpdate(dst);
 		}
+
+		string getStatus(string prefix)
+		{
+			return (
+				prefix+"Device "+id+":\n"+
+				groupPtr->getStatus(prefix+" ")
+			);
+		}
+
 
 		~Cdevice()
 		{
@@ -656,6 +673,14 @@ namespace asterisk
 			sendUpdate(dst);
 		}
 
+		string getStatus(string prefix)
+		{
+			return (
+				prefix + "Channel " + id + ":\n" +
+				devicePtr->getStatus(prefix+" ")
+			);
+		}
+
 		~Cchannel()
 		{
 
@@ -676,7 +701,7 @@ namespace asterisk
 	};
 	
 	
-	//physical asterisk servers. ever server has its own device and channel map	
+	//physical asterisk servers. every server has its own device and channel map
 	class Cserver
 	{
 		private:
@@ -776,14 +801,49 @@ namespace asterisk
 			channelMap.clear();
 		}
 
+		string getStatus(string prefix)
+		{
+			string s;
+			s=prefix+"Server "+id+":"+"\n";
+			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
+			{
+				s= s + I->second->getStatus(prefix+" ") + "\n";
+			}
+
+//			for (CdeviceMap::iterator I=deviceMap.begin(); I!=deviceMap.end(); I++)
+//			{
+//				s=s + I->second->getStatus(prefix+" ");
+//			}
+
+			return (s);
+		}
+
 		~Cserver()
 		{
 
 		}
 
 	};
-	
 
+	SYNAPSE_REGISTER(asterisk_GetStatus)
+	{
+		Cmsg out;
+		out.event="asterisk_Status";
+		out.dst=msg.src;
+		out["status"]="";
+		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+		{
+			out["status"].str()+= I->second.getStatus(" ");
+		}
+
+		out["status"].str()+="Groups:\n";
+		for (CgroupMap::iterator I=groupMap.begin(); I!=groupMap.end(); I++)
+		{
+			out["status"].str()+=I->second->getStatus(" ");
+		}
+
+		out.send();
+	}
 	
 	SYNAPSE_REGISTER(timer_Ready)
 	{
