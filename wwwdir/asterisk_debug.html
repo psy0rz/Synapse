@@ -1,0 +1,55 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<title>Asterisk debug page</title>
+
+	<script type="text/javascript" src="synapse.js"></script>
+
+	<script type="text/javascript">
+
+		/// SYNAPSE EVENT HANDLERS
+
+		synapse_register("error",function(errortxt)
+		{
+			$('#error').html(errortxt);
+		});	
+				
+
+ 		synapse_register("asterisk_Status",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+ 			$('#asterisk_Status').html(
+				msg["status"]
+			);
+ 		});
+
+
+		/// JAVA SCRIPT EVENT HANDLERS
+		$(document).ready(function(){
+			synapse_login();
+			
+
+			$('#asterisk_GetStatus').click(function(event){
+				send(0,"asterisk_GetStatus", { 
+				});				
+			});
+		});
+
+
+	</script>
+</head>
+
+
+<body>
+	<h1>Asterisk debugging page</h1>
+	<p>
+
+	<pre>
+	<div id='asterisk_Status'></div>
+	</pre>
+	<input type='submit' value='Get status...' id='asterisk_GetStatus'>
+
+</body>
+</html>
