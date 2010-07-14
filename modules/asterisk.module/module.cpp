@@ -709,13 +709,23 @@ namespace asterisk
 		CchannelMap channelMap;
 
 		public:	
+		enum Estatus
+		{
+			CONNECTING,
+			AUTHENTICATING,
+			AUTHENTICATED,
+		};
+
+		Estatus status;
+
 		string id;
 		string username;
 		string password;
 		int sessionId;
 
 		Cserver()
-		{	
+		{
+			status=CONNECTING;
 		}
 
 	
@@ -801,19 +811,32 @@ namespace asterisk
 			channelMap.clear();
 		}
 
+
 		string getStatus(string prefix)
 		{
 			string s;
-			s=prefix+"Server "+id+":"+"\n";
+			s=prefix+"Server "+id+": ";
+
+
+
+			if (status==CONNECTING)
+				s=s+"connecting...";
+			if (status==AUTHENTICATING)
+				s=s+"authenticating...";
+			if (status==AUTHENTICATED)
+				s=s+"authenticating";
+
+			s=s+"\n";
+
 			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
 			{
 				s= s + I->second->getStatus(prefix+" ") + "\n";
 			}
 
-//			for (CdeviceMap::iterator I=deviceMap.begin(); I!=deviceMap.end(); I++)
-//			{
-//				s=s + I->second->getStatus(prefix+" ");
-//			}
+			for (CdeviceMap::iterator I=deviceMap.begin(); I!=deviceMap.end(); I++)
+			{
+				s=s + I->second->getStatus(prefix+" ")+"\n";
+			}
 
 			return (s);
 		}
@@ -839,7 +862,7 @@ namespace asterisk
 		out["status"].str()+="Groups:\n";
 		for (CgroupMap::iterator I=groupMap.begin(); I!=groupMap.end(); I++)
 		{
-			out["status"].str()+=I->second->getStatus(" ");
+			out["status"].str()+=I->second->getStatus(" ")+"\n";
 		}
 
 		out.send();
@@ -914,7 +937,9 @@ namespace asterisk
 		
 		serverMap[msg.dst].username=msg["server"]["username"].str();
 		serverMap[msg.dst].password=msg["server"]["password"].str();
-	
+		serverMap[msg.dst].status=Cserver::CONNECTING;
+
+
 		Cmsg out;
 		out.clear();
 		out.event="ami_Connect";
@@ -939,6 +964,8 @@ namespace asterisk
 		out["ActionID"]="Login";
 		out["Events"]="on";
 		out.send();
+
+		serverMap[msg.dst].status=Cserver::AUTHENTICATING;
 	
 	}
 	
@@ -946,9 +973,9 @@ namespace asterisk
 	{
 		
 		//AMI is broken by design: why didnt they just use a Event, instead of defining the format of a Response exception. Now we need to use the ActionID and do extra marshhalling:
+		//SIPshowPeer response
 		if (msg["ActionID"].str()=="SIPshowPeer")
 		{
-			//SIPshowPeer response
 			string deviceId=msg["Channeltype"].str()+"/"+msg["ObjectName"].str();
 			CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(deviceId);
 	
@@ -962,14 +989,14 @@ namespace asterisk
 				devicePtr->setCallerId(msg["Callerid"].str());
 			else
 				devicePtr->setCallerId(msg["ObjectName"]);
-	
-	
-//			devicePtr->sendChanges();
+
 		}
+		//login response
 		else if (msg["ActionID"].str()=="Login")
 		{
-			//login response
-	
+			serverMap[msg.dst].status=Cserver::AUTHENTICATED;
+
+
 			//learn all SIP peers as soon as we login
 			Cmsg out;
 			out.clear();
@@ -1002,6 +1029,7 @@ namespace asterisk
 	{
 		//since we're disconnected, clear all devices/channels
 		serverMap[msg.dst].clear();
+		serverMap[msg.dst].status=Cserver::CONNECTING;
 		
 		//ami reconnects automaticly
 	}
