@@ -12,6 +12,8 @@
 #include "ccallman.h"
 #include "clog.h"
 using namespace boost;
+namespace synapse
+{
 
 CcallMan::CcallMan()
 {
@@ -155,4 +157,5 @@ bool CcallMan::interruptAll()
 		}
 	}
 	return false;
+}
 }

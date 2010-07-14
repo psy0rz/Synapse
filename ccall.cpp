@@ -10,7 +10,8 @@
 //
 //
 #include "ccall.h"
-
+namespace synapse
+{
 Ccall::~Ccall()
 {
 }
@@ -29,3 +30,4 @@ Ccall::Ccall(const CmsgPtr & msg,const CsessionPtr & dst, FsoHandler soHandler)
 }
 
 
+}

@@ -10,6 +10,8 @@
 //
 //
 #include "cgroup.h"
+namespace synapse
+{
 
 Cgroup::Cgroup(const string & name)
 {
@@ -30,4 +32,6 @@ Cgroup::~Cgroup()
 string Cgroup::getName()
 {
 	return (name);
+}
+
 }

@@ -50,11 +50,18 @@ To setup a fake server replaying this:
 #include <boost/regex.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
+#include "./csession.h"
+//#include "./cgroup.h"
+//#include "./csession_types.h"
+//#include "./cgroup_types.h"
 
 #define ASTERISK_AUTH "999"
 
 namespace asterisk
 {
+	using namespace std;
+	using namespace boost;
+
 	typedef long int TauthCookie;
  	struct drand48_data randomBuffer;
 
@@ -159,14 +166,8 @@ namespace asterisk
 		}
 	}
 
-	class Csession;
-	typedef shared_ptr<class Csession> CsessionPtr;
-	typedef map<int, CsessionPtr> CsessionMap;
 	CsessionMap sessionMap;
 
-	class Cgroup;
-	typedef shared_ptr<class Cgroup> CgroupPtr;
-	typedef map<string, CgroupPtr> CgroupMap;
 	CgroupMap groupMap;
 
 	typedef shared_ptr<class Cdevice> CdevicePtr;
@@ -178,109 +179,11 @@ namespace asterisk
 	typedef map<int, class Cserver> CserverMap;
 	CserverMap serverMap;
 
-	//sessions: every synapse session has a corresponding session object here
-	class Csession
-	{
-		private:
-// 		int id;
-// 		bool authenticated;
-		CgroupPtr groupPtr;
-
-		public:
-		Csession()
-		{
-//			authenticated=false;
-		}
-
-// 		void setId(int id)
-// 		{
-// 			this->id=id;
-// 
-// 		}
-
-		void setGroupPtr(CgroupPtr groupPtr)
-		{
-			this->groupPtr=groupPtr;
-		}
-
-		CgroupPtr getGroupPtr()
-		{
-			return (groupPtr);
-		}
-	};
 
 
-	//groups: most times a tennant is considered a group.
-	//After authenticating, a session points to a group.'
-	//All devices of a specific tennant also point to this group
-	//events are only sent to Csessions that are member of the same group as the corresponding device.
-	
-	class Cgroup
-	{
-		private:
-		string id;
-
-
-		public:
-		Cgroup()
-		{
-		}
-
-		void setId(string id)
-		{
-			this->id=id;
-		}
-
-		string getId()
-		{
-			return(id);
-		}
-
-		//sends msg after applying group filtering.
-		//message will only be sended or broadcasted to sessions that belong to this group.
-		void send(Cmsg & msg)
-		{
-			//broadcast?
-			if (msg.dst==0)
-			{
-				//we cant simply broadcast it, we need to check group membership session by session
-				for (CsessionMap::iterator I=sessionMap.begin(); I!=sessionMap.end(); I++)
-				{
-					if (I->second->getGroupPtr().get()==this)
-					{
-						msg.dst=I->first;
-						msg.send();
-					}
-				}
-				//restore dst value:
-				msg.dst=0;
-			}
-			else
-			{
-				CsessionMap::iterator I=sessionMap.find(msg.dst);
-				if (I!=sessionMap.end())
-				{
-					if (I->second->getGroupPtr().get()!=this)
-					{
-						//dont: WARNING("Cant send message to session " << msg.dst << ", it doesnt belong to group: " << getId());
-						return;
-					}
-					msg.send();
-				}
-			}
-
-		}
-
-		string getStatus(string prefix)
-		{
-			return (
-				prefix+"Group "+id
-			);
-		}
-
-	};	
 
 	
+
 
 
 
@@ -393,7 +296,7 @@ namespace asterisk
 				out["groupId"]=groupPtr->getId();
 			}
 
-			groupPtr->send(out);
+			groupPtr->send(sessionMap,out);
 			return(true);
 		}
 
@@ -431,7 +334,7 @@ namespace asterisk
 			out["id"]=id;
 
 			if (groupPtr!=NULL)
-				groupPtr->send(out);
+				groupPtr->send(sessionMap,out);
 		}
 
 		
@@ -480,7 +383,7 @@ namespace asterisk
 			msg.dst=0;
 			msg.src=0;
 
-			devicePtr->getGroupPtr()->send(msg);
+			devicePtr->getGroupPtr()->send(sessionMap,msg);
 			return (true);
 		}
 
@@ -663,7 +566,7 @@ namespace asterisk
 
 			out["firstExtension"]=firstExtension;
 
-			devicePtr->getGroupPtr()->send(out);
+			devicePtr->getGroupPtr()->send(sessionMap,out);
 
 			return (true);
 		}
@@ -694,7 +597,7 @@ namespace asterisk
 				{
 					out["deviceId"]=devicePtr->getId();
 				}
-				devicePtr->getGroupPtr()->send(out);
+				devicePtr->getGroupPtr()->send(sessionMap,out);
 			}
 		}
 
@@ -824,18 +727,20 @@ namespace asterisk
 			if (status==AUTHENTICATING)
 				s=s+"authenticating...";
 			if (status==AUTHENTICATED)
-				s=s+"authenticating";
+				s=s+"authenticated";
 
 			s=s+"\n";
 
+			s=s+prefix+" Channels:\n";
 			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
 			{
-				s= s + I->second->getStatus(prefix+" ") + "\n";
+				s= s + I->second->getStatus(prefix+"  ") + "\n";
 			}
 
+			s=s+prefix+" Devices:\n";
 			for (CdeviceMap::iterator I=deviceMap.begin(); I!=deviceMap.end(); I++)
 			{
-				s=s + I->second->getStatus(prefix+" ")+"\n";
+				s=s + I->second->getStatus(prefix+"  ")+"\n";
 			}
 
 			return (s);
@@ -854,16 +759,28 @@ namespace asterisk
 		out.event="asterisk_Status";
 		out.dst=msg.src;
 		out["status"]="";
-		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+
+		out["status"].str()+="Sessions:\n";
+		for (CsessionMap::iterator I=sessionMap.begin(); I!=sessionMap.end(); I++)
 		{
-			out["status"].str()+= I->second.getStatus(" ");
+			stringstream id;
+			id << I->first;
+			out["status"].str()+=I->second->getStatus(" ")+"\n";
 		}
+
 
 		out["status"].str()+="Groups:\n";
 		for (CgroupMap::iterator I=groupMap.begin(); I!=groupMap.end(); I++)
 		{
 			out["status"].str()+=I->second->getStatus(" ")+"\n";
 		}
+
+		out["status"].str()+="Servers:\n";
+		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+		{
+			out["status"].str()+= I->second.getStatus(" ");
+		}
+
 
 		out.send();
 	}
@@ -1311,7 +1228,7 @@ namespace asterisk
 		//create a Csession object for the src session?
 		if (sessionMap.find(msg.src) == sessionMap.end())
 		{
-			sessionMap[msg.src]=CsessionPtr(new Csession());
+			sessionMap[msg.src]=CsessionPtr(new Csession(msg.src));
 		}
 
 		//deviceId + correct authCookie ?

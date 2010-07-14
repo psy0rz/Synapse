@@ -11,6 +11,8 @@
 //
 #include "cuser.h"
 #include "clog.h"
+namespace synapse
+{
 
 Cuser::Cuser(const string &name, const string &password="")
 {
@@ -95,4 +97,5 @@ void Cuser::print()
 		DEB( (*groupI)->getName());
 	}
 
+}
 }

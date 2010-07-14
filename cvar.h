@@ -12,12 +12,15 @@
 #ifndef CVAR_H
 #define CVAR_H
 
+
 #include "clog.h"
 #include <string>
 #include "boost/variant.hpp"
 #include <map>
 #include "json_spirit.h"
 
+namespace synapse
+{
 using namespace std;
 using namespace boost;
 using namespace json_spirit;
@@ -94,5 +97,9 @@ protected:
 private:	
 	variant <void *,CvarMap , long double, string, CvarList> value;
 };
+}
+
+typedef synapse::Cvar Cvar;
+
 
 #endif

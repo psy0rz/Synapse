@@ -13,14 +13,22 @@
 #define CSESSION_H
 
 #include <boost/shared_ptr.hpp>
-using namespace boost;
-using namespace std;
+namespace synapse
+{
+	using namespace boost;
+	using namespace std;
 
-typedef shared_ptr<class Csession> CsessionPtr;
+
+	typedef shared_ptr<class Csession> CsessionPtr;
+}
 
 #include "cmodule.h"
 #include "cuser.h"
 
+namespace synapse
+{
+using namespace boost;
+using namespace std;
 /*
 	disabled sessions have id SESSION_DISABLED (-1)
 	broadcasts go to sessions id 0
@@ -55,5 +63,5 @@ private:
 	
 };
 
-
+}
 #endif

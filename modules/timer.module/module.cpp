@@ -14,6 +14,8 @@ This is a simple timer module, to send delayed events or repeat events with a in
 
 namespace timer
 {
+using namespace std;
+
 
 bool shutdown;
 

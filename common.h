@@ -2,8 +2,11 @@
 #define COMMON_H
 
 #include <string>
+namespace synapse
+{
 
 using namespace std;
+
 
 struct eqstr
 {
@@ -13,5 +16,6 @@ struct eqstr
   }
 };
 
+}
 
 #endif

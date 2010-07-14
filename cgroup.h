@@ -13,6 +13,8 @@
 #define CGROUP_H
 #include <boost/shared_ptr.hpp>
 #include <string>
+namespace synapse
+{
 using namespace boost;
 using namespace std;
 
@@ -31,5 +33,5 @@ private:
 };
 
 typedef shared_ptr<Cgroup> CgroupPtr;
-
+}
 #endif

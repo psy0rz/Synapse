@@ -23,6 +23,9 @@ Look in the files section for more info..
 #include "synapse.h"
 #include <signal.h>
 
+namespace synapse
+{
+
 
 //Dont forget you can only do things to core-objects after locking the core!
 //Also dont forget you CANT send() while holding the core-lock. (it will deadlock)
@@ -943,3 +946,4 @@ SYNAPSE_REGISTER(core_DelMapping)
 		out.send();
 }
  
+}

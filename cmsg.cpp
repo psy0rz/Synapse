@@ -74,3 +74,5 @@ bool Cmsg::fromJson(string & jsonStr)
 		return false;
 	}
 }
+
+

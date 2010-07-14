@@ -20,8 +20,7 @@
 #include "cvar.h"
 //#include "cmessageman.h"
 
-using namespace std;
-using namespace boost;
+
 
 
 
@@ -52,28 +51,37 @@ typical route of a cmsg object
 /**
 	@author 
 */
-class Cmsg : public Cvar  {
-public:
-    Cmsg();
-    ~Cmsg();
-	int src;
-	int dst;
-	string event;
 
-	//this function is only implemented in the .so object module
-	//so if you use it in the core you will get linker errors :)
-	string send(int cookie=0);
-	void returnError(string description);
-	void returnWarning(string description);
-	bool returnIfOtherThan(char * keys, ...);
+namespace synapse
+{
+	using namespace std;
 
-	//json stuff
-	void toJson(string & jsonStr);
-	bool fromJson(string & jsonStr);
 
-};
+	class Cmsg : public Cvar  {
+	public:
+		Cmsg();
+		~Cmsg();
+		int src;
+		int dst;
+		string event;
 
-typedef shared_ptr<Cmsg> CmsgPtr; 
+		//this function is only implemented in the .so object module
+		//so if you use it in the core you will get linker errors :)
+		string send(int cookie=0);
+		void returnError(string description);
+		void returnWarning(string description);
+		bool returnIfOtherThan(char * keys, ...);
 
+		//json stuff
+		void toJson(string & jsonStr);
+		bool fromJson(string & jsonStr);
+
+	};
+
+	typedef shared_ptr<Cmsg> CmsgPtr;
+
+}
+
+typedef synapse::Cmsg Cmsg;
 
 #endif

@@ -13,4 +13,9 @@
 #include <iostream>
 #include <boost/thread/mutex.hpp>
 
+namespace synapse
+{
+
 boost::mutex logMutex;
+
+}

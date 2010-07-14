@@ -9,6 +9,9 @@
 #include <boost/foreach.hpp>
 #include <stdarg.h>
 
+namespace synapse
+{
+
 
 #ifdef SYNAPSE_HAS_INIT
 	void init();
@@ -32,7 +35,7 @@ list<string> synapseAutoReg::handlers;
 
 //This stores the handler in a list by constructing a dummy object:
 #define SYNAPSE_REGISTER(name) \
-    synapseAutoReg BOOST_PP_CAT(synapse_autoreg_, name)(#name); \
+    synapse::synapseAutoReg BOOST_PP_CAT(synapse_autoreg_, name)(#name); \
     SYNAPSE_HANDLER(name)
 
 
@@ -123,5 +126,7 @@ bool Cmsg::returnIfOtherThan(char * keys, ...)
 		return true;
 	}
 	return false;
+
+}
 
 }

@@ -12,19 +12,27 @@
 #ifndef CMODULE_H
 #define CMODULE_H
 
+
 #include <boost/shared_ptr.hpp>
 #include <boost/bind.hpp>
 //#include <hash_map.h>
 #include "common.h"
 
-using namespace boost;
-using namespace std;
+namespace synapse
+{
+	using namespace boost;
+	using namespace std;
 
-typedef shared_ptr<class Cmodule> CmodulePtr;
+	typedef shared_ptr<class Cmodule> CmodulePtr;
+}
 
 #include "cmsg.h"
 #include "csession.h"
 
+namespace synapse
+{
+using namespace boost;
+using namespace std;
 
 //MODULE STUFF
 #define SYNAPSE_API_VERSION 2
@@ -97,6 +105,6 @@ public:
 
 };
 
-
+}
 
 #endif

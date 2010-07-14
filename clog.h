@@ -17,6 +17,8 @@
 #include <iostream>
 #include <boost/thread/thread.hpp>
 
+namespace synapse
+{
 extern boost::mutex logMutex;
 
 //colors and ansi stuff (we dont want ncurses YET)
@@ -37,7 +39,7 @@ extern boost::mutex logMutex;
 		stringstream log_buff; \
 		log_buff << s; \
 		{ \
-			boost::lock_guard<boost::mutex> lock(logMutex); \
+			boost::lock_guard<boost::mutex> lock(synapse::logMutex); \
 			cout  << log_buff.rdbuf(); \
 		} \
 	}
@@ -64,6 +66,6 @@ extern boost::mutex logMutex;
 #define LOG_RECV(s) LOG(boost::this_thread::get_id() << " " << TERM_RECV_MESSAGE << s << TERM_NORMAL << endl)
 
 
-
+}
 
 #endif

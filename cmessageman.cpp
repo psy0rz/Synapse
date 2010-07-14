@@ -22,6 +22,8 @@
 #include <boost/foreach.hpp>
 #include "cevent.h"
 
+namespace synapse
+{
 using namespace boost;
 
 CmessageMan::CmessageMan()
@@ -701,4 +703,5 @@ void CmessageMan::getMapping(string mapFrom, Cvar & var)
 		{
 			var.list().push_back(event);
 		}
+}
 }

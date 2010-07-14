@@ -26,6 +26,9 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/recursive_mutex.hpp>
 
+namespace synapse
+{
+
 /*
 	This is the main object.
 
@@ -124,6 +127,6 @@ private:
 
 };
 
-
+}
 
 #endif

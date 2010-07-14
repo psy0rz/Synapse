@@ -14,6 +14,8 @@
 #include <dlfcn.h>
 #include <boost/regex.hpp> 
 #include <boost/foreach.hpp>
+namespace synapse
+{
 
 
 
@@ -248,4 +250,6 @@ void Cmodule::getEvents(Cvar & var)
 	{
 		var[handler.first]=1;
 	}
+}
+
 }

@@ -15,6 +15,8 @@
 #include "cmsg.h"
 #include <boost/thread/thread.hpp>
 
+namespace synapse
+{
 typedef shared_ptr<thread> CthreadPtr; 
 
 /**
@@ -33,5 +35,5 @@ public:
 	CthreadPtr threadPtr;	
 
 };
-
+}
 #endif

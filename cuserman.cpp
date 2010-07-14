@@ -16,6 +16,8 @@
 #include "cmodule.h"
 #include "clog.h"
 
+namespace synapse
+{
 
 using namespace std;
 CuserMan::CuserMan()
@@ -299,4 +301,6 @@ string CuserMan::login(const int & sessionId, const string & userName, const str
 			return (string());
 		}
 	}
+}
+
 }

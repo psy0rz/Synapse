@@ -12,6 +12,8 @@
 #include "clog.h"
 #include "cevent.h"
 #include <iostream>
+namespace synapse
+{
 
 
 Cevent::Cevent(const CgroupPtr & modifyGroup, const CgroupPtr & sendGroup, const CgroupPtr & recvGroup )
@@ -115,4 +117,6 @@ void Cevent::print()
 	DEB("recvGroup  =" << recvGroup->getName());
 	DEB("sendGroup  =" << sendGroup->getName());
 	DEB("modifyGroup=" << modifyGroup->getName());
+}
+
 }

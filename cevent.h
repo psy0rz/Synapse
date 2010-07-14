@@ -16,9 +16,12 @@
 #include "cuser.h"
 
 #include <boost/shared_ptr.hpp>
+
+namespace synapse
+{
+
 using namespace boost;
 using namespace std;
-
 
 
 /**
@@ -54,5 +57,7 @@ private:
 };
 
 typedef shared_ptr<Cevent> CeventPtr;
+
+}
 
 #endif

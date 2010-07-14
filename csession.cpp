@@ -14,6 +14,9 @@
 #include "cmodule.h"
 #include <iostream>
 
+namespace synapse
+{
+
 Csession::Csession(const CuserPtr &user, const CmodulePtr &module, int cookie)
 {
 	this->user=user;
@@ -69,4 +72,6 @@ void Csession::endThread()
 	module->endThread();
 	currentThreads--;
 	assert(currentThreads>=0);
+}
+
 }

@@ -18,6 +18,10 @@
 
 #include <boost/shared_ptr.hpp>
 #include <list>
+
+namespace synapse
+{
+
 using namespace std;
 using namespace boost;
 
@@ -53,5 +57,6 @@ private:
 	int sessionMaxPerUser;
 	
 };
+}
 
 #endif

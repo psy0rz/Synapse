@@ -18,6 +18,8 @@
 /**
 	@author 
 */
+namespace synapse
+{
 
 typedef list<Ccall> CcallList;
 
@@ -38,5 +40,5 @@ public:
 	CcallList callList;
 	
 };
-
+}
 #endif

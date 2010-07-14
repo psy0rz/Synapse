@@ -5,17 +5,19 @@
 
 #include "cmessageman.h"
 
-int main(int argc, char *argv[])
-{
-	CmessageMan messageMan;
-	if (argc==2)
+	int main(int argc, char *argv[])
 	{
-		return (messageMan.run("modules/core.module/libcore.so",argv[1]));
+		using namespace synapse;
+		CmessageMan messageMan;
+		if (argc==2)
+		{
+			return (messageMan.run("modules/core.module/libcore.so",argv[1]));
+		}
+		else
+		{
+			INFO("Usage: ./synapse <initialmodule.so>\n");
+			return (1);
+		}
 	}
-	else
-	{
-		INFO("Usage: ./synapse <initialmodule.so>\n");
-		return (1);
-	}
-}
+
 

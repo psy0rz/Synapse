@@ -15,9 +15,11 @@
 #include <string>
 #include <list>
 #include <boost/shared_ptr.hpp>
+
+namespace synapse
+{
 using namespace boost;
 using namespace std;
-
 
 /**
 	@author 
@@ -42,5 +44,6 @@ private:
 
 typedef shared_ptr<Cuser> CuserPtr;
 
+}
 
 #endif

@@ -14,6 +14,9 @@
 #include <boost/lexical_cast.hpp>
 #include "clog.h"
 
+namespace synapse
+{
+
 /// COMMON STUFF
 
 Cvar::Cvar()
@@ -436,4 +439,6 @@ bool Cvar::fromJson(string & jsonStr)
 	{
 		return false;
 	}
+}
+
 }
