@@ -668,8 +668,11 @@ namespace asterisk
 
 		void sendChanges()
 		{
-			//NOTE: usually there are many more devices then channels. and the channels change the most, while devices almost never have changes.
-			//This is why we choose to batch channel changes every second, but send device changes realtime.
+			//let all devices send their changes, if they have them.
+			for (CdeviceMap::iterator I=deviceMap.begin(); I!=deviceMap.end(); I++)
+			{
+				I->second->sendChanges();
+			}
 
 			//let all channels send their changes, if they have them.
 			for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
@@ -807,6 +810,9 @@ namespace asterisk
 	
 	SYNAPSE_REGISTER(asterisk_sendChanges)
 	{
+		CserverMap::iterator I;
+//		I->second.sendChanges();
+
 		//let all servers send their changes 
 		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
 		{

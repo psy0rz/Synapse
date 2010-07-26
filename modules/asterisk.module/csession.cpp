@@ -28,7 +28,10 @@ namespace asterisk
 	string Csession::getStatus(string prefix)
 	{
 		stringstream s;
-		s << prefix <<  "Session " << id << ":\n" << groupPtr->getStatus(prefix+" ");
+		if (groupPtr)
+			s << prefix <<  "Session " << id << ":\n" << groupPtr->getStatus(prefix+" ");
+		else
+			s << prefix <<  "Session " << id << "\n" << prefix << "(not logged in)\n";
 		return(s.str());
 	}
 
