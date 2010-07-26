@@ -31,6 +31,11 @@ SYNAPSE_REGISTER(module_Init)
 	out["maxThreads"]=10;
 	out.send();
 
+	out.clear();
+	out.event="core_ChangeSession";
+	out["maxThreads"]=10;
+	out.send();
+
 	//tell the rest of the world we are ready for duty
 	//(the core will send a timer_Ready)
 	out.clear();

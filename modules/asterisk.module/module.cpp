@@ -55,7 +55,7 @@ To setup a fake server replaying this:
 //#include "./csession_types.h"
 //#include "./cgroup_types.h"
 
-#define ASTERISK_AUTH "999"
+#define ASTERISK_AUTH "9999"
 
 namespace asterisk
 {

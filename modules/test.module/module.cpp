@@ -46,6 +46,12 @@ SYNAPSE_REGISTER(module_Init)
 	out["path"]="modules/conn_json.module/libconn_json.so";
 	out.send();
 
+  	out["path"]="modules/marquee_m500.module/libmarquee_m500.so";
+  	out.send();
+
+  	out["path"]="modules/asterisk_marquee.module/libasterisk_marquee.so";
+  	out.send();
+
 	// Counter that ever counterSleep seconds emits a message.
 	// Speed can be changed with appropriate messages
 	out.clear();
