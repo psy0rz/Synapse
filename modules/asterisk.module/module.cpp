@@ -400,9 +400,6 @@ namespace asterisk
 
 		bool sendDebug(Cmsg msg, int serverId)
 		{
-			//disabled for now
-			return(false);
-
 			if (devicePtr==NULL || devicePtr->getGroupPtr()==NULL)
 				return (false);
 
