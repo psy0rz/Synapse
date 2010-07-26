@@ -210,7 +210,7 @@ namespace asterisk
 			changed=true;
 			id="";
 			online=true;
-			trunk=false;
+			trunk=true; //assume true, to prevent showing trunks on asterisk-reconnect
 		}
 
 		//check if the device should be filtered from the endusers, according to various filtering options
@@ -400,6 +400,9 @@ namespace asterisk
 
 		bool sendDebug(Cmsg msg, int serverId)
 		{
+			//disabled for now
+			return(false);
+
 			if (devicePtr==NULL || devicePtr->getGroupPtr()==NULL)
 				return (false);
 

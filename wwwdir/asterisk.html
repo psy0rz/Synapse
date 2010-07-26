@@ -285,7 +285,7 @@
 			}
 			//update active call list
  			$("#activeCallList "+escapeClass(msg["id"])+" .channelInfo").html(
- 		 		prettyCallerId(msg["callerId"], msg["callerIdName"])+"..."+callerInfo
+ 		 		$(escapeId(msg["deviceId"]) + " .deviceInfo").html() + " ... "+callerInfo
  		 	);
 
 			///////////////////// Stuff for all channels
@@ -305,8 +305,8 @@
  			
 			//hide it from the call list with a nice effect 
 			$("#activeCallList "+escapeClass(msg["id"])).slideUp("",function() {
-				//change attributes and move it to the history
-	 			$(this).attr('state', 'deleted');
+				//add class and move it to the history
+	 			$(this).addClass('deleted');
 	 			//yes, this will actually MOVE the object, not copy it:
 	 			$("#historyCallList .list").prepend($(this));
 	 			//show it again with a nice effect
@@ -495,9 +495,8 @@
 			background-image:url('asterisk/channel_ring.png');
 		}
 
-		.channel[state="deleted"] .channelInfo
+		.deleted
 		{
-			text-decoration: line-through;
 			color:#aaaaaa; 
 		}
 
