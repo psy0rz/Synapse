@@ -12,6 +12,8 @@ namespace asterisk
 	Csession::Csession(int id)
 	{
 		this->id=id;
+		isAdmin=false;
+
 	}
 
 

@@ -35,6 +35,8 @@ namespace asterisk
 		CgroupPtr groupPtr;
 
 		public:
+		bool isAdmin;
+
 		Csession(int id);
 		void setGroupPtr(CgroupPtr groupPtr);
 		CgroupPtr getGroupPtr();

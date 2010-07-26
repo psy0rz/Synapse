@@ -27,8 +27,9 @@ namespace asterisk
 		return(id);
 	}
 
-	//sends msg after applying group filtering.
+	//sends msg after applying filtering.
 	//message will only be sended or broadcasted to sessions that belong to this group.
+	//some channels like locals and trunks will also be filtered, depending on session-specific preferences
 	void Cgroup::send(CsessionMap & sessionMap, Cmsg & msg)
 	{
 		//broadcast?
@@ -37,7 +38,7 @@ namespace asterisk
 			//we cant simply broadcast it, we need to check group membership session by session
 			for (CsessionMap::iterator I=sessionMap.begin(); I!=sessionMap.end(); I++)
 			{
-				if (I->second->getGroupPtr().get()==this)
+				if (I->second->isAdmin || I->second->getGroupPtr().get()==this)
 				{
 					msg.dst=I->first;
 					msg.send();
@@ -51,12 +52,10 @@ namespace asterisk
 			CsessionMap::iterator I=sessionMap.find(msg.dst);
 			if (I!=sessionMap.end())
 			{
-				if (I->second->getGroupPtr().get()!=this)
+				if (I->second->isAdmin || I->second->getGroupPtr().get()==this)
 				{
-					//dont: WARNING("Cant send message to session " << msg.dst << ", it doesnt belong to group: " << getId());
-					return;
+					msg.send();
 				}
-				msg.send();
 			}
 		}
 

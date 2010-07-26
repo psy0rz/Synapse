@@ -97,9 +97,6 @@
 
 			}
 
-			//make devices without callerID name hidden:
-			if (msg["callerId"].substr(0,2)=='""')
-				$(escapeId(msg["id"])).css('display', 'none');
 
 			//update the device caller id:
 //			$(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]+"<br> tennant="+msg["groupId"]+" ("+msg["id"]+")");

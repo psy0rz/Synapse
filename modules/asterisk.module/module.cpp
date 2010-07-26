@@ -193,6 +193,7 @@ namespace asterisk
 	{
 		private: 
 
+		bool trunk;
 		bool online;
 		string callerId;
 		string id;
@@ -209,6 +210,25 @@ namespace asterisk
 			changed=true;
 			id="";
 			online=true;
+			trunk=false;
+		}
+
+		//check if the device should be filtered from the endusers, according to various filtering options
+		bool isFiltered()
+		{
+			//dont show trunks
+			if (trunk)
+				return (true);
+
+			//dont show devices with empty caller ID's
+			if (callerId.substr(0,2)=="\"\"")
+				return (true);
+
+			//dont show anything thats not sip (for now)
+			if (id.substr(0,3)!="SIP")
+				return (true);
+
+			return(false);
 		}
 
 		CgroupPtr getGroupPtr()
@@ -267,6 +287,12 @@ namespace asterisk
 			}
 		}
 
+		void setTrunk(bool trunk)
+		{
+			this->trunk=trunk;
+			changed=true;
+		}
+
 		void setOnline(bool online)
 		{
 			if (online!=this->online)
@@ -284,12 +310,16 @@ namespace asterisk
 			if (groupPtr==NULL)	
 				return(false);
 
+			if (isFiltered())
+				return(false);
+
 			Cmsg out;
 			out.event="asterisk_updateDevice";
 			out.dst=forceDst;
 			out["id"]=id;
 			out["callerId"]=callerId;
 			out["online"]=online;
+			out["trunk"]=trunk;
 
 			if (groupPtr!=NULL)
 			{
@@ -545,6 +575,9 @@ namespace asterisk
 		bool sendUpdate(int forceDst=0)
 		{
 			if (devicePtr==NULL || devicePtr->getGroupPtr()==NULL)
+				return (false);
+
+			if (devicePtr->isFiltered())
 				return (false);
 
 			Cmsg out;
@@ -912,6 +945,12 @@ namespace asterisk
 				devicePtr->setCallerId(msg["Callerid"].str());
 			else
 				devicePtr->setCallerId(msg["ObjectName"]);
+
+			if (msg["ToHost"].str() != "")
+				devicePtr->setTrunk(true);
+			else
+				devicePtr->setTrunk(false);
+
 
 		}
 		//login response
