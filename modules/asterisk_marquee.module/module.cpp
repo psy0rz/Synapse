@@ -92,14 +92,14 @@ void updateMarquee()
 	Cmsg out;
 	out.event="marquee_Set";
 	if (text!="")
-		out["text"]="%C1"+text;
+		out["text"]="%C0"+text;
 	else if (!callerIds.empty())
 	{
 		stringstream s;
 		if (callerIds.size()==1)
-			s << "%C51 call";
+			s << "%C31 call";
 		else
-			s << "%C5" << callerIds.size() << " calls";
+			s << "%C3" << callerIds.size() << " calls";
 		out["text"]=s.str();
 	}
 	else

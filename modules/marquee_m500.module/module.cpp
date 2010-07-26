@@ -52,7 +52,7 @@ SYNAPSE_REGISTER(marquee_Get)
 {
 	Cmsg out;
 	out.dst=msg.src;
-	out.event="marquee_Text";
+	out.event="marquee_Set";
 	out["text"]=text;
 	out.send();
 }
