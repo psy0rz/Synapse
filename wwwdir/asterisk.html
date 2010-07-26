@@ -19,7 +19,7 @@
 
 	<script type="text/javascript" src="synapse.js"></script>
 
-	<script type="text/javascript"><!--
+	<script type="text/javascript">
 
 		loginDeviceId="";
 
@@ -85,7 +85,7 @@
 			{
 				//add dom objects
 				html="<div class='ui-state-default ui-widget-content ui-corner-all device' id='"+msg["id"]+"'>";
-				html+="<div class=' deviceInfo'></div>";
+				html+="<div class='deviceInfo'></div>";
 				html+="<div class='channelList'></div>";
 				html+="</div>";
 
@@ -154,7 +154,7 @@
 			{
 				var newChannelHtml="";
 				newChannelHtml+="<div class='channel "+msg["id"]+"'>";
-				newChannelHtml+="<div class='channelInfo ui-state-highlight'></div>";
+				newChannelHtml+="<div class='channelInfo'></div>";
 				newChannelHtml+="<div class='channelDebug'>"+oldDebug+"</div>";
 				newChannelHtml+="</div>";
 
@@ -281,7 +281,25 @@
 				newChannelHtml+="</div>";
 				$("#activeCallList .list").prepend(newChannelHtml);
 				show=1;
-				
+
+				//make the device highlight when hoovering the active-call-list channel
+				$("#activeCallList "+escapeClass(msg["id"])).hover(
+					function () {
+						$(this).addClass("ui-state-highlight");
+						$(escapeId(msg["deviceId"])).addClass("ui-state-highlight");
+
+						//if its in the deviceList, scroll to it:
+						var device=$("#deviceList "+escapeId(msg["deviceId"]));
+						if (device.length!=0)
+						{
+							$('#deviceList').scrollTop($('#deviceList').scrollTop()+device.position().top); 
+						}
+					}, 
+					function () {
+						$(this).removeClass("ui-state-highlight");
+						$(escapeId(msg["deviceId"])).removeClass("ui-state-highlight");
+					}
+				);
 			}
 			//update active call list
  			$("#activeCallList "+escapeClass(msg["id"])+" .channelInfo").html(
@@ -339,7 +357,7 @@
 		});
 
 
-	--></script>
+	</script>
 
 	<style>
 		
@@ -475,24 +493,25 @@
 			margin:0;
 			min-width:15em;
 			padding-left:25px;
-			background-repeat:no-repeat;
-			background-image:url('asterisk/channel_idle.png');
+			background-repeat:no-repeat !important;
+			background-position: left !important;
+			background-image:url('asterisk/channel_idle.png') !important;
 			position:relative;
 		}
 
 		.channel[state="in"] 
 		{
-			background-image:url('asterisk/channel_in.png');
+			background-image:url('asterisk/channel_in.png') !important;
 		}
 
 		.channel[state="out"] 
 		{
-			background-image:url('asterisk/channel_out.png');
+			background-image:url('asterisk/channel_out.png') !important;
 		}
 
 		.channel[state="ringing"] 
 		{
-			background-image:url('asterisk/channel_ring.png');
+			background-image:url('asterisk/channel_ring.png') !important;
 		}
 
 		.deleted
@@ -500,10 +519,6 @@
 			color:#aaaaaa; 
 		}
 
-		.channel:hover
-		{
-			background-color:yellow;
-		}
 
 		.channelInfo
 		{
