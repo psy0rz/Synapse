@@ -1314,10 +1314,13 @@ namespace asterisk
 		//tell the client which number to call, to authenticate
 		stringstream number;
 		number << ASTERISK_AUTH << msg.src;
-	
+
 		Cmsg out;
-		out.event="asterisk_authCall";
+		out.event="asterisk_reset"; //since we're logged out again, make sure the screen is cleared.
 		out.dst=msg.src;
+		out.send();
+
+		out.event="asterisk_authCall";
 		out["number"]=number.str();
 		out.send();
 	}

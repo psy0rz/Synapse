@@ -43,9 +43,6 @@
 				deviceId:   $.readCookie('asterisk_deviceId')
 			});
 
-			//request a refresh, to learn about all objects
-			send(0,"asterisk_refresh", { 
-			});
 		});
 
  		synapse_register("asterisk_authCall",function(msg_src, msg_dst, msg_event, msg)
@@ -174,7 +171,8 @@
 
  		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
  		{
-
+			var moved=false;
+			
 			/////////// DeviceList-only stuff:
 			//does the channel exist already?
 			if ($(".device "+escapeClass(msg["id"])).length!=0)
@@ -182,7 +180,8 @@
 				//doesnt it exist under the specified device?
 				if ($(escapeId(msg["deviceId"]) + " " + escapeClass(msg["id"])).length==0)
 				{
-					//then it probably has been moved/renamed, so delete the channel and recreate it below.
+					 //then it probably has been moved/renamed, so delete the channel and recreate it below.
+					moved=true; //since it takes a while for the effect to actually remove it:
 					$(".device "+escapeClass(msg["id"])).slideUp("",function() {
 					    $(this).remove();
 					});
@@ -190,7 +189,7 @@
 			}
 
 			//channel doesnt exist (anymore)?
-			if ($(".device "+escapeClass(msg["id"])).length==0)
+			if (moved || $(".device "+escapeClass(msg["id"])).length==0)
 			{
 				//add a brand new channel object
 				var newChannelHtml="";

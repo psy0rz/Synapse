@@ -58,9 +58,9 @@ SYNAPSE_REGISTER(module_Init)
 
 	counter=0;
 	counterSleep=10000000;
-	out.clear();
-	out.event="test_Counter";
-	out.send();
+//	out.clear();
+//	out.event="test_Counter";
+//	out.send();
 
 
 	//chat demo stuff
