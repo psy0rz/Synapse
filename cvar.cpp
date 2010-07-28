@@ -423,22 +423,15 @@ void Cvar::toJsonFormatted(string & jsonStr)
 
 }
 
-bool Cvar::fromJson(string & jsonStr)
+void Cvar::fromJson(string & jsonStr)
 {
 
 	//parse json input
-	try
-	{
-		Value spiritValue;
-		//TODO:how safe is it actually to let json_spirit parse untrusted input? (regarding DoS, buffer overflows, etc)
-		json_spirit::read(jsonStr, spiritValue);
-		fromJsonSpirit(spiritValue);
-		return true;
-	}
-	catch(...)
-	{
-		return false;
-	}
+	Value spiritValue;
+	//TODO:how safe is it actually to let json_spirit parse untrusted input? (regarding DoS, buffer overflows, etc)
+	json_spirit::read(jsonStr, spiritValue);
+	fromJsonSpirit(spiritValue);
+
 }
 
 }

@@ -936,7 +936,7 @@ namespace asterisk
 			CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(deviceId);
 	
 			//NOTE: we handle Unmonitored sip peers as online, while we dont actually know if its online or not.		
-			if (msg["Status"].str().find("OK")==0 || msg["Status"].str().find("Unmonitored")==0 ||  msg["Status"].str().find("UNKNOWN")==0)
+			if (msg["Status"].str().find("OK")==0 || msg["Status"].str().find("Unmonitored")==0 )//||  msg["Status"].str().find("UNKNOWN")==0)
 				devicePtr->setOnline(true);
 			else
 				devicePtr->setOnline(false);

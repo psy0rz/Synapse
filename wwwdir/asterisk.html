@@ -100,9 +100,9 @@
 			$(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]);
 
 			if (msg["online"])
-				$(escapeId(msg["id"])).attr('state','');
+				$(escapeId(msg["id"])).removeClass('ui-state-disabled');
 			else
-				$(escapeId(msg["id"])).attr('state','offline');
+				$(escapeId(msg["id"])).addClass('ui-state-disabled');
 
 
 			//is it the device of the logged in user?
@@ -426,11 +426,6 @@
 		}
 
 
-		.device[state="offline"]
-		{
-			border-color: #dddddd;
-			background-color: #eeeeee;
-		}
 
 		.deviceInfo
 		{

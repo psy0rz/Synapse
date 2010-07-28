@@ -97,8 +97,10 @@ class CnetModule : public synapse::Cnet
 		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), readBuffer.size());
 		dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 
-		if (out.fromJson(dataStr))
+		try
 		{
+			out.fromJson(dataStr);
+
 			//if its requesting a new session, make sure the correct cookie is sended along:
 			if (out.event=="core_NewSession")
 			{
@@ -114,10 +116,10 @@ class CnetModule : public synapse::Cnet
 				writeMessage(id,errMsg);
 			}
 		}
-		else
+		catch(std::exception& e)
 		{
 			Cmsg errMsg;
-			errMsg["description"]="Error while parsing incoming json message";
+			errMsg["description"]="Error while parsing incoming json message: "+string(e.what());
 			errMsg.event="error";
 			writeMessage(id,errMsg);
 		}

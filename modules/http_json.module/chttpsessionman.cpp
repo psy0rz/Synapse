@@ -175,9 +175,13 @@ string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonStr)
 	Cmsg msg;
 
 	//we do this unlocked, since parsing probably takes most of the time:
-	if (!msg.fromJson(jsonStr))
+	try
+	{
+		msg.fromJson(jsonStr);
+	}
+	catch(std::exception &e)
 	{	
-		error <<  "Error while parsing JSON message:" << jsonStr;
+		error <<  "Error while parsing JSON message:" << e.what();
 		return (error.str());
 	}
 

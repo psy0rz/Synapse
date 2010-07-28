@@ -74,7 +74,7 @@ namespace synapse
 
 		//json stuff
 		void toJson(string & jsonStr);
-		bool fromJson(string & jsonStr);
+		void fromJson(string & jsonStr);
 
 	};
 
