@@ -3,8 +3,8 @@
 
 #define MAX_MESSAGE 2048
 
-
-
+using namespace boost;
+using namespace std;
 
 int moduleSessionId=0;
 
@@ -48,7 +48,7 @@ void writeMessage(int id, Cmsg & msg);
 
 // As soon as something with a network connection 'happens', these handlers will be called.
 // This stuff basically runs as anonymous, until a user uses core_login to change the user.
-class CnetModule : public Cnet
+class CnetModule : public synapse::Cnet
 {
 
 
@@ -138,7 +138,7 @@ class CnetModule : public Cnet
 };
 
 
-CnetMan<CnetModule> net;
+synapse::CnetMan<CnetModule> net;
 
 void writeMessage(int id, Cmsg & msg)
 {

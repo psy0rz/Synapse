@@ -40,7 +40,7 @@ extern boost::mutex logMutex;
 		log_buff << s; \
 		{ \
 			boost::lock_guard<boost::mutex> lock(synapse::logMutex); \
-			cout  << log_buff.rdbuf(); \
+			std::cout  << log_buff.rdbuf(); \
 		} \
 	}
 

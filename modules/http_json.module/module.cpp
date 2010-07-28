@@ -104,7 +104,7 @@ ChttpSessionMan httpSessionMan;
 // Every connection will get its own unique Cnet object.
 // As soon as something with a network connection 'happens', these handlers will be called.
 // We do syncronised writing instead of using the asyncronious doWrite()
-class CnetHttp : public Cnet
+class CnetHttp : public synapse::Cnet
 {
 	/// //////////////// PRIVATE STUFF FOR NETWORK CONNECTIONS
 
@@ -604,7 +604,7 @@ class CnetHttp : public Cnet
 
 };
 
-CnetMan<CnetHttp> net(MAX_CONNECTIONS);
+synapse::CnetMan<CnetHttp> net(MAX_CONNECTIONS);
 
 
 
@@ -644,8 +644,6 @@ SYNAPSE_REGISTER(http_json_Listen)
 		out["port"]=msg["port"];
  		out.send();
 
- 		//FIXME: race condition
-
 		//become the listening thread
 		net.runListen(msg["port"]);
 
@@ -676,6 +674,9 @@ SYNAPSE_REGISTER(http_json_Accept)
  */
 SYNAPSE_REGISTER(http_json_Close)
 {
+	if (dst!=moduleSessionId)
+		return;
+
 	net.doClose(msg["port"]);
 }
 
@@ -686,6 +687,9 @@ SYNAPSE_REGISTER(http_json_Close)
  */
 SYNAPSE_REGISTER(module_Shutdown)
 {
+	if (dst!=moduleSessionId)
+		return;
+
 	//let the net module shut down to fix the rest
 	net.doShutdown();
 }
@@ -705,7 +709,7 @@ void enqueueMessage(Cmsg & msg, int dst)
 		//a client is waiting for a message, lets inform him:
 		lock_guard<mutex> lock(net.threadMutex);
 
-		CnetMan<CnetHttp>::CnetMap::iterator netI=net.nets.find(waitingNetId);
+		synapse::CnetMan<CnetHttp>::CnetMap::iterator netI=net.nets.find(waitingNetId);
 
 		//client connection still exists?
 		if (netI != net.nets.end())
@@ -751,6 +755,9 @@ SYNAPSE_REGISTER(module_SessionEnd)
 
 SYNAPSE_REGISTER(http_json_GetStatus)
 {
+	if (dst!=moduleSessionId)
+		return;
+
 	Cmsg out;
 	out.dst=msg.src;
 	out.event="http_json_Status";

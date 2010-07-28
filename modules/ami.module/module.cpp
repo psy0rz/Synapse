@@ -55,6 +55,8 @@ All parameters are copied from/to asterisk without modification.
 #include "synapse.h"
 #include <boost/regex.hpp>
 
+using namespace std;
+using namespace boost;
 
 SYNAPSE_REGISTER(module_Init)
 {
@@ -76,7 +78,7 @@ SYNAPSE_REGISTER(module_Init)
 	out.send();
 }
  
-class CnetAmi : public Cnet
+class CnetAmi : public synapse::Cnet
 {
 	void init(int id)
 	{
@@ -158,7 +160,7 @@ class CnetAmi : public Cnet
 
 };
 
-CnetMan<CnetAmi> net;
+synapse::CnetMan<CnetAmi> net;
 
 /** Connects to a asterisk servers managment interface, and links it to \c src.
 	\param host Hostname of the asterisk server.

@@ -4,10 +4,22 @@
 
 /// NOTE: since this is a template, this cpp file will be included from cnetman.h! (and thus re-compiled for every module)
 
+//using namespace std;
+//using namespace boost;
+//using asio::ip::tcp;
+
+namespace synapse
+{
+
+using namespace std;
+using namespace boost;
+using asio::ip::tcp;
+
 
 template <class Tnet> 
 CnetMan<Tnet>::CnetMan(unsigned int maxConnections=100)
 {
+	shutdown=false;
 	autoIdCount=0;	
 	this->maxConnections=maxConnections;
 }
@@ -82,6 +94,10 @@ bool CnetMan<Tnet>::runListen(int port)
 
 		//inform the world we're listening
 		INFO("Listening on tcp port " << port);
+
+		//inform any runAccepts that are waiting for us
+		threadCond.notify_all();
+
 	}
 	//at this point the ioservice has no work yet, so make sure it keeps running:
 	asio::io_service::work work(ioService);
@@ -92,6 +108,7 @@ bool CnetMan<Tnet>::runListen(int port)
 		lock_guard<mutex> lock(threadMutex);
 		//we're done, remove the acceptor from the list
 		acceptors.erase(port);
+		//FIXME: what happens if a runAccept JUST started a threadCond.wait()? will it hang until shutdown or the next runListen?
 	}
 	INFO("Stopped listening on tcp port " << port);
 
@@ -103,7 +120,7 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
 {
 	CnetPtr netPtr;
 	{
-		lock_guard<mutex> lock(threadMutex);
+		unique_lock<mutex> lock(threadMutex);
 
 		if (nets.size()>=maxConnections)
 		{
@@ -111,11 +128,10 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
 			return false;
 		}
 
-		if (acceptors.find(port)==acceptors.end())
+		while (!shutdown && acceptors.find(port)==acceptors.end())
 		{
-			//FIXME: wait instead of returning when this happens? to prevent race conditions.
-			ERROR("net port " << port << " is not listening (anymore), ignoring accept-request");
-			return false;
+			DEB("net port " << port << " is not listening yet, waiting...");
+			threadCond.wait(lock);
 		}
 
 		if (id==0)
@@ -209,6 +225,12 @@ void CnetMan<Tnet>::doShutdown()
 {
 	{
 		lock_guard<mutex> lock(threadMutex);
+
+		if (shutdown)
+			return;
+
+		shutdown=true;
+
 		//close all ports
 		DEB("Closing all open ports");	
 		for (CacceptorMap::iterator acceptorI=acceptors.begin(); acceptorI!=acceptors.end(); acceptorI++)
@@ -224,6 +246,7 @@ void CnetMan<Tnet>::doShutdown()
 		{
 			netI->second->doDisconnect();
 		}
+
 
 	}
 }
@@ -262,3 +285,5 @@ string CnetMan<Tnet>::getStatusStr()
 	}
 
 };
+
+}

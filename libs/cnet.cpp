@@ -3,6 +3,15 @@
 #include "cnet.h"
 #include "clog.h"
 
+//using namespace std;
+//using namespace boost;
+//using asio::ip::tcp;
+namespace synapse
+{
+
+using namespace std;
+using namespace boost;
+using asio::ip::tcp;
 
 Cnet::Cnet()
 		:tcpResolver(ioService), connectTimer(ioService), readBuffer(65535), tcpSocket(ioService) 
@@ -379,3 +388,4 @@ string Cnet::getStatusStr()
 	return (s.str());
 }
 
+}

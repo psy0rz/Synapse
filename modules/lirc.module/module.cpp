@@ -2,6 +2,9 @@
 #include "synapse.h"
 #include <boost/regex.hpp>
 
+using namespace boost;
+using namespace std;
+
 SYNAPSE_REGISTER(module_Init)
 {
 	Cmsg out;
@@ -22,7 +25,7 @@ SYNAPSE_REGISTER(module_Init)
 	out.send();
 }
  
-class CnetLirc : public Cnet
+class CnetLirc : public synapse::Cnet
 {
 
  	void connected(int id, const string &host, int port)
@@ -87,7 +90,7 @@ class CnetLirc : public Cnet
 
 };
 
-CnetMan<CnetLirc> net;
+synapse::CnetMan<CnetLirc> net;
 
 SYNAPSE_REGISTER(lirc_Connect)
 {

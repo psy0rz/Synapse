@@ -56,59 +56,68 @@
 #include <boost/thread/thread.hpp>
 #include <string>
 
-using namespace std;
-using namespace boost;
-using asio::ip::tcp;
 
-typedef shared_ptr<tcp::acceptor> CacceptorPtr;
+typedef boost::shared_ptr<boost::asio::ip::tcp::acceptor> CacceptorPtr;
 #include "cnet.h"
 
-template <class Tnet>
-class CnetMan
+namespace synapse
 {
 
-	public:
-	CnetMan(unsigned int maxConnections);
 
-	//for server: call runListen to listen on a port. 
-	//It returns when doClose is called.
-	//Add ids that will accept the new connections with runAccept. (runAccept returns when connection is closed)
-	bool runListen(int port);
-	bool doClose(int port);
-	bool runAccept(int port, int id);
+	using namespace std;
+	using namespace boost;
+	using asio::ip::tcp;
 
-	//for client: call runConnect(returns when connection is closed)
-	bool runConnect(int id, string host, int port, int reconnectTime=0, string delimiter="\n");
+	template <class Tnet>
+	class CnetMan
+	{
 
-	//for both client and server:
-	bool doDisconnect(int id); 
-	bool doWrite(int id, string & data);
-	void doShutdown();
-	void setMaxConnections(unsigned int maxConnections);
+		public:
+		CnetMan(unsigned int maxConnections);
 
-	//debugging/admin
-	string getStatusStr();
+		//for server: call runListen to listen on a port.
+		//It returns when doClose is called.
+		//Add ids that will accept the new connections with runAccept. (runAccept returns when connection is closed)
+		bool runListen(int port);
+		bool doClose(int port);
+		bool runAccept(int port, int id);
 
-	typedef shared_ptr<Tnet> CnetPtr;
-	typedef map<int, CnetPtr > CnetMap;
-	typedef map<int, CacceptorPtr> CacceptorMap;
+		//for client: call runConnect(returns when connection is closed)
+		bool runConnect(int id, string host, int port, int reconnectTime=0, string delimiter="\n");
 
-	//also publicly avaible for easy access to all your connections
-	//be carefull with locking!
-	CnetMap nets;
-	mutex threadMutex;
+		//for both client and server:
+		bool doDisconnect(int id);
+		bool doWrite(int id, string & data);
+		void doShutdown();
+		void setMaxConnections(unsigned int maxConnections);
 
-	private:
-	int autoIdCount;
-	CacceptorMap acceptors;
+		//debugging/admin
+		string getStatusStr();
 
-	unsigned int maxConnections;
+		typedef shared_ptr<Tnet> CnetPtr;
+		typedef map<int, CnetPtr > CnetMap;
+		typedef map<int, CacceptorPtr> CacceptorMap;
 
-	void closeHandler(int port);
-	int getAutoId();
+		//also publicly avaible for easy access to all your connections
+		//be carefull with locking!
+		CnetMap nets;
+		mutex threadMutex;
+		condition_variable threadCond;
+
+
+		private:
+		bool shutdown;
+		int autoIdCount;
+		CacceptorMap acceptors;
+
+		unsigned int maxConnections;
+
+		void closeHandler(int port);
+		int getAutoId();
+
 	
-
-};
+	};
+}
 
 /// Templates need to be compiled for every use-case:
 #include "cnetman.cpp"

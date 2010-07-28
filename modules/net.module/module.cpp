@@ -19,6 +19,9 @@
 #include "synapse.h"
 #include "cnetman.h"
 
+using namespace boost;
+using namespace std;
+
 /** module_Init - called first, set up basic stuff here
  */
 SYNAPSE_REGISTER(module_Init)
@@ -62,7 +65,7 @@ SYNAPSE_REGISTER(module_SessionStart)
 // Every new network session will get its own Cnet object. 
 // As soon as something with a network connection 'happens', these handlers will be called.
 // In the case of this generic module, the data is assume to be readable text and is sended with a net_Read message.
-class CnetModule : public Cnet
+class CnetModule : public synapse::Cnet
 {
 
 	
@@ -135,7 +138,7 @@ class CnetModule : public Cnet
 	}
 }; 
 
-CnetMan<CnetModule> net;
+synapse::CnetMan<CnetModule> net;
 
 
 /** Client-only: Create a new connection, connects to host:port for session src
