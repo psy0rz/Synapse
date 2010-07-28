@@ -54,10 +54,21 @@ class CnetModule : public Cnet
 
 	/** Server connection 'id' is established.
 	*/
- 	void connected_server(int id, const string &host, int port)
+ 	void connected_server(int id, const string &host, int port, int local_port)
 	{
-		//someone is connecting us, create a new session initial session for this connection
 		Cmsg out;
+
+		//fireoff a new acceptor thread, to accept future connections.
+		out.clear();
+		out.dst=moduleSessionId;
+		out.event="conn_json_Accept";
+		out["port"]=local_port;
+ 		out.send();
+
+
+ 		//someone has connecting us, create a new session initial session for this connection
+		out.clear();
+		out.dst=0;
 		out.event="core_NewSession";
 		out["synapse_cookie"]=id;
 		out["username"]="anonymous";
@@ -149,13 +160,12 @@ SYNAPSE_REGISTER(conn_json_Listen)
 		//starts a new thread to accept and handle the incomming connection.
 		Cmsg out;
 		
-		//fire off acceptor threads
+		//fire off acceptor thread
 		out.clear();
 		out.dst=msg.dst;
 		out.event="conn_json_Accept";
 		out["port"]=msg["port"];
-		for (int i=0; i<10; i++)
-	 		out.send();
+ 		out.send();
 
 		//become the listening thread
 		net.runListen(msg["port"]);
@@ -179,8 +189,7 @@ SYNAPSE_REGISTER(conn_json_Accept)
 {
 	if (msg.dst==moduleSessionId)
 	{
-		//keep accepting until shutdown or some other error
-		while(net.runAccept(msg["port"], 0));
+		net.runAccept(msg["port"], 0);
 	}
 
 }

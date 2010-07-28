@@ -68,7 +68,7 @@ class CnetMan
 {
 
 	public:
-	CnetMan();
+	CnetMan(unsigned int maxConnections);
 
 	//for server: call runListen to listen on a port. 
 	//It returns when doClose is called.
@@ -84,6 +84,7 @@ class CnetMan
 	bool doDisconnect(int id); 
 	bool doWrite(int id, string & data);
 	void doShutdown();
+	void setMaxConnections(unsigned int maxConnections);
 
 	//debugging/admin
 	string getStatusStr();
@@ -101,6 +102,7 @@ class CnetMan
 	int autoIdCount;
 	CacceptorMap acceptors;
 
+	unsigned int maxConnections;
 
 	void closeHandler(int port);
 	int getAutoId();

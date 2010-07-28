@@ -25,6 +25,7 @@
 
 #define MAX_CONTENT 20000
 
+#define MAX_CONNECTIONS 100
 
 /**
 
@@ -44,7 +45,7 @@ int moduleSessionId=0;
 
 int netIdCounter=0;
 
-int moduleThreads=1;
+//int moduleThreads=1;
 
 map<string,string> contentTypes;
 
@@ -59,7 +60,7 @@ SYNAPSE_REGISTER(module_Init)
 	//especially broadcastMulti is important for our "all"-handler
 	out.clear();
 	out.event="core_ChangeModule";
-	out["maxThreads"]=moduleThreads;
+	out["maxThreads"]=MAX_CONNECTIONS+10;
 	out["broadcastMulti"]=1;
 	out.send();
 
@@ -67,7 +68,7 @@ SYNAPSE_REGISTER(module_Init)
 	//(this is done with moduleThreads and sending core_ChangeModule events)
 	out.clear();
 	out.event="core_ChangeSession";
-	out["maxThreads"]=10000;
+	out["maxThreads"]=MAX_CONNECTIONS+10;
 	out.send();
 
 	//register a special handler without specified event
@@ -133,6 +134,19 @@ class CnetHttp : public Cnet
 		delimiter="\r\n\r\n";
 		authCookie=0;
 	}
+
+	/** Server connection 'id' is established.
+	*/
+ 	void connected_server(int id, const string &host, int port, int local_port)
+ 	{
+		//fire off first acceptor thread
+		Cmsg out;
+		out.dst=moduleSessionId;
+		out.event="http_json_Accept";
+		out["port"]=local_port;
+ 		out.send();
+ 	}
+
 
 	void startAsyncRead()
 	{
@@ -590,7 +604,7 @@ class CnetHttp : public Cnet
 
 };
 
-CnetMan<CnetHttp> net;
+CnetMan<CnetHttp> net(MAX_CONNECTIONS);
 
 
 
@@ -617,29 +631,30 @@ SYNAPSE_REGISTER(http_json_Listen)
 
 		//allow this many threads.
 		//NOTE: the reason why we do this, is to prevent multiple threads from entereing our "all" handler: this would be bad for performance, since httpSessionMan is locked to 1 thread.
-		moduleThreads+=connections+1;
-		out.clear();
-		out.event="core_ChangeModule";
-		out["maxThreads"]=moduleThreads;
-		out.send();
+//		moduleThreads+=connections+1;
+//		out.clear();
+//		out.event="core_ChangeModule";
+//		out["maxThreads"]=moduleThreads;
+//		out.send();
 		
-		//fire off acceptor threads
+		//fire off first acceptor thread
 		out.clear();
 		out.dst=moduleSessionId;
 		out.event="http_json_Accept";
 		out["port"]=msg["port"];
-		for (int i=0; i<connections; i++)
-	 		out.send();
+ 		out.send();
+
+ 		//FIXME: race condition
 
 		//become the listening thread
 		net.runListen(msg["port"]);
 
 		//restore max module threads
-		moduleThreads-=(connections+1);
-		out.clear();
-		out.event="core_ChangeModule";
-		out["maxThreads"]=moduleThreads;
-		out.send();
+//		moduleThreads-=(connections+1);
+//		out.clear();
+//		out.event="core_ChangeModule";
+//		out["maxThreads"]=moduleThreads;
+//		out.send();
 	}
 	else
 		ERROR("Send to the wrong session id");
@@ -653,10 +668,7 @@ SYNAPSE_REGISTER(http_json_Accept)
 {
 	if (msg.dst==moduleSessionId)
 	{
-		//race condition with net.runlisten..
-		//fixed? sleep(1);
-		//keep accepting until shutdown or some other error
-		while(net.runAccept(msg["port"], 0));
+		net.runAccept(msg["port"], 0);
 	}
 }
 

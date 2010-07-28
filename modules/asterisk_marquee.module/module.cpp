@@ -45,30 +45,6 @@ SYNAPSE_REGISTER(asterisk_Ready)
 map<string,string> callerIds;
 
 
-SYNAPSE_REGISTER(asterisk_reset)
-{
-	callerIds.empty();
-}
-
-SYNAPSE_REGISTER(asterisk_authCall)
-{
-	Cmsg out;
-	out.event="marquee_Set";
-	out["text"]="Call "+msg["number"].str() + " to login...";
-	out.send();
-}
-
-SYNAPSE_REGISTER(asterisk_authOk)
-{
-	Cmsg out;
-	out.event="marquee_Set";
-	out["text"]="Login ok";
-	out.send();
-
-	out.event="asterisk_refresh";
-	out.send();
-}
-
 void updateMarquee()
 {
 	//make a unique list of caller Ids
@@ -106,6 +82,32 @@ void updateMarquee()
 		out["text"]="%C7no calls";
 	out.send();
 
+}
+
+
+SYNAPSE_REGISTER(asterisk_reset)
+{
+	callerIds.empty();
+	updateMarquee();
+}
+
+SYNAPSE_REGISTER(asterisk_authCall)
+{
+	Cmsg out;
+	out.event="marquee_Set";
+	out["text"]="Call "+msg["number"].str() + " to login...";
+	out.send();
+}
+
+SYNAPSE_REGISTER(asterisk_authOk)
+{
+	Cmsg out;
+	out.event="marquee_Set";
+	out["text"]="Login ok";
+	out.send();
+
+	out.event="asterisk_refresh";
+	out.send();
 }
 
 SYNAPSE_REGISTER(asterisk_updateChannel)

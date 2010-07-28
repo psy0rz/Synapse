@@ -6,10 +6,10 @@
 
 
 template <class Tnet> 
-CnetMan<Tnet>::CnetMan()
+CnetMan<Tnet>::CnetMan(unsigned int maxConnections=100)
 {
 	autoIdCount=0;	
-
+	this->maxConnections=maxConnections;
 }
 
 template <class Tnet> 
@@ -29,6 +29,13 @@ bool CnetMan<Tnet>::runConnect(int id, string host, int port, int reconnectTime,
 	CnetPtr netPtr;
 	{
 		lock_guard<mutex> lock(threadMutex);
+
+		if (nets.size()>=maxConnections)
+		{
+			ERROR("net reached max connections of " << maxConnections << ", cannot create new connection.");
+			return false;
+		}
+
 		if (id==0)
 		{
 			id=getAutoId();
@@ -97,8 +104,16 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
 	CnetPtr netPtr;
 	{
 		lock_guard<mutex> lock(threadMutex);
+
+		if (nets.size()>=maxConnections)
+		{
+			ERROR("net reached max connections of " << maxConnections << ", cannot accept new connection.");
+			return false;
+		}
+
 		if (acceptors.find(port)==acceptors.end())
 		{
+			//FIXME: wait instead of returning when this happens? to prevent race conditions.
 			ERROR("net port " << port << " is not listening (anymore), ignoring accept-request");
 			return false;
 		}
@@ -214,6 +229,13 @@ void CnetMan<Tnet>::doShutdown()
 }
 
 template <class Tnet> 
+void CnetMan<Tnet>::setMaxConnections(unsigned int maxConnections)
+{
+	lock_guard<mutex> lock(threadMutex);
+	this->maxConnections=maxConnections;
+}
+
+template <class Tnet>
 string CnetMan<Tnet>::getStatusStr()
 {
 	{

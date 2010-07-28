@@ -106,7 +106,7 @@ void Cnet::acceptHandler(
 	//this ways its easy to change existing code between server and client mode.
 	//we ALSO call a specific server handler, just in case the user needs the distinction
 	connected(       id, tcpSocket.remote_endpoint().address().to_string(), tcpSocket.remote_endpoint().port());
-	connected_server(id, tcpSocket.remote_endpoint().address().to_string(), tcpSocket.remote_endpoint().port());
+	connected_server(id, tcpSocket.remote_endpoint().address().to_string(), tcpSocket.remote_endpoint().port(), tcpSocket.local_endpoint().port());
 
 	//start reading the incoming data
 	startAsyncRead();
@@ -332,7 +332,7 @@ void Cnet::connected(int id, const string &host, int port)
 	//dummy
 }
 
-void Cnet::connected_server(int id, const string &host, int port)
+void Cnet::connected_server(int id, const string &host, int port, int local_port)
 {
 	//dummy
 	DEB(id << " server is connected to " << host << ":" << port);

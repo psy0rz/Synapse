@@ -68,10 +68,10 @@ class Cnet
 	tcp::resolver tcpResolver;
 	asio::deadline_timer connectTimer;
 
-
-	string host;
-	int port;
 	
+	string host; //the host to connect to, in client mode.
+	int port; //the port to connect to in client mode
+
 	//just stuff for getStatusStr, not neccesary for anything else.
 	int statusServer;
 
@@ -135,7 +135,7 @@ class Cnet
 	//end-user "hooks" for server
 	virtual void init_server(int id, CacceptorPtr acceptorPtr);
 	virtual void accepting(int id, int port);
-	virtual void connected_server(int id, const string &host, int port);
+	virtual void connected_server(int id, const string &host, int port, int local_port);
  
 	//end-user "hooks" for client
 	virtual void connecting(int id, const string &host, int port);
