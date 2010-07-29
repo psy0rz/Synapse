@@ -119,7 +119,7 @@ class CnetModule : public synapse::Cnet
 		catch(std::exception& e)
 		{
 			Cmsg errMsg;
-			errMsg["description"]="Error while parsing incoming json message: "+string(e.what());
+			errMsg["description"]=string(e.what());
 			errMsg.event="error";
 			writeMessage(id,errMsg);
 		}

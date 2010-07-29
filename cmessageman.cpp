@@ -21,6 +21,7 @@
 #include "cmodule.h"
 #include <boost/foreach.hpp>
 #include "cevent.h"
+#include <string.h>
 
 namespace synapse
 {
@@ -340,7 +341,22 @@ void CmessageMan::operator()()
 		{
 			callI->soHandler(*(callI->msg), callI->dst->id, callI->dst->cookie);
 		}
-	  	catch (std::exception& e)
+	  	catch (const ios::failure& e)
+  		{
+			//return std::exceptions as error events
+			lock_guard<mutex> lock(threadMutex);
+
+			ERROR("I/O error while handling " << callI->msg->event << ": " << strerror(errno));
+			CmsgPtr error(new Cmsg);
+			(*error).event="module_Error";
+			(*error).dst=callI->msg->src;
+			(*error).src=callI->dst->id;
+			(*error)["event"]=callI->msg->event;
+			(*error)["description"]="I/O error: " + string(e.what());
+			(*error)["parameters"]=(*callI->msg);
+			sendMessage(callI->dst->module, error);
+		}
+	  	catch (const std::exception& e)
   		{
 			//return std::exceptions as error events
 			lock_guard<mutex> lock(threadMutex);
@@ -352,8 +368,8 @@ void CmessageMan::operator()()
 			(*error).src=callI->dst->id;
 			(*error)["event"]=callI->msg->event;
 			(*error)["description"]="Exception: " + string(e.what());
-			(*error)["parameters"]=(*callI->msg);	
-			sendMessage(callI->dst->module, error); 
+			(*error)["parameters"]=(*callI->msg);
+			sendMessage(callI->dst->module, error);
 		}
 		catch(...)
 		{
@@ -369,7 +385,6 @@ void CmessageMan::operator()()
 			(*error)["description"]="Unknown exception";
 			(*error)["parameters"]=(*callI->msg);	
 			sendMessage(callI->dst->module, error); 
-
 		}
 	}
 }

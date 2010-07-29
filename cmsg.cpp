@@ -53,8 +53,7 @@ void Cmsg::fromJson(string & jsonStr)
 {
 
 	Value spiritMsg;
-	//TODO:how safe is it actually to let json_spirit parse untrusted input? (regarding DoS, buffer overflows, etc)
-	json_spirit::read(jsonStr, spiritMsg);
+	readJsonSpirit(jsonStr, spiritMsg);
 
 	if (spiritMsg.get_array().size()>2)
 	{

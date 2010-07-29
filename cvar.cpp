@@ -13,6 +13,7 @@
 #include <iostream>
 #include <boost/lexical_cast.hpp>
 #include "clog.h"
+#include <sstream>
 
 namespace synapse
 {
@@ -414,6 +415,30 @@ void Cvar::toJson(string & jsonStr)
 
 }
 
+//"better" version of json read that throws nicer exceptions
+void Cvar::readJsonSpirit(const string & jsonStr, Value & spiritValue)
+{
+	//TODO:how safe is it actually to let json_spirit parse untrusted input? (regarding DoS, buffer overflows, etc)
+	if (!json_spirit::read(jsonStr, spiritValue))
+	{
+		//this function is 3 times slower, but gives a nice exception with an error message
+		try
+		{
+			json_spirit::read_or_throw(jsonStr, spiritValue);
+		}
+		catch(json_spirit::Error_position e)
+		{
+			//reformat the exception to something generic:
+			stringstream s;
+			s << "JSON parse error at line " << e.line_<< ", column " << e.column_ << ": " << e.reason_;
+			throw(runtime_error(s.str()));
+		}
+	}
+
+
+}
+
+
 void Cvar::toJsonFormatted(string & jsonStr)
 {
 	Value spiritValue;
@@ -423,13 +448,12 @@ void Cvar::toJsonFormatted(string & jsonStr)
 
 }
 
+
 void Cvar::fromJson(string & jsonStr)
 {
-
 	//parse json input
 	Value spiritValue;
-	//TODO:how safe is it actually to let json_spirit parse untrusted input? (regarding DoS, buffer overflows, etc)
-	json_spirit::read(jsonStr, spiritValue);
+	readJsonSpirit(jsonStr,spiritValue);
 	fromJsonSpirit(spiritValue);
 
 }

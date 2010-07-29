@@ -16,6 +16,7 @@
 #include <string>
 #include <iostream>
 #include <boost/thread/thread.hpp>
+#include <sstream>
 
 namespace synapse
 {
@@ -36,7 +37,7 @@ extern boost::mutex logMutex;
 //we first buffer the output to a streamstream, since sometimes recursive calls happen from functions that are called while doing a << .
 #define LOG(s) \
 	{ \
-		stringstream log_buff; \
+		std::stringstream log_buff; \
 		log_buff << s; \
 		{ \
 			boost::lock_guard<boost::mutex> lock(synapse::logMutex); \
@@ -47,23 +48,23 @@ extern boost::mutex logMutex;
 
 //debug output with extra info:
 #ifndef NDEBUG
-#define DEB(s) LOG (boost::this_thread::get_id() << " " << "DEB: " << s << " @" << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ << endl)
+#define DEB(s) LOG (boost::this_thread::get_id() << " " << "DEB: " << s << " @" << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ << std::endl)
 #else
 #define DEB(s)
 #endif
 
 //normal info:
-#define INFO(s) LOG(boost::this_thread::get_id() << " " << TERM_BOLD << "INFO: " << s << TERM_NORMAL << endl)
+#define INFO(s) LOG(boost::this_thread::get_id() << " " << TERM_BOLD << "INFO: " << s << TERM_NORMAL << std::endl)
 
 //errors:
-#define ERROR(s) LOG(boost::this_thread::get_id() << " " << TERM_BAD << "ERROR: " << s << TERM_NORMAL << endl)
+#define ERROR(s) LOG(boost::this_thread::get_id() << " " << TERM_BAD << "ERROR: " << s << TERM_NORMAL << std::endl)
 
 //warnings:
-#define WARNING(s) LOG(boost::this_thread::get_id() << " " << TERM_WARN << "WARNING: " << s << TERM_NORMAL << endl)
+#define WARNING(s) LOG(boost::this_thread::get_id() << " " << TERM_WARN << "WARNING: " << s << TERM_NORMAL << std::endl)
 
 //messages:
-#define LOG_SEND(s) LOG(boost::this_thread::get_id() << " " << TERM_SEND_MESSAGE << s << TERM_NORMAL << endl)
-#define LOG_RECV(s) LOG(boost::this_thread::get_id() << " " << TERM_RECV_MESSAGE << s << TERM_NORMAL << endl)
+#define LOG_SEND(s) LOG(boost::this_thread::get_id() << " " << TERM_SEND_MESSAGE << s << TERM_NORMAL << std::endl)
+#define LOG_RECV(s) LOG(boost::this_thread::get_id() << " " << TERM_RECV_MESSAGE << s << TERM_NORMAL << std::endl)
 
 
 }

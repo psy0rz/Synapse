@@ -1,11 +1,11 @@
 #include "synapse.h"
-
+#include "cconfig.h"
+#include "clog.h"
 int counter;
 int counterSleep;
 
 SYNAPSE_REGISTER(module_Init)
 {
-	
 	Cmsg out;
 
 	out.clear();

@@ -90,9 +90,11 @@ namespace synapse
 
 	protected:
 
-		//json spirit conversion stuff, used internally
+		//json spirit specific conversion stuff, used internally
+		//We might decide to use a safer/faster json parser in the future!
 		void toJsonSpirit(Value &spiritValue);
 		void fromJsonSpirit(Value &spiritValue);
+		void readJsonSpirit(const string & jsonStr, Value & spiritValue);
 	
 	private:
 		variant <void *,CvarMap , long double, string, CvarList> value;
