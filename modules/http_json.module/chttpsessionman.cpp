@@ -79,6 +79,7 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
 			//we dont have messages yet, the client will wait for us, so remember the netId of that client so we can inform it as soon as something arrives.
 			jsonStr.clear();
 			httpSessionI->second.netId=netId;
+			httpSessionI->second.netInformed=false;
 		}
 		return;
 	}
@@ -285,8 +286,12 @@ int ChttpSessionMan::enqueueMessage(Cmsg & msg, int dst)
 		}
 	
 		//we want to inform the netId only ONE time
-		int netId=httpSessionI->second.netId;
-		httpSessionI->second.netId=0;
+		int netId=0;
+		if (!httpSessionI->second.netInformed)
+		{
+			httpSessionI->second.netInformed=true;
+			netId=httpSessionI->second.netId;
+		}
 	
 		DEB("Enqueued message for destination session " << dst << ", probably for netId " << netId << ": " << jsonStr);
 	

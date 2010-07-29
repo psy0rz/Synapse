@@ -6,6 +6,7 @@
 ChttpSession::ChttpSession()
 {
 	netId=0;
+	netInformed=false;
 	lastTime=time(NULL);
 	expired=false;
 }
