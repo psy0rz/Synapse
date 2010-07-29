@@ -82,49 +82,52 @@ class CnetModule : public synapse::Cnet
 	*/
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
-		if (bytesTransferred > MAX_MESSAGE)
-		{
-			stringstream s;
-			s << "Json message on id " << id << " is " << bytesTransferred << " bytes. (max=" << MAX_MESSAGE << ")";
-			Cmsg errMsg;
-			errMsg["description"]=s.str();
-			errMsg.event="error";
-			writeMessage(id,errMsg);
-			return ;
-		}
-
 		Cmsg out;
 		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), readBuffer.size());
 		dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 
-		try
+		if (dataStr.length() > MAX_MESSAGE)
 		{
-			out.fromJson(dataStr);
-
-			//if its requesting a new session, make sure the correct cookie is sended along:
-			if (out.event=="core_NewSession")
+			stringstream s;
+			s << "Json message on id " << id << " is " << bytesTransferred << " bytes. (max=" << MAX_MESSAGE << ") Ignoring.";
+			Cmsg errMsg;
+			errMsg["description"]=s.str();
+			errMsg.event="error";
+			writeMessage(id,errMsg);
+		}
+		else
+		{
+			try
 			{
-				out["synapse_cookie"]=id;
+				//parse it
+				out.fromJson(dataStr);
+
+				//if its requesting a new session, make sure the correct cookie is sended along:
+				if (out.event=="core_NewSession")
+				{
+					out["synapse_cookie"]=id;
+				}
+				//send it and handle send errors
+				string error=out.send(id);
+				if (error!="")
+				{
+					Cmsg errMsg;
+					errMsg["description"]=error;
+					errMsg.event="error";
+					writeMessage(id,errMsg);
+				}
 			}
-			//send it and handle send errors
-			string error=out.send(id);
-			if (error!="")
+			catch(std::exception& e)
 			{
 				Cmsg errMsg;
-				errMsg["description"]=error;
+				errMsg["description"]=string(e.what());
 				errMsg.event="error";
 				writeMessage(id,errMsg);
 			}
 		}
-		catch(std::exception& e)
-		{
-			Cmsg errMsg;
-			errMsg["description"]=string(e.what());
-			errMsg.event="error";
-			writeMessage(id,errMsg);
-		}
-
+		//cant we do this right away, before parsing ?
 		readBuffer.consume(dataStr.length());
+
 	}
 
 	/** Connection 'id' is disconnected, or a connect-attempt has failed.

@@ -253,7 +253,6 @@ list<int> CuserMan::delCookieSessions(int cookie, CmodulePtr module)
 			{
 				if (sessions[sessionId]->cookie==cookie && sessions[sessionId]->module==module)
 				{
-					INFO("DELETING" << sessionId);
 					delSession(sessionId);
 					deletedIds.push_back(sessionId);
 				}
