@@ -4,7 +4,7 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-	<title>Asterisk debug page</title>
+	<title>Asterisk admin page</title>
 
 	<script type="text/javascript" src="synapse.js"></script>
 
@@ -35,6 +35,12 @@
 				send(0,"asterisk_GetStatus", { 
 				});				
 			});
+
+			$('#asterisk_Config').click(function(event){
+				send(0,"asterisk_Config", { 
+				});				
+			});
+
 		});
 
 
@@ -46,6 +52,7 @@
 	<h1>Asterisk debugging page</h1>
 	<p>
 	<input type='submit' value='Get status...' id='asterisk_GetStatus'>
+	<input type='submit' value='Reload config...' id='asterisk_Config'>
 
 	<pre>
 	<div id='asterisk_Status'></div>

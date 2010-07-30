@@ -256,7 +256,7 @@ class CnetHttp : public synapse::Cnet
 	{
 		Cvar extraHeaders;
 
-		//FIXME: do a better way of checking/securing the path. Inode verification?
+		//FIXME: do a better way of checking/securing the path. Inode verification? Or compare with a filelist?
 		if (path.find("..")!=string::npos)
 		{
 			respondError(403, "Path contains illegal characters");

@@ -73,6 +73,7 @@ namespace synapse
 		operator CvarMap & ();
 		Cvar & operator [](const string & key);
 		bool isSet(const char * key);
+		bool isSet(const string & key);
 		CvarMap::iterator begin();
 		CvarMap::iterator end();
 		void erase(const char * key);

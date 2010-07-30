@@ -51,6 +51,7 @@ To setup a fake server replaying this:
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include "./csession.h"
+#include "cconfig.h"
 //#include "./cgroup.h"
 //#include "./csession_types.h"
 //#include "./cgroup_types.h"
@@ -76,7 +77,7 @@ namespace asterisk
 	
 		out.clear();
 		out.event="core_ChangeModule";
-		out["maxThreads"]=1; //NOTE: this module is single threaded only, but we need one thread for the change interval
+		out["maxThreads"]=1; //NOTE: this module is single threaded only!
 		out.send();
 	
 		out.clear();
@@ -661,6 +662,9 @@ namespace asterisk
 		string id;
 		string username;
 		string password;
+		string host;
+		string port;
+
 		int sessionId;
 
 		Cserver()
@@ -833,19 +837,14 @@ namespace asterisk
 		out["seconds"]=1;
 		out["repeat"]=-1;
 		out["dst"]=dst;
-		out["event"]="asterisk_sendChanges";
+		out["event"]="asterisk_SendChanges";
 		out.send();
 	}
 	
 	
+
 	
-	
-	SYNAPSE_REGISTER(module_SessionEnded)
-	{
-		sessionMap.erase(msg["session"]);
-	}
-	
-	SYNAPSE_REGISTER(asterisk_sendChanges)
+	SYNAPSE_REGISTER(asterisk_SendChanges)
 	{
 		CserverMap::iterator I;
 //		I->second.sendChanges();
@@ -866,6 +865,10 @@ namespace asterisk
 		out.clear();
 		out.event="core_Ready";
 		out.send();
+
+		out.clear();
+		out.event="asterisk_Config";
+		out.send();
 	}
 	
 	/** Connects to specified asterisk server
@@ -875,41 +878,98 @@ namespace asterisk
 		\param password Asterisk manager password
 	
 	*/
-	SYNAPSE_REGISTER(asterisk_Connect)
+
+// replaced by asterisk_Config for now, which lo
+//	SYNAPSE_REGISTER(asterisk_Connect)
+//	{
+//		//ami connections are src-session based, so we need a new session for every connection.
+//		Cmsg out;
+//		out.event="core_NewSession";
+//		out["server"]["username"]=msg["username"];
+//		out["server"]["password"]=msg["password"];
+//		out["server"]["port"]=msg["port"];
+//		out["server"]["host"]=msg["host"];
+//		out.send();
+//	}
+
+	/** Loads asterisk.conf and connects to specified servers.
+	 * It will also handle server deletes/changes.
+	 */
+	SYNAPSE_REGISTER(asterisk_Config)
 	{
-		//ami connections are src-session based, so we need a new session for every connection.
-		Cmsg out;
-		out.event="core_NewSession";
-		out["server"]["username"]=msg["username"];
-		out["server"]["password"]=msg["password"];
-		out["server"]["port"]=msg["port"];
-		out["server"]["host"]=msg["host"];
-		out.send();
+		using synapse::Cconfig;
+		Cconfig config;
+		config.load("etc/asterisk.conf");
+
+		//delete servers that have been changed or removed from the config
+		for (CserverMap::iterator serverI=serverMap.begin(); serverI!=serverMap.end(); serverI++)
+		{
+			//server config removed or changed?
+			if (
+				!config.isSet(serverI->second.id) ||
+				serverI->second.username!=config[serverI->second.id]["username"].str() ||
+				serverI->second.password!=config[serverI->second.id]["password"].str() ||
+				serverI->second.host!=config[serverI->second.id]["host"].str() ||
+				serverI->second.port!=config[serverI->second.id]["port"].str()
+			)
+			{
+				//delete server and connection by ending session
+				//the rest will get cleaned up automaticly by the module_SessionEnd(ed) events.
+				Cmsg out;
+				out.src=serverI->first;
+				out.event="core_DelSession";
+				out.send();
+			}
+			else
+			{
+				//nothing changed, deleted it from config-object
+				config.map().erase(serverI->second.id);
+			}
+		}
+
+		//the remaining config entries need to be (re)created and (re)connected.
+		for (Cconfig::iterator configI=config.begin(); configI!=config.end(); configI++)
+		{
+			//start a new session for every new connection, and supply the config info
+			Cmsg out;
+			out.event="core_NewSession";
+			out["server"]=configI->second;
+			out["server"]["id"]=configI->first;
+			out.send();
+		}
 	}
 	
-	
+
 	SYNAPSE_REGISTER(module_SessionStart)
 	{
+		//new session that is started with server info
+		if (msg.isSet("server"))
+		{
+			//setup a new server object
+			serverMap[msg.dst].id=msg["server"]["id"].str();
+			serverMap[msg.dst].username=msg["server"]["username"].str();
+			serverMap[msg.dst].password=msg["server"]["password"].str();
+			serverMap[msg.dst].host=msg["server"]["host"].str();
+			serverMap[msg.dst].port=msg["server"]["port"].str();
 	
-		serverMap[msg.dst].id=msg["server"]["username"].str()+
-								"@"+msg["server"]["host"].str()+
-								":"+msg["server"]["port"].str();
-		
-		serverMap[msg.dst].username=msg["server"]["username"].str();
-		serverMap[msg.dst].password=msg["server"]["password"].str();
-		serverMap[msg.dst].status=Cserver::CONNECTING;
-
-
-		Cmsg out;
-		out.clear();
-		out.event="ami_Connect";
-		out.src=msg.dst;
-		out["host"]=msg["server"]["host"].str();
-		out["port"]=msg["server"]["port"].str();
-		out.send();
-		
+			//instruct ami to connect to the server
+			Cmsg out;
+			out.clear();
+			out.event="ami_Connect";
+			out.src=msg.dst;
+			out["host"]=msg["server"]["host"].str();
+			out["port"]=msg["server"]["port"].str();
+			out.send();
+		}
 	}
-	
+
+	SYNAPSE_REGISTER(module_SessionEnd)
+	{
+		//since the ami module sees a module_SessionEnded, it will automaticly disconnect the server
+		serverMap[msg.dst].clear();
+		serverMap.erase(msg.dst);
+	}
+
 	
 	SYNAPSE_REGISTER(ami_Connected)
 	{
@@ -1000,12 +1060,6 @@ namespace asterisk
 		//ami reconnects automaticly
 	}
 	
-	SYNAPSE_REGISTER(module_SessionEnd)
-	{
-			
-		serverMap[msg.dst].clear();
-		serverMap.erase(msg.dst);
-	}
 	
 	
 	SYNAPSE_REGISTER(asterisk_refresh)

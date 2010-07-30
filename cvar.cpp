@@ -271,9 +271,6 @@ CvarMap::iterator Cvar::end()
 	return ((CvarMap &)(*this)).end();
 }
 
-/*!
-    \fn Cvar::isSet(string key)
- */
 bool Cvar::isSet(const char * key)
 {
 	return(
@@ -281,6 +278,12 @@ bool Cvar::isSet(const char * key)
 	);
 }
 
+bool Cvar::isSet(const string & key)
+{
+	return(
+		((CvarMap&)(*this)).find(key)!=((CvarMap&)(*this)).end()
+	);
+}
 
 void Cvar::erase(const char * key)
 {
