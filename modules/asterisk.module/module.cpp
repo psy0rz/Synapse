@@ -95,26 +95,33 @@ namespace asterisk
 		out["path"]="modules/timer.module/libtimer.so";
 		out.send();
 	
-		//FIXME  clean/permissions
 	
 		out.clear();
+
+
+		//send by anonymous only:
 		out.event="core_ChangeEvent";
 		out["modifyGroup"]=	"modules";
 		out["sendGroup"]=	"anonymous";
+		out["recvGroup"]=	"modules";
+
+		out["event"]=		"asterisk_authReq";
+		out.send();
+
+		out["event"]=		"asterisk_refresh";
+		out.send();
+
+		//receive by anonymous only:
+		out.event="core_ChangeEvent";
+		out["modifyGroup"]=	"modules";
+		out["sendGroup"]=	"modules";
 		out["recvGroup"]=	"anonymous";
-	
-	
+
 	
 	 	out["event"]=		"asterisk_debugChannel"; 
  	 	out.send();
 	
-	
-		out["event"]=		"asterisk_login"; 
-		out.send();
-	
-		out["event"]=		"asterisk_authReq"; 
-		out.send();
-	
+
 		out["event"]=		"asterisk_authCall"; 
 		out.send();
 	
@@ -132,10 +139,7 @@ namespace asterisk
 	
 		out["event"]=		"asterisk_delDevice"; 
 		out.send();
-	
-		out["event"]=		"asterisk_refresh"; 
-		out.send();
-	
+
 		out["event"]=		"asterisk_reset"; 
 		out.send();
 	
