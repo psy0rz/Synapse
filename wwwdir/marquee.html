@@ -35,15 +35,21 @@
 
 	synapse_register("marquee_Set",function(msg_src, msg_dst, msg_event, msg)
 	{
-		var s="<span style='color: red'>"+msg["text"]+"</span>";
-		s=s.replace("%C0", "</span><span style='color: #ff0000'>");
-		s=s.replace("%C1", "</span><span style='color: #aa0000'>");
-		s=s.replace("%C2", "</span><span style='color: #aaaa00'>");
-		s=s.replace("%C3", "</span><span style='color: #ffff00'>");
-		s=s.replace("%C4", "</span><span style='color: #EE7600'>");
-		s=s.replace("%C5", "</span><span style='color: #EE9A00'>");
-		s=s.replace("%C6", "</span><span style='color: #00aa00'>");
-		s=s.replace("%C7", "</span><span style='color: #00ff00'>");
+		var s;
+		s=msg["text"].replace(/&/gmi, '&amp;').
+			replace(/"/gmi, '&quot;').
+		    replace(/>/gmi, '&gt;').
+		    replace(/</gmi, '&lt;');
+	    
+		s="<span style='color: red'>"+s+"</span>";
+		s=s.replace(/%C0/g, "</span><span style='color: #ff0000'>");
+		s=s.replace(/%C1/g, "</span><span style='color: #aa0000'>");
+		s=s.replace(/%C2/g, "</span><span style='color: #aaaa00'>");
+		s=s.replace(/%C3/g, "</span><span style='color: #ffff00'>");
+		s=s.replace(/%C4/g, "</span><span style='color: #EE7600'>");
+		s=s.replace(/%C5/g, "</span><span style='color: #EE9A00'>");
+		s=s.replace(/%C6/g, "</span><span style='color: #00aa00'>");
+		s=s.replace(/%C7/g, "</span><span style='color: #00ff00'>");
 		$('#text').html(s);
 	});
 

@@ -63,7 +63,7 @@ SYNAPSE_REGISTER(marquee_SendChanges)
 	{
 		//HACK, implement in C++:
 		string cmd;
-		cmd="/home/psy/opensyn3/trunk/projects/movingsign-m500N-7x80rg2/writemarquee '"+text+"'";
+		cmd="./writemarquee '"+text+"'";
 		if (system(cmd.c_str())) ;
 
 		changed=false;

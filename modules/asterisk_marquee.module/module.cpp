@@ -41,53 +41,100 @@ SYNAPSE_REGISTER(asterisk_Ready)
 
 }
 
-
-map<string,string> callerIds;
+typedef map<string,Cvar> CchannelMap;
+CchannelMap channels;
 
 
 void updateMarquee()
 {
-	//make a unique list of caller Ids
+	//make a unique list of the caller ids of ringing phones and a string with active calls.
 	set<string> uniqCallerIds;
-	for (map<string,string>::iterator I=callerIds.begin(); I!=callerIds.end(); I++)
+	string activeCalls;
+	for (CchannelMap::iterator I=channels.begin(); I!=channels.end(); I++)
 	{
-		uniqCallerIds.insert(I->second);
-	}
+		if (I->second["state"].str()=="ringing")
+		{
+			string callerId;
+			//already linked with a channel?
+			if (I->second["linkCallerId"].str() != "")
+			{
+				callerId=I->second["linkCallerId"].str();
+			}
+			//we dont know whos connected yet, try using the callerId
+			else
+			{
+				callerId=I->second["callerId"].str();
+			}
 
-	//now make a nice string for the marquee
-	string text;
-	for (set<string>::iterator I=uniqCallerIds.begin(); I!=uniqCallerIds.end(); I++)
-	{
-		if (text=="")
-			text=*I;
+			//only show external calls. e.g. longer then 4 digits.
+			if (callerId.length()>4)
+				uniqCallerIds.insert(callerId);
+		}
 		else
-			text=text+", "+*I;
+		{
+			string callerId;
+			//we know who's connected:
+			if (I->second["linkCallerId"].str() != "")
+			{
+				callerId=I->second["linkCallerId"].str();
+			}
+			//we dont know whos connected yet
+			else
+			{
+				//show who's being dialed, or show caller id if its an incoming call:
+				if (I->second["state"].str()=="out")
+					callerId=I->second["firstExtension"].str();
+				else
+					callerId=I->second["callerId"].str();
+			}
+
+
+			if (I->second["state"].str()=="in")
+				activeCalls=activeCalls + I->second["deviceCallerId"].str() + "<" + callerId + " ";
+			else if (I->second["state"].str()=="out")
+				activeCalls=activeCalls + I->second["deviceCallerId"].str() + ">" + callerId + " ";
+		}
 	}
 
-	//determine the string to send to the marquee
-	Cmsg out;
-	out.event="marquee_Set";
-	if (text!="")
+
+	//are there incoming ringing calls?
+	if (!uniqCallerIds.empty())
+	{
+		//transform the uniq list into a string
+		string text;
+		for (set<string>::iterator I=uniqCallerIds.begin(); I!=uniqCallerIds.end(); I++)
+		{
+			if (text=="")
+				text=*I;
+			else
+				text=text+", "+*I;
+		}
+		Cmsg out;
+		out.event="marquee_Set";
 		out["text"]="%C0"+text;
-	else if (!callerIds.empty())
-	{
-		stringstream s;
-		if (callerIds.size()==1)
-			s << "%C31 call";
-		else
-			s << "%C3" << callerIds.size() << " calls";
-		out["text"]=s.str();
+		out.send();
 	}
+	//nothing ringing, show active calls
 	else
-		out["text"]="%C7no calls";
-	out.send();
-
+	{
+		Cmsg out;
+		out.event="marquee_Set";
+		if (activeCalls=="")
+		{
+				out["text"]="%C7no calls";
+		}
+		else
+		{
+			out["text"]="%C3"+activeCalls;
+		}
+		out.send();
+	}
 }
 
 
 SYNAPSE_REGISTER(asterisk_reset)
 {
-	callerIds.empty();
+	channels.empty();
 	updateMarquee();
 }
 
@@ -112,30 +159,13 @@ SYNAPSE_REGISTER(asterisk_authOk)
 
 SYNAPSE_REGISTER(asterisk_updateChannel)
 {
-	string callerId;
-	if (msg["state"].str()=="ringing")
-	{
-		//already linked with a channel?
-		if (msg["linkCallerId"].str() != "")
-		{
-			callerId=msg["linkCallerId"].str();
-		}
-		//we dont know whos connected yet, try using the callerId
-		else
-		{
-			callerId=msg["callerId"].str();
-		}
-	}
-
-	//update the list
-	callerIds[msg["id"]]=callerId;
-
+	channels[msg["id"]]=msg;
 	updateMarquee();
 }
 
 SYNAPSE_REGISTER(asterisk_delChannel)
 {
-	callerIds.erase(msg["id"]);
+	channels.erase(msg["id"]);
 	updateMarquee();
 }
 

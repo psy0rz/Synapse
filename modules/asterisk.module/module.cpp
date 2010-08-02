@@ -201,6 +201,7 @@ namespace asterisk
 		bool trunk;
 		bool online;
 		string callerId;
+		string callerIdName;
 		string id;
 		bool changed;
 		CgroupPtr groupPtr;	
@@ -213,7 +214,6 @@ namespace asterisk
 			mrand48_r(&randomBuffer, &authCookie);
 
 			changed=true;
-			id="";
 			online=true;
 			trunk=true; //assume true, to prevent showing trunks on asterisk-reconnect
 		}
@@ -226,7 +226,7 @@ namespace asterisk
 				return (true);
 
 			//dont show devices with empty caller ID's
-			if (callerId.substr(0,2)=="\"\"")
+			if (callerIdName=="")
 				return (true);
 
 			//dont show anything thats not sip (for now)
@@ -292,6 +292,26 @@ namespace asterisk
 			}
 		}
 
+		string getCallerId()
+		{
+			return(callerId);
+		}
+
+		void setCallerIdName(string callerIdName)
+		{
+			if (callerIdName!="" && callerIdName!=this->callerIdName)
+			{
+				this->callerIdName=callerIdName;
+				changed=true;
+			}
+		}
+
+		string getCallerIdName()
+		{
+			return(callerIdName);
+		}
+
+
 		void setTrunk(bool trunk)
 		{
 			this->trunk=trunk;
@@ -323,6 +343,7 @@ namespace asterisk
 			out.dst=forceDst;
 			out["id"]=id;
 			out["callerId"]=callerId;
+			out["callerIdName"]=callerIdName;
 			out["online"]=online;
 			out["trunk"]=trunk;
 
@@ -389,7 +410,7 @@ namespace asterisk
 		string linkCallerId;
 		string linkCallerIdName;
 		string firstExtension;
-		bool initiator;
+//		bool initiator;
 		CdevicePtr devicePtr;
 
 		int changesSent;		
@@ -400,7 +421,7 @@ namespace asterisk
 		{
 			changes=1;
 			changesSent=0;
-			initiator=true;
+//			initiator=true;
 		}
 
 		bool sendDebug(Cmsg msg, int serverId)
@@ -443,15 +464,15 @@ namespace asterisk
 			return(firstExtension);
 		}
 
-		void setInitiator(bool initiator)
-		{
-			if (initiator!=this->initiator)
-			{
-				this->initiator=initiator;
-				changes++;
-			}
-
-		}
+//		void setInitiator(bool initiator)
+//		{
+//			if (initiator!=this->initiator)
+//			{
+//				this->initiator=initiator;
+//				changes++;
+//			}
+//
+//		}
 
 		void setDevicePtr(CdevicePtr devicePtr)
 		{
@@ -590,13 +611,15 @@ namespace asterisk
 			out.dst=forceDst;
 			out["id"]=id;
 			out["state"]=state;
-			out["initiator"]=initiator;
+//			out["initiator"]=initiator;
 			out["callerId"]=callerId;
 			out["callerIdName"]=callerIdName;
 
 			if (devicePtr!=CdevicePtr())
 			{
 				out["deviceId"]=devicePtr->getId();
+				out["deviceCallerId"]=devicePtr->getCallerId();
+				out["deviceCallerIdName"]=devicePtr->getCallerIdName();
 			}
 
 			out["linkCallerId"]=linkCallerId;
@@ -1006,9 +1029,27 @@ namespace asterisk
 				devicePtr->setOnline(false);
 	
 			if (msg["Callerid"].str() != "\"\" <>")
-				devicePtr->setCallerId(msg["Callerid"].str());
+			{
+				//split up the the callerid+callerIdname string
+				//Why the heck are the asterisk folks pre-formatting it like this?? Everywhere else in the ami a caller id is just a number instead of a preformatted string!
+				smatch what;
+				if (regex_search(
+					msg["Callerid"].str(),
+					what,
+					boost::regex("\"(.*)\" <(.*)>")
+				))
+				{
+					devicePtr->setCallerIdName(what[1]);
+					devicePtr->setCallerId(what[2]);
+				}
+				else
+				{
+					//cant parse somehow? just set the whole string as callerIdName
+					devicePtr->setCallerIdName(msg["CallerId"]);
+				}
+			}
 			else
-				devicePtr->setCallerId(msg["ObjectName"]);
+				devicePtr->setCallerIdName(msg["ObjectName"]);
 
 			if (msg["ToHost"].str() != "")
 				devicePtr->setTrunk(true);

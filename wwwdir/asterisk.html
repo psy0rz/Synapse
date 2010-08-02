@@ -73,6 +73,20 @@
 
 		});
 
+		function prettyCallerId( callerId, callerIdName)
+		{
+			var txt="";
+			if (callerIdName!="")
+				txt=txt+callerIdName;
+
+			if (callerId!="")
+				txt=txt+" &lt;"+callerId+"&gt;";
+			else
+				txt=" (unknown)";
+
+			return txt;					
+		}
+ 		
 
  		synapse_register("asterisk_updateDevice",function(msg_src, msg_dst, msg_event, msg)
  		{
@@ -97,7 +111,7 @@
 
 			//update the device caller id:
 //			$(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]+"<br> tennant="+msg["groupId"]+" ("+msg["id"]+")");
-			$(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]);
+			$(escapeId(msg["id"])+" .deviceInfo").html(prettyCallerId(msg["callerId"], msg["callerIdName"]));
 
 			if (msg["online"])
 				$(escapeId(msg["id"])).removeClass('ui-state-disabled');
@@ -106,10 +120,10 @@
 
 
 			//is it the device of the logged in user?
-			if (msg["id"]==loginDeviceId)
-			{
-				$('#statusLoginUser').text(msg["callerId"]);				
-			}
+//			if (msg["id"]==loginDeviceId)
+//			{
+//				$('#statusLoginUser').text(msg["callerId"]);				
+//			}
 
 			$(escapeId(msg["id"])+":hidden").slideDown();
 
@@ -154,19 +168,6 @@
 		});
 
 
-		function prettyCallerId( callerId, callerIdName)
-		{
-			var txt="";
-			if (callerId!="")
-				txt=txt+callerId;
-			else
-				txt="(unknown number)";
-
-			if (callerIdName!="")
-				txt=txt+" '"+callerIdName+"'";
-
-			return txt;					
-		}
 
 
  		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
@@ -264,7 +265,7 @@
 
 			//update active call list
  			$("#activeCallList "+escapeClass(msg["id"])+" .channelInfo").html(
- 		 		$(escapeId(msg["deviceId"]) + " .deviceInfo").html() + " ... "+callerInfo
+ 		 		prettyCallerId(msg["deviceCallerId"], msg["deviceCallerIdName"]) + " ... "+callerInfo
  		 	);
 
 			///////////////////// Stuff for all channels
