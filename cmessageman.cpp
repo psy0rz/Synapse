@@ -352,7 +352,7 @@ void CmessageMan::operator()()
 			(*error).dst=callI->msg->src;
 			(*error).src=callI->dst->id;
 			(*error)["event"]=callI->msg->event;
-			(*error)["description"]="I/O error: " + string(e.what());
+			(*error)["description"]="I/O error: " + string(strerror(errno));
 			(*error)["parameters"]=(*callI->msg);
 			sendMessage(callI->dst->module, error);
 		}

@@ -899,7 +899,7 @@ namespace asterisk
 	{
 		using synapse::Cconfig;
 		Cconfig config;
-		config.load("etc/asterisk.conf");
+		config.load("etc/synapse/asterisk.conf");
 
 		//delete servers that have been changed or removed from the config
 		for (CserverMap::iterator serverI=serverMap.begin(); serverI!=serverMap.end(); serverI++)
