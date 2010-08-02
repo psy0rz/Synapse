@@ -169,7 +169,3 @@ SYNAPSE_REGISTER(asterisk_delChannel)
 	updateMarquee();
 }
 
-SYNAPSE_REGISTER(net_Ready)
-{
-
-}

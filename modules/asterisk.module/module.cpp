@@ -478,10 +478,34 @@ namespace asterisk
 		{
 			if (devicePtr!=this->devicePtr)
 			{
+				if (
+						//device disappeared somehow?
+						(this->devicePtr && devicePtr) ||
+						//or channel moved to other device?
+						(this->devicePtr && devicePtr && this->devicePtr->getGroupPtr()!=devicePtr->getGroupPtr())
+				)
+				{
+					//the channel is moving to another group.
+					//send a delete to the group of the current device:
+					//(otherwise the people in the current group wont see the delChannel lateron)
+					if (this->devicePtr->getGroupPtr())
+					{
+						Cmsg out;
+						out.event="asterisk_delChannel";
+						out.dst=0;
+						out["id"]=id;
+						if (this->devicePtr!=NULL)
+						{
+							out["deviceId"]=this->devicePtr->getId();
+						}
+						this->devicePtr->getGroupPtr()->send(sessionMap,out);
+					}
+				}
+
+				//store the new device
 				this->devicePtr=devicePtr;
 				changes++;
 			}
-
 		}
 
 		void setId(string id)
