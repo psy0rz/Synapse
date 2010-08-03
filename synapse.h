@@ -90,15 +90,19 @@ string Cmsg::send(int cookie)
  */
 void Cmsg::returnError(string description)
 {
-	ERROR("while handling " << event << ": " << description);
-	Cmsg error;
-	error.event="module_Error";
-	error.dst=src;
-	error.src=dst;
-	error["event"]=event;
-	error["description"]=description;
-	error["parameters"]=*this;
-	error.send();
+	if (description!="")
+	{
+
+		ERROR("while handling " << event << ": " << description);
+		Cmsg error;
+		error.event="module_Error";
+		error.dst=src;
+		error.src=dst;
+		error["event"]=event;
+		error["description"]=description;
+		error["parameters"]=*this;
+		error.send();
+	}
 }
 
 bool Cmsg::returnIfOtherThan(char * keys, ...)

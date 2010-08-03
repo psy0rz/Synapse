@@ -4,7 +4,7 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-	<title>Synapse realtime chat demo</title>
+	<title>Synapse pong demo</title>
 
 	<script type="text/javascript" src="synapse.js"></script>
 
@@ -12,118 +12,49 @@
 
 
 		/// SYNAPSE EVENT HANDLERS
-		synapse_register("error",function(errortxt)
-		{
-			$('#error').html(errortxt);
-		});	
+
+ 		synapse_register("pong_GameStatus",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			if ($("#gameList #"+msg["id"]).length==0)
+			{
+				//add to gamelist
+				html="<div class='game' id='"+msg["id"]+"'>";
+				html+="</div>";
+				$('#gameList').append(html);
+			}
+			
+			$("#gameList #"+msg["id"]).html(
+					"Game of " + msg["name"]  + " (game id " +msg["id"] + ")"
+					);
 				
- 		synapse_register("module_Error",function(msg_src, msg_dst, msg_event, msg)
- 		{
- 			$('#error').html(msg["description"]);
- 		});
-
-		function getColor(s)
-		{
-			return (s % 11);
-		}
-
-		//render the html of the nicklist, from the nicks-array.
-		function renderNickList()
-		{
-			//render nick overview
-			var s=String();
-			for (var nickI in nicks)
-			{
-				s=s+"<tr><td class='color"+getColor(nickI.substr(1))+"'>"+nicks[nickI]["nick"];
-				if (nicks[nickI]["enter"]==1)
-					s=s+"<td class='entered'>";
-				else
-					s=s+"<td>";
-	
-				s=s+nicks[nickI]["text"]+"</tr>";
-			}
-			$('#chatTyping').html(s);
-		}
-
-		//we've received chat text from other people
-		//(and ourself)
- 		synapse_register("chat_Text",function(msg_src, msg_dst, msg_event, msg)
- 		{
-			msg["nick"]=msg["nick"].replace("<", "&lt;");
-			msg["text"]=msg["text"].replace("<", "&lt;");
-
-			nicks["n"+msg_src]={
-				"nick": msg["nick"],
-				"text": msg["text"],
-				"enter": msg["enter"]
-			};
-
-			renderNickList();			
-
-			//add to chat 
-			if (msg["enter"] == "1")
-			{
-				$('#chatLines').append("&lt;<span class='color"+getColor(msg_src)+"'>"+msg["nick"]+"</span>&gt; "+msg["text"]+"<br>");
-				$('#chatBox').scrollTop(1000000);				
-			}
-
 		});
 
-		//on start, we broadcast a poll to the other clients to get the initial nicklist:
+		synapse_register("pong_GameDeleted",function(msg_src, msg_dst, msg_event, msg)
+		{	
+					
+		});
+
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
-			send(0,"chat_Poll", { 
+			send(0,"pong_GetGames", { 
 			});
-		});
-
-		//someone is requesting a poll, respond with a normal chat_Text event.
- 		synapse_register("chat_Poll",function(msg_src, msg_dst, msg_event, msg)
- 		{
-			send(msg_src,"chat_Text", { 
-				"text": $('#text').val(),
-				"nick": $('#nick').val(),
-			});
-		});
-
-		//a session has ended.. remove it from the nicklist
- 		synapse_register("module_SessionEnded",function(msg_src, msg_dst, msg_event, msg)
- 		{
-			//remove
-			delete nicks["n"+msg["session"]];
-			renderNickList();
 		});
 
 
 		/// JAVA SCRIPT EVENT HANDLERS
 		$(document).ready(function(){
-	
-			nicks=new Array();
-			lines=new Array();
-
-			function sendinput(event)
-			{
-
-				//pressed enter
-				if (event.which==13)
-				{
-					send(0,"chat_Text", { 
-						"text": $('#text').val(),
-						"nick": $('#nick').val(),
-						"enter": 1
+			$("#newGame").click(function()
+					{
+						send(0,"pong_NewGame", {
+								"name":$("#name").val()
+							});
 					});
-					$('#text').val("");
-				}
-				else
-				{
-					send(0,"chat_Text", { 
-						"text": $('#text').val(),
-						"nick": $('#nick').val(),
+			$("#getGames").click(function()
+					{
+						$('.game').remove();
+						send(0,"pong_GetGames", {});
 					});
-				}
-			}
-
-			$('#text').keyup(sendinput);
-			$('#nick').keyup(sendinput);
+			
 
 		});
 
@@ -138,10 +69,7 @@
 			height:100%;
 		} 
 
-		.entered
-		{
-			color: #aaaaaa;
-		}
+
 		.color1  { color: #ff0000; } 
 		.color2  { color: #00ff00; } 
 		.color3  { color: #0000ff; } 
@@ -153,68 +81,50 @@
 		.color9  { color: #aa00aa; } 
 		.color10 { color: #aa00ff; } 
 
-		#chatLines
-		{
-		}
-
-		#nickListBox
+		#gameManager
 		{
 			position:absolute; 
 			left:0;
-			bottom: 0;
-			width: 100%;
-			border-style:solid;
-		}
-
-		#chatBox
-		{
-			overflow:scroll;
-			position:absolute; 
-			left:0%;
 			top: 0;
-			width: 100%;
-			height: 50%;
+			width: 20em;
+			bottom:0;
 			border-style:solid;
 		}
 
-		#InputBox
+		#gameField
 		{
 			position:absolute; 
-			left:0;
-			top: 50%;
-			width:100%;
+			left:20em;
+			top: 0;
+			right: 0;
+			bottom:0;
 			border-style:solid;
 		}
-
-
+		
 	</style>
 
 </head>
 
 
-<body>
+<body class='ui-widget'>
 	<p>
 
-	<div id='chatBox'>
-		<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
-		<div id='chatLines'>
-		</div>
+	<div class='ui-widget-content' id='gameManager'>
+		<div class='ui-widget-header'>Your name:</div>
+		<input id='name' type='text' value=''>
+
+		<div class='ui-widget-header'>Available games:</div>
+		<div id='gameList'></div>
+		<input id='newGame' type='submit' value='New game'>
+		<input id='getGames' type='submit' value='Refresh...'>
 	</div>
 
 
-	<div id='InputBox'>
-		Nick: <input type='text' id='nick' size=15 maxlength=15>
-		Chat: <input type='text' id='text' size=50 maxlength=200 witdh=100%>
-	</div>
 
 
-	<div id='chatInputBox'>
+	<div id='gameField'>
 	</div>
 
-	<div id='nickListBox'>
-		<table id='chatTyping'>
-		</table>
-	</div>
 
 	
 </body>
