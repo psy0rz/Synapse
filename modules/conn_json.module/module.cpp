@@ -186,6 +186,10 @@ class CnetModule : public synapse::Cnet
 								sessionRemoteToLocalSrc[out.src]=sessionId;
 								sessionLocalToRemoteDst[sessionId]=out.src;
 
+								stringstream s;
+								s << "Session mapping from " << out.src << "@" << tcpSocket.remote_endpoint().address() << ":" << tcpSocket.remote_endpoint().port();
+								newSession->description=s.str();
+
 								//now actually map it:
 								out.src=sessionId;
 							}

@@ -270,7 +270,7 @@ string CuserMan::getStatusStr()
 	{
 		if (sessions[sessionId])
 		{
-			s << "session " << sessionId << " = " << sessions[sessionId]->user->getName() << "@" << sessions[sessionId]->module->name << "\n";
+			s << "session " << sessionId << " = " << sessions[sessionId]->user->getName() << "@" << sessions[sessionId]->module->name << ": " << sessions[sessionId]->description << "\n";
 		}
 	}
 	return (s.str());

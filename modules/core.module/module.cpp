@@ -500,6 +500,7 @@ SYNAPSE_REGISTER(core_Login)
 \par Sends \c module_SessionStart:
 	to the new session, within the same module. This is to let the module know about its new session.
 		\arg \c username Username of the session
+		\arg \c description (optional) description of the session, usefull for debugging and administration.
 		\arg \c (other parameters) Contains all specified arguments. (without password)
 
 \par Broadcasts \c module_SessionStarted:
@@ -538,6 +539,8 @@ SYNAPSE_REGISTER(core_NewSession)
 					if (msg.isSet("maxThreads") && msg["maxThreads"] > 0)
 						messageMan->setSessionThreads(newSession, msg["maxThreads"]);
 	
+					newSession->description=msg["description"].str();
+
 					//send startmessage to the new session, copy all parameters.
 					startmsg=msg;
 					if (startmsg.isSet("password"))

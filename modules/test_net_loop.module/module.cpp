@@ -61,6 +61,7 @@ SYNAPSE_REGISTER(net_Ready)
 		out.clear();
 		out.event="core_NewSession";
 		out["pars"]["mode"]="accept";
+		out["description"]="test acceptor";
 		out.send();
 	};
 
@@ -73,6 +74,7 @@ SYNAPSE_REGISTER(net_Ready)
 		out.clear();
 		out.event="core_NewSession";
 		out["pars"]["mode"]="connect";
+		out["description"]="test connector";
 		out.send();
 	};
 

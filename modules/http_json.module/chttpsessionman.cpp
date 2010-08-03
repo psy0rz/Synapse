@@ -104,6 +104,7 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
 	//Request a new session from core...
 	Cmsg out;
 	out.event="core_NewSession";
+	out["description"]="http_json session";
 
 	//Should we try to clone the credentials from a previous authCookie?
 	ChttpSessionMap::iterator httpSessionI=findSessionByCookie(	authCookieClone);

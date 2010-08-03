@@ -96,6 +96,7 @@ SYNAPSE_REGISTER(net_Ready)
 	{
 		out.clear();
 		out.event="core_NewSession";
+		out["description"]="Test connection";
 		out.send();
 	};
 

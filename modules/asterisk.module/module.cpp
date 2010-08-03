@@ -982,6 +982,7 @@ namespace asterisk
 			out.event="core_NewSession";
 			out["server"]=configI->second;
 			out["server"]["id"]=configI->first;
+			out["description"]="asterisk-ami connection session.";
 			out.send();
 		}
 	}

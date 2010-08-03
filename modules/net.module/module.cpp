@@ -47,6 +47,7 @@ SYNAPSE_REGISTER(module_Init)
 	out.clear();
 	out.event="core_NewSession";
 	out["maxThreads"]=1;
+	out["description"]="Data sender for net module.";
 	out.send();
 
 }
