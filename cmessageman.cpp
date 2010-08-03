@@ -22,6 +22,9 @@
 #include <boost/foreach.hpp>
 #include "cevent.h"
 #include <string.h>
+#include <map>
+#include <set>
+
 
 namespace synapse
 {
@@ -190,6 +193,8 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 		//TODO:optimize these broadcasting algoritms
 		CsessionPtr dst;
 		bool delivered=false;
+		static map <string,set<int> > sendedToCookie; //static for performance reasons.
+		sendedToCookie.clear();
 		for (int sessionId=0; sessionId<MAX_SESSIONS; sessionId++)
 		{
 			dst=userMan.getSession(sessionId);
@@ -201,7 +206,10 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 				{
 					//modules always receive the event on the defaultsession 
 					//OR on all sessions when broadcastMulti is true
-					if (dst->module->defaultSessionId==sessionId || dst->module->broadcastMulti)
+					//OR send it to each uniq cookie. (more difficult and slow since we have to keep a list)
+					if (dst->module->defaultSessionId==sessionId || dst->module->broadcastMulti ||
+						( dst->module->broadcastCookie && sendedToCookie[dst->module->name].find(dst->cookie) == sendedToCookie[dst->module->name].end())
+					)
 					{
 						//get the handler, and does it exist?
 						soHandler=dst->module->getHandler(msg->event);
@@ -214,6 +222,8 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 							callMan.addCall(msg, dst, soHandler);
 							threadCond.notify_one();
 							delivered=true;
+							sendedToCookie[dst->module->name].insert(dst->cookie);
+
 						}
 					}
 				}

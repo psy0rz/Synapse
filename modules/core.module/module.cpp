@@ -738,7 +738,8 @@ SYNAPSE_REGISTER(core_DelCookieSessions)
 
 /** Changes the settings of the \c src module.
 	\param maxThreads (optional) The maximum number of threads for the module. (default 1, e.g. single threaded)
-	\param broadcastMulti (optional) Deliver broadcasts to every session specific, instead of only to the default session of the module.
+	\param broadcastMulti (optional) Set to 1 to deliver broadcasts to every session specific, instead of only to the default session of the module.
+	\param broadcastCookie (optional) Set to 1 to deliver broadcasts to every uniq session-cookie specific, instead of only to the default session of the module.
 
 \post Settings have been changed.
 */
@@ -758,6 +759,9 @@ SYNAPSE_REGISTER(core_ChangeModule)
 
 			if (msg.isSet("broadcastMulti"))
 				session->module->broadcastMulti=msg["broadcastMulti"];	
+
+			if (msg.isSet("broadcastCookie"))
+				session->module->broadcastCookie=msg["broadcastCookie"];
 		}
 	}
 	if (error!="")

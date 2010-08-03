@@ -66,7 +66,8 @@ public:
 	bool unload();
 	int maxThreads;
 	int currentThreads;
-	bool broadcastMulti;
+	bool broadcastMulti; //send broadcasts to all sessions of every module, instead to the default session only
+	bool broadcastCookie;//send broadcasts to each uniq session cookie
 	int defaultSessionId;
 	string name;
 	string path;

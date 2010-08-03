@@ -54,7 +54,7 @@ public:
 	CuserPtr user;
 	CmodulePtr module;
 	int	id;
-	int cookie; //random value, set by module for internal use
+	int cookie; //arbitrary value, set by module for internal use
 	int maxThreads;
 	int currentThreads;
 

@@ -18,6 +18,7 @@ SYNAPSE_REGISTER(module_Init)
 	out.clear();
 	out.event="core_ChangeModule";
 	out["maxThreads"]=100;
+	out["broadcastCookie"]=1;
 	out.send();
 
 	out.clear();
@@ -59,24 +60,29 @@ class CnetModule : public synapse::Cnet
 	public:
 	void sendMessage(Cmsg & msg)
 	{
-		//does a mapping exist yet?
-		CnetModule::CsessionMapping::iterator sessionMappingI;
-		sessionMappingI=sessionLocalToRemoteDst.find(msg.dst);
-		if (sessionMappingI!=sessionLocalToRemoteDst.end())
+		//if its not a broadcast, map it
+		if (msg.dst)
 		{
-			//yes, so map it
-			msg.dst=sessionMappingI->second;
-		}
-		else
-		{
-			ERROR("conn_json: trying to send message to network connection " << id << " and msg.dst " << msg.dst << ", but i can not find a session-mapping for this destination.");
-			return;
+			//does a mapping exist?
+			CnetModule::CsessionMapping::iterator sessionMappingI;
+			sessionMappingI=sessionLocalToRemoteDst.find(msg.dst);
+			if (sessionMappingI!=sessionLocalToRemoteDst.end())
+			{
+				//yes, so map it
+				msg.dst=sessionMappingI->second;
+			}
+			else
+			{
+				ERROR("conn_json: trying to send message to network connection " << id << " and msg.dst " << msg.dst << ", but i can not find a session-mapping for this destination.");
+				return;
+			}
 		}
 
-		//now that the destination is succesfully mapped, send it:
+		//now send it over the network connection:
 		string msgStr;
 		msg.toJson(msgStr);
 		msgStr+="\n";
+		//TODO: we can optimize this with a direct syncronious write?
 		doWrite(msgStr);
 	}
 
@@ -231,40 +237,20 @@ class CnetModule : public synapse::Cnet
 
 synapse::CnetMan<CnetModule> net;
 
-void sendToNetId(int id, Cmsg & msg)
-{
-	//if its for a specific network connection, just map it and write it
-	if (id)
-	{
-		//accessing the net-object directly, so lock it:
-		lock_guard<mutex> lock(net.threadMutex);
-
-		synapse::CnetMan<CnetModule>::CnetMap::iterator netI;
-		netI=net.nets.find(id);
-		if (netI!=net.nets.end())
-		{
-			//found the net object, pass the message on the the netobject and let it decide that to do with it.
-			//We need to post it, since the net-object gets called by the ioservice thread, so there is no other safe way to call it:
-			netI->second->ioService.post(bind(&CnetModule::sendMessage,netI->second, msg));
-		}
-		else
-		{
-			ERROR("conn_json: trying to send message to non-existant network connection with id " << id);
-			return ;
-		}
-	}
-	else if (!id && msg.dst==0)
-	{
-		//no specific id, and its a broadcast?
-		//send it to all net objects:
-		lock_guard<mutex> lock(net.threadMutex);
-
-		for (synapse::CnetMan<CnetModule>::CnetMap::iterator netI=net.nets.begin(); netI!=net.nets.end(); netI++)
-		{
-			netI->second->ioService.post(bind(&CnetModule::sendMessage,netI->second, msg));
-		}
-	}
-}
+//void sendToNetId(int id, Cmsg & msg)
+//{
+//	else if (!id && msg.dst==0)
+//	{
+//		//no specific id, and its a broadcast?
+//		//send it to all net objects:
+//		lock_guard<mutex> lock(net.threadMutex);
+//
+//		for (synapse::CnetMan<CnetModule>::CnetMap::iterator netI=net.nets.begin(); netI!=net.nets.end(); netI++)
+//		{
+//			netI->second->ioService.post(bind(&CnetModule::sendMessage,netI->second, msg));
+//		}
+//	}
+//}
 
 
 
@@ -332,7 +318,26 @@ SYNAPSE_REGISTER(module_Shutdown)
  */
 SYNAPSE_HANDLER(all)
 {
-	sendToNetId(cookie,msg);
+	//if its for a specific network connection, send it to the correct net-object for furhter processing.
+	if (cookie)
+	{
+		//accessing the net-object directly, so lock it:
+		lock_guard<mutex> lock(net.threadMutex);
+
+		synapse::CnetMan<CnetModule>::CnetMap::iterator netI;
+		netI=net.nets.find(cookie);
+		if (netI!=net.nets.end())
+		{
+			//found the net object, pass the message on the the netobject and let it decide that to do with it.
+			//We need to post it, since the net-object gets called by the ioservice thread, so there is no other safe way to call it:
+			netI->second->ioService.post(bind(&CnetModule::sendMessage,netI->second, msg));
+		}
+		else
+		{
+			ERROR("conn_json: trying to send message to non-existant network connection with id " << cookie);
+			return ;
+		}
+	}
 }
 
 

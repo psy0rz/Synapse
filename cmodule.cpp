@@ -24,6 +24,7 @@ Cmodule::Cmodule()
 	maxThreads=1;
 	currentThreads=0;
 	broadcastMulti=false;
+	broadcastCookie=false;
 	soHandle=NULL;
 	defaultSessionId=SESSION_DISABLED;
 	soDefaultHandler=NULL;
