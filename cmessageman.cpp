@@ -547,6 +547,7 @@ CsessionPtr CmessageMan::loadModule(string path, string userName)
 			//we need a session for the init function of the core-module:
 			CsessionPtr session(new Csession(user,module));
 			module->defaultSessionId=userMan.addSession(session);
+			session->description="module default session.";
 
 			DEB("Init module " << module->name);
 			if (module->soInit(this ,module))
