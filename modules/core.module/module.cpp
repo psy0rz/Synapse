@@ -531,7 +531,7 @@ SYNAPSE_REGISTER(core_NewSession)
 				if (error!="")
 				{
 					//login failed, delete session again
-					messageMan->userMan.delSession(msg.src);
+					messageMan->userMan.delSession(sessionId);
 				}
 				{
 					//set max threads?

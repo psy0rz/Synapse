@@ -15,11 +15,9 @@ SYNAPSE_REGISTER(module_Init)
 	moduleSessionId=msg.dst;
 
 	//change module settings. 
-	//especially broadcastMulti is important for our "all"-handler
 	out.clear();
 	out.event="core_ChangeModule";
 	out["maxThreads"]=100;
-	out["broadcastMulti"]=1;
 	out.send();
 
 	out.clear();
@@ -41,7 +39,6 @@ SYNAPSE_REGISTER(module_Init)
 
 }
 
-void writeMessage(int id, Cmsg & msg);
 
 
 // We extent the Cnet class with our own network handlers.
@@ -50,13 +47,52 @@ void writeMessage(int id, Cmsg & msg);
 // This stuff basically runs as anonymous, until a user uses core_login to change the user.
 class CnetModule : public synapse::Cnet
 {
+	public:
+	typedef map<int,int> CsessionMapping;
+	//both lists are identical but reversed, just for peformance reasons.
+	CsessionMapping sessionRemoteToLocalSrc;
+	CsessionMapping sessionLocalToRemoteDst;
+	string username;
+	string password;
 
+
+	public:
+	void sendMessage(Cmsg & msg)
+	{
+		//does a mapping exist yet?
+		CnetModule::CsessionMapping::iterator sessionMappingI;
+		sessionMappingI=sessionLocalToRemoteDst.find(msg.dst);
+		if (sessionMappingI!=sessionLocalToRemoteDst.end())
+		{
+			//yes, so map it
+			msg.dst=sessionMappingI->second;
+		}
+		else
+		{
+			ERROR("conn_json: trying to send message to network connection " << id << " and msg.dst " << msg.dst << ", but i can not find a session-mapping for this destination.");
+			return;
+		}
+
+		//now that the destination is succesfully mapped, send it:
+		string msgStr;
+		msg.toJson(msgStr);
+		msgStr+="\n";
+		doWrite(msgStr);
+	}
+
+
+	private:
 
 	/** Server connection 'id' is established.
 	*/
  	void connected_server(int id, const string &host, int port, int local_port)
 	{
 		Cmsg out;
+
+		//FIXME: TEMPORARY HACK
+		username="psy";
+		password="as";
+
 
 		//fireoff a new acceptor thread, to accept future connections.
 		out.clear();
@@ -67,13 +103,13 @@ class CnetModule : public synapse::Cnet
 
 
  		//someone has connecting us, create a new session initial session for this connection
-		out.clear();
-		out.dst=0;
-		out.event="core_NewSession";
-		out["synapse_cookie"]=id;
-		out["username"]="anonymous";
-		out["password"]="anonymous";
-		out.send();
+//		out.clear();
+//		out.dst=0;
+//		out.event="core_NewSession";
+//		out["synapse_cookie"]=id;
+//		out["username"]="anonymous";
+//		out["password"]="anonymous";
+//		out.send();
 
 	}
 
@@ -93,28 +129,77 @@ class CnetModule : public synapse::Cnet
 			Cmsg errMsg;
 			errMsg["description"]=s.str();
 			errMsg.event="error";
-			writeMessage(id,errMsg);
+			sendMessage(errMsg);
 		}
 		else
 		{
 			try
 			{
+				string error;
+
 				//parse it
 				out.fromJson(dataStr);
 
-				//if its requesting a new session, make sure the correct cookie is sended along:
-				if (out.event=="core_NewSession")
+				//map the remote session to a local session:
+				//do we already have a mapping for this one?
+				CsessionMapping::iterator sessionMappingI;
+				sessionMappingI=sessionRemoteToLocalSrc.find(out.src);
+				if (sessionMappingI!=sessionRemoteToLocalSrc.end())
 				{
-					out["synapse_cookie"]=id;
+					//found it, so just map it
+					out.src=sessionMappingI->second;
 				}
-				//send it and handle send errors
-				string error=out.send(id);
+				else
+				{
+					//no mapping yet: create a new session mapping on the fly, by approaching the core directly!
+					//(normally this would be considered a hack, but for the special case of connector-modules its ok i think)
+					lock_guard<mutex> lock(synapse::messageMan->threadMutex);
+					synapse::CsessionPtr session=synapse::messageMan->userMan.getSession(moduleSessionId);
+					if (!session)
+						error="BUG: conn_json cant find module session.";
+					else
+					{
+						//create the session, and use the netId as cookie.
+						synapse::CsessionPtr newSession=synapse::CsessionPtr(new synapse::Csession(session->user,session->module,id));
+						int sessionId=synapse::messageMan->userMan.addSession(newSession);
+						if (sessionId==SESSION_DISABLED)
+							error="cant create new session";
+						else
+						{
+							//login with the supplied username/password
+							error=synapse::messageMan->userMan.login(sessionId, username, password);
+
+							if (error!="")
+							{
+								//login failed, delete session again
+								synapse::messageMan->userMan.delSession(sessionId);
+							}
+							else
+							{
+								//new session + login succeeded, add to our mapping tables
+								sessionRemoteToLocalSrc[out.src]=sessionId;
+								sessionLocalToRemoteDst[sessionId]=out.src;
+
+								//now actually map it:
+								out.src=sessionId;
+							}
+						}
+					}
+				}
+
+				//if nothing went wrong, send the session-mapped message:
+				if (error=="")
+				{
+					error=out.send(id);
+				}
+
+				//something went wrong?
 				if (error!="")
 				{
 					Cmsg errMsg;
 					errMsg["description"]=error;
 					errMsg.event="error";
-					writeMessage(id,errMsg);
+					sendMessage(errMsg);
 				}
 			}
 			catch(std::exception& e)
@@ -122,13 +207,14 @@ class CnetModule : public synapse::Cnet
 				Cmsg errMsg;
 				errMsg["description"]=string(e.what());
 				errMsg.event="error";
-				writeMessage(id,errMsg);
+				sendMessage(errMsg);
 			}
 		}
 		//cant we do this right away, before parsing ?
 		readBuffer.consume(dataStr.length());
 
 	}
+
 
 	/** Connection 'id' is disconnected, or a connect-attempt has failed.
 	* Sends: conn_Disconnected
@@ -145,12 +231,39 @@ class CnetModule : public synapse::Cnet
 
 synapse::CnetMan<CnetModule> net;
 
-void writeMessage(int id, Cmsg & msg)
+void sendToNetId(int id, Cmsg & msg)
 {
-	string msgStr;
-	msg.toJson(msgStr);
-	msgStr+="\n";
-	net.doWrite(id,msgStr);
+	//if its for a specific network connection, just map it and write it
+	if (id)
+	{
+		//accessing the net-object directly, so lock it:
+		lock_guard<mutex> lock(net.threadMutex);
+
+		synapse::CnetMan<CnetModule>::CnetMap::iterator netI;
+		netI=net.nets.find(id);
+		if (netI!=net.nets.end())
+		{
+			//found the net object, pass the message on the the netobject and let it decide that to do with it.
+			//We need to post it, since the net-object gets called by the ioservice thread, so there is no other safe way to call it:
+			netI->second->ioService.post(bind(&CnetModule::sendMessage,netI->second, msg));
+		}
+		else
+		{
+			ERROR("conn_json: trying to send message to non-existant network connection with id " << id);
+			return ;
+		}
+	}
+	else if (!id && msg.dst==0)
+	{
+		//no specific id, and its a broadcast?
+		//send it to all net objects:
+		lock_guard<mutex> lock(net.threadMutex);
+
+		for (synapse::CnetMan<CnetModule>::CnetMap::iterator netI=net.nets.begin(); netI!=net.nets.end(); netI++)
+		{
+			netI->second->ioService.post(bind(&CnetModule::sendMessage,netI->second, msg));
+		}
+	}
 }
 
 
@@ -219,9 +332,7 @@ SYNAPSE_REGISTER(module_Shutdown)
  */
 SYNAPSE_HANDLER(all)
 {
-	msg.dst=dst;
-	if (cookie)
-		writeMessage(cookie,msg);
+	sendToNetId(cookie,msg);
 }
 
 
