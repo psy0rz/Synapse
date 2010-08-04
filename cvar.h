@@ -42,6 +42,7 @@ namespace synapse
 	class Cvar {
 	public:
 		typedef CvarMap::iterator iterator;
+		typedef CvarList::iterator iteratorList;
 
 		//common stuff
 		int which();

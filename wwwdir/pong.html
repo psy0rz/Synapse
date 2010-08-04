@@ -10,6 +10,9 @@
 
 	<script type="text/javascript">
 
+		//this is the class to store position information in.
+		//position information is always a combination of x,y coordinates and x,y speed.
+		//In combination with timing we can calculate the predicted position.
 		function Cposition() {
 			this.x=0;
 			this.y=0;
@@ -65,110 +68,93 @@
 		var mouseY=0;
 		var mouseXold=0; //mouse position, speed and time during last snapshot
 		var mouseYold=0;
-//		var mouseXspeedOld=1000; //to trigger the first update
-//		var mouseYspeedOld=1000;
 		var mouseTime=new Date().getTime();
 		var mousePosition=new Cposition();
 		
-		var mouseSkip=0;
-		
 		var ballPosition=new Cposition();
 
+		var padPositions=new Array();
 		
 		function updateGameField()
 		{
-			mouseSkip++;
-			//if (mouseSkip)
+			var currentTime=new Date().getTime();
+
+
+			//////////////////////////////// Mouse movement stuff
+			//our mouse motion prediction is off by too much?
+			m=mousePosition.get();
+			if (
+					Math.abs(m.x-mouseX) > 10 ||
+					Math.abs(m.y-mouseY) > 10||
+					( mouseX==mouseXold && mousePosition.xSpeed!=0) ||	
+					( mouseY==mouseYold && mousePosition.ySpeed!=0) 	
+				)
 			{
-				var currentTime=new Date().getTime();
+				//determine current direction and speed
+				var mouseXspeed=(mouseX-mouseXold)*1000/(currentTime-mouseTime);
+				var mouseYspeed=(mouseY-mouseYold)*1000/(currentTime-mouseTime);
 
-				//our mouse motion prediction is off by too much?
-				m=mousePosition.get();
+				//store it in the motion predictor
+				mousePosition.set(mouseX, mouseY, mouseXspeed, mouseYspeed);
 
-				
-				if (
-						Math.abs(m.x-mouseX) > 10 ||
-						Math.abs(m.y-mouseY) > 10||
-						( mouseX==mouseXold && mousePosition.xSpeed!=0) ||	
-						( mouseY==mouseYold && mousePosition.ySpeed!=0) 	
-					)
-				{
-					//determine current direction and speed
-					var mouseXspeed=(mouseX-mouseXold)*1000/(currentTime-mouseTime);
-					var mouseYspeed=(mouseY-mouseYold)*1000/(currentTime-mouseTime);
+				//convert it and send to server, so other clients can predict our position as well.
+				pos=browser2game(mouseX, mouseY);
+				speed=browser2game(mouseX, mouseY);
+				send(0,"pong_SetPosition", [pos.x, pos.y, speed.x, speed.y] );
+	
+			}
 
-					//store it in the motion predictor
-					mousePosition.set(mouseX, mouseY, mouseXspeed, mouseYspeed);
-					
-					console.info("MISS", mouseXspeed, mouseYspeed);
-					
-					mouseSkip=0;
-
-					//use set values
-					$(".pad").css('left',mouseX).css('top',mouseY);
-
-				}
-				else
-				{
-					//use predicted values
-					$(".pad").css('left',m.x).css('top',m.y);
-					console.info("HIT");
-				}
-
-				
-				mouseXold=mouseX;
-				mouseYold=mouseY;
-				mouseTime=currentTime;
+			//update local pad?
+			if (mouseX!=mouseXold || mouseY!=mouseYold)
+			{
+				$(".padLocal").css('left',mouseX).css('top',mouseY);
 				
 			}
 			
-			
-			var ball=ballPosition.get();
-			//convert coordinates to browser coordinates and update ball position:
-			bpos=game2browser(ball.x, ball.y);
-			$(".ball").css('left',bpos.x).css('top',bpos.y);
+			mouseXold=mouseX;
+			mouseYold=mouseY;
+			mouseTime=currentTime;
+				
+			///////////////////////////////////// Ball and pad movements 
+
+			//move ball:
+			var pos=ballPosition.get();
+			$(".ball").css('left',pos.x).css('top',pos.y);
 		};
 
-
-		synapse_register("pong_RunStep",function(msg_src, msg_dst, msg_event, msg)
-				{	
-					//ball xy
-					ballPosition.set(msg[0], msg[1], msg[2],msg[3]);
-
-					return;
-
-					i=2;
-					while(i<msg.length)
-					{
-						var id=msg[i+0];
-						var x=Math.round((msg[i+1]*$("#gameField").width())/10000);
-						var y=Math.round((msg[i+2]*$("#gameField").height())/10000);
-
-						
-						var object=$("#gameField #"+id);
-						if (object.length==0)
-						{
-							//add pad
-							$("#gameField").append("<div class='pad' id='" + id + "'></div>");
-							object=$("#gameField #"+id);
-						}
-						
-						object.css('left',x).css('top',y);
-						i=i+3;
-					}
-
-					if (myXYchanged && currentGameId)
-					{
-						//the field is always 10000x10000 pixels.
-						send(0,"pong_SetPosition", {
-							"id":currentGameId,
-							"x":Math.round((myX * 10000) / $("#gameField").width()),
-							"y":Math.round((myY * 10000) / $("#gameField").height())							
-						});
-						myXYchanged=false;
-					}
-
-				});
+		//here is where we receive the positions of the ball and pads from the server.
+		//We just store the information in Cposition objects. The actual calculation and drawing is done in UpdateGameField().
+		synapse_register("pong_Positions",function(msg_src, msg_dst, msg_event, msg)
+		{	
+			//(positions are in a plain array for speed optimisation)
+			
+			//the ball is always first and has id 0
+			if (msg[0]==0)
+			{
+				//ball xy
+				pos=game2browser(msg[1], msg[2]);
+				speed=game2browser(msg[3], msg[4]);				
+				ballPosition.set(pos.x, pos.y, speed.x, speed.y);
+				i=5;
+			}
+			else
+			{
+				i=0
+			}
+			
+			while(i<msg.length)
+			{
+				id=msg[i];
+				if (padPositions[id]==undefined)
+				{
+					padPositions[id]=new Cposition();
+				}
+				pos=game2browser(msg[i+1], msg[i+2]);
+				speed=game2browser(msg[i+3], msg[i+4]);				
+				padPositions[id].set(pos.x, pos.y, speed.x, speed.y);
+				i=i+5;		
+			}
+		});
 
 
 		
@@ -352,7 +338,17 @@
 			top:1em;
 		}
 
-		.pad
+		.padLocal
+		{
+			position:absolute;
+			left:10%;
+			top:10%;
+			width:1%;
+			height:10%;
+			background-color:#ffffff;
+		}
+		
+		.padPlayer
 		{
 			position:absolute;
 			left:10%;
@@ -398,7 +394,7 @@
 		<div class='score' id='scoreLeft'>15</div>
 		<div class='score' id='scoreRight'>2</div>
 		<div class='ball'></div>		
-		<div class='pad'></div>		
+		<div class='padLocal'></div>		
 		
 	</div>
 

@@ -7,6 +7,7 @@ Used in combination with pong.html or any other frontend someone might come up w
 */
 #include "synapse.h"
 #include <time.h>
+#include <set>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 
@@ -58,7 +59,7 @@ namespace pong
 		out["event"]=	"pong_GameStatus";		out.send();
 		out["event"]=	"pong_GameDeleted";		out.send();
 		out["event"]=	"pong_GameJoined";		out.send();
-		out["event"]=	"pong_RunStep";			out.send();
+		out["event"]=	"pong_Positions";		out.send();
 
 		//start game engine
 		out.clear();
@@ -82,8 +83,14 @@ namespace pong
 		int xSpeed; //pixels per second
 		int ySpeed;
 		ptime startTime;
+		bool changed;
 
 		public:
+
+		bool isChanged()
+		{
+			return (changed);
+		}
 
 		Cposition()
 		{
@@ -96,6 +103,7 @@ namespace pong
 			this->y=y;
 			this->xSpeed=xSpeed;
 			this->ySpeed=ySpeed;
+			changed=true;
 			startTime=microsec_clock::local_time();
 		}
 
@@ -103,11 +111,11 @@ namespace pong
 		void get(int & currentX, int & currentY, int & currentXspeed, int & currentYspeed)
 		{
 			time_duration td=(microsec_clock::local_time()-startTime);
-
 			currentX=x+((xSpeed*td.total_nanoseconds())/1000000000);
 			currentY=y+((ySpeed*td.total_nanoseconds())/1000000000);
 			currentXspeed=xSpeed;
 			currentYspeed=ySpeed;
+			changed=false;
 		}
 	};
 
@@ -115,34 +123,20 @@ namespace pong
 	{
 		public:
 
-		int id; //session id
 		string name;
-		int x;
-		int y;
-		bool changed;
+		Cposition position;
 
 		Cplayer()
 		{
-			x=0;
-			y=0;
-			changed=true;
 		}
 
-		void setPosition(int x, int y)
-		{
-			if (this->x != x || this->y!=y)
-			{
-				this->x=x;
-				this->y=y;
-				changed=true;
-			}
-		}
 	};
+
+	typedef map<int,Cplayer> CplayerMap;
+	CplayerMap playerMap;
 
 	class Cpong
 	{
-		typedef map<int,Cplayer> CplayerMap;
-		CplayerMap playerMap;
 
 		int id;
 		string name;
@@ -153,6 +147,8 @@ namespace pong
 		int width;
 		int height;
 
+		typedef set<int> CplayerIds;
+		CplayerIds playerIds;
 
 		enum eStatus
 		{
@@ -186,9 +182,9 @@ namespace pong
 			out["id"]=id;
 			out["name"]=name;
 			out["status"]=status;
-			for (CplayerMap::iterator I=playerMap.begin(); I!=playerMap.end(); I++)
+			for (CplayerIds::iterator I=playerIds.begin(); I!=playerIds.end(); I++)
 			{
-				out["players"].list().push_back(I->second.name);
+				out["players"].list().push_back(playerMap[*I].name);
 			}
 			out.dst=dst;
 			out.send();
@@ -196,13 +192,15 @@ namespace pong
 
 		void addPlayer(int playerId, string name)
 		{
-			if (name=="")
-				throw(runtime_error("Please enter your name before joining."));
-
-			if (playerMap.find(playerId)== playerMap.end())
+			if (playerIds.find(playerId)== playerIds.end())
 			{
+				if (name=="")
+				{
+					throw(runtime_error("Please enter a name before joining the game."));
+				}
+
 				playerMap[playerId].name=name;
-				playerMap[playerId].id=playerId;
+				playerIds.insert(playerId);
 				sendStatus();
 				Cmsg out;
 				out.event="pong_GameJoined";
@@ -216,38 +214,16 @@ namespace pong
 			}
 		}
 
-		// Get a reference to a player or throw exception
-		Cplayer & getPlayer(int id)
-		{
-			if (playerMap.find(id)== playerMap.end())
-				throw(runtime_error("You're not in this game!"));
-
-			return (playerMap[id]);
-		}
-
-
-		void setPlayerPosition(int playerId, int x, int y)
-		{
-
-				getPlayer(playerId).setPosition(x,y);
-//			}
-//			catch(...)
-//			{
-//
-//			}
-		}
-
-
 		void delPlayer(int playerId)
 		{
-			if (playerMap.find(playerId)!= playerMap.end())
+			if (playerIds.find(playerId)!= playerIds.end())
 			{
-				playerMap.erase(playerId);
+				playerIds.erase(playerId);
 				sendStatus();
 			}
 
 			//last player deleted?
-			if (playerMap.empty())
+			if (playerIds.empty())
 			{
 				//self destruct this game
 				Cmsg out;
@@ -268,70 +244,96 @@ namespace pong
 		//runs the simulation one step, call this periodically
 		void runStep()
 		{
-			//do calculations:
-			int ballX,ballY,ballXspeed, ballYspeed;
-			bool bounced=false;
-			ballPosition.get(ballX,ballY, ballXspeed, ballYspeed);
-
-			//bounce the ball of the walls
-			if (ballX>width)
 			{
-				ballX=width-(ballX-width);
-				ballXspeed=ballXspeed*-1;
-				bounced=true;
-			}
-			else if (ballX<0)
-			{
-				ballX=ballX*-1;
-				ballXspeed=ballXspeed*-1;
-				bounced=true;
-			}
-			if (ballY>height)
-			{
-				ballY=height-(ballY-height);
-				ballYspeed=ballYspeed*-1;
-				bounced=true;
-			}
-			else if (ballY<0)
-			{
-				ballY=ballY*-1;
-				ballYspeed=ballYspeed*-1;
-				bounced=true;
-			}
+				//do calculations:
+				int ballX,ballY,ballXspeed, ballYspeed;
+				bool bounced=false;
+				ballPosition.get(ballX,ballY, ballXspeed, ballYspeed);
 
-			if (bounced)
-			{
-				ballPosition.set(ballX,ballY, ballXspeed, ballYspeed);
-
-
-				//send out data
-				Cmsg out;
-
-				out.event="pong_RunStep";
-				out.list().push_back(ballX);
-				out.list().push_back(ballY);
-				out.list().push_back(ballXspeed);
-				out.list().push_back(ballYspeed);
-
-				//collect all positions of all players:
-				for (CplayerMap::iterator I=playerMap.begin(); I!=playerMap.end(); I++)
+				//bounce the ball of the walls?
+				if (ballX>width)
 				{
-					//for efficiency sake, just send a array with a specified format:
-					if (I->second.changed)
-					{
-						out.list().push_back(I->second.id);
-						out.list().push_back(I->second.x);
-						out.list().push_back(I->second.y);
-						I->second.changed=false;
-					}
+					ballX=width-(ballX-width);
+					ballXspeed=ballXspeed*-1;
+					bounced=true;
+				}
+				else if (ballX<0)
+				{
+					ballX=ballX*-1;
+					ballXspeed=ballXspeed*-1;
+					bounced=true;
+				}
+				if (ballY>height)
+				{
+					ballY=height-(ballY-height);
+					ballYspeed=ballYspeed*-1;
+					bounced=true;
+				}
+				else if (ballY<0)
+				{
+					ballY=ballY*-1;
+					ballYspeed=ballYspeed*-1;
+					bounced=true;
 				}
 
-
-				//send the event to all the players:
-				for (CplayerMap::iterator I=playerMap.begin(); I!=playerMap.end(); I++)
+				//it bounced?
+				if (bounced)
 				{
-					out.dst=I->second.id;
-					out.send();
+					//update position
+					ballPosition.set(ballX,ballY, ballXspeed, ballYspeed);
+				}
+			}
+
+			//send a update to all players, each player gets a uniq list, sending only the minimum amount of data
+			//TODO: possible optimization if there are lots of players, for now the code is clean rather that uber efficient
+			map<int,Cmsg> outs; //list of output messages, one for each player
+			int x,y,xSpeed,ySpeed;
+
+			//send everyone a ball position change
+			if (ballPosition.isChanged())
+			{
+				ballPosition.get(x,y,xSpeed,ySpeed);
+				for (CplayerIds::iterator I=playerIds.begin(); I!=playerIds.end(); I++)
+				{
+					outs[*I].list().push_back(0);
+					outs[*I].list().push_back(x);
+					outs[*I].list().push_back(y);
+					outs[*I].list().push_back(xSpeed);
+					outs[*I].list().push_back(ySpeed);
+				}
+			}
+
+			//check which players have an updated position
+			for (CplayerIds::iterator I=playerIds.begin(); I!=playerIds.end(); I++)
+			{
+				if (playerMap[*I].position.isChanged())
+				{
+					playerMap[*I].position.get(x,y,xSpeed,ySpeed);
+
+					//add the update to the out-message for all players, but never tell them their own info.
+					for (CplayerIds::iterator sendI=playerIds.begin(); sendI!=playerIds.end(); sendI++)
+					{
+						if (*sendI!=*I)
+						{
+							outs[*sendI].list().push_back(*I);
+							outs[*sendI].list().push_back(x);
+							outs[*sendI].list().push_back(y);
+							outs[*sendI].list().push_back(xSpeed);
+							outs[*sendI].list().push_back(ySpeed);
+						}
+					}
+				}
+			}
+
+			//now do the actual sending
+			for (CplayerIds::iterator I=playerIds.begin(); I!=playerIds.end(); I++)
+			{
+				//only if there actually is something to send
+				if (!outs[*I].list().empty())
+				{
+					outs[*I].event="pong_Positions";
+					outs[*I].dst=*I;
+					outs[*I].send();
 				}
 			}
 		}
@@ -397,7 +399,7 @@ namespace pong
 		if (pongMap.find(msg.src)== pongMap.end())
 		{
 			pongMap[msg.src].init(msg.src, msg["name"].str());
-			pongMap[msg.src].addPlayer(msg.src, msg["name"]);
+			pongMap[msg.src].addPlayer(msg.src,msg["name"].str());
 		}
 		else
 		{
@@ -446,13 +448,20 @@ namespace pong
 		}
 	}
 
-	/** Sets position of \c src in the specified game id.
+	/** Sets position of \c src
 	 *
 	 */
 	SYNAPSE_REGISTER(pong_SetPosition)
 	{
 		lock_guard<mutex> lock(threadMutex);
-		getPong(msg["id"]).setPlayerPosition(msg.src, msg["x"], msg["y"]);
+		if (msg.list().size()==4)
+		{
+			Cmsg::iteratorList I;
+			I=msg.list().begin();
+			playerMap[msg.src].position.set(
+					*I, *(I++), *(I++), *(I++)
+			);
+		}
 	}
 
 
@@ -465,6 +474,8 @@ namespace pong
 		{
 			I->second.delPlayer(msg["session"]);
 		}
+		//remove from map
+		playerMap.erase(msg["session"]);
 	}
 
 
