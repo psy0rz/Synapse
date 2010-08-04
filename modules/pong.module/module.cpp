@@ -7,13 +7,15 @@ Used in combination with pong.html or any other frontend someone might come up w
 */
 #include "synapse.h"
 #include <time.h>
+#include <boost/date_time/posix_time/posix_time.hpp>
+
 
 namespace pong
 {
 
 	using namespace std;
 	using namespace boost;
-
+	using namespace boost::posix_time;
 
 	bool shutdown;
 
@@ -70,6 +72,45 @@ namespace pong
 		out.send();
 	}
 
+
+	//position of an object with motion prediction info
+	class Cposition
+	{
+		private:
+		int x;
+		int y;
+		int xSpeed; //pixels per second
+		int ySpeed;
+		ptime startTime;
+
+		public:
+
+		Cposition()
+		{
+			set(0,0,0,0);
+		}
+
+		void set(int x, int y, int xSpeed, int ySpeed)
+		{
+			this->x=x;
+			this->y=y;
+			this->xSpeed=xSpeed;
+			this->ySpeed=ySpeed;
+			startTime=microsec_clock::local_time();
+		}
+
+		//get the position, according to calculations of speed and time.
+		void get(int & currentX, int & currentY, int & currentXspeed, int & currentYspeed)
+		{
+			time_duration td=(microsec_clock::local_time()-startTime);
+
+			currentX=x+((xSpeed*td.total_nanoseconds())/1000000000);
+			currentY=y+((ySpeed*td.total_nanoseconds())/1000000000);
+			currentXspeed=xSpeed;
+			currentYspeed=ySpeed;
+		}
+	};
+
 	class Cplayer
 	{
 		public:
@@ -106,14 +147,11 @@ namespace pong
 		int id;
 		string name;
 
-		//ball (make objects for this too, later?)
-		int ballX;
-		int ballY;
+		Cposition ballPosition;
 
 		//map settings
 		int width;
 		int height;
-		int stepSize;
 
 
 		enum eStatus
@@ -131,9 +169,7 @@ namespace pong
 			status=NEW;
 			width=10000;
 			height=10000;
-			stepSize=100;
-			ballX=0;
-			ballY=0;
+			ballPosition.set(0,0,1000,2000);
 		}
 
 		void init(int id, string name)
@@ -232,36 +268,71 @@ namespace pong
 		//runs the simulation one step, call this periodically
 		void runStep()
 		{
-			//do calculations
-			ballX=(ballX+stepSize)%width;
-			ballY=(ballY+stepSize)%height;
+			//do calculations:
+			int ballX,ballY,ballXspeed, ballYspeed;
+			bool bounced=false;
+			ballPosition.get(ballX,ballY, ballXspeed, ballYspeed);
 
-			//send out data
-			Cmsg out;
-			out.event="pong_RunStep";
-
-			out.list().push_back(ballX);
-			out.list().push_back(ballY);
-
-			//collect all positions of all players:
-			for (CplayerMap::iterator I=playerMap.begin(); I!=playerMap.end(); I++)
+			//bounce the ball of the walls
+			if (ballX>width)
 			{
-				//for efficiency sake, just send a array with a specified format:
-				if (I->second.changed)
-				{
-					out.list().push_back(I->second.id);
-					out.list().push_back(I->second.x);
-					out.list().push_back(I->second.y);
-					I->second.changed=false;
-				}
+				ballX=width-(ballX-width);
+				ballXspeed=ballXspeed*-1;
+				bounced=true;
+			}
+			else if (ballX<0)
+			{
+				ballX=ballX*-1;
+				ballXspeed=ballXspeed*-1;
+				bounced=true;
+			}
+			if (ballY>height)
+			{
+				ballY=height-(ballY-height);
+				ballYspeed=ballYspeed*-1;
+				bounced=true;
+			}
+			else if (ballY<0)
+			{
+				ballY=ballY*-1;
+				ballYspeed=ballYspeed*-1;
+				bounced=true;
 			}
 
-
-			//send the event to all the players:
-			for (CplayerMap::iterator I=playerMap.begin(); I!=playerMap.end(); I++)
+			if (bounced)
 			{
-				out.dst=I->second.id;
-				out.send();
+				ballPosition.set(ballX,ballY, ballXspeed, ballYspeed);
+
+
+				//send out data
+				Cmsg out;
+
+				out.event="pong_RunStep";
+				out.list().push_back(ballX);
+				out.list().push_back(ballY);
+				out.list().push_back(ballXspeed);
+				out.list().push_back(ballYspeed);
+
+				//collect all positions of all players:
+				for (CplayerMap::iterator I=playerMap.begin(); I!=playerMap.end(); I++)
+				{
+					//for efficiency sake, just send a array with a specified format:
+					if (I->second.changed)
+					{
+						out.list().push_back(I->second.id);
+						out.list().push_back(I->second.x);
+						out.list().push_back(I->second.y);
+						I->second.changed=false;
+					}
+				}
+
+
+				//send the event to all the players:
+				for (CplayerMap::iterator I=playerMap.begin(); I!=playerMap.end(); I++)
+				{
+					out.dst=I->second.id;
+					out.send();
+				}
 			}
 		}
 

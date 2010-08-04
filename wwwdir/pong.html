@@ -10,12 +10,94 @@
 
 	<script type="text/javascript">
 
+		function Cposition() {
+			this.x=0;
+			this.y=0;
+			this.xSpeed=0;
+			this.ySpeed=0;
+			this.startTime=0;
+	
+			this.set=function(newX, newY, newXspeed, newYspeed)
+			{
+				this.x=newX;
+				this.y=newY;
+				this.xSpeed=newXspeed;
+				this.ySpeed=newYspeed;
+				this.startTime=new Date().getTime();
+			}
+	
+			this.get=function()
+			{
+				var currentTime=new Date().getTime();
+				var duration=currentTime-this.startTime;
+				return {
+					x: this.x+((this.xSpeed*duration)/1000),
+					y: this.y+((this.ySpeed*duration)/1000),
+					xSpeed: this.xSpeed,
+					ySpeed: this.ySpeed
+				};
+			}								
+		}
+
 
 		var currentGameId=0;
 		var myX=0;
 		var myY=0;
 		var myXYchanged=true;
-	
+		var ballPosition=new Cposition();
+
+		function updateGameField()
+		{
+			var ball=ballPosition.get();
+			//convert coordinates to browser coordinates and update ball position:
+			x=Math.round((ball.x*$("#gameField").width())/10000);
+			y=Math.round((ball.y*$("#gameField").height())/10000);
+			$(".ball").css('left',x).css('top',y);
+		};
+
+
+		synapse_register("pong_RunStep",function(msg_src, msg_dst, msg_event, msg)
+				{	
+					//ball xy
+					ballPosition.set(msg[0], msg[1], msg[2],msg[3]);
+
+					return;
+
+					i=2;
+					while(i<msg.length)
+					{
+						var id=msg[i+0];
+						var x=Math.round((msg[i+1]*$("#gameField").width())/10000);
+						var y=Math.round((msg[i+2]*$("#gameField").height())/10000);
+
+						
+						var object=$("#gameField #"+id);
+						if (object.length==0)
+						{
+							//add pad
+							$("#gameField").append("<div class='pad' id='" + id + "'></div>");
+							object=$("#gameField #"+id);
+						}
+						
+						object.css('left',x).css('top',y);
+						i=i+3;
+					}
+
+					if (myXYchanged && currentGameId)
+					{
+						//the field is always 10000x10000 pixels.
+						send(0,"pong_SetPosition", {
+							"id":currentGameId,
+							"x":Math.round((myX * 10000) / $("#gameField").width()),
+							"y":Math.round((myY * 10000) / $("#gameField").height())							
+						});
+						myXYchanged=false;
+					}
+
+				});
+
+
+		
 		/// SYNAPSE EVENT HANDLERS
  		synapse_register("pong_GameStatus",function(msg_src, msg_dst, msg_event, msg)
  		{
@@ -61,52 +143,20 @@
 			$("#gameField .pad").remove();
 		});
 
-		synapse_register("pong_RunStep",function(msg_src, msg_dst, msg_event, msg)
-		{	
-			//ball xy
-			var x=Math.round((msg[0]*$("#gameField").width())/10000);
-			var y=Math.round((msg[1]*$("#gameField").height())/10000);
-			$(".ball").css('left',x).css('top',y);
 
-			i=2;
-			while(i<msg.length)
-			{
-				var id=msg[i+0];
-				var x=Math.round((msg[i+1]*$("#gameField").width())/10000);
-				var y=Math.round((msg[i+2]*$("#gameField").height())/10000);
-
-				
-				var object=$("#gameField #"+id);
-				if (object.length==0)
-				{
-					//add pad
-					$("#gameField").append("<div class='pad' id='" + id + "'></div>");
-					object=$("#gameField #"+id);
-				}
-				
-				object.css('left',x).css('top',y);
-				i=i+3;
-			}
-
-			if (myXYchanged && currentGameId)
-			{
-				//the field is always 10000x10000 pixels.
-				send(0,"pong_SetPosition", {
-					"id":currentGameId,
-					"x":Math.round((myX * 10000) / $("#gameField").width()),
-					"y":Math.round((myY * 10000) / $("#gameField").height())							
-				});
-				myXYchanged=false;
-			}
-
-		});
-
+		
+		
+		
 		
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
 			send(0,"pong_GetGames", { 
 			});
 
+			/// start local engine
+			window.setInterval(updateGameField, 50);
+
+			
 			/// JAVA SCRIPT EVENT HANDLERS
 			$("#newGame").click(function()
 					{
@@ -185,8 +235,7 @@
 			border-color:#00ff00;
 			border-width:0;
 			background:black;
-			
-			
+			overflow:hidden;
 		}
 
 		#gameFieldMouse
