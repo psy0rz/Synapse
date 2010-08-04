@@ -38,21 +38,95 @@
 				};
 			}								
 		}
+		
+		//calculate browser coordinates to game coordinates
+		function browser2game(x,y)
+		{
+			return {
+				x:Math.round((x * 10000) / $("#gameField").width()),
+				y:Math.round((y * 10000) / $("#gameField").height())
+			}
+		}
+
+		//calculate game coordinates to browser coordinates
+		function game2browser(x,y)
+		{
+			return {
+				x: Math.round((x*$("#gameField").width())/10000),
+				y: Math.round((y*$("#gameField").height())/10000)
+			}
+		}
 
 
 		var currentGameId=0;
-		var myX=0;
-		var myY=0;
-		var myXYchanged=true;
+
+		//variables to predict mouse movement
+		var mouseX=0; //current mouse position
+		var mouseY=0;
+		var mouseXold=0; //mouse position, speed and time during last snapshot
+		var mouseYold=0;
+//		var mouseXspeedOld=1000; //to trigger the first update
+//		var mouseYspeedOld=1000;
+		var mouseTime=new Date().getTime();
+		var mousePosition=new Cposition();
+		
+		var mouseSkip=0;
+		
 		var ballPosition=new Cposition();
 
+		
 		function updateGameField()
 		{
+			mouseSkip++;
+			//if (mouseSkip)
+			{
+				var currentTime=new Date().getTime();
+
+				//our mouse motion prediction is off by too much?
+				m=mousePosition.get();
+
+				
+				if (
+						Math.abs(m.x-mouseX) > 10 ||
+						Math.abs(m.y-mouseY) > 10||
+						( mouseX==mouseXold && mousePosition.xSpeed!=0) ||	
+						( mouseY==mouseYold && mousePosition.ySpeed!=0) 	
+					)
+				{
+					//determine current direction and speed
+					var mouseXspeed=(mouseX-mouseXold)*1000/(currentTime-mouseTime);
+					var mouseYspeed=(mouseY-mouseYold)*1000/(currentTime-mouseTime);
+
+					//store it in the motion predictor
+					mousePosition.set(mouseX, mouseY, mouseXspeed, mouseYspeed);
+					
+					console.info("MISS", mouseXspeed, mouseYspeed);
+					
+					mouseSkip=0;
+
+					//use set values
+					$(".pad").css('left',mouseX).css('top',mouseY);
+
+				}
+				else
+				{
+					//use predicted values
+					$(".pad").css('left',m.x).css('top',m.y);
+					console.info("HIT");
+				}
+
+				
+				mouseXold=mouseX;
+				mouseYold=mouseY;
+				mouseTime=currentTime;
+				
+			}
+			
+			
 			var ball=ballPosition.get();
 			//convert coordinates to browser coordinates and update ball position:
-			x=Math.round((ball.x*$("#gameField").width())/10000);
-			y=Math.round((ball.y*$("#gameField").height())/10000);
-			$(".ball").css('left',x).css('top',y);
+			bpos=game2browser(ball.x, ball.y);
+			$(".ball").css('left',bpos.x).css('top',bpos.y);
 		};
 
 
@@ -170,15 +244,14 @@
 //						send(0,"pong_GetGames", {});
 //					});
 
-			
+
 
 			$("#gameFieldMouse").mousemove(function(m)
 					{
-						myX=m.layerX;
-						myY=m.layerY;
-						myXYchanged=true;
-//						console.info(m.layerX ,",",m.layerY, "=>" ,x, ",", y);
-						
+//						mouseX=m.layerX;
+	//					mouseY=m.layerY;
+						mouseX=m.offsetX;
+						mouseY=m.offsetY;
 					});
  		});
 
@@ -325,6 +398,7 @@
 		<div class='score' id='scoreLeft'>15</div>
 		<div class='score' id='scoreRight'>2</div>
 		<div class='ball'></div>		
+		<div class='pad'></div>		
 		
 	</div>
 
