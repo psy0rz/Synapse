@@ -12,6 +12,9 @@
 
 
 		var currentGameId=0;
+		var myX=0;
+		var myY=0;
+		var myXYchanged=true;
 	
 		/// SYNAPSE EVENT HANDLERS
  		synapse_register("pong_GameStatus",function(msg_src, msg_dst, msg_event, msg)
@@ -60,7 +63,12 @@
 
 		synapse_register("pong_RunStep",function(msg_src, msg_dst, msg_event, msg)
 		{	
-			i=0;
+			//ball xy
+			var x=Math.round((msg[0]*$("#gameField").width())/10000);
+			var y=Math.round((msg[1]*$("#gameField").height())/10000);
+			$(".ball").css('left',x).css('top',y);
+
+			i=2;
 			while(i<msg.length)
 			{
 				var id=msg[i+0];
@@ -79,8 +87,20 @@
 				object.css('left',x).css('top',y);
 				i=i+3;
 			}
+
+			if (myXYchanged && currentGameId)
+			{
+				//the field is always 10000x10000 pixels.
+				send(0,"pong_SetPosition", {
+					"id":currentGameId,
+					"x":Math.round((myX * 10000) / $("#gameField").width()),
+					"y":Math.round((myY * 10000) / $("#gameField").height())							
+				});
+				myXYchanged=false;
+			}
+
 		});
-				
+
 		
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
@@ -100,23 +120,15 @@
 //						send(0,"pong_GetGames", {});
 //					});
 
+			
 
 			$("#gameFieldMouse").mousemove(function(m)
 					{
-						//the field is always 10000x10000 pixels.
-						var x=Math.round((m.layerX * 10000) / $("#gameField").width());
-						var y=Math.round((m.layerY * 10000) / $("#gameField").height());
-						
+						myX=m.layerX;
+						myY=m.layerY;
+						myXYchanged=true;
 //						console.info(m.layerX ,",",m.layerY, "=>" ,x, ",", y);
-						if (currentGameId)
-						{
-							send(0,"pong_SetPosition", {
-								"id":currentGameId,
-								"x":x,
-								"y":y							
-							});
-						}
-									
+						
 					});
  		});
 
@@ -263,12 +275,13 @@
 		<div id='gameFieldMiddle'></div>
 		<div class='score' id='scoreLeft'>15</div>
 		<div class='score' id='scoreRight'>2</div>
+		<div class='ball'></div>		
+		
 	</div>
 
 	<div id='gameFieldMouse'>
 	</div>
 
-	<div class='ball'></div>		
 	
 </body>
 </html>

@@ -78,17 +78,23 @@ namespace pong
 		string name;
 		int x;
 		int y;
+		bool changed;
 
 		Cplayer()
 		{
 			x=0;
 			y=0;
+			changed=true;
 		}
 
 		void setPosition(int x, int y)
 		{
-			this->x=x;
-			this->y=y;
+			if (this->x != x || this->y!=y)
+			{
+				this->x=x;
+				this->y=y;
+				changed=true;
+			}
 		}
 	};
 
@@ -125,7 +131,9 @@ namespace pong
 			status=NEW;
 			width=10000;
 			height=10000;
-			stepSize=10;
+			stepSize=100;
+			ballX=0;
+			ballY=0;
 		}
 
 		void init(int id, string name)
@@ -224,17 +232,30 @@ namespace pong
 		//runs the simulation one step, call this periodically
 		void runStep()
 		{
+			//do calculations
+			ballX=(ballX+stepSize)%width;
+			ballY=(ballY+stepSize)%height;
+
+			//send out data
 			Cmsg out;
 			out.event="pong_RunStep";
+
+			out.list().push_back(ballX);
+			out.list().push_back(ballY);
 
 			//collect all positions of all players:
 			for (CplayerMap::iterator I=playerMap.begin(); I!=playerMap.end(); I++)
 			{
 				//for efficiency sake, just send a array with a specified format:
-				out.list().push_back(I->second.id);
-				out.list().push_back(I->second.x);
-				out.list().push_back(I->second.y);
+				if (I->second.changed)
+				{
+					out.list().push_back(I->second.id);
+					out.list().push_back(I->second.x);
+					out.list().push_back(I->second.y);
+					I->second.changed=false;
+				}
 			}
+
 
 			//send the event to all the players:
 			for (CplayerMap::iterator I=playerMap.begin(); I!=playerMap.end(); I++)
@@ -284,7 +305,7 @@ namespace pong
 			}
 
 			if (!idle)
-				usleep(100000);
+				usleep(50000);
 			else
 				sleep(1); //nothing to do, dont eat all the cpu ..
 		}
