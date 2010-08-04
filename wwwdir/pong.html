@@ -11,52 +11,116 @@
 	<script type="text/javascript">
 
 
+		var currentGameId=0;
+	
 		/// SYNAPSE EVENT HANDLERS
-
  		synapse_register("pong_GameStatus",function(msg_src, msg_dst, msg_event, msg)
  		{
 			if ($("#gameList #"+msg["id"]).length==0)
 			{
 				//add to gamelist
-				html="<div class='game' id='"+msg["id"]+"'>";
+				var html="<div class='game' id='"+msg["id"]+"'>";
 				html+="</div>";
 				$('#gameList').append(html);
+
+				//make it clickable
+				$("#"+msg["id"]).click(function()
+						{
+							send(0,"pong_JoinGame", {
+									"name":$("#name").val(),
+									"id":$(this).attr('id'),
+								});
+						});
 			}
-			
-			$("#gameList #"+msg["id"]).html(
-					"Game of " + msg["name"]  + " (game id " +msg["id"] + ")"
-					);
-				
+
+			//create the html with the actual game info:
+			var html="Game of " + msg["name"]  + " (#" +msg["id"] + "):";
+			for (var playerI in msg["players"])
+			{
+				html+="<div class='playerInfo'>";
+				html+=msg["players"][playerI];
+				html+="</div>";
+			}
+
+			$("#gameList #"+msg["id"]).html(html);
 		});
 
-		synapse_register("pong_GameDeleted",function(msg_src, msg_dst, msg_event, msg)
+ 		synapse_register("pong_GameDeleted",function(msg_src, msg_dst, msg_event, msg)
+		{
+ 			$("#gameList #"+msg["id"]).remove();
+		});
+ 				
+
+		synapse_register("pong_GameJoined",function(msg_src, msg_dst, msg_event, msg)
 		{	
-					
+			currentGameId=msg["id"];
+			//clear up the old gamefield.
+			$("#gameField .pad").remove();
 		});
 
+		synapse_register("pong_RunStep",function(msg_src, msg_dst, msg_event, msg)
+		{	
+			i=0;
+			while(i<msg.length)
+			{
+				var id=msg[i+0];
+				var x=Math.round((msg[i+1]*$("#gameField").width())/10000);
+				var y=Math.round((msg[i+2]*$("#gameField").height())/10000);
+
+				
+				var object=$("#gameField #"+id);
+				if (object.length==0)
+				{
+					//add pad
+					$("#gameField").append("<div class='pad' id='" + id + "'></div>");
+					object=$("#gameField #"+id);
+				}
+				
+				object.css('left',x).css('top',y);
+				i=i+3;
+			}
+		});
+				
+		
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
 			send(0,"pong_GetGames", { 
 			});
-		});
 
-
-		/// JAVA SCRIPT EVENT HANDLERS
-		$(document).ready(function(){
+			/// JAVA SCRIPT EVENT HANDLERS
 			$("#newGame").click(function()
 					{
 						send(0,"pong_NewGame", {
 								"name":$("#name").val()
 							});
 					});
-			$("#getGames").click(function()
-					{
-						$('.game').remove();
-						send(0,"pong_GetGames", {});
-					});
-			
+//				$("#getGames").click(function()
+//					{
+//						$('.game').remove();
+//						send(0,"pong_GetGames", {});
+//					});
 
-		});
+
+			$("#gameFieldMouse").mousemove(function(m)
+					{
+						//the field is always 10000x10000 pixels.
+						var x=Math.round((m.layerX * 10000) / $("#gameField").width());
+						var y=Math.round((m.layerY * 10000) / $("#gameField").height());
+						
+//						console.info(m.layerX ,",",m.layerY, "=>" ,x, ",", y);
+						if (currentGameId)
+						{
+							send(0,"pong_SetPosition", {
+								"id":currentGameId,
+								"x":x,
+								"y":y							
+							});
+						}
+									
+					});
+ 		});
+
+
 
 
 	</script>
@@ -81,6 +145,13 @@
 		.color9  { color: #aa00aa; } 
 		.color10 { color: #aa00ff; } 
 
+		.playerInfo
+		{
+			width:18em;
+			background:yellow;
+			margin-left:1em;
+		}
+
 		#gameManager
 		{
 			position:absolute; 
@@ -99,6 +170,72 @@
 			right: 0;
 			bottom:0;
 			border-style:solid;
+			border-color:#00ff00;
+			border-width:0;
+			background:black;
+			
+			
+		}
+
+		#gameFieldMouse
+		{
+			position:absolute; 
+			left:20em;
+			top: 0;
+			right: 0;
+			bottom:0;
+		}
+		
+		#gameFieldMiddle
+		{
+			position:absolute;
+			left:50%;
+			top:0;
+			bottom:0;
+			border-style:dashed;
+			border-color:#00ff00;
+		}
+
+		.score
+		{
+			color: #00ff00;
+			font-size:2em;
+			font-family: monospace;
+			font-weight: bold;
+		}
+
+		#scoreLeft
+		{
+			position:absolute;
+			left:40%;
+			top:1em;
+		}
+		
+		#scoreRight
+		{
+			position:absolute;
+			left:60%;
+			top:1em;
+		}
+
+		.pad
+		{
+			position:absolute;
+			left:10%;
+			top:10%;
+			width:1%;
+			height:10%;
+			background-color:#00ff00;
+		}
+
+		.ball
+		{
+			position:absolute;
+			left:30%;
+			top:30%;
+			width:1%;
+			height:2%;
+			background-color:#00ff00;
 		}
 		
 	</style>
@@ -114,18 +251,24 @@
 		<input id='name' type='text' value=''>
 
 		<div class='ui-widget-header'>Available games:</div>
+		Click to join...
 		<div id='gameList'></div>
 		<input id='newGame' type='submit' value='New game'>
-		<input id='getGames' type='submit' value='Refresh...'>
 	</div>
 
 
 
 
 	<div id='gameField'>
+		<div id='gameFieldMiddle'></div>
+		<div class='score' id='scoreLeft'>15</div>
+		<div class='score' id='scoreRight'>2</div>
 	</div>
 
+	<div id='gameFieldMouse'>
+	</div>
 
+	<div class='ball'></div>		
 	
 </body>
 </html>

@@ -41,9 +41,11 @@ namespace pong
 		out["sendGroup"]=	"anonymous";
 		out["recvGroup"]=	"modules";
 		out["event"]=	"pong_NewGame";			out.send();
+		out["event"]=	"pong_DelGame";			out.send();
 		out["event"]=	"pong_GetGames";		out.send();
 		out["event"]=	"pong_JoinGame";		out.send();
 		out["event"]=	"pong_StartGame";		out.send();
+		out["event"]=	"pong_SetPosition";		out.send();
 
 		//client receive-only events:
 		out.clear();
@@ -53,7 +55,13 @@ namespace pong
 		out["recvGroup"]=	"anonymous";
 		out["event"]=	"pong_GameStatus";		out.send();
 		out["event"]=	"pong_GameDeleted";		out.send();
+		out["event"]=	"pong_GameJoined";		out.send();
+		out["event"]=	"pong_RunStep";			out.send();
 
+		//start game engine
+		out.clear();
+		out.event="pong_Engine";
+		out.send();
 
 		//tell the rest of the world we are ready for duty
 		//(the core will send a timer_Ready)
@@ -76,6 +84,12 @@ namespace pong
 			x=0;
 			y=0;
 		}
+
+		void setPosition(int x, int y)
+		{
+			this->x=x;
+			this->y=y;
+		}
 	};
 
 	class Cpong
@@ -90,9 +104,11 @@ namespace pong
 		int ballX;
 		int ballY;
 
-		//field size
+		//map settings
 		int width;
 		int height;
+		int stepSize;
+
 
 		enum eStatus
 		{
@@ -107,6 +123,9 @@ namespace pong
 		Cpong()
 		{
 			status=NEW;
+			width=10000;
+			height=10000;
+			stepSize=10;
 		}
 
 		void init(int id, string name)
@@ -131,13 +150,21 @@ namespace pong
 			out.send();
 		}
 
-		void addPlayer(int id, string name)
+		void addPlayer(int playerId, string name)
 		{
-			if (playerMap.find(id)== playerMap.end())
+			if (name=="")
+				throw(runtime_error("Please enter your name before joining."));
+
+			if (playerMap.find(playerId)== playerMap.end())
 			{
-				playerMap[id].name=name;
-				playerMap[id].id=id;
+				playerMap[playerId].name=name;
+				playerMap[playerId].id=playerId;
 				sendStatus();
+				Cmsg out;
+				out.event="pong_GameJoined";
+				out["id"]=id;
+				out.dst=playerId;
+				out.send();
 			}
 			else
 			{
@@ -145,15 +172,46 @@ namespace pong
 			}
 		}
 
-		void delPlayer(int id)
+		// Get a reference to a player or throw exception
+		Cplayer & getPlayer(int id)
 		{
-			if (playerMap.find(id)!= playerMap.end())
-			{
-				playerMap.erase(id);
-				sendStatus();
-			}
+			if (playerMap.find(id)== playerMap.end())
+				throw(runtime_error("You're not in this game!"));
+
+			return (playerMap[id]);
 		}
 
+
+		void setPlayerPosition(int playerId, int x, int y)
+		{
+
+				getPlayer(playerId).setPosition(x,y);
+//			}
+//			catch(...)
+//			{
+//
+//			}
+		}
+
+
+		void delPlayer(int playerId)
+		{
+			if (playerMap.find(playerId)!= playerMap.end())
+			{
+				playerMap.erase(playerId);
+				sendStatus();
+			}
+
+			//last player deleted?
+			if (playerMap.empty())
+			{
+				//self destruct this game
+				Cmsg out;
+				out.event="pong_DelGame";
+				out.src=id;
+				out.send();
+			}
+		}
 
 
 		void start()
@@ -161,6 +219,31 @@ namespace pong
 			status=RUNNING;
 			sendStatus();
 		}
+
+
+		//runs the simulation one step, call this periodically
+		void runStep()
+		{
+			Cmsg out;
+			out.event="pong_RunStep";
+
+			//collect all positions of all players:
+			for (CplayerMap::iterator I=playerMap.begin(); I!=playerMap.end(); I++)
+			{
+				//for efficiency sake, just send a array with a specified format:
+				out.list().push_back(I->second.id);
+				out.list().push_back(I->second.x);
+				out.list().push_back(I->second.y);
+			}
+
+			//send the event to all the players:
+			for (CplayerMap::iterator I=playerMap.begin(); I!=playerMap.end(); I++)
+			{
+				out.dst=I->second.id;
+				out.send();
+			}
+		}
+
 
 		~Cpong()
 		{
@@ -185,6 +268,29 @@ namespace pong
 		return (pongMap[id]);
 	}
 
+	SYNAPSE_REGISTER(pong_Engine)
+	{
+		bool idle;
+		while(!shutdown)
+		{
+			idle=true;
+			{
+				lock_guard<mutex> lock(threadMutex);
+				for (CpongMap::iterator I=pongMap.begin(); I!=pongMap.end(); I++)
+				{
+					I->second.runStep();
+					idle=false;
+				}
+			}
+
+			if (!idle)
+				usleep(100000);
+			else
+				sleep(1); //nothing to do, dont eat all the cpu ..
+		}
+	}
+
+
 	/** Creates a new game on behave of \c src
 	 *
 	 */
@@ -207,12 +313,23 @@ namespace pong
 		}
 	}
 
+	SYNAPSE_REGISTER(pong_DelGame)
+	{
+		lock_guard<mutex> lock(threadMutex);
+		pongMap.erase(msg.src);
+	}
+
 	/** Lets \c src join a game
 	 *
 	 */
 	SYNAPSE_REGISTER(pong_JoinGame)
 	{
 		lock_guard<mutex> lock(threadMutex);
+		//leave all other games
+		for (CpongMap::iterator I=pongMap.begin(); I!=pongMap.end(); I++)
+		{
+			I->second.delPlayer(msg.src);
+		}
 		getPong(msg["id"]).addPlayer(msg.src, msg["name"]);
 	}
 
@@ -237,20 +354,24 @@ namespace pong
 		}
 	}
 
-	SYNAPSE_REGISTER(module_SessionEnd)
+	/** Sets position of \c src in the specified game id.
+	 *
+	 */
+	SYNAPSE_REGISTER(pong_SetPosition)
+	{
+		lock_guard<mutex> lock(threadMutex);
+		getPong(msg["id"]).setPlayerPosition(msg.src, msg["x"], msg["y"]);
+	}
+
+
+	SYNAPSE_REGISTER(module_SessionEnded)
 	{
 		lock_guard<mutex> lock(threadMutex);
 
 		//leave all games
 		for (CpongMap::iterator I=pongMap.begin(); I!=pongMap.end(); I++)
 		{
-			I->second.delPlayer(msg.src);
-		}
-
-		//if the person owns a game, deleted it.
-		if (pongMap.find(msg.src)!= pongMap.end())
-		{
-			pongMap.erase(msg.src);
+			I->second.delPlayer(msg["session"]);
 		}
 	}
 
