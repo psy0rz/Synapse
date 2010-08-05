@@ -143,12 +143,12 @@
 			//move pads:
 			for (padI in padPositions)
 			{
-				var object=$("#gameField #"+padI);
+				var object=$("#pad_"+padI);
 				if (object.length==0)
 				{
 					//add pad
-					$("#gameField").append("<div class='padPlayer' id='"+padI+"'></div>");
-					object=$("#gameField #"+padI);					
+					$("#gameField").append("<div class='padPlayer' id='pad_"+padI+"'></div>");
+					object=$("#pad_"+padI);					
 				}
 				var pos=padPositions[padI].get();
 				object.css('left',pos.x).css('top',pos.y);
@@ -196,19 +196,20 @@
 		/// SYNAPSE EVENT HANDLERS
  		synapse_register("pong_GameStatus",function(msg_src, msg_dst, msg_event, msg)
  		{
-			if ($("#gameList #"+msg["id"]).length==0)
+			if ($("#game_"+msg["id"]).length==0)
 			{
 				//add to gamelist
-				var html="<div class='game' id='"+msg["id"]+"'>";
+				var html="<div class='game' id='game_"+msg["id"]+"'>";
 				html+="</div>";
 				$('#gameList').append(html);
-
+				$("#game_"+msg["id"]).attr('gameId',msg["id"]);
+				
 				//make it clickable
-				$("#"+msg["id"]).click(function()
+				$("#game_"+msg["id"]).click(function()
 						{
 							send(0,"pong_JoinGame", {
 									"name":$("#name").val(),
-									"id":$(this).attr('id'),
+									"id":$(this).attr('gameId'),
 								});
 						});
 			}
@@ -222,12 +223,12 @@
 				html+="</div>";
 			}
 
-			$("#gameList #"+msg["id"]).html(html);
+			$("#game_"+msg["id"]).html(html);
 		});
 
  		synapse_register("pong_GameDeleted",function(msg_src, msg_dst, msg_event, msg)
 		{
- 			$("#gameList #"+msg["id"]).remove();
+ 			$("#game_"+msg["id"]).remove();
 		});
  				
 
@@ -235,7 +236,7 @@
 		{	
 			currentGameId=msg["id"];
 			//clear up the old gamefield.
-			$("#gameField .pad").remove();
+			$("#gameField .padPlayer").remove();
 		});
 
 
@@ -382,27 +383,6 @@
 		}
 
 
-		.padDebugEst
-		{
-			position:absolute;
-			left:10%;
-			top:10%;
-			width:1%;
-			height:10%;
-			border-color: red;
-			border-style:solid;
-		}
-
-		.padDebugStart
-		{
-			position:absolute;
-			left:10%;
-			top:10%;
-			width:1%;
-			height:10%;
-			border-color: yellow;
-			border-style:solid;
-		}
 		
 		.padPlayer
 		{
