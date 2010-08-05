@@ -19,25 +19,47 @@
 			this.xSpeed=0;
 			this.ySpeed=0;
 			this.startTime=0;
+			this.stopTime=0;
 	
-			this.set=function(newX, newY, newXspeed, newYspeed)
+			this.set=function(newX, newY, newXspeed, newYspeed, stopTime)
 			{
+				if (typeof stopTime !== 'undefined')
+					this.stopTime=stopTime;
 				this.x=newX;
 				this.y=newY;
 				this.xSpeed=newXspeed;
 				this.ySpeed=newYspeed;
 				this.startTime=new Date().getTime();
 			}
+
+			//move smootly from current position to new position
+			this.move=function(newX, newY)
+			{
+				//how long did the last move take?
+				var currentTime=new Date().getTime();
+				var duration=(currentTime-this.startTime)/1000;
+				p=this.get();
+				this.x=p.x;
+				this.y=p.y;
+				this.startTime=currentTime;
+				this.xSpeed=(newX-p.x)/duration;
+				this.ySpeed=(newY-p.y)/duration;	
+				this.stopTime=duration*1000;
+				console.info("duration ", duration);
+			}
 	
 			this.get=function()
 			{
 				var currentTime=new Date().getTime();
 				var duration=currentTime-this.startTime;
+				if (this.stopTime && duration>this.stopTime)
+					duration=this.stopTime;
 				return {
 					x: this.x+((this.xSpeed*duration)/1000),
 					y: this.y+((this.ySpeed*duration)/1000),
 					xSpeed: this.xSpeed,
-					ySpeed: this.ySpeed
+					ySpeed: this.ySpeed,
+					stopTime: this.stopTime
 				};
 			}								
 		}
@@ -68,8 +90,9 @@
 		var mouseY=0;
 		var mouseXold=0; //mouse position, speed and time during last snapshot
 		var mouseYold=0;
-		var mouseTime=new Date().getTime();
-		var mousePosition=new Cposition();
+//		var mouseTime=new Date().getTime();
+//		var mousePosition=new Cposition();
+		var mouseCount=0;
 		
 		var ballPosition=new Cposition();
 
@@ -78,45 +101,26 @@
 		
 		function updateGameField()
 		{
-			var currentTime=new Date().getTime();
 
-
-			//////////////////////////////// Mouse movement stuff
-			//our mouse motion prediction is off by too much?
-			m=mousePosition.get();
-			$(".padLocal").css('left',m.x).css('top',m.y); //DEBUG
-
-			if (
-					Math.abs(m.x-mouseX) > 5 ||
-					Math.abs(m.y-mouseY) > 5||
-					( mouseX==mouseXold && m.x!=mouseX && mouseY==mouseYold && m.y!=mouseY) 	
-				)
-			{
-				//determine current direction and speed
-				var mouseXspeed=(mouseX-mouseXold)*1000/(currentTime-mouseTime);
-				var mouseYspeed=(mouseY-mouseYold)*1000/(currentTime-mouseTime);
-
-				//store it in the motion predictor
-				mousePosition.set(mouseX, mouseY, mouseXspeed, mouseYspeed);
-				$(".padDebugStart").css('left',mouseX).css('top',mouseY); //DEBUG
-
-				//convert it and send to server, so other clients can predict our position as well.
-				pos=browser2game(mouseX, mouseY);
-				speed=browser2game(mouseXspeed, mouseYspeed);
-				send(0,"pong_SetPosition", [pos.x, pos.y, speed.x, speed.y] );
-	
-			}
-
-			//update local pad?
+			mouseCount++;
 			if (mouseX!=mouseXold || mouseY!=mouseYold)
 			{
-//				$(".padLocal").css('left',mouseX).css('top',mouseY);
+				//send mouse update to server?
+				if (mouseCount>4)
+				{
+					mouseCount=0;
+					//convert it and send to server, so other clients can predict our position as well.
+					pos=browser2game(mouseX, mouseY);
+					send(0,"pong_SetPosition", [pos.x, pos.y] );
+
+					mouseXold=mouseX;
+					mouseYold=mouseY;
+				}
+				//update local pad
+				$(".padLocal").css('left',mouseX).css('top',mouseY);
 				
 			}
-			
-			mouseXold=mouseX;
-			mouseYold=mouseY;
-			mouseTime=currentTime;
+
 				
 			///////////////////////////////////// Ball and pad movements 
 
@@ -167,9 +171,8 @@
 					padPositions[id]=new Cposition();
 				}
 				pos=game2browser(msg[i+1], msg[i+2]);
-				speed=game2browser(msg[i+3], msg[i+4]);				
-				padPositions[id].set(pos.x, pos.y, speed.x, speed.y);
-				i=i+5;		
+				padPositions[id].move(pos.x, pos.y);
+				i=i+3;		
 			}
 		});
 
@@ -231,7 +234,7 @@
 			});
 
 			/// start local engine
-			window.setInterval(updateGameField, 50);
+			window.setInterval(updateGameField, 25);
 
 			
 			/// JAVA SCRIPT EVENT HANDLERS
@@ -250,12 +253,10 @@
 
 
 			$("#gameFieldMouse").mousemove(function(m)
-					{
-//						mouseX=m.layerX;
-	//					mouseY=m.layerY;
-						mouseX=m.offsetX;
-						mouseY=m.offsetY;
-					});
+			{
+				mouseX=m.pageX-$("#gameFieldMouse").offset().left;
+				mouseY=m.pageY-$("#gameFieldMouse").offset().top;
+			});
  		});
 
 
@@ -435,8 +436,6 @@
 		<div class='score' id='scoreRight'>2</div>
 		<div class='ball'></div>		
 		<div class='padLocal'></div>		
-		<div class='padDebugStart'></div>		
-		<div class='padDebugEst'></div>		
 		
 	</div>
 

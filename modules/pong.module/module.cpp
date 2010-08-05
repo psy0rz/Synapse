@@ -121,14 +121,40 @@ namespace pong
 
 	class Cplayer
 	{
-		public:
+		private:
+		int x;
+		int y;
+		bool moved;
 
+		public:
 		string name;
-		Cposition position;
 
 		Cplayer()
 		{
+			x=0;
+			y=0;
+			moved=true;
 		}
+
+		void setPosition(int x, int y)
+		{
+			this->x=x;
+			this->y=y;
+			moved=true;
+		}
+
+		bool hasMoved()
+		{
+			return(moved);
+		}
+
+		void getPosition(int & x, int & y)
+		{
+			x=this->x;
+			y=this->y;
+			moved=false;
+		}
+
 
 	};
 
@@ -306,9 +332,9 @@ namespace pong
 			//check which players have an updated position
 			for (CplayerIds::iterator I=playerIds.begin(); I!=playerIds.end(); I++)
 			{
-				if (playerMap[*I].position.isChanged())
+				if (playerMap[*I].hasMoved())
 				{
-					playerMap[*I].position.get(x,y,xSpeed,ySpeed);
+					playerMap[*I].getPosition(x,y);
 
 					//add the update to the out-message for all players, but never tell them their own info.
 					for (CplayerIds::iterator sendI=playerIds.begin(); sendI!=playerIds.end(); sendI++)
@@ -318,8 +344,6 @@ namespace pong
 							outs[*sendI].list().push_back(*I);
 							outs[*sendI].list().push_back(x);
 							outs[*sendI].list().push_back(y);
-							outs[*sendI].list().push_back(xSpeed);
-							outs[*sendI].list().push_back(ySpeed);
 						}
 					}
 				}
@@ -454,20 +478,15 @@ namespace pong
 	SYNAPSE_REGISTER(pong_SetPosition)
 	{
 		lock_guard<mutex> lock(threadMutex);
-		if (msg.list().size()==4)
+		if (msg.list().size()==2)
 		{
 			Cmsg::iteratorList I;
 			I=msg.list().begin();
-			int x,y,xSpeed,ySpeed;
+			int x,y;
 			x=*I;
 			I++;
 			y=*I;
-			I++;
-			xSpeed=*I;
-			I++;
-			ySpeed=*I;
-
-			playerMap[msg.src].position.set(x, y, xSpeed, ySpeed);
+			playerMap[msg.src].setPosition(x, y);
 		}
 	}
 
