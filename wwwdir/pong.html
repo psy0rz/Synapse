@@ -284,11 +284,7 @@
 			{
 				mouseX=m.pageX-$("#gameFieldMouse").offset().left;
 				mouseY=m.pageY-$("#gameFieldMouse").offset().top;
-				//update local pad?
-//				if (mouseX!=mouseXold || mouseY!=mouseYold)
-				{
-					$(".padLocal").css('left',mouseX).css('top',mouseY);
-				}
+				$(".padLocal").css('left',mouseX).css('top',mouseY);
 
 			});
  		});

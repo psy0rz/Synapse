@@ -44,7 +44,6 @@ namespace pong
 		out["sendGroup"]=	"anonymous";
 		out["recvGroup"]=	"modules";
 		out["event"]=	"pong_NewGame";			out.send();
-		out["event"]=	"pong_DelGame";			out.send();
 		out["event"]=	"pong_GetGames";		out.send();
 		out["event"]=	"pong_JoinGame";		out.send();
 		out["event"]=	"pong_StartGame";		out.send();
@@ -202,6 +201,7 @@ namespace pong
 		{
 			this->id=id;
 			this->name=name;
+			sendStatus();
 		}
 
 		//broadcasts a gamestatus, so that everyone knows the game exists.
@@ -222,6 +222,8 @@ namespace pong
 
 		void addPlayer(int playerId, string name)
 		{
+
+
 			if (playerIds.find(playerId)== playerIds.end())
 			{
 				if (name=="")
@@ -250,16 +252,15 @@ namespace pong
 			{
 				playerIds.erase(playerId);
 				sendStatus();
-			}
 
-			//last player deleted?
-			if (playerIds.empty())
-			{
-				//self destruct this game
-				Cmsg out;
-				out.event="pong_DelGame";
-				out.src=id;
-				out.send();
+				//when the last person leaves, self destruct!
+				if (playerIds.empty())
+				{
+					Cmsg out;
+					out.event="pong_DelGame";
+					out["id"]=id;
+					out.send();
+				}
 			}
 		}
 
@@ -274,6 +275,7 @@ namespace pong
 		//runs the simulation one step, call this periodically
 		void runStep()
 		{
+
 			{
 				//do calculations:
 				int ballX,ballY,ballXspeed, ballYspeed;
@@ -366,15 +368,12 @@ namespace pong
 					outs[*I].send();
 				}
 			}
+
 		}
 
 
 		~Cpong()
 		{
-			Cmsg out;
-			out.event="pong_GameDeleted";
-			out["id"]=id;
-			out.send();
 		}
 	};
 
@@ -429,7 +428,6 @@ namespace pong
 		if (pongMap.find(msg.src)== pongMap.end())
 		{
 			pongMap[msg.src].init(msg.src, msg["name"].str());
-			pongMap[msg.src].addPlayer(msg.src,msg["name"].str());
 		}
 		else
 		{
@@ -437,10 +435,17 @@ namespace pong
 		}
 	}
 
+	//only modules can del games
 	SYNAPSE_REGISTER(pong_DelGame)
 	{
 		lock_guard<mutex> lock(threadMutex);
-		pongMap.erase(msg.src);
+		pongMap.erase(msg["id"]);
+
+		Cmsg out;
+		out.event="pong_GameDeleted";
+		out["id"]=msg["id"];
+		out.send();
+
 	}
 
 	/** Lets \c src join a game
@@ -450,10 +455,12 @@ namespace pong
 	{
 		lock_guard<mutex> lock(threadMutex);
 		//leave all other games
+		//TODO: future versions allow you perhaps to be in multiple games? :)
 		for (CpongMap::iterator I=pongMap.begin(); I!=pongMap.end(); I++)
 		{
 			I->second.delPlayer(msg.src);
 		}
+
 		getPong(msg["id"]).addPlayer(msg.src, msg["name"]);
 	}
 
