@@ -124,6 +124,8 @@ namespace pong
 		private:
 		int x;
 		int y;
+		long double duration; //duration in S it takes to move to x,y
+
 		bool moved;
 
 		public:
@@ -136,10 +138,11 @@ namespace pong
 			moved=true;
 		}
 
-		void setPosition(int x, int y)
+		void setPosition(int x, int y, long double duration)
 		{
 			this->x=x;
 			this->y=y;
+			this->duration=duration;
 			moved=true;
 		}
 
@@ -148,10 +151,11 @@ namespace pong
 			return(moved);
 		}
 
-		void getPosition(int & x, int & y)
+		void getPosition(int & x, int & y, long double & duration)
 		{
 			x=this->x;
 			y=this->y;
+			duration=this->duration;
 			moved=false;
 		}
 
@@ -314,6 +318,7 @@ namespace pong
 			//TODO: possible optimization if there are lots of players, for now the code is clean rather that uber efficient
 			map<int,Cmsg> outs; //list of output messages, one for each player
 			int x,y,xSpeed,ySpeed;
+			long double duration;
 
 			//send everyone a ball position change
 			if (ballPosition.isChanged())
@@ -334,7 +339,7 @@ namespace pong
 			{
 				if (playerMap[*I].hasMoved())
 				{
-					playerMap[*I].getPosition(x,y);
+					playerMap[*I].getPosition(x,y,duration);
 
 					//add the update to the out-message for all players, but never tell them their own info.
 					for (CplayerIds::iterator sendI=playerIds.begin(); sendI!=playerIds.end(); sendI++)
@@ -344,6 +349,7 @@ namespace pong
 							outs[*sendI].list().push_back(*I);
 							outs[*sendI].list().push_back(x);
 							outs[*sendI].list().push_back(y);
+							outs[*sendI].list().push_back(duration);
 						}
 					}
 				}
@@ -402,7 +408,7 @@ namespace pong
 			}
 
 			if (!idle)
-				usleep(50000);
+				usleep(10000);
 			else
 				sleep(1); //nothing to do, dont eat all the cpu ..
 		}
@@ -478,15 +484,18 @@ namespace pong
 	SYNAPSE_REGISTER(pong_SetPosition)
 	{
 		lock_guard<mutex> lock(threadMutex);
-		if (msg.list().size()==2)
+		if (msg.list().size()==3)
 		{
 			Cmsg::iteratorList I;
 			I=msg.list().begin();
 			int x,y;
+			long double duration;
 			x=*I;
 			I++;
 			y=*I;
-			playerMap[msg.src].setPosition(x, y);
+			I++;
+			duration=*I;
+			playerMap[msg.src].setPosition(x, y, duration);
 		}
 	}
 

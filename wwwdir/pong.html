@@ -10,6 +10,9 @@
 
 	<script type="text/javascript">
 
+		//global time, updated every frame. This is to lower the number of calls to Date().gettime and to get time-consistency.
+		currentTime=0;
+	
 		//this is the class to store position information in.
 		//position information is always a combination of x,y coordinates and x,y speed.
 		//In combination with timing we can calculate the predicted position.
@@ -19,47 +22,44 @@
 			this.xSpeed=0;
 			this.ySpeed=0;
 			this.startTime=0;
-			this.stopTime=0;
-	
-			this.set=function(newX, newY, newXspeed, newYspeed, stopTime)
+			this.duration=0;
+
+			//duration is in S
+			//Speeds in pixels per S.
+			this.set=function(newX, newY, newXspeed, newYspeed, duration)
 			{
-				if (typeof stopTime !== 'undefined')
-					this.stopTime=stopTime;
+				if (typeof duration !== 'undefined')
+					this.duration=duration;
 				this.x=newX;
 				this.y=newY;
 				this.xSpeed=newXspeed;
 				this.ySpeed=newYspeed;
-				this.startTime=new Date().getTime();
+				this.startTime=currentTime;
 			}
 
 			//move smootly from current position to new position
-			this.move=function(newX, newY)
+			//duration in S.
+			this.move=function(newX, newY, duration)
 			{
-				//how long did the last move take?
-				var currentTime=new Date().getTime();
-				var duration=(currentTime-this.startTime)/1000;
+				//get current calculated position
 				p=this.get();
-				this.x=p.x;
-				this.y=p.y;
-				this.startTime=currentTime;
-				this.xSpeed=(newX-p.x)/duration;
-				this.ySpeed=(newY-p.y)/duration;	
-				this.stopTime=duration*1000;
-				console.info("duration ", duration);
+				//move from there to the new position in duration S.
+				this.set(p.x, p.y, ((newX-p.x)/duration), ((newY-p.y)/duration), duration);  
 			}
-	
+
+			
+			//calculate the current x and y coordinates, based on the start position, start time, x,y-speeds and current time.
 			this.get=function()
 			{
-				var currentTime=new Date().getTime();
-				var duration=currentTime-this.startTime;
-				if (this.stopTime && duration>this.stopTime)
-					duration=this.stopTime;
+				var duration=(currentTime-this.startTime)/1000;
+				if (this.duration && duration>this.duration)
+					duration=this.duration;
 				return {
-					x: this.x+((this.xSpeed*duration)/1000),
-					y: this.y+((this.ySpeed*duration)/1000),
+					x: this.x+((this.xSpeed*duration)),
+					y: this.y+((this.ySpeed*duration)),
 					xSpeed: this.xSpeed,
 					ySpeed: this.ySpeed,
-					stopTime: this.stopTime
+					duration: duration
 				};
 			}								
 		}
@@ -82,7 +82,10 @@
 			}
 		}
 
-
+		
+		var updateInterval=25; //update inteval in mS
+		var mouseSkip=4;       //nr of mouse position sends to skip 
+		
 		var currentGameId=0;
 
 		//variables to predict mouse movement
@@ -90,8 +93,7 @@
 		var mouseY=0;
 		var mouseXold=0; //mouse position, speed and time during last snapshot
 		var mouseYold=0;
-//		var mouseTime=new Date().getTime();
-//		var mousePosition=new Cposition();
+		var mouseTime=0;
 		var mouseCount=0;
 		
 		var ballPosition=new Cposition();
@@ -101,24 +103,34 @@
 		
 		function updateGameField()
 		{
+			//update global time variable. 
+			currentTime=new Date().getTime();
 
+			//send mouse update to server?
 			mouseCount++;
-			if (mouseX!=mouseXold || mouseY!=mouseYold)
+			if (mouseCount>mouseSkip)
 			{
-				//send mouse update to server?
-				if (mouseCount>4)
+				mouseCount=0;
+
+				//mouse actually changed?
+				if (mouseX!=mouseXold || mouseY!=mouseYold)
 				{
-					mouseCount=0;
-					//convert it and send to server, so other clients can predict our position as well.
+					//convert coordinates and send out destination position + time it took to get there.
 					pos=browser2game(mouseX, mouseY);
-					send(0,"pong_SetPosition", [pos.x, pos.y] );
+					send(0,"pong_SetPosition", [pos.x, pos.y, (currentTime-mouseTime)/1000] );
 
 					mouseXold=mouseX;
 					mouseYold=mouseY;
 				}
-				//update local pad
+
+				//always update mouse time!
+				mouseTime=currentTime;
+			}
+		
+			//update local pad?
+			if (mouseX!=mouseXold || mouseY!=mouseYold)
+			{
 				$(".padLocal").css('left',mouseX).css('top',mouseY);
-				
 			}
 
 				
@@ -147,6 +159,9 @@
 		//We just store the information in Cposition objects. The actual calculation and drawing is done in UpdateGameField().
 		synapse_register("pong_Positions",function(msg_src, msg_dst, msg_event, msg)
 		{	
+			//update global time variable. 
+			currentTime=new Date().getTime();
+
 			//(positions are in a plain array for speed optimisation)
 			
 			//the ball is always first and has id 0
@@ -171,8 +186,8 @@
 					padPositions[id]=new Cposition();
 				}
 				pos=game2browser(msg[i+1], msg[i+2]);
-				padPositions[id].move(pos.x, pos.y);
-				i=i+3;		
+				padPositions[id].move(pos.x, pos.y, msg[i+3]);
+				i=i+4;		
 			}
 		});
 
@@ -234,7 +249,7 @@
 			});
 
 			/// start local engine
-			window.setInterval(updateGameField, 25);
+			window.setInterval(updateGameField, updateInterval);
 
 			
 			/// JAVA SCRIPT EVENT HANDLERS
