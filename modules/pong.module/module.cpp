@@ -428,6 +428,15 @@ namespace pong
 		if (pongMap.find(msg.src)== pongMap.end())
 		{
 			pongMap[msg.src].init(msg.src, msg["name"].str());
+
+			//TODO: code duplication:
+			//leave all games and join this one:
+			for (CpongMap::iterator I=pongMap.begin(); I!=pongMap.end(); I++)
+			{
+				I->second.delPlayer(msg.src);
+			}
+			getPong(msg.src).addPlayer(msg.src, msg["name"]);
+
 		}
 		else
 		{
