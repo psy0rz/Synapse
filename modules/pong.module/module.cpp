@@ -458,9 +458,16 @@ namespace pong
 		{
 			Cmsg::iteratorList I;
 			I=msg.list().begin();
-			playerMap[msg.src].position.set(
-					*I, *(I++), *(I++), *(I++)
-			);
+			int x,y,xSpeed,ySpeed;
+			x=*I;
+			I++;
+			y=*I;
+			I++;
+			xSpeed=*I;
+			I++;
+			ySpeed=*I;
+
+			playerMap[msg.src].position.set(x, y, xSpeed, ySpeed);
 		}
 	}
 
