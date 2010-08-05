@@ -23,6 +23,7 @@
 			this.ySpeed=0;
 			this.startTime=0;
 			this.duration=0;
+			this.stopped=0;
 
 			//duration is in S
 			//Speeds in pixels per S.
@@ -30,19 +31,24 @@
 			{
 				if (typeof duration !== 'undefined')
 					this.duration=duration;
+
 				this.x=newX;
 				this.y=newY;
 				this.xSpeed=newXspeed;
 				this.ySpeed=newYspeed;
 				this.startTime=currentTime;
+				this.stopped=0;
 			}
 
 			//move smootly from current position to new position
 			//duration in S.
 			this.move=function(newX, newY, duration)
 			{
+				if (duration==0)
+					duration=0.1;
+				
 				//get current calculated position
-				p=this.get();
+				p=this.get();				
 				//move from there to the new position in duration S.
 				this.set(p.x, p.y, ((newX-p.x)/duration), ((newY-p.y)/duration), duration);  
 			}
@@ -53,7 +59,10 @@
 			{
 				var duration=(currentTime-this.startTime)/1000;
 				if (this.duration && duration>this.duration)
+				{
 					duration=this.duration;
+					this.stopped=1;
+				}
 				return {
 					x: this.x+((this.xSpeed*duration)),
 					y: this.y+((this.ySpeed*duration)),
@@ -83,8 +92,8 @@
 		}
 
 		
-		var updateInterval=25; //update inteval in mS
-		var mouseSkip=4;       //nr of mouse position sends to skip 
+		var updateInterval=50; //update inteval in mS
+		var mouseSkip=2;       //nr of mouse position sends to skip 
 		
 		var currentGameId=0;
 
@@ -127,11 +136,6 @@
 				mouseTime=currentTime;
 			}
 		
-			//update local pad?
-			if (mouseX!=mouseXold || mouseY!=mouseYold)
-			{
-				$(".padLocal").css('left',mouseX).css('top',mouseY);
-			}
 
 				
 			///////////////////////////////////// Ball and pad movements 
@@ -143,15 +147,21 @@
 			//move pads:
 			for (padI in padPositions)
 			{
-				var object=$("#pad_"+padI);
-				if (object.length==0)
+				if (!padPositions[padI].stopped)
 				{
-					//add pad
-					$("#gameField").append("<div class='padPlayer' id='pad_"+padI+"'></div>");
-					object=$("#pad_"+padI);					
-				}
-				var pos=padPositions[padI].get();
-				object.css('left',pos.x).css('top',pos.y);
+					var object=$("#pad_"+padI);
+					if (object.length==0)
+					{
+						//add pad
+						//console.info("addded pad");
+						$("#gameField").append("<div class='padPlayer' id='pad_"+padI+"'></div>");
+						object=$("#pad_"+padI);					
+					}
+					//calculate position and draw:
+					var pos=padPositions[padI].get();
+					object.css('left',pos.x).css('top',pos.y);
+					//console.info("draw ", padPositions[padI]);
+				}				
 			}
 		};
 
@@ -183,10 +193,12 @@
 				id=msg[i];
 				if (padPositions[id]==undefined)
 				{
+//					console.info("new!");
 					padPositions[id]=new Cposition();
 				}
 				pos=game2browser(msg[i+1], msg[i+2]);
 				padPositions[id].move(pos.x, pos.y, msg[i+3]);
+				//console.info("stored ", id, " pos", pos.x," ",pos.y," ", msg[i+3]);
 				i=i+4;		
 			}
 		});
@@ -272,6 +284,12 @@
 			{
 				mouseX=m.pageX-$("#gameFieldMouse").offset().left;
 				mouseY=m.pageY-$("#gameFieldMouse").offset().top;
+				//update local pad?
+//				if (mouseX!=mouseXold || mouseY!=mouseYold)
+				{
+					$(".padLocal").css('left',mouseX).css('top',mouseY);
+				}
+
 			});
  		});
 
