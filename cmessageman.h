@@ -64,8 +64,8 @@ public:
 	int run(string coreName,string moduleName);
 
 	//the rest is not thread safe, so callers are responsible for locking:
-	string sendMappedMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg,int cookie);
-	string sendMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg, int cookie=0);
+	void sendMappedMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg,int cookie);
+	void sendMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg, int cookie=0);
 
 	void checkThread();
 

@@ -55,7 +55,7 @@ CmessageMan::~CmessageMan()
 
 
 
-string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie)
+void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie)
 {
 	// -module is a pointer thats set by the core and can be trusted
 	// -msg is set by the user and only containts direct objects, and NO pointers. it cant be trusted yet!
@@ -63,7 +63,7 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 	// -internally the core only works with smartpointers, so most stuff thats not in msg will be a smartpointer.
 
 	if (shutdown)
-		return ("Shutting down, ignored message");
+		throw(runtime_error("Shutting down, ignored message"));
 
 	//no src session specified means use default session of module:
 	//NOTE: this is the only case where modify the actual msg object.
@@ -77,7 +77,7 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 		{
 			stringstream s;
 			s << "send: module " << module->name << " want to send " << msg->event << " from its default session, but is doesnt have one.";
-			return (s.str());
+			throw(runtime_error(s.str().c_str()));
 		}
 	}
 
@@ -91,7 +91,7 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 		//not found. we cant send an error back yet, so just return false
 		stringstream s;
 		s << "send: module " << module->name << " want to send " << msg->event << " from non-existing session " << msg->src;
-		return (s.str());
+		throw(runtime_error(s.str().c_str()));
 	}
 
 	//source session belongs to this module?
@@ -100,7 +100,7 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 		//module is not the session owner. we cant send an error back yet, so just return false
 		stringstream s;
 		s << "send: module " << module->name << " wants to send " << msg->event << " from session " << msg->src << ", but isnt the owner of this session.";
-		return (s.str());
+		throw(runtime_error(s.str().c_str()));
 	}
 
 	//this cookie matches with src session cookie?
@@ -109,7 +109,7 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 	{
 		stringstream s;
 		s << "send: module " << module->name << " tries to send from session " << msg->src << ", but cookie " << cookie << " doesnt match session cookie " << src->cookie;
-		return (s.str());
+		throw(runtime_error(s.str().c_str()));
 	}
 
 	//resolve or create the event and check send-permissions:
@@ -118,7 +118,7 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 	{
 		stringstream s;
 		s << "send: session " << msg->src << " with user " << src->user->getName() << " is not allowed to send event " << msg->event;
-		return (s.str());
+		throw(runtime_error(s.str().c_str()));
 	}
 
 
@@ -145,7 +145,7 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 		{
 			stringstream s;
 			s << "send: destination session " << msg->dst << " not found";
-			return (s.str());
+			throw(runtime_error(s.str().c_str()));
 		}
 
 		//get the handler, and does it exist?
@@ -153,7 +153,7 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 		if (soHandler==NULL)
 		{
 			WARNING("send ignored message: no handler for " << msg->event << " found in " << dst->module->name );
-			return("");
+			return;
 		}
 
 		//is specified destination allowed?
@@ -161,7 +161,7 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 		{
 			stringstream s;
 			s <<  "send: session " << msg->dst << " with user " << dst->user->getName() << " is not allowed to receive event " << msg->event;
-			return (s.str());
+			throw(runtime_error(s.str().c_str()));
 		}
 
 		if (logSends)
@@ -179,7 +179,7 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 		threadCond.notify_one();
 
 
-		return("");
+		return;
 	}
 	//destination <=0 == broadcast
 	else
@@ -237,8 +237,7 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 		}
 
 		if (!delivered)
-			WARNING("broadcast " << msg->event << " was not received by anyone.") 
-		return ("");
+			WARNING("broadcast " << msg->event << " was not received by anyone.");
 	}
 }
 
@@ -246,11 +245,11 @@ string CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr & 
 Internally it will result in 1 or more calls to sendMappedMessage, if the msg.dst is -1.
 */
 
-string CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie)
+void CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie)
 {
 	if (msg->dst >= 0)
 	{
-		return(sendMappedMessage(module, msg, cookie));
+		sendMappedMessage(module, msg, cookie);
 	}
 	else
 	{
@@ -273,8 +272,6 @@ string CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg, 
 		(*mappedMsg)["mappedFrom"]=msg->event; 
 		sendMessage(module, mappedMsg, cookie);
 
-		//we dont care about the result of the mapped sendMessage, for now
-		return ("");
 	}
 }
 
@@ -364,7 +361,12 @@ void CmessageMan::operator()()
 			(*error)["event"]=callI->msg->event;
 			(*error)["description"]="I/O error: " + string(strerror(errno));
 			(*error)["parameters"]=(*callI->msg);
-			sendMessage(callI->dst->module, error);
+			//prevent exception loops
+			try
+			{
+				sendMessage(callI->dst->module, error);
+			}
+			catch(...){};
 		}
 	  	catch (const std::exception& e)
   		{
@@ -379,7 +381,11 @@ void CmessageMan::operator()()
 			(*error)["event"]=callI->msg->event;
 			(*error)["description"]="Exception: " + string(e.what());
 			(*error)["parameters"]=(*callI->msg);
-			sendMessage(callI->dst->module, error);
+			try
+			{
+				sendMessage(callI->dst->module, error);
+			}
+			catch(...){};
 		}
 		catch(...)
 		{
@@ -394,7 +400,11 @@ void CmessageMan::operator()()
 			(*error)["event"]=callI->msg->event;
 			(*error)["description"]="Unknown exception";
 			(*error)["parameters"]=(*callI->msg);	
-			sendMessage(callI->dst->module, error); 
+			try
+			{
+				sendMessage(callI->dst->module, error);
+			}
+			catch(...){};
 		}
 	}
 }
@@ -640,7 +650,6 @@ void CmessageMan::getEvents(Cvar & var)
 		}
 	}
 	
-	ERROR(var.getPrint());
 
 	//get more information for each event
 	for (Cvar::iterator eventI=var.begin();  eventI!=var.end(); eventI++)

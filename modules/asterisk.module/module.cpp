@@ -1011,11 +1011,23 @@ namespace asterisk
 		}
 	}
 
+	//a session owned by us ended, remove the corresponding server.
 	SYNAPSE_REGISTER(module_SessionEnd)
 	{
-		//since the ami module sees a module_SessionEnded, it will automaticly disconnect the server
+		//since the ami module also sees a module_SessionEnded, it will automaticly disconnect the server
 		serverMap[msg.dst].clear();
 		serverMap.erase(msg.dst);
+	}
+
+	//a session owned by another module ended. check if we created local stuff that we need to delete.
+	SYNAPSE_REGISTER(module_SessionEnded)
+	{
+		if (sessionMap.find(msg["session"]) != sessionMap.end())
+		{
+			//remove the session. we use smartpointers , so it should be safe.
+			DEB("Removing session object " << msg["session"]);
+			sessionMap.erase(msg["session"]);
+		}
 	}
 
 	

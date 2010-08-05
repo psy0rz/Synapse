@@ -126,7 +126,11 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
 	out["authCookie"]=authCookie;
 	out["netId"]=netId;
 
-	if (out.send()!="")
+	try
+	{
+		out.send();
+	}
+	catch(...)
 	{
 		//sending fails if the user doesnt have rights to send a NewSession request. (like anonymous user)
 		//in this case we just create a new anonymous session without cloning.
@@ -202,7 +206,16 @@ string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonStr)
 		msg.src=httpSessionI->first;
 	}
 
-	return(msg.send());
+	try
+	{
+		msg.send();
+	}
+	catch(const std::exception& e)
+	{
+		return(string(e.what()));
+	}
+
+	return("");
 }
 
 //core informs us of a new session that is started, probably for a client of us:

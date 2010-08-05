@@ -77,11 +77,11 @@ extern "C" void synapseCleanup()
 //and send a smartpointer of it to the core.
 //sendPtr should be defined in each module in synapse.h
 //you CANT send messages from the core with this funtion, you'll get an 'undefined reference'. :)
-string Cmsg::send(int cookie)
+void Cmsg::send(int cookie)
 { 
 	lock_guard<mutex> lock(messageMan->threadMutex);
 
-	return(messageMan->sendMessage((CmodulePtr)module,CmsgPtr(new Cmsg(*this)), cookie));
+	messageMan->sendMessage((CmodulePtr)module,CmsgPtr(new Cmsg(*this)), cookie);
 } 
 
 

@@ -141,6 +141,7 @@ class CnetModule : public synapse::Cnet
 		{
 			try
 			{
+				//TODO: replace 'error'-string with exceptions?
 				string error;
 
 				//parse it
@@ -200,11 +201,10 @@ class CnetModule : public synapse::Cnet
 				//if nothing went wrong, send the session-mapped message:
 				if (error=="")
 				{
-					error=out.send(id);
+					out.send(id);
 				}
-
+				else
 				//something went wrong?
-				if (error!="")
 				{
 					Cmsg errMsg;
 					errMsg["description"]=error;

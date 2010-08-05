@@ -41,7 +41,15 @@ namespace asterisk
 				if (I->second->isAdmin || I->second->getGroupPtr().get()==this)
 				{
 					msg.dst=I->first;
-					msg.send();
+					try
+					{
+						msg.send();
+					}
+					catch(const std::exception& e)
+					{
+						WARNING("asterisk delivering broadcast to " << msg.dst << " failed: " << e.what());
+					}
+
 				}
 			}
 			//restore dst value:
@@ -54,7 +62,14 @@ namespace asterisk
 			{
 				if (I->second->isAdmin || I->second->getGroupPtr().get()==this)
 				{
-					msg.send();
+					try
+					{
+						msg.send();
+					}
+					catch(const std::exception& e)
+					{
+						WARNING("asterisk send to " << msg.dst << " failed: " << e.what());
+					}
 				}
 			}
 		}
