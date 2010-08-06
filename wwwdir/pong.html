@@ -1,5 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-
+<!-- (C)edwin@datux.nl - released under GPL -->
 <html>
 
 <head>
@@ -72,6 +72,57 @@
 				};
 			}								
 		}
+
+		function Cpoint(x,y)
+		{
+			this.x=x;
+			this.y=y;
+		}
+		
+		function Cline(x1,y1,x2,y2) {
+			this.point1=new Cpoint(x1,y1);
+			this.point2=new Cpoint(x2,y2);
+
+			this.calcSlope=function()
+			{
+				return( ( this.point1.y - this.point2.y) / ( this.point1.x - this.point2.x ) );
+			}
+			
+			this.calcOffset=function()
+			{
+				return ( 
+						( ( this.point1.y * this.point2.x ) - ( this.point2.y * this.point1.x ) ) /
+						  			( this.point2.x -this.point1.x )
+						  );
+			}					  			
+		}
+
+		function calcIntersect(x11,y11,x12,y12,x21,y21,x22,y22)
+		{
+			//from: http://www.topcoder.com/tc?module=Static&d1=tutorials&d2=geometry2
+			A1 = y12-y11;
+			B1 = x11-x12;
+			C1 = A1*x11+B1*y11;
+
+			A2 = y22-y21;
+			B2 = x21-x22;
+			C2 = A2*x21+B2*y21;
+
+			det = A1*B2 - A2*B1;
+			if (det==0)
+				return({ "collide": false});
+		
+			x = (B2*C1 - B1*C2)/det;
+			y = (A1*C2 - A2*C1)/det;
+			
+			return({
+				"x":x, 
+				"y":y,
+				"collide": true
+				});
+		}
+		
+
 		
 		//calculate browser coordinates to game coordinates
 		function browser2game(x,y)
@@ -92,6 +143,7 @@
 		}
 
 		
+		
 		var updateInterval=50; //update inteval in mS
 		var mouseSkip=2;       //nr of mouse position sends to skip 
 		
@@ -100,15 +152,34 @@
 		//variables to predict mouse movement
 		var mouseX=0; //current mouse position
 		var mouseY=0;
-		var mouseXold=0; //mouse position, speed and time during last snapshot
+
+		var mouseXold=0; //old mouse position and time and count, for slow updates to server
 		var mouseYold=0;
 		var mouseTime=0;
 		var mouseCount=0;
+
+		var mouseXoldFast=0; //old mouse position for collision detection, the realtime faster version.
+		var mouseYoldFast=0;
 		
+
+		//dynamic position:
 		var ballPosition=new Cposition();
+
+		//for collision detection we need the traveled line:
+		var ballX=0;
+		var ballY=0;
+		var ballXold=0;
+		var ballYold=0;
 
 		var padPositions=new Array();
 
+		function bounceCheck()
+		{
+			i=calcIntersect(mouseXoldFast, mouseYoldFast, mouseX, mouseY, ballXold, ballYold, ballX, ballY );
+			if (i.collide)
+				$("#test").css('left',i.x).css('top',i.y);
+	
+		}		
 		
 		function updateGameField()
 		{
@@ -124,6 +195,7 @@
 				//mouse actually changed?
 				if (mouseX!=mouseXold || mouseY!=mouseYold)
 				{
+					
 					//convert coordinates and send out destination position + time it took to get there.
 					pos=browser2game(mouseX, mouseY);
 					send(0,"pong_SetPosition", [pos.x, pos.y, (currentTime-mouseTime)/1000] );
@@ -143,6 +215,15 @@
 			//move ball:
 			var pos=ballPosition.get();
 			$(".ball").css('left',pos.x).css('top',pos.y);
+
+			//store travelled ball path for collision detection:
+			ballXold=ballX;
+			ballYold=ballY;
+			ballX=pos.x
+			ballY=pos.y;
+
+			//ball moved, check for bounces with local pad
+			bounceCheck();
 
 			//move pads:
 			for (padI in padPositions)
@@ -282,9 +363,17 @@
 
 			$("#gameFieldMouse").mousemove(function(m)
 			{
+				mouseXoldFast=mouseX;
+				mouseYoldFast=mouseY;
 				mouseX=m.pageX-$("#gameFieldMouse").offset().left;
 				mouseY=m.pageY-$("#gameFieldMouse").offset().top;
+				
 				$(".padLocal").css('left',mouseX).css('top',mouseY);
+
+				//local pad moved, check for bounces with ball
+				bounceCheck();
+			
+				//console.info("draw ", padPositions[padI]);
 
 			});
  		});
@@ -408,6 +497,17 @@
 			background-color:#00ff00;
 		}
 
+		#test
+		{
+			position:absolute;
+			left:10%;
+			top:10%;
+			width:1%;
+			height:10%;
+			background-color:#ff0000;
+		}
+
+
 		.ball
 		{
 			position:absolute;
@@ -444,7 +544,8 @@
 		<div class='score' id='scoreLeft'>15</div>
 		<div class='score' id='scoreRight'>2</div>
 		<div class='ball'></div>		
-		<div class='padLocal'></div>		
+		<div class='padLocal'></div>
+		<div id='test'></div>		
 		
 	</div>
 
