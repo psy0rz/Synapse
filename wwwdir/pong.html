@@ -10,51 +10,69 @@
 
 	<script type="text/javascript">
 
-		//global time, updated every frame. This is to lower the number of calls to Date().gettime and to get time-consistency.
-		currentTime=0;
+
+		//(these where member of Cpoint, but thats only annoying and slow)
+		//calculate browser coordinates to game coordinates
+		function toGame(x,y)
+		{
+			return ({
+				"x":Math.round((x * 10000) / $("#gameField").width()),
+				"y":Math.round((y * 10000) / $("#gameField").height())
+			});
+		}
 	
-		//this is the class to store position information in.
+		//calculate game coordinates to browser coordinates 
+		function toBrowser(x,y)
+		{
+			return ({
+				"x":Math.round((x*$("#gameField").width())/10000),
+				"y":Math.round((y*$("#gameField").height())/10000)
+			});
+		}				
+
+	
+		function Cpoint(x,y)
+		{
+			this.x=x;
+			this.y=y;
+
+			this.copy=function(point)
+			{
+				this.x=point.x;
+				this.y=point.y;
+			}
+			
+		}
+
+		
+		//this is the class to store vector information in.
 		//position information is always a combination of x,y coordinates and x,y speed.
 		//In combination with timing we can calculate the predicted position.
-		function Cposition() {
-			this.x=0;
-			this.y=0;
+		function Cvector() {
+			this.startPoint=new Cpoint(0,0);
 			this.xSpeed=0;
 			this.ySpeed=0;
 			this.startTime=0;
 			this.duration=0;
-			this.stopped=0;
+			this.stopped=1;
 
 			//duration is in S
 			//Speeds in pixels per S.
-			this.set=function(newX, newY, newXspeed, newYspeed, duration)
+			this.set=function(point, speed, duration)
 			{
 				if (typeof duration !== 'undefined')
 					this.duration=duration;
 
-				this.x=newX;
-				this.y=newY;
-				this.xSpeed=newXspeed;
-				this.ySpeed=newYspeed;
+				this.startPoint.copy(point);
+				this.xSpeed=speed.x;
+				this.ySpeed=speed.y;
 				this.startTime=currentTime;
 				this.stopped=0;
 			}
 
-			//move smootly from current position to new position
-			//duration in S.
-			this.move=function(newX, newY, duration)
-			{
-				if (duration==0)
-					duration=0.1;
-				
-				//get current calculated position
-				p=this.get();				
-				//move from there to the new position in duration S.
-				this.set(p.x, p.y, ((newX-p.x)/duration), ((newY-p.y)/duration), duration);  
-			}
-
 			
 			//calculate the current x and y coordinates, based on the start position, start time, x,y-speeds and current time.
+			//return a Cpoint with the calculated position.
 			this.get=function()
 			{
 				var duration=(currentTime-this.startTime)/1000;
@@ -63,172 +81,226 @@
 					duration=this.duration;
 					this.stopped=1;
 				}
-				return {
-					x: this.x+((this.xSpeed*duration)),
-					y: this.y+((this.ySpeed*duration)),
-					xSpeed: this.xSpeed,
-					ySpeed: this.ySpeed,
-					duration: duration
-				};
-			}								
+				return ({
+					x:this.startPoint.x+((this.xSpeed*duration)), 
+					y:this.startPoint.y+((this.ySpeed*duration))
+				});
+			}
+
+			//move smootly from current position to new position
+			//duration in S.
+			this.move=function(toPoint, duration)
+			{
+				if (duration==0)
+					duration=0.1;
+				
+				//get current calculated position
+				currentPoint=this.get();				
+				//move from there to the new position in duration S.
+				speed=new Cpoint((toPoint.x-currentPoint.x)/duration, (toPoint.y-currentPoint.y)/duration );
+				
+				this.set(currentPoint, speed, duration);  
+			}
 		}
 
-		function Cpoint(x,y)
-		{
-			this.x=x;
-			this.y=y;
-		}
 		
 		function Cline(x1,y1,x2,y2) {
 			this.point1=new Cpoint(x1,y1);
 			this.point2=new Cpoint(x2,y2);
 
+			this.copy=function(line)
+			{
+				this.point1.x=line.point1.x;
+				this.point1.y=line.point1.y;
+				this.point2.x=line.point2.x;
+				this.point2.y=line.point2.y;
+			}
+			
 			this.calcSlope=function()
 			{
-				return( ( this.point1.y - this.point2.y) / ( this.point1.x - this.point2.x ) );
+				with (this)
+				{
+					return( ( point1.y - point2.y) / ( point1.x - point2.x ) );
+				}
 			}
 			
 			this.calcOffset=function()
 			{
-				return ( 
-						( ( this.point1.y * this.point2.x ) - ( this.point2.y * this.point1.x ) ) /
-						  			( this.point2.x -this.point1.x )
-						  );
-			}					  			
+				with (this)
+				{
+					return ( 
+							( ( point1.y * point2.x ) - ( point2.y * point1.x ) ) /
+							  			( point2.x -point1.x )
+							  );
+				}
+			}
+
+			//calculate intersection of 2 lines.
+			this.calcIntersect=function(other)
+			{
+				//calcIntersect(xaa,yaa,xab,yab,xba,yba,xbb,ybb)
+				//from: http://www.topcoder.com/tc?module=Static&d1=tutorials&d2=geometry2
+				Athis = this.point2.y-this.point1.y;
+				Bthis = this.point1.x-this.point2.x;
+				Cthis = (Athis * this.point1.x) + (Bthis * this.point1.y );
+
+				Aother = other.point2.y-other.point1.y;
+				Bother = other.point1.x-other.point2.x;
+				Cother = (Aother * other.point1.x) + (Bthis * other.point1.y );
+				 
+				det = (Athis*Bother) - (Aother*Bthis);
+
+				if (det==0)
+					return({ "intersect": false});
+				else
+				{
+					return({
+						"intersect": true,
+						"x": (Bother*Cthis - Bthis*Cother)/det,
+						"y": (Athis*Cother - Aother*Cthis)/det
+					});
+				}
+			}
 		}
 
-		function calcIntersect(x11,y11,x12,y12,x21,y21,x22,y22)
-		{
-			//from: http://www.topcoder.com/tc?module=Static&d1=tutorials&d2=geometry2
-			A1 = y12-y11;
-			B1 = x11-x12;
-			C1 = A1*x11+B1*y11;
 
-			A2 = y22-y21;
-			B2 = x21-x22;
-			C2 = A2*x21+B2*y21;
+		function Crect() {
+			this.lt=new Cpoint(0,0);
+			this.rb=new Cpoint(0,0);
 
-			det = A1*B2 - A2*B1;
-			if (det==0)
-				return({ "collide": false});
-		
-			x = (B2*C1 - B1*C2)/det;
-			y = (A1*C2 - A2*C1)/det;
+			this.copy=function(rect)
+			{
+				this.lt.x=rect.lt.x;
+				this.lt.y=rect.lt.y;
+				this.rb.x=rect.rb.x;
+				this.rb.y=rect.rb.y;
+			}
 			
-			return({
-				"x":x, 
-				"y":y,
-				"collide": true
-				});
-		}
-		
-
-		
-		//calculate browser coordinates to game coordinates
-		function browser2game(x,y)
-		{
-			return {
-				x:Math.round((x * 10000) / $("#gameField").width()),
-				y:Math.round((y * 10000) / $("#gameField").height())
+			//calculate rectangle coordinates from a given middlepoint with width and height
+			this.fromPoint=function(middle, width, height)
+			{
+				this.lt.x= middle.x - (width/2);
+				this.lt.y= middle.y + (height/2); 
+				this.rb.x= middle.x + (width/2);
+				this.rb.y= middle.y - (height/2); 
 			}
-		}
 
-		//calculate game coordinates to browser coordinates
-		function game2browser(x,y)
-		{
-			return {
-				x: Math.round((x*$("#gameField").width())/10000),
-				y: Math.round((y*$("#gameField").height())/10000)
+			//returns true if point falls within rect.
+			this.pointIsIn=function(point)
+			{
+				if (
+						point.x<this.lt.x || 
+						point.x>this.rb.x || 
+						point.y>this.lt.y || 
+						point.y<this.rb.y
+					)
+						return false;
+					else
+						return true;
 			}
+
+			//returns true if 2 rectangles intersect
+			this.intersect=function(rect)
+			{
+				if (
+						this.lt.x > rect.rb.x || //we are right of it							
+						this.rb.x < rect.lt.x || //we are left of it
+						this.lt.y < rect.rb.y || //we are below it
+						this.rb.y > rect.lt.y  //we are above it
+					)
+					return false;
+				else
+					return true;					
+			}
+
+			
 		}
 
+		//check if 2 rectangles collided during flight
+		//TODO: this is kinda difficult ;)
+		function rectCollision(rectAstart, rectAend, rectBstart, rectBend)
+		{
+			//put B in the middle and see if A jumped over it.
+
+			//put A in the middle and see if B jumped over it.
+		}
+
+		//global time, updated every frame. This is to lower the number of calls to Date().gettime and to get time-consistency.
+		var currentTime=0;
 		
-		
-		var updateInterval=50; //update inteval in mS
-		var mouseSkip=2;       //nr of mouse position sends to skip 
+//		var lastTime=0; //last time a frame was analysed.
+		var updateInterval=25; //frame update inteval in mS
 		
 		var currentGameId=0;
 
-		//variables to predict mouse movement
-		var mouseX=0; //current mouse position
-		var mouseY=0;
+		var mousePoint=new Cpoint(); //current mouse position
 
-		var mouseXold=0; //old mouse position and time and count, for slow updates to server
-		var mouseYold=0;
-		var mouseTime=0;
-		var mouseCount=0;
+		//mouse info sending to server:
+		var mouseSendPoint=new Cpoint(); //last mousepoint sent to server
+		var mouseSendTime=0; //last time the mousePosition was anaylsed by updateGameField
+		var mouseSendSkip=4;   //nr of mouse position sends to skip during each gamefieldupdate 
+		var mouseSendSkipCount=0; 
 
-		var mouseXoldFast=0; //old mouse position for collision detection, the realtime faster version.
-		var mouseYoldFast=0;
-		
+		//dynamic ball position:
+		var ballVector=new Cvector();
 
-		//dynamic position:
-		var ballPosition=new Cposition();
+		//dynamic pad positions
+		var padVectors=new Array();
 
-		//for collision detection we need the traveled line:
-		var ballX=0;
-		var ballY=0;
-		var ballXold=0;
-		var ballYold=0;
 
-		var padPositions=new Array();
+		//store stuff for collision detection:
+		var ballRect=new Crect();
+		var ballRectOld=new Crect();
+		var mouseRect=new Crect();
+		var mouseRectOld=new Crect();
 
-		function bounceCheck()
-		{
-			i=calcIntersect(mouseXoldFast, mouseYoldFast, mouseX, mouseY, ballXold, ballYold, ballX, ballY );
-			if (i.collide)
-				$("#test").css('left',i.x).css('top',i.y);
-	
-		}		
 		
 		function updateGameField()
 		{
 			//update global time variable. 
 			currentTime=new Date().getTime();
-
-			//send mouse update to server?
-			mouseCount++;
-			if (mouseCount>mouseSkip)
-			{
-				mouseCount=0;
-
-				//mouse actually changed?
-				if (mouseX!=mouseXold || mouseY!=mouseYold)
-				{
-					
-					//convert coordinates and send out destination position + time it took to get there.
-					pos=browser2game(mouseX, mouseY);
-					send(0,"pong_SetPosition", [pos.x, pos.y, (currentTime-mouseTime)/1000] );
-
-					mouseXold=mouseX;
-					mouseYold=mouseY;
-				}
-
-				//always update mouse time!
-				mouseTime=currentTime;
-			}
-		
-
+			
 				
-			///////////////////////////////////// Ball and pad movements 
+			///////////////////////////////////// Collision handling 
 
-			//move ball:
-			var pos=ballPosition.get();
-			$(".ball").css('left',pos.x).css('top',pos.y);
+			//get calculated ball point:
+			var ballPoint=ballVector.get();
 
-			//store travelled ball path for collision detection:
-			ballXold=ballX;
-			ballYold=ballY;
-			ballX=pos.x
-			ballY=pos.y;
+			//calculate the rectangle from it:
+			ballRect.fromPoint(ballPoint, $(".ball").width(), $(".ball").height()); 
 
-			//ball moved, check for bounces with local pad
-			bounceCheck();
+			//calculate the mouse rectangle as well:
+			mouseRect.fromPoint(mousePoint, $(".padLocal").width(), $(".padLocal").height()); 
 
-			//move pads:
-			for (padI in padPositions)
+			//normal collision checking, for now
+			if (mouseRect.intersect(ballRect))
 			{
-				if (!padPositions[padI].stopped)
+				console.info("WAM");
+				$("#test3").css('left',ballPoint.x).css('top',ballPoint.y);
+			}
+			else
+			{
+				//TODO:do the advanced collision checking:
+				//if (rectCollision(ballRectOld, ballRect, mouseRectOld, mouseRect))
+				//{
+				//	console.show("BOOM");
+				//}
+			}			
+			
+			//javascript references objects instead of copying..
+			mouseRectOld.copy(mouseRect);
+			ballRectOld.copy(ballRect);
+			
+
+			//////////////////////////////// Move ball object
+
+			$(".ball").css('left',ballPoint.x).css('top',ballPoint.y);
+			
+
+			//////////////////////////////// Move pad objects
+			for (padI in padVectors)
+			{
+				if (!padVectors[padI].stopped)
 				{
 					var object=$("#pad_"+padI);
 					if (object.length==0)
@@ -239,11 +311,34 @@
 						object=$("#pad_"+padI);					
 					}
 					//calculate position and draw:
-					var pos=padPositions[padI].get();
+					var pos=padVectors[padI].get();
 					object.css('left',pos.x).css('top',pos.y);
 					//console.info("draw ", padPositions[padI]);
-				}				
+				}
 			}
+
+			/////////////////////////////////// Send mouse updates to server
+			//send mouse update to server?
+			mouseSendSkipCount++;
+			if (mouseSendSkipCount>mouseSendSkip)
+			{
+				//mouse actually changed?
+				if (mousePoint.x != mouseSendPoint.x || mousePoint.y != mouseSendPoint.y )
+				{
+					mouseSendSkipCount=0;
+					
+					//convert coordinates and send out destination position + time it took to get there.
+					pos=toGame(mousePoint.x, mousePoint.y);
+					send(0,"pong_SetPosition", [pos.x, pos.y, (currentTime-mouseSendTime)/1000] );
+					mouseSendPoint.copy(mousePoint);
+				}
+
+				//always update mouse time!
+				mouseSendTime=currentTime;
+			}
+
+
+			lastTime=currentTime;
 		};
 
 		//here is where we receive the positions of the ball and pads from the server.
@@ -259,9 +354,9 @@
 			if (msg[0]==0)
 			{
 				//ball xy
-				pos=game2browser(msg[1], msg[2]);
-				speed=game2browser(msg[3], msg[4]);				
-				ballPosition.set(pos.x, pos.y, speed.x, speed.y);
+				point=toBrowser(msg[1], msg[2]);
+				speed=toBrowser(msg[3], msg[4]);
+				ballVector.set(point, speed);
 				i=5;
 			}
 			else
@@ -272,13 +367,12 @@
 			while(i<msg.length)
 			{
 				id=msg[i];
-				if (padPositions[id]==undefined)
+				if (padVectors[id]==undefined)
 				{
-//					console.info("new!");
-					padPositions[id]=new Cposition();
+					padVectors[id]=new Cvector();
 				}
-				pos=game2browser(msg[i+1], msg[i+2]);
-				padPositions[id].move(pos.x, pos.y, msg[i+3]);
+				point=toBrowser(msg[i+1], msg[i+2]);
+				padVectors[id].move(point, msg[i+3]);
 				//console.info("stored ", id, " pos", pos.x," ",pos.y," ", msg[i+3]);
 				i=i+4;		
 			}
@@ -363,18 +457,10 @@
 
 			$("#gameFieldMouse").mousemove(function(m)
 			{
-				mouseXoldFast=mouseX;
-				mouseYoldFast=mouseY;
-				mouseX=m.pageX-$("#gameFieldMouse").offset().left;
-				mouseY=m.pageY-$("#gameFieldMouse").offset().top;
+				mousePoint.x=m.pageX-$("#gameFieldMouse").offset().left;
+				mousePoint.y=m.pageY-$("#gameFieldMouse").offset().top;
 				
-				$(".padLocal").css('left',mouseX).css('top',mouseY);
-
-				//local pad moved, check for bounces with ball
-				bounceCheck();
-			
-				//console.info("draw ", padPositions[padI]);
-
+				$(".padLocal").css('left',mousePoint.x).css('top',mousePoint.y);
 			});
  		});
 
@@ -482,8 +568,11 @@
 			top:10%;
 			width:1%;
 			height:10%;
+			margin-top:-5%;
+			margin-left:-0.5%;
 			background-color:#ffffff;
 		}
+
 
 
 		
@@ -497,13 +586,33 @@
 			background-color:#00ff00;
 		}
 
-		#test
+		#test1
 		{
 			position:absolute;
 			left:10%;
 			top:10%;
-			width:1%;
-			height:10%;
+			width:4px;
+			height:4px;
+			background-color:#ff00ff;
+		}
+		#test2
+		{
+			position:absolute;
+			left:10%;
+			top:10%;
+			width:4px;
+			height:4px;
+			background-color:#00ffff;
+			
+		}
+
+		#test3
+		{
+			position:absolute;
+			left:10%;
+			top:10%;
+			width:4px;
+			height:4px;
 			background-color:#ff0000;
 		}
 
@@ -514,7 +623,9 @@
 			left:30%;
 			top:30%;
 			width:1%;
+			margin-left:-0.5%;
 			height:2%;
+			margin-top:-1%;
 			background-color:#00ff00;
 		}
 		
@@ -545,7 +656,9 @@
 		<div class='score' id='scoreRight'>2</div>
 		<div class='ball'></div>		
 		<div class='padLocal'></div>
-		<div id='test'></div>		
+		<div id='test1'></div>		
+		<div id='test2'></div>		
+		<div id='test3'></div>		
 		
 	</div>
 
