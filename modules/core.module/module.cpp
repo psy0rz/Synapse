@@ -5,7 +5,7 @@ This contains all the core functionality to control the synapse framework.
 
 Here are some common sends that can be emitted by all event-handers of the core:
 \par Sends \c module_Error:
-	Sended to the requesting session if some error happend. 
+	Sended to the requesting session if some error happend.
 		\arg \c error A string describing the error.
 */
 
@@ -36,7 +36,7 @@ void init()
 {
 	//We have no core lock, but there are no threads yet, so its no problem.
 	//What this means is that we can do everything we want AND use the send() without causing a deadlock.
-	
+
 	INFO("Synapse core v1.0 starting up...");
 
 	//call the normal module-init to do the rest:
@@ -45,7 +45,7 @@ void init()
 	out.send();
 
 }
- 
+
 void exitHandler(int signum)
 {
 	//disable it from now on, so pressing ctrl-c a second time interrupts it.
@@ -184,19 +184,19 @@ SYNAPSE_REGISTER(module_Init)
 	out["recvGroup"]="core";
 	out.send();
 
-	out["event"]="core_MappedEvent"; 
+	out["event"]="core_MappedEvent";
 	out["modifyGroup"]="core";
 	out["sendGroup"]="modules";
 	out["recvGroup"]="core";
 	out.send();
 
-	out["event"]="core_AddMapping"; 
+	out["event"]="core_AddMapping";
 	out["modifyGroup"]="core";
 	out["sendGroup"]="core";
 	out["recvGroup"]="core";
 	out.send();
 
-	out["event"]="core_DelMapping"; 
+	out["event"]="core_DelMapping";
 	out["modifyGroup"]="core";
 	out["sendGroup"]="core";
 	out["recvGroup"]="core";
@@ -212,7 +212,7 @@ SYNAPSE_REGISTER(module_Init)
 	out.send();
 
 
-	DEB("Core init complete");	
+	DEB("Core init complete");
 }
 
 
@@ -243,7 +243,7 @@ SYNAPSE_REGISTER(core_LoadModule)
 	{
 		lock_guard<mutex> lock(messageMan->threadMutex);
 		CmodulePtr module;
-	
+
 		module=messageMan->getModule(msg["path"]);
 
 		//is it already loaded?
@@ -279,12 +279,14 @@ SYNAPSE_REGISTER(core_LoadModule)
 				startmsg["description"]=session->description;
 				startmsg.dst=session->id;
 				startmsg.src=0;
+
+				module=session->module;
 			}
-			module=session->module;
 		}
 
 		//add the requesting session to the list of requesters, so it gets informed when the module becomes ready.
-		module->requestingSessions.push_back(msg.src);
+		if (module!=NULL)
+			module->requestingSessions.push_back(msg.src);
 	}
 
 	if (error!="")
@@ -406,7 +408,7 @@ SYNAPSE_REGISTER(core_Register)
 	\param event The event you want to change.
 	\param sendGroup The group that has permission to send the event.
 	\param recvGroup The group that has permission to receive the event.
-	\param modifyGroup The group that has permission to modify the permissions. 
+	\param modifyGroup The group that has permission to modify the permissions.
 
 \post The permissions are changed.
 
@@ -473,7 +475,7 @@ SYNAPSE_REGISTER(core_ChangeEvent)
 
 	if (error!="")
 		msg.returnError(error);
-} 
+}
 
 
 
@@ -513,7 +515,7 @@ SYNAPSE_REGISTER(core_Login)
 
 
 /** Starts a new session, with the same user as \c src.
-	\param username (optional) 
+	\param username (optional)
 	\param password (optional) If specified will create a session with a different user instead of the \c src user.
 	\param maxThreads (optional) Max threads of new session.
 	\param synapse_cookie (optional) Cookie, can be used internally by module. This value is passed every time a handler for the session is called. It is passed as \c cookie parameter to the handler-function.
@@ -528,7 +530,7 @@ SYNAPSE_REGISTER(core_Login)
 
 \par Broadcasts \c module_SessionStarted:
 	to let the rest of the word know of the new session.
-		\arg \c session The session id of the new session. 
+		\arg \c session The session id of the new session.
 */
 SYNAPSE_REGISTER(core_NewSession)
 {
@@ -561,7 +563,7 @@ SYNAPSE_REGISTER(core_NewSession)
 					//set max threads?
 					if (msg.isSet("maxThreads") && msg["maxThreads"] > 0)
 						messageMan->setSessionThreads(newSession, msg["maxThreads"]);
-	
+
 					newSession->description=msg["description"].str();
 
 					//send startmessage to the new session, copy all parameters.
@@ -633,8 +635,8 @@ SYNAPSE_REGISTER(core_Shutdown)
 	endmsg.event="module_Shutdown";
 	endmsg.dst=0;
 	//use lowlevel sendMessage, since endmsg.send would deadlock
-	messageMan->sendMessage((CmodulePtr)module,CmsgPtr(new Cmsg(endmsg))); 
-	
+	messageMan->sendMessage((CmodulePtr)module,CmsgPtr(new Cmsg(endmsg)));
+
 
 	//now tell all the sessions they are ended, and actually delete them
 	//do this PER session.
@@ -649,25 +651,25 @@ SYNAPSE_REGISTER(core_Shutdown)
 			endmsg.event="module_SessionEnd";
 			endmsg.dst=sessionId;
 			//use lowlevel sendMessage, since endmsg.send would deadlock
-			messageMan->sendMessage((CmodulePtr)module,CmsgPtr(new Cmsg(endmsg))); 
-	
+			messageMan->sendMessage((CmodulePtr)module,CmsgPtr(new Cmsg(endmsg)));
+
 			//inform everyone the session has ended
 			endmsg.clear();
 			endmsg.event="module_SessionEnded";
 			endmsg["session"]=sessionId;
 			endmsg.dst=0;
-			messageMan->sendMessage((CmodulePtr)module,CmsgPtr(new Cmsg(endmsg))); 
-		
+			messageMan->sendMessage((CmodulePtr)module,CmsgPtr(new Cmsg(endmsg)));
+
 			//now actually delete the session
 			//Csession object stays intact as long as there are shared_ptr's referring to it from the call queue
 			if (!messageMan->userMan.delSession(sessionId))
 					ERROR("cant delete session" << sessionId);
-			
+
 			//when the last session for a module is gone the module is unloaded.
 			//when the last module is unloaded the program shuts down.
 		}
 	}
-	
+
 	//delete the core session, so nobody can do any corestuff from now on
 	messageMan->userMan.delSession(1);
 
@@ -712,7 +714,7 @@ SYNAPSE_REGISTER(core_DelSession)
 		endmsg["session"]=endmsg.dst;
 		endmsg.dst=0;
 		endmsg.send();
-	
+
 		//now actually delete the session
 		{
 			lock_guard<mutex> lock(messageMan->threadMutex);
@@ -784,7 +786,7 @@ SYNAPSE_REGISTER(core_ChangeModule)
 				messageMan->setModuleThreads(session->module, msg["maxThreads"]);
 
 			if (msg.isSet("broadcastMulti"))
-				session->module->broadcastMulti=msg["broadcastMulti"];	
+				session->module->broadcastMulti=msg["broadcastMulti"];
 
 			if (msg.isSet("broadcastCookie"))
 				session->module->broadcastCookie=msg["broadcastCookie"];
@@ -847,7 +849,7 @@ SYNAPSE_REGISTER(core_Interrupt)
 		out.event="core_InterruptSent";
 		out["pars"]=msg;
 	}
-	
+
 
 	if (error!="")
 		msg.returnError(error);
@@ -912,7 +914,7 @@ SYNAPSE_REGISTER(core_GetEvents)
 		out.dst=msg.src;
 	}
 	out.send();
-} 
+}
 
 /** Adds a new event mapping.
 	\param mapFrom Event to map from
@@ -975,5 +977,5 @@ SYNAPSE_REGISTER(core_DelMapping)
 	else
 		out.send();
 }
- 
+
 }

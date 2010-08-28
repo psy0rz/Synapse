@@ -1,5 +1,9 @@
 #include "cnetman.h"
 #include "synapse.h"
+#include <boost/thread/condition.hpp>
+
+
+
 
 #define MAX_MESSAGE 2048
 
@@ -14,7 +18,7 @@ SYNAPSE_REGISTER(module_Init)
 
 	moduleSessionId=msg.dst;
 
-	//change module settings. 
+	//change module settings.
 	out.clear();
 	out.event="core_ChangeModule";
 	out["maxThreads"]=100;
@@ -267,7 +271,7 @@ SYNAPSE_REGISTER(conn_json_Listen)
 	{
 		//starts a new thread to accept and handle the incomming connection.
 		Cmsg out;
-		
+
 		//fire off acceptor thread
 		out.clear();
 		out.dst=msg.dst;
@@ -317,7 +321,7 @@ SYNAPSE_REGISTER(module_Shutdown)
 
 
 /** This handler is called for all events that:
- * -dont have a specific handler, 
+ * -dont have a specific handler,
  * -are send to broadcast or to a session we manage.
  */
 SYNAPSE_HANDLER(all)

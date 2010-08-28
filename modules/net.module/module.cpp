@@ -18,6 +18,9 @@
 
 #include "synapse.h"
 #include "cnetman.h"
+#include <boost/thread/condition.hpp>
+
+
 
 using namespace boost;
 using namespace std;
@@ -70,15 +73,15 @@ SYNAPSE_REGISTER(module_SessionStart)
 }
 
 // We extent the Cnet class with our own network handlers.
-// Every new network session will get its own Cnet object. 
+// Every new network session will get its own Cnet object.
 // As soon as something with a network connection 'happens', these handlers will be called.
 // In the case of this generic module, the data is assume to be readable text and is sended with a net_Read message.
 class CnetModule : public synapse::Cnet
 {
 
-	
+
 	//...put your per-network-connection variables here...
-	
+
 	/** Connection 'id' is trying to connect to host:port
 	* Sends: net_Connecting
 	*/
@@ -144,7 +147,7 @@ class CnetModule : public synapse::Cnet
 		out["reason"]=ec.message();
 		out.send();
 	}
-}; 
+};
 
 synapse::CnetMan<CnetModule> net;
 
@@ -200,7 +203,7 @@ SYNAPSE_REGISTER(net_Close)
 }
 
 
-/** Disconnections the connection related to src 
+/** Disconnections the connection related to src
  */
 SYNAPSE_REGISTER(net_Disconnect)
 {

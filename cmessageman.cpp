@@ -1,7 +1,7 @@
 //
 // C++ Implementation: cmessageman
 //
-// Description: 
+// Description:
 //
 //
 // Author:  <>, (C) 2009
@@ -24,6 +24,8 @@
 #include <string.h>
 #include <map>
 #include <set>
+#include <boost/thread/condition.hpp>
+
 
 
 namespace synapse
@@ -43,7 +45,7 @@ CmessageMan::CmessageMan()
 	currentThreads=0;
 	maxActiveThreads=0;
 	wantCurrentThreads=1;
-	maxThreads=1000;	
+	maxThreads=1000;
 	shutdown=false;
 }
 
@@ -126,8 +128,8 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 	if (logSends)
 	{
 		//build a text-representaion of whats happening:
-		msgStr << "SEND " << msg->event << 
-			" FROM " << msg->src << ":" << src->user->getName() << "@" << module->name <<  
+		msgStr << "SEND " << msg->event <<
+			" FROM " << msg->src << ":" << src->user->getName() << "@" << module->name <<
 			" TO ";
 	}
 
@@ -166,7 +168,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 
 		if (logSends)
 		{
-			msgStr << msg->dst << ":" << dst->user->getName() << "@" << dst->module->name << 
+			msgStr << msg->dst << ":" << dst->user->getName() << "@" << dst->module->name <<
 				" " << msg->getPrint(" |");
 			LOG_SEND(msgStr.str());
 		}
@@ -204,7 +206,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 				//session owner is allowed to receive the event?
 				if (event->isRecvAllowed(dst->user))
 				{
-					//modules always receive the event on the defaultsession 
+					//modules always receive the event on the defaultsession
 					//OR on all sessions when broadcastMulti is true
 					//OR send it to each uniq cookie. (more difficult and slow since we have to keep a list)
 					if (dst->module->defaultSessionId==sessionId || dst->module->broadcastMulti ||
@@ -217,7 +219,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 						{
 							if (logSends)
 								msgStr << dst->id << ":" << dst->user->getName() << "@" << dst->module->name << " ";
-							
+
 
 							callMan.addCall(msg, dst, soHandler);
 							threadCond.notify_one();
@@ -231,7 +233,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		}
 		if (logSends)
 		{
-			msgStr << ") " <<  
+			msgStr << ") " <<
 				msg->getPrint(" |");
 			LOG_SEND(msgStr.str());
 		}
@@ -241,7 +243,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 	}
 }
 
-/** Use this to send a message. 
+/** Use this to send a message.
 Internally it will result in 1 or more calls to sendMappedMessage, if the msg.dst is -1.
 */
 
@@ -269,7 +271,7 @@ void CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg, in
 			sendMessage(module, mapMsg, cookie);
 		}
 
-		(*mappedMsg)["mappedFrom"]=msg->event; 
+		(*mappedMsg)["mappedFrom"]=msg->event;
 		sendMessage(module, mappedMsg, cookie);
 
 	}
@@ -292,17 +294,17 @@ void CmessageMan::operator()()
 
 	//thread main-loop
 	while(1)
-	{	
+	{
 		//locking and call getting stuff...
 		{
-			//no interrupts here 
+			//no interrupts here
 			boost::this_thread::disable_interruption di;
 
 			//lock core
 			unique_lock<mutex> lock(threadMutex);
 
 
-			//end previous call 
+			//end previous call
 			if (callI!=CcallList::iterator())
 			{
 				callMan.endCall(callI);
@@ -333,10 +335,10 @@ void CmessageMan::operator()()
 
 		if (logReceives)
 		{
-			
+
 			stringstream msgStr;
-			msgStr << "RECV " << callI->msg->event << 
-				" FROM " << callI->msg->src << 
+			msgStr << "RECV " << callI->msg->event <<
+				" FROM " << callI->msg->src <<
 				" BY " << callI->dst->id << ":" << callI->dst->user->getName() << "@" << callI->dst->module->name << " " <<
 				callI->msg->getPrint(" |");
 
@@ -399,7 +401,7 @@ void CmessageMan::operator()()
 			(*error).src=callI->dst->id;
 			(*error)["event"]=callI->msg->event;
 			(*error)["description"]="Unknown exception";
-			(*error)["parameters"]=(*callI->msg);	
+			(*error)["parameters"]=(*callI->msg);
 			try
 			{
 				sendMessage(callI->dst->module, error);
@@ -474,7 +476,7 @@ void CmessageMan::checkThread()
     \fn CmessageMan::run()
  */
 int CmessageMan::run(string coreName, string moduleName)
-{	
+{
 	//load the first module as user core UNLOCKED!
 	loadModule(coreName, "core");
 	this->firstModuleName=moduleName;
@@ -490,7 +492,7 @@ int CmessageMan::run(string coreName, string moduleName)
 		//lock core and do our stuff
 		{
 			lock_guard<mutex> lock(threadMutex);
-// 			DEB(maxActiveThreads << "/" << wantCurrentThreads << " threads active."); 
+// 			DEB(maxActiveThreads << "/" << wantCurrentThreads << " threads active.");
 // 			callMan.print();
 // 			userMan.print();
 
@@ -498,7 +500,7 @@ int CmessageMan::run(string coreName, string moduleName)
 			{
 				wantCurrentThreads--;
 				threadCond.notify_one();
-				
+
 				DEB("maxActiveThreads was " << maxActiveThreads << " so deceasing wantCurrentThreads to " << wantCurrentThreads);
 			}
 			maxActiveThreads=activeThreads;
@@ -649,7 +651,7 @@ void CmessageMan::getEvents(Cvar & var)
 			}
 		}
 	}
-	
+
 
 	//get more information for each event
 	for (Cvar::iterator eventI=var.begin();  eventI!=var.end(); eventI++)
@@ -657,7 +659,7 @@ void CmessageMan::getEvents(Cvar & var)
 		string s=eventI->first;
 		CeventPtr eventPtr=getEvent(s, CuserPtr());
 		eventI->second["recvGroup"]=eventPtr->getRecvGroup()->getName();
-		eventI->second["sendGroup"]=eventPtr->getSendGroup()->getName();	
+		eventI->second["sendGroup"]=eventPtr->getSendGroup()->getName();
 		eventI->second["modifyGroup"]=eventPtr->getModifyGroup()->getName();
 	}
 }

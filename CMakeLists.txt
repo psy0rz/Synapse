@@ -21,7 +21,7 @@ SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 #add definitions, compiler switches, etc.
 #ADD_DEFINITIONS(-Wall -O2 -pthread -pg -Werror)
-ADD_DEFINITIONS(-Wall -O2 -pthread -Werror)
+	ADD_DEFINITIONS(-Wall -O2 -pthread -Werror)
 
 #list all source files here
 file(GLOB sources *.cpp)
@@ -29,11 +29,17 @@ MESSAGE(STATUS "Detected source files: ${sources}")
 ADD_EXECUTABLE(synapse ${sources})
 
 
-#need to link to some other libraries ? just add them here
+#################### ADD BOOST STUFF HERE
+INCLUDE(FindBoost)
+set(Boost_USE_MULTITHREADED ON)
+find_package( Boost 1.40.0 REQUIRED thread regex system )
+
+
+
+#need to link to some other libraries ? add the to the modules CMakeList.txt, not here!
 #TARGET_LINK_LIBRARIES(synapse boost_thread-mt dl boost_regex-mt boost_system-mt -pg json_spirit)
-TARGET_LINK_LIBRARIES(synapse boost_thread-mt dl boost_regex-mt boost_system-mt json_spirit)
+TARGET_LINK_LIBRARIES(synapse ${Boost_LIBRARIES} json_spirit dl)
 
-
-INCLUDE_DIRECTORIES(libs libs/json_spirit)
+INCLUDE_DIRECTORIES(libs libs/json_spirit ${Boost_INCLUDE_DIRS})
 
 SUBDIRS(libs modules libs/json_spirit)

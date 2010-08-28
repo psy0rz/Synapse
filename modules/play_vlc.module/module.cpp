@@ -64,7 +64,7 @@ libvlc_MediaPlayerEncounteredError
 void vlcEventMediaPlayerOpening(const libvlc_event_t * event, void *sessionId)
 {
 	Cmsg out;
-	out.src=(int)sessionId;
+	out.src=(long int)sessionId;
 	out.event="play_StateOpening";
 	out.send();
 }
@@ -72,7 +72,7 @@ void vlcEventMediaPlayerOpening(const libvlc_event_t * event, void *sessionId)
 void vlcEventMediaPlayerBuffering(const libvlc_event_t * event, void *sessionId)
 {
 	Cmsg out;
-	out.src=(int)sessionId;
+	out.src=(long int)sessionId;
 	out.event="play_StateBuffering";
 	out.send();
 }
@@ -80,7 +80,7 @@ void vlcEventMediaPlayerBuffering(const libvlc_event_t * event, void *sessionId)
 void vlcEventMediaPlayerPlaying(const libvlc_event_t * event, void *sessionId)
 {
 	Cmsg out;
-	out.src=(int)sessionId;
+	out.src=(long int)sessionId;
 	out.event="play_StatePlaying";
 	out.send();
 }
@@ -88,7 +88,7 @@ void vlcEventMediaPlayerPlaying(const libvlc_event_t * event, void *sessionId)
 void vlcEventMediaPlayerPaused(const libvlc_event_t * event, void *sessionId)
 {
 	Cmsg out;
-	out.src=(int)sessionId;
+	out.src=(long int)sessionId;
 	out.event="play_StatePaused";
 	out.send();
 }
@@ -96,7 +96,7 @@ void vlcEventMediaPlayerPaused(const libvlc_event_t * event, void *sessionId)
 void vlcEventMediaPlayerStopped(const libvlc_event_t * event, void *sessionId)
 {
 	Cmsg out;
-	out.src=(int)sessionId;
+	out.src=(long int)sessionId;
 	out.event="play_StateStopped";
 	out.send();
 }
@@ -104,7 +104,7 @@ void vlcEventMediaPlayerStopped(const libvlc_event_t * event, void *sessionId)
 void vlcEventMediaPlayerEndReached(const libvlc_event_t * event, void *sessionId)
 {
 	Cmsg out;
-	out.src=(int)sessionId;
+	out.src=(long int)sessionId;
 	out.event="play_StateEnded";
 	out.send();
 }
@@ -112,7 +112,7 @@ void vlcEventMediaPlayerEndReached(const libvlc_event_t * event, void *sessionId
 void vlcEventMediaPlayerEncounteredError(const libvlc_event_t * event, void *sessionId)
 {
 	Cmsg out;
-	out.src=(int)sessionId;
+	out.src=(long int)sessionId;
 	out.event="play_StateEnded";
 	out.send();
 }
