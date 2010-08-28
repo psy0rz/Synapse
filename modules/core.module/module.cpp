@@ -226,6 +226,7 @@ SYNAPSE_REGISTER(module_Error)
 	\param path The absolute pathname of the .so file.
 
 \post The module specified by path is loaded.
+After loading the module_Init event is sended to the initial session of the module. Directly after that the module_SessionStarted and module_SessionStart are also sended.
 
 \par Replys \c modulename_Ready:
 	Sended to all the sessions that requested the load, after the module indicates its ready.
@@ -237,6 +238,8 @@ SYNAPSE_REGISTER(core_LoadModule)
 {
 	string error;
 	Cmsg out;
+	Cmsg startmsg;
+
 	{
 		lock_guard<mutex> lock(messageMan->threadMutex);
 		CmodulePtr module;
@@ -269,6 +272,13 @@ SYNAPSE_REGISTER(core_LoadModule)
 				//call the init function of the module
 				out.event="module_Init";
 				out.dst=session->id;
+
+				startmsg.event="module_SessionStart";
+				startmsg["username"]=session->user->getName();
+				startmsg["synapse_cookie"]=session->cookie;
+				startmsg["description"]=session->description;
+				startmsg.dst=session->id;
+				startmsg.src=0;
 			}
 			module=session->module;
 		}
@@ -282,6 +292,19 @@ SYNAPSE_REGISTER(core_LoadModule)
 	else
 	{
 		out.send();
+
+		if (startmsg.event!="")
+		{
+			//the module_SessionStart
+			startmsg.send();
+
+			//also broadcast module_SessionStarted, so other modules know that a session is started
+			startmsg.clear();
+			startmsg.event="module_SessionStarted";
+			startmsg["session"]=startmsg.dst;
+			startmsg.dst=0;
+			startmsg.send();
+		}
 	}
 }
 

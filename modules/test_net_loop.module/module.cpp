@@ -82,9 +82,9 @@ SYNAPSE_REGISTER(net_Ready)
 
 SYNAPSE_REGISTER(module_SessionStart)
 {
-	sessions++;
 	if (msg["pars"]["mode"].str()=="accept")
 	{
+		sessions++;
 		Cmsg out;
 		out.clear();
 		out.event="net_Accept";
@@ -92,8 +92,9 @@ SYNAPSE_REGISTER(module_SessionStart)
 		out["port"]=12345;
 		out.send();
 	}
-	else
+	else if (msg["pars"]["mode"].str()=="connect")
 	{
+		sessions++;
 		Cmsg out;
 		out.clear();
 		out.event="net_Connect";

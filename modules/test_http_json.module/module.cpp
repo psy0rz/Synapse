@@ -162,7 +162,7 @@ SYNAPSE_REGISTER(net_Read)
 			rnd.resize(random()%40, '3');
 			jsonStr+=",\"random3\":\""+rnd+"\"";
 
-			jsonStr+="}";
+			jsonStr+="}]";
 
 			stringstream ss;
 			ss << "POST /synapse/send HTTP/1.1\r\nX-Synapse-Authcookie: "+authCookie+"\r\n";
@@ -224,14 +224,14 @@ SYNAPSE_REGISTER(net_Read)
 
 SYNAPSE_REGISTER(net_ConnectEnded)
 {
-	Cmsg out;
-	out.clear();
-	out.event="net_Connect";
-	out.src=msg.dst;
-	out["port"]=10080;
-	out["host"]="localhost";
-	out["delimiter"]="\r\n\r\n";
-	out.send();
+//	Cmsg out;
+//	out.clear();
+//	out.event="net_Connect";
+//	out.src=msg.dst;
+//	out["port"]=10080;
+//	out["host"]="localhost";
+//	out["delimiter"]="\r\n\r\n";
+//	out.send();
 
 }
 

@@ -9,6 +9,7 @@
 #include "cnetman.h"
 
 int dataSessionId=0;
+int moduleSessionId=0;
 using namespace boost;
 using namespace std;
 
@@ -17,6 +18,8 @@ using namespace std;
 SYNAPSE_REGISTER(module_Init)
 {
 	Cmsg out;
+
+	moduleSessionId=msg.dst;
 
 	//max number of parallel threads
 	out.clear();
@@ -103,6 +106,9 @@ synapse::CnetMan<CnetModule> net;
 
 SYNAPSE_REGISTER(module_SessionStart)
 {
+	if (msg.dst=moduleSessionId)
+		return;
+
 	dataSessionId=msg.dst;
 	///tell the rest of the world we are ready for duty
 	Cmsg out;

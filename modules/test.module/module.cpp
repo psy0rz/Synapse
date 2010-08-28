@@ -28,18 +28,18 @@ SYNAPSE_REGISTER(module_Init)
 	out.clear();
 	out.event="core_LoadModule";
 
-//	out["path"]="modules/lirc.module/liblirc.so";
-//	out.send();
+	out["path"]="modules/lirc.module/liblirc.so";
+	out.send();
 
-//	out["path"]="modules/net.module/libnet.so";
-//	out.send();
+	out["path"]="modules/net.module/libnet.so";
+	out.send();
 
 	out["path"]="modules/http_json.module/libhttp_json.so";
 	out.send();
-
+//
   	out["path"]="modules/ami.module/libami.so";
   	out.send();
-
+//
   	out["path"]="modules/asterisk.module/libasterisk.so";
   	out.send();
 
@@ -48,12 +48,16 @@ SYNAPSE_REGISTER(module_Init)
 
 	out["path"]="modules/conn_json.module/libconn_json.so";
 	out.send();
-
+//
   	out["path"]="modules/marquee_m500.module/libmarquee_m500.so";
   	out.send();
-
+//
   	out["path"]="modules/asterisk_marquee.module/libasterisk_marquee.so";
   	out.send();
+
+	out["path"]="modules/play_vlc.module/libplay_vlc.so";
+	out.send();
+
 
 	// Counter that ever counterSleep seconds emits a message.
 	// Speed can be changed with appropriate messages
@@ -91,6 +95,14 @@ SYNAPSE_REGISTER(module_Init)
 
 }
 
+SYNAPSE_REGISTER(play_Ready)
+{
+	Cmsg out;
+	out.dst=msg.src;
+	out.event="play_Open";
+	out["url"]="/mnt/server/.mldonkey/incoming/Deep Rising KLAXXON.avi";
+	out.send();
+}
 
 SYNAPSE_REGISTER(asterisk_Ready)
 {
