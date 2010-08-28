@@ -106,7 +106,7 @@ synapse::CnetMan<CnetModule> net;
 
 SYNAPSE_REGISTER(module_SessionStart)
 {
-	if (msg.dst=moduleSessionId)
+	if (msg.dst==moduleSessionId)
 		return;
 
 	dataSessionId=msg.dst;
