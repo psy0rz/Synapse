@@ -485,7 +485,7 @@ int CmessageMan::run(string coreName, string moduleName)
 	//thread manager loop
 	while (! (shutdown && callMan.callList.empty() ))
 	{
-		sleep(10);
+		sleep(1);
 
 		//lock core and do our stuff
 		{
