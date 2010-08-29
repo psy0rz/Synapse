@@ -23,37 +23,38 @@ SYNAPSE_REGISTER(module_Init)
 	out.event="core_Ready";
 	out.send();
 
-	
+
 	//load the modules you wanna fiddle around with:
 	out.clear();
 	out.event="core_LoadModule";
 
-	out["path"]="modules/lirc.module/liblirc.so";
-	out.send();
+//  	out["path"]="modules/asterisk.module/libasterisk.so";
+//  	out.send();
+//
+//  	out["path"]="modules/pong.module/libpong.so";
+//  	out.send();
+//
+//	out["path"]="modules/conn_json.module/libconn_json.so";
+//	out.send();
+//
+//  	out["path"]="modules/marquee_m500.module/libmarquee_m500.so";
+//  	out.send();
+//
+//  	out["path"]="modules/asterisk_marquee.module/libasterisk_marquee.so";
+//  	out.send();
+//
+//  	out["path"]="modules/lirc.module/liblirc.so";
+//	out.send();
+//
+//	out["path"]="modules/net.module/libnet.so";
+//	out.send();
+//
+//  	out["path"]="modules/ami.module/libami.so";
+//  	out.send();
 
-	out["path"]="modules/net.module/libnet.so";
-	out.send();
 
 	out["path"]="modules/http_json.module/libhttp_json.so";
 	out.send();
-//
-  	out["path"]="modules/ami.module/libami.so";
-  	out.send();
-//
-  	out["path"]="modules/asterisk.module/libasterisk.so";
-  	out.send();
-
-  	out["path"]="modules/pong.module/libpong.so";
-  	out.send();
-
-	out["path"]="modules/conn_json.module/libconn_json.so";
-	out.send();
-//
-  	out["path"]="modules/marquee_m500.module/libmarquee_m500.so";
-  	out.send();
-//
-  	out["path"]="modules/asterisk_marquee.module/libasterisk_marquee.so";
-  	out.send();
 
 	out["path"]="modules/play_vlc.module/libplay_vlc.so";
 	out.send();
@@ -63,7 +64,7 @@ SYNAPSE_REGISTER(module_Init)
 	// Speed can be changed with appropriate messages
 	out.clear();
 	out.event="core_ChangeEvent";
-	out["event"]=		"test_Counter"; 
+	out["event"]=		"test_Counter";
 	out["modifyGroup"]=	"modules";
 	out["sendGroup"]=	"modules";
 	out["recvGroup"]=	"anonymous";
@@ -79,7 +80,7 @@ SYNAPSE_REGISTER(module_Init)
 	//chat demo stuff
 	out.clear();
 	out.event="core_ChangeEvent";
-	out["event"]=		"chat_Text"; 
+	out["event"]=		"chat_Text";
 	out["modifyGroup"]=	"modules";
 	out["sendGroup"]=	"anonymous";
 	out["recvGroup"]=	"anonymous";
@@ -87,7 +88,7 @@ SYNAPSE_REGISTER(module_Init)
 
 	out.clear();
 	out.event="core_ChangeEvent";
-	out["event"]=		"chat_Poll"; 
+	out["event"]=		"chat_Poll";
 	out["modifyGroup"]=	"modules";
 	out["sendGroup"]=	"anonymous";
 	out["recvGroup"]=	"anonymous";
@@ -100,7 +101,7 @@ SYNAPSE_REGISTER(play_Ready)
 	Cmsg out;
 	out.dst=msg.src;
 	out.event="play_Open";
-	out["url"]="/mnt/server/.mldonkey/incoming/Deep Rising KLAXXON.avi";
+	out["url"]="http://listen.di.fm/public3/chilloutdreams.pls";
 	out.send();
 }
 
@@ -108,7 +109,7 @@ SYNAPSE_REGISTER(asterisk_Ready)
 {
 	Cmsg out;
 
-// 
+//
 /*	out.clear();
 	out.event="asterisk_Connect";
 	out["username"]="manager";
@@ -116,7 +117,7 @@ SYNAPSE_REGISTER(asterisk_Ready)
 	out["host"]="localhost";
 	out["port"]="5038";
 	out.send();*/
-// 
+//
 // 	out.clear();
 // 	out.event="asterisk_Connect";
 // 	out["username"]="manager";
@@ -124,7 +125,7 @@ SYNAPSE_REGISTER(asterisk_Ready)
 // 	out["host"]="localhost";
 // 	out["port"]="5039";
 // 	out.send();
-// 
+//
 // 	out.clear();
 // 	out.event="asterisk_Connect";
 // 	out["username"]="manager";
@@ -251,7 +252,7 @@ SYNAPSE_REGISTER(loop)
 	out.send();
 }
 
- 
+
 SYNAPSE_REGISTER(lirc_Ready)
 {
 	Cmsg out;
