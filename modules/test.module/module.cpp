@@ -102,6 +102,8 @@ SYNAPSE_REGISTER(play_Ready)
 	out.dst=msg.src;
 	out.event="play_Open";
 	out["url"]="http://listen.di.fm/public3/chilloutdreams.pls";
+//	out["url"]="/home/psy/09-orbital-style-rns.mp3";
+//	out["url"]="/home/psy/hackers_in_prison.mp3";
 	out.send();
 }
 

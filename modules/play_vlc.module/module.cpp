@@ -5,39 +5,86 @@
 #include <map>
 #include <string>
 
+
+
 namespace play_vlc
 {
 
 using namespace std;
 
 libvlc_instance_t * vlcInst=NULL;
-map<int,libvlc_media_list_player_t*> vlcPlayers;
 
-//gets specified player pointer or return NULL
-libvlc_media_list_player_t * getPlayer(int id)
+//A player instance
+//Consists of a libvlc player, list-player and and media-list (play queue)
+class CPlayer
 {
-	if (vlcPlayers.find(id)==vlcPlayers.end())
+	public:
+
+	libvlc_media_list_t* vlcList;
+	libvlc_media_player_t* vlcPlayer;
+	libvlc_media_list_player_t* vlcListPlayer;
+
+	//create all the objects
+	CPlayer()
 	{
-		return (NULL);
+		vlcList=NULL;
+		vlcPlayer=NULL;
+		vlcListPlayer=NULL;
+
+		if (vlcInst)
+		{
+			//increase vlc reference count
+			libvlc_retain(vlcInst);
+
+			//create list player
+			vlcListPlayer = libvlc_media_list_player_new(vlcInst);
+			if (vlcListPlayer)
+			{
+				//create a player
+				vlcPlayer=libvlc_media_player_new(vlcInst);
+
+				if (vlcPlayer)
+				{
+					//create a list
+					vlcList=libvlc_media_list_new(vlcInst);
+
+					if (vlcList)
+					{
+						//let the list player use this list
+						libvlc_media_list_player_set_media_list(vlcListPlayer, vlcList);
+
+						//let the list player use this player
+						libvlc_media_list_player_set_media_player(vlcListPlayer, vlcPlayer);
+					}
+				}
+			}
+		}
 	}
-	else
+
+	bool ok()
 	{
-		return(vlcPlayers[id]);
+		return (vlcPlayer!=NULL && vlcList!=NULL && vlcListPlayer!=NULL);
 	}
-}
 
 
-//throws an exception if a vlc error occured
-//Watch out for vlc memleaks!
-//void vlcErrorCheck()
-//{
-//	if (libvlc_errmsg() != NULL)
-//	{
-//		string s(libvlc_errmsg());
-//		libvlc_clearerr();
-//		throw(runtime_error(s));
-//	}
-//}
+	void clean()
+	{
+		if (vlcPlayer)
+			libvlc_media_player_release(vlcPlayer);
+
+		if (vlcList)
+			libvlc_media_list_release(vlcList);
+
+		if (vlcListPlayer)
+			libvlc_media_list_player_release(vlcListPlayer);
+
+		if (vlcInst)
+			libvlc_release(vlcInst);
+	}
+};
+
+map<int, CPlayer> players;
+
 
 ////////////////////////////// VLC event callbacks
 /*
@@ -66,6 +113,7 @@ void vlcEventMediaPlayerOpening(const libvlc_event_t * event, void *sessionId)
 	out.src=(long int)sessionId;
 	out.event="play_StateOpening";
 	out.send();
+
 }
 
 void vlcEventMediaPlayerBuffering(const libvlc_event_t * event, void *sessionId)
@@ -112,9 +160,133 @@ void vlcEventMediaPlayerEncounteredError(const libvlc_event_t * event, void *ses
 {
 	Cmsg out;
 	out.src=(long int)sessionId;
-	out.event="play_StateEnded";
+	out.event="play_StateError";
 	out.send();
 }
+
+void vlcEventGeneric(const libvlc_event_t * event, void *sessionId)
+{
+	Cmsg out;
+	out.src=(long int)sessionId;
+	out.event=string("play_Event")+string(libvlc_event_type_name(event->type));
+	out.send();
+}
+
+void vlcEventMediaPlayerTimeChanged(const libvlc_event_t * event, void *sessionId)
+{
+	Cmsg out;
+	out.src=(long int)sessionId;
+	out.event="play_EventTime";
+	out["time"]=event->u.media_player_time_changed.new_time;
+	out["length"]=libvlc_media_player_get_length((libvlc_media_player_t*)event->p_obj);
+	out.send();
+}
+
+void vlcEventMediaPlayerTitleChanged(const libvlc_event_t * event, void *sessionId)
+{
+	Cmsg out;
+	out.src=(long int)sessionId;
+	out.event="play_EventTitle";
+	out["title"]=libvlc_media_player_get_title((libvlc_media_player_t*)event->p_obj);
+	out.send();
+}
+
+void vlcEventMediaMetaChanged(const libvlc_event_t * event, void *sessionId)
+{
+	Cmsg out;
+	out.src=(long int)sessionId;
+	out.event="play_EventMeta";
+
+	libvlc_media_parse((libvlc_media_t*)event->p_obj);
+
+	char * s;
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, event->u.media_meta_changed.meta_type)) != NULL)
+		out["changed"]=string(s);
+
+
+	INFO("changed=" << event->u.media_meta_changed.meta_type);
+
+//	if ((s=libvlc_media_get_mrl((libvlc_media_t*)event->p_obj)) != NULL)
+//		out["mrl"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Album)) != NULL)
+		out["album"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Artist)) != NULL)
+		out["artist"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_ArtworkURL)) != NULL)
+		out["artworkUrl"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Copyright)) != NULL)
+		out["copyright"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Date)) != NULL)
+		out["date"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Description)) != NULL)
+		out["description"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_EncodedBy)) != NULL)
+		out["encodedBy"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Genre)) != NULL)
+		out["genre"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Language)) != NULL)
+		out["language"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_NowPlaying)) != NULL)
+		out["nowPlaying"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Publisher)) != NULL)
+		out["publisher"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Rating)) != NULL)
+		out["rating"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Setting)) != NULL)
+		out["setting"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Title)) != NULL)
+		out["title"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_TrackID)) != NULL)
+		out["trackId"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_TrackNumber)) != NULL)
+		out["trackNumber"]=string(s);
+
+	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_URL)) != NULL)
+		out["url"]=string(s);
+
+	out.send();
+}
+
+void vlcEventMediaListPlayerNextItemSet(const libvlc_event_t * event, void *sessionId)
+{
+	INFO("Adding meta handler");
+	libvlc_event_manager_t *em;
+	em=libvlc_media_event_manager(event->u.media_list_player_next_item_set.item);
+	if (em)
+	{
+		libvlc_event_attach(em, libvlc_MediaMetaChanged, vlcEventMediaMetaChanged, sessionId);
+		libvlc_event_attach(em, libvlc_MediaSubItemAdded, vlcEventGeneric, sessionId);
+		libvlc_event_attach(em, libvlc_MediaStateChanged, vlcEventGeneric, sessionId);
+	}
+}
+
+
+
+//void vlcEventMediaPlayerPositionChanged(const libvlc_event_t * event, void *sessionId)
+//{
+//	Cmsg out;
+//	out.src=(long int)sessionId;
+//	out.event="play_Time";
+//	out["position"]=event->u.media_player_position_changed.new_position;
+//	out.send();
+//}
 
 
 SYNAPSE_REGISTER(module_Init)
@@ -163,43 +335,49 @@ SYNAPSE_REGISTER(module_SessionStart)
 
 	//every session has its own player
 	//so we CAN, if we want, create multiple instances of the player.
-
-	if (vlcInst)
+	if (players[msg.dst].ok())
 	{
-		//increase vlc reference count
-		libvlc_retain(vlcInst);
+		libvlc_event_manager_t *em;
 
-		//create list player
-		vlcPlayers[msg.dst] = libvlc_media_list_player_new(vlcInst);
-		if (getPlayer(msg.dst))
+		//get the event manager of the player
+		em=libvlc_media_player_event_manager(players[msg.dst].vlcPlayer);
+		if (em)
 		{
-			//create a player
-			libvlc_media_player_t *mp=libvlc_media_player_new(vlcInst);
+			//attach our event handlers
+			libvlc_event_attach(em, libvlc_MediaPlayerOpening, vlcEventMediaPlayerOpening, (void*)msg.dst);
+			libvlc_event_attach(em, libvlc_MediaPlayerBuffering, vlcEventMediaPlayerBuffering, (void*)msg.dst);
+			libvlc_event_attach(em, libvlc_MediaPlayerPlaying, vlcEventMediaPlayerPlaying, (void*)msg.dst);
+			libvlc_event_attach(em, libvlc_MediaPlayerPaused, vlcEventMediaPlayerPaused, (void*)msg.dst);
+			libvlc_event_attach(em, libvlc_MediaPlayerStopped, vlcEventMediaPlayerStopped, (void*)msg.dst);
+			libvlc_event_attach(em, libvlc_MediaPlayerEndReached, vlcEventMediaPlayerEndReached, (void*)msg.dst);
+			libvlc_event_attach(em, libvlc_MediaPlayerEncounteredError,	vlcEventMediaPlayerEncounteredError, (void*)msg.dst);
 
+//			libvlc_event_attach(em, libvlc_MediaPlayerTimeChanged, vlcEventMediaPlayerTimeChanged, (void*)msg.dst);
+//			libvlc_event_attach(em, libvlc_MediaPlayerPositionChanged, vlcEventMediaPlayerPositionChanged, (void*)msg.dst);
 
-			if (mp)
-			{
-				//let the list player use this player
-				libvlc_media_list_player_set_media_player(getPlayer(msg.dst), mp);
+//jittert			libvlc_event_attach(em, libvlc_MediaPlayerLengthChanged, vlcEventGeneric, (void*)msg.dst);
+			libvlc_event_attach(em, libvlc_MediaPlayerTitleChanged, vlcEventMediaPlayerTitleChanged, (void*)msg.dst);
 
-				//get the event manager of this player
-				libvlc_event_manager_t *em=libvlc_media_player_event_manager(mp);
-				if (em)
-				{
-
-					//attach our event handlers
-					libvlc_event_attach(em, libvlc_MediaPlayerOpening, vlcEventMediaPlayerOpening, (void*)msg.dst);
-					libvlc_event_attach(em, libvlc_MediaPlayerBuffering, vlcEventMediaPlayerBuffering, (void*)msg.dst);
-					libvlc_event_attach(em, libvlc_MediaPlayerPlaying, vlcEventMediaPlayerPlaying, (void*)msg.dst);
-					libvlc_event_attach(em, libvlc_MediaPlayerPaused, vlcEventMediaPlayerPaused, (void*)msg.dst);
-					libvlc_event_attach(em, libvlc_MediaPlayerStopped, vlcEventMediaPlayerStopped, (void*)msg.dst);
-					libvlc_event_attach(em, libvlc_MediaPlayerEndReached, vlcEventMediaPlayerEndReached, (void*)msg.dst);
-					libvlc_event_attach(em, libvlc_MediaPlayerEncounteredError,	vlcEventMediaPlayerEncounteredError, (void*)msg.dst);
-				}
-
-				libvlc_media_player_release(mp);
-			}
 		}
+
+		//get the event manager of the media list player
+		em=libvlc_media_list_player_event_manager(players[msg.dst].vlcListPlayer);
+		if (em)
+		{
+			libvlc_event_attach(em, libvlc_MediaListPlayerNextItemSet, vlcEventMediaListPlayerNextItemSet, (void*)msg.dst);
+		}
+
+		//get the event manager of the media list
+		em=libvlc_media_list_event_manager(players[msg.dst].vlcList);
+		if (em)
+		{
+			libvlc_event_attach(em, libvlc_MediaListPlayerStopped, vlcEventGeneric, (void*)msg.dst);
+			libvlc_event_attach(em, libvlc_MediaListPlayerPlayed, vlcEventGeneric, (void*)msg.dst);
+			libvlc_event_attach(em, libvlc_MediaListItemDeleted, vlcEventGeneric, (void*)msg.dst);
+			libvlc_event_attach(em, libvlc_MediaListItemAdded, vlcEventGeneric, (void*)msg.dst);
+		}
+
+
 	}
 
 	if (libvlc_errmsg())
@@ -223,56 +401,56 @@ SYNAPSE_REGISTER(module_SessionStart)
 
 SYNAPSE_REGISTER(module_SessionEnd)
 {
-	if (vlcInst)
-	{
-		if (getPlayer(msg.dst))
-		{
-			//release player
-			libvlc_media_list_player_release(getPlayer(msg.dst));
-		}
-
-		//decrease vlc reference count
-		libvlc_release(vlcInst);
-	}
+	players[msg.dst].clean();
+	players.erase(msg.dst);
 }
 
+/** Open the specified url
+ *  TODO: implement functions to manage a play-queue. (basics have been setup for this)
+ *
+ */
 SYNAPSE_REGISTER(play_Open)
 {
-	if (!getPlayer(msg.dst))
-		return;
-
 	libvlc_clearerr();
 
 	INFO("vlc opening " << msg["url"].str());
 
-	//create media list
-	libvlc_media_list_t * ml;
-	ml=libvlc_media_list_new(vlcInst);
-
-	if (ml)
+	if (players[msg.dst].ok())
 	{
 		 // Create a new media item
 		libvlc_media_t * m;
 		m = libvlc_media_new_location(vlcInst, msg["url"].str().c_str());
 
+		//niet hier ivm subitems!
+//		libvlc_event_manager_t *em;
+//		em=libvlc_media_event_manager(m);
+//		if (em)
+//		{
+//			libvlc_event_attach(em, libvlc_MediaMetaChanged, vlcEventMediaMetaChanged, (void*)msg.dst);
+//			libvlc_event_attach(em, libvlc_MediaSubItemAdded, vlcEventGeneric, (void*)msg.dst);
+//			libvlc_event_attach(em, libvlc_MediaStateChanged, vlcEventGeneric, (void*)msg.dst);
+//		}
+
+
 		if (m)
 		{
-			//add media item in the list
-			libvlc_media_list_lock(ml);
-			libvlc_media_list_add_media(ml,m);
-			libvlc_media_list_unlock(ml);
+			libvlc_media_list_lock(players[msg.dst].vlcList);
 
-			//associate our filled list with the player
-			libvlc_media_list_player_set_media_list(getPlayer(msg.dst), ml);
+			//clear the list
+			while(libvlc_media_list_count(players[msg.dst].vlcList))
+			{
+				libvlc_media_list_remove_index(players[msg.dst].vlcList, 0);
+			}
+
+			//add media
+			libvlc_media_list_add_media(players[msg.dst].vlcList, m);
+			libvlc_media_list_unlock(players[msg.dst].vlcList);
 
 			//command the list player to play
-			libvlc_media_list_player_play(getPlayer(msg.dst));
-
+			libvlc_media_list_player_play(players[msg.dst].vlcListPlayer);
 
 			libvlc_media_release(m);
 		}
-
-		libvlc_media_list_release(ml);
 	}
 
 
