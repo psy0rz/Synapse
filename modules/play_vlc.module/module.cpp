@@ -191,78 +191,104 @@ void vlcEventMediaPlayerTitleChanged(const libvlc_event_t * event, void *session
 	out.send();
 }
 
+
+//converts metadata from a mediaobject into a message
+void vlcMeta2Msg(libvlc_media_t * m, Cmsg & msg)
+{
+	char * s;
+
+	if ((s=libvlc_media_get_mrl(m)) != NULL)
+		msg["mrl"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_Album)) != NULL)
+		msg["album"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_Artist)) != NULL)
+		msg["artist"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_ArtworkURL)) != NULL)
+		msg["artworkUrl"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_Copyright)) != NULL)
+		msg["copyright"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_Date)) != NULL)
+		msg["date"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_Description)) != NULL)
+		msg["description"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_EncodedBy)) != NULL)
+		msg["encodedBy"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_Genre)) != NULL)
+		msg["genre"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_Language)) != NULL)
+		msg["language"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_NowPlaying)) != NULL)
+		msg["nowPlaying"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_Publisher)) != NULL)
+		msg["publisher"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_Rating)) != NULL)
+		msg["rating"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_Setting)) != NULL)
+		msg["setting"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_Title)) != NULL)
+		msg["title"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_TrackID)) != NULL)
+		msg["trackId"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_TrackNumber)) != NULL)
+		msg["trackNumber"]=string(s);
+
+	if ((s=libvlc_media_get_meta(m, libvlc_meta_URL)) != NULL)
+		msg["url"]=string(s);
+
+
+}
+
+
+
+
 void vlcEventMediaMetaChanged(const libvlc_event_t * event, void *sessionId)
 {
+	static Cmsg prevMsg;
+
 	Cmsg out;
 	out.src=(long int)sessionId;
 	out.event="play_EventMeta";
 
-	libvlc_media_parse((libvlc_media_t*)event->p_obj);
+	//its no use to look at event->u.media_meta_changed.meta_type, since that seems to give unrelated values.
+	vlcMeta2Msg((libvlc_media_t*)event->p_obj, out);
 
-	char * s;
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, event->u.media_meta_changed.meta_type)) != NULL)
-		out["changed"]=string(s);
-
-
-	INFO("changed=" << event->u.media_meta_changed.meta_type);
-
-//	if ((s=libvlc_media_get_mrl((libvlc_media_t*)event->p_obj)) != NULL)
-//		out["mrl"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Album)) != NULL)
-		out["album"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Artist)) != NULL)
-		out["artist"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_ArtworkURL)) != NULL)
-		out["artworkUrl"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Copyright)) != NULL)
-		out["copyright"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Date)) != NULL)
-		out["date"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Description)) != NULL)
-		out["description"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_EncodedBy)) != NULL)
-		out["encodedBy"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Genre)) != NULL)
-		out["genre"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Language)) != NULL)
-		out["language"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_NowPlaying)) != NULL)
-		out["nowPlaying"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Publisher)) != NULL)
-		out["publisher"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Rating)) != NULL)
-		out["rating"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Setting)) != NULL)
-		out["setting"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_Title)) != NULL)
-		out["title"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_TrackID)) != NULL)
-		out["trackId"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_TrackNumber)) != NULL)
-		out["trackNumber"]=string(s);
-
-	if ((s=libvlc_media_get_meta((libvlc_media_t*)event->p_obj, libvlc_meta_URL)) != NULL)
-		out["url"]=string(s);
-
-	out.send();
+	if (out!=prevMsg)
+	{
+		out.send();
+		prevMsg=out;
+	}
 }
+
+void vlcEventMediaSubItemAdded(const libvlc_event_t * event, void *sessionId)
+{
+//	INFO("Adding meta handler");
+//	libvlc_event_manager_t *em;
+//	em=libvlc_media_event_manager(event->u.media_subitem_added.new_child);
+//	if (em)
+//	{
+//		libvlc_event_attach(em, libvlc_MediaMetaChanged, vlcEventMediaMetaChanged, sessionId);
+//		libvlc_event_attach(em, libvlc_MediaSubItemAdded, vlcEventMediaSubItemAdded, sessionId);
+//		libvlc_event_attach(em, libvlc_MediaStateChanged, vlcEventGeneric, sessionId);
+//	}
+
+}
+
 
 void vlcEventMediaListPlayerNextItemSet(const libvlc_event_t * event, void *sessionId)
 {
@@ -275,6 +301,8 @@ void vlcEventMediaListPlayerNextItemSet(const libvlc_event_t * event, void *sess
 		libvlc_event_attach(em, libvlc_MediaSubItemAdded, vlcEventGeneric, sessionId);
 		libvlc_event_attach(em, libvlc_MediaStateChanged, vlcEventGeneric, sessionId);
 	}
+
+
 }
 
 
@@ -306,7 +334,13 @@ SYNAPSE_REGISTER(module_Init)
 
 	// Load the VLC engine
 	DEB("Loading vlc engine");
-	vlcInst=libvlc_new (0, NULL);
+
+//	char p[200];
+//	const char *pp=p;
+//	strcpy(p,"-vvvv");
+//	vlcInst=libvlc_new (1, &pp);
+	vlcInst=libvlc_new (0,NULL);
+
 	if (vlcInst)
 	{
 		out.clear();
@@ -352,7 +386,7 @@ SYNAPSE_REGISTER(module_SessionStart)
 			libvlc_event_attach(em, libvlc_MediaPlayerEndReached, vlcEventMediaPlayerEndReached, (void*)msg.dst);
 			libvlc_event_attach(em, libvlc_MediaPlayerEncounteredError,	vlcEventMediaPlayerEncounteredError, (void*)msg.dst);
 
-//			libvlc_event_attach(em, libvlc_MediaPlayerTimeChanged, vlcEventMediaPlayerTimeChanged, (void*)msg.dst);
+			libvlc_event_attach(em, libvlc_MediaPlayerTimeChanged, vlcEventMediaPlayerTimeChanged, (void*)msg.dst);
 //			libvlc_event_attach(em, libvlc_MediaPlayerPositionChanged, vlcEventMediaPlayerPositionChanged, (void*)msg.dst);
 
 //jittert			libvlc_event_attach(em, libvlc_MediaPlayerLengthChanged, vlcEventGeneric, (void*)msg.dst);
@@ -364,6 +398,8 @@ SYNAPSE_REGISTER(module_SessionStart)
 		em=libvlc_media_list_player_event_manager(players[msg.dst].vlcListPlayer);
 		if (em)
 		{
+			//libvlc_event_attach(em, libvlc_MediaListPlayerStopped, vlcEventGeneric, (void*)msg.dst);
+			//libvlc_event_attach(em, libvlc_MediaListPlayerPlayed, vlcEventGeneric, (void*)msg.dst);
 			libvlc_event_attach(em, libvlc_MediaListPlayerNextItemSet, vlcEventMediaListPlayerNextItemSet, (void*)msg.dst);
 		}
 
@@ -371,8 +407,6 @@ SYNAPSE_REGISTER(module_SessionStart)
 		em=libvlc_media_list_event_manager(players[msg.dst].vlcList);
 		if (em)
 		{
-			libvlc_event_attach(em, libvlc_MediaListPlayerStopped, vlcEventGeneric, (void*)msg.dst);
-			libvlc_event_attach(em, libvlc_MediaListPlayerPlayed, vlcEventGeneric, (void*)msg.dst);
 			libvlc_event_attach(em, libvlc_MediaListItemDeleted, vlcEventGeneric, (void*)msg.dst);
 			libvlc_event_attach(em, libvlc_MediaListItemAdded, vlcEventGeneric, (void*)msg.dst);
 		}
@@ -420,20 +454,17 @@ SYNAPSE_REGISTER(play_Open)
 		 // Create a new media item
 		libvlc_media_t * m;
 		m = libvlc_media_new_location(vlcInst, msg["url"].str().c_str());
-
-		//niet hier ivm subitems!
-//		libvlc_event_manager_t *em;
-//		em=libvlc_media_event_manager(m);
-//		if (em)
-//		{
-//			libvlc_event_attach(em, libvlc_MediaMetaChanged, vlcEventMediaMetaChanged, (void*)msg.dst);
-//			libvlc_event_attach(em, libvlc_MediaSubItemAdded, vlcEventGeneric, (void*)msg.dst);
-//			libvlc_event_attach(em, libvlc_MediaStateChanged, vlcEventGeneric, (void*)msg.dst);
-//		}
-
+//		m = libvlc_media_new_path(vlcInst, msg["url"].str().c_str());
 
 		if (m)
 		{
+//			Cmsg out;
+//			out.event="play_Meta";
+//			libvlc_media_parse(m);
+//			vlcMeta2Msg(m, out);
+//			out.send();
+
+
 			libvlc_media_list_lock(players[msg.dst].vlcList);
 
 			//clear the list
@@ -448,6 +479,17 @@ SYNAPSE_REGISTER(play_Open)
 
 			//command the list player to play
 			libvlc_media_list_player_play(players[msg.dst].vlcListPlayer);
+
+			//niet hier ivm subitems!
+			libvlc_event_manager_t *em;
+			em=libvlc_media_event_manager(m);
+			if (em)
+			{
+				libvlc_event_attach(em, libvlc_MediaMetaChanged, vlcEventMediaMetaChanged, (void*)msg.dst);
+				libvlc_event_attach(em, libvlc_MediaSubItemAdded, vlcEventMediaSubItemAdded, (void*)msg.dst);
+				libvlc_event_attach(em, libvlc_MediaStateChanged, vlcEventGeneric, (void*)msg.dst);
+			}
+
 
 			libvlc_media_release(m);
 		}
@@ -465,48 +507,5 @@ SYNAPSE_REGISTER(play_Open)
 
 
 
-
-//{
-//     /* Create a new item */
-//     m = libvlc_media_new_location (inst, "/mnt/server/.mldonkey/incoming/Deep Rising KLAXXON.avi");
-//
-//     /* Create a media player playing environement */
-//     mp = libvlc_media_player_new_from_media (m);
-//
-//     /* No need to keep the media now */
-//     libvlc_media_release (m);
-//
-// #if 0
-//     /* This is a non working code that show how to hooks into a window,
-//      * if we have a window around */
-//      libvlc_media_player_set_xdrawable (mp, xdrawable);
-//     /* or on windows */
-//      libvlc_media_player_set_hwnd (mp, hwnd);
-//     /* or on mac os */
-//      libvlc_media_player_set_nsobject (mp, view);
-//  #endif
-//
-//     /* play the media_player */
-//     libvlc_media_player_play (mp);
-//
-//     sleep (10); /* Let it play a bit */
-//
-//     /* Stop playing */
-//     libvlc_media_player_stop (mp);
-//
-//     /* Free the media_player */
-//     libvlc_media_player_release (mp);
-//
-//     libvlc_release (inst);
-//
-//
-// 	///tell the rest of the world we are ready for duty
-// 	out.clear();
-// 	out.event="core_Ready";
-// 	out.send();
-//
-//}
-//
-//
 
 }
