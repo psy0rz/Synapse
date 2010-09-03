@@ -84,10 +84,16 @@ namespace synapse
 		void operator=(CvarList & value);
 		CvarList & list();
 
+		//comparison
+		bool operator==( Cvar & other);
+		bool operator!=( Cvar & other);
+
+
 		//json conversion stuff
 		void toJson(string & jsonStr);
 		void toJsonFormatted(string & jsonStr);
 		void fromJson(string & jsonStr);
+
 
 
 	protected:

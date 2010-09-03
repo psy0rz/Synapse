@@ -309,6 +309,76 @@ CvarList & Cvar::list()
 
 }
 
+
+/// COMPARISON STUFF
+bool Cvar::operator==( Cvar & other)
+{
+
+	if (value.which()!=other.value.which())
+		return (false);
+
+
+	switch (value.which())
+	{
+		case CVAR_EMPTY:
+			return (true);
+			break;
+		case CVAR_LONG_DOUBLE:
+			return ((long double)(*this)==(long double)other);
+			break;
+		case CVAR_STRING:
+			return ((string)(*this)==(string)(other));
+			break;
+		case CVAR_MAP:
+			//wrong count?
+			if (((CvarMap)(*this)).size()!=((CvarMap)other).size())
+				return (false);
+
+			//recursively compare keys and values
+			for (CvarMap::iterator varI=begin(); varI!=end(); varI++)
+			{
+				//key doesnt exists in other?
+				if (!other.isSet(varI->first))
+					return (false);
+
+				//compare values (this recurses)
+				if (varI->second!=other[varI->first])
+					return (false);
+			}
+			return (true);
+			break;
+		case CVAR_LIST:
+			//wrong count?
+			if (((CvarList)(*this)).size()!=((CvarList)other).size())
+				return (false);
+
+			{
+				//recursively compare values (order has to be the same as well)
+				CvarList::iterator otherVarI;
+				for (CvarList::iterator varI=list().begin(); varI!=list().end(); varI++)
+				{
+					//compare values (this recurses)
+					if ((*varI)!=(*otherVarI))
+						return false;
+					otherVarI++;
+				}
+			}
+			return (true);
+			break;
+		default:
+			WARNING("Cvar: Trying to compare unknown types");
+			return (false);
+			break;
+	}
+}
+
+bool Cvar::operator!=( Cvar & other)
+{
+	return !(*this == other);
+}
+
+
+
 /// JSON stuff
 
 /** Recursively converts a json_spirit Value to this Cvar
