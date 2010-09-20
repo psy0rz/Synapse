@@ -86,83 +86,62 @@ class CPlayer
 map<int, CPlayer> players;
 
 
-////////////////////////////// VLC event callbacks
-/*
- * libvlc_NothingSpecial
-libvlc_Opening
-libvlc_Buffering
-libvlc_Playing
-libvlc_Paused
-libvlc_Stopped
-libvlc_Ended
-libvlc_Error
-
-vlc_MediaPlayerOpening
-libvlc_MediaPlayerBuffering
-libvlc_MediaPlayerPlaying
-libvlc_MediaPlayerPaused
-libvlc_MediaPlayerStopped
-libvlc_MediaPlayerEndReached
-libvlc_MediaPlayerEncounteredError
- *
- */
-
-void vlcEventMediaPlayerOpening(const libvlc_event_t * event, void *sessionId)
-{
-	Cmsg out;
-	out.src=(long int)sessionId;
-	out.event="play_StateOpening";
-	out.send();
-
-}
-
-void vlcEventMediaPlayerBuffering(const libvlc_event_t * event, void *sessionId)
-{
-	Cmsg out;
-	out.src=(long int)sessionId;
-	out.event="play_StateBuffering";
-	out.send();
-}
-
-void vlcEventMediaPlayerPlaying(const libvlc_event_t * event, void *sessionId)
-{
-	Cmsg out;
-	out.src=(long int)sessionId;
-	out.event="play_StatePlaying";
-	out.send();
-}
-
-void vlcEventMediaPlayerPaused(const libvlc_event_t * event, void *sessionId)
-{
-	Cmsg out;
-	out.src=(long int)sessionId;
-	out.event="play_StatePaused";
-	out.send();
-}
-
-void vlcEventMediaPlayerStopped(const libvlc_event_t * event, void *sessionId)
-{
-	Cmsg out;
-	out.src=(long int)sessionId;
-	out.event="play_StateStopped";
-	out.send();
-}
-
-void vlcEventMediaPlayerEndReached(const libvlc_event_t * event, void *sessionId)
-{
-	Cmsg out;
-	out.src=(long int)sessionId;
-	out.event="play_StateEnded";
-	out.send();
-}
-
-void vlcEventMediaPlayerEncounteredError(const libvlc_event_t * event, void *sessionId)
-{
-	Cmsg out;
-	out.src=(long int)sessionId;
-	out.event="play_StateError";
-	out.send();
-}
+//void vlcEventMediaPlayerOpening(const libvlc_event_t * event, void *sessionId)
+//{
+//	Cmsg out;
+//	out.src=(long int)sessionId;
+//	out.event="play_StateOpening";
+//	out.send();
+//
+//}
+//
+//void vlcEventMediaPlayerBuffering(const libvlc_event_t * event, void *sessionId)
+//{
+//	Cmsg out;
+//	out.src=(long int)sessionId;
+//	out.event="play_StateBuffering";
+//	out.send();
+//}
+//
+//void vlcEventMediaPlayerPlaying(const libvlc_event_t * event, void *sessionId)
+//{
+//	Cmsg out;
+//	out.src=(long int)sessionId;
+//	out.event="play_StatePlaying";
+//	out.send();
+//}
+//
+//void vlcEventMediaPlayerPaused(const libvlc_event_t * event, void *sessionId)
+//{
+//	Cmsg out;
+//	out.src=(long int)sessionId;
+//	out.event="play_StatePaused";
+//	out.send();
+//}
+//
+//void vlcEventMediaPlayerStopped(const libvlc_event_t * event, void *sessionId)
+//{
+//	Cmsg out;
+//	out.src=(long int)sessionId;
+//	out.event="play_StateStopped";
+//	out.send();
+//}
+//
+//void vlcEventMediaPlayerEndReached(const libvlc_event_t * event, void *sessionId)
+//{
+//	Cmsg out;
+//	out.src=(long int)sessionId;
+//	out.event="play_StateEnded";
+//	out.send();
+//}
+//
+//void vlcEventMediaPlayerEncounteredError(const libvlc_event_t * event, void *sessionId)
+//{
+//	Cmsg out;
+//	out.src=(long int)sessionId;
+//	out.event="play_StateError";
+//	out.send();
+//}
 
 void vlcEventGeneric(const libvlc_event_t * event, void *sessionId)
 {
@@ -176,7 +155,7 @@ void vlcEventMediaPlayerTimeChanged(const libvlc_event_t * event, void *sessionI
 {
 	Cmsg out;
 	out.src=(long int)sessionId;
-	out.event="play_EventTime";
+	out.event="play_Time";
 	out["time"]=event->u.media_player_time_changed.new_time;
 	out["length"]=libvlc_media_player_get_length((libvlc_media_player_t*)event->p_obj);
 	out.send();
@@ -263,7 +242,7 @@ void vlcEventMediaMetaChanged(const libvlc_event_t * event, void *sessionId)
 
 	Cmsg out;
 	out.src=(long int)sessionId;
-	out.event="play_EventMeta";
+	out.event="play_InfoMeta";
 
 	//its no use to look at event->u.media_meta_changed.meta_type, since that seems to give unrelated values.
 	vlcMeta2Msg((libvlc_media_t*)event->p_obj, out);
@@ -275,6 +254,31 @@ void vlcEventMediaMetaChanged(const libvlc_event_t * event, void *sessionId)
 	}
 }
 
+void vlcEventMediaStateChanged(const libvlc_event_t * event, void *sessionId)
+{
+	Cmsg out;
+	out.src=(long int)sessionId;
+
+	if (event->u.media_state_changed.new_state==libvlc_NothingSpecial)
+		out.event="play_StateNone";
+	else if (event->u.media_state_changed.new_state==libvlc_Opening)
+		out.event="play_StateOpening";
+	else if (event->u.media_state_changed.new_state==libvlc_Buffering)
+		out.event="play_StateBuffering";
+	else if (event->u.media_state_changed.new_state==libvlc_Playing)
+		out.event="play_StatePlaying";
+	else if (event->u.media_state_changed.new_state==libvlc_Paused)
+		out.event="play_StatePaused";
+	else if (event->u.media_state_changed.new_state==libvlc_Stopped)
+		out.event="play_StateStopped";
+	else if (event->u.media_state_changed.new_state==libvlc_Ended)
+		out.event="play_StateEnded";
+	else if (event->u.media_state_changed.new_state==libvlc_Error)
+		out.event="play_StateError";
+
+	out.send();
+
+}
 void vlcEventMediaSubItemAdded(const libvlc_event_t * event, void *sessionId)
 {
 //	INFO("Adding meta handler");
@@ -299,7 +303,7 @@ void vlcEventMediaListPlayerNextItemSet(const libvlc_event_t * event, void *sess
 	{
 		libvlc_event_attach(em, libvlc_MediaMetaChanged, vlcEventMediaMetaChanged, sessionId);
 		libvlc_event_attach(em, libvlc_MediaSubItemAdded, vlcEventGeneric, sessionId);
-		libvlc_event_attach(em, libvlc_MediaStateChanged, vlcEventGeneric, sessionId);
+		libvlc_event_attach(em, libvlc_MediaStateChanged, vlcEventMediaStateChanged, sessionId);
 	}
 
 
@@ -378,13 +382,13 @@ SYNAPSE_REGISTER(module_SessionStart)
 		if (em)
 		{
 			//attach our event handlers
-			libvlc_event_attach(em, libvlc_MediaPlayerOpening, vlcEventMediaPlayerOpening, (void*)msg.dst);
-			libvlc_event_attach(em, libvlc_MediaPlayerBuffering, vlcEventMediaPlayerBuffering, (void*)msg.dst);
-			libvlc_event_attach(em, libvlc_MediaPlayerPlaying, vlcEventMediaPlayerPlaying, (void*)msg.dst);
-			libvlc_event_attach(em, libvlc_MediaPlayerPaused, vlcEventMediaPlayerPaused, (void*)msg.dst);
-			libvlc_event_attach(em, libvlc_MediaPlayerStopped, vlcEventMediaPlayerStopped, (void*)msg.dst);
-			libvlc_event_attach(em, libvlc_MediaPlayerEndReached, vlcEventMediaPlayerEndReached, (void*)msg.dst);
-			libvlc_event_attach(em, libvlc_MediaPlayerEncounteredError,	vlcEventMediaPlayerEncounteredError, (void*)msg.dst);
+//			libvlc_event_attach(em, libvlc_MediaPlayerOpening, vlcEventMediaPlayerOpening, (void*)msg.dst);
+//			libvlc_event_attach(em, libvlc_MediaPlayerBuffering, vlcEventMediaPlayerBuffering, (void*)msg.dst);
+//			libvlc_event_attach(em, libvlc_MediaPlayerPlaying, vlcEventMediaPlayerPlaying, (void*)msg.dst);
+//			libvlc_event_attach(em, libvlc_MediaPlayerPaused, vlcEventMediaPlayerPaused, (void*)msg.dst);
+//			libvlc_event_attach(em, libvlc_MediaPlayerStopped, vlcEventMediaPlayerStopped, (void*)msg.dst);
+//			libvlc_event_attach(em, libvlc_MediaPlayerEndReached, vlcEventMediaPlayerEndReached, (void*)msg.dst);
+//			libvlc_event_attach(em, libvlc_MediaPlayerEncounteredError,	vlcEventMediaPlayerEncounteredError, (void*)msg.dst);
 
 			libvlc_event_attach(em, libvlc_MediaPlayerTimeChanged, vlcEventMediaPlayerTimeChanged, (void*)msg.dst);
 //			libvlc_event_attach(em, libvlc_MediaPlayerPositionChanged, vlcEventMediaPlayerPositionChanged, (void*)msg.dst);
