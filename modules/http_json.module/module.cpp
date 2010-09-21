@@ -36,6 +36,9 @@
 	The browser uses XMLhttprequest GET to receive events.
 	If there are no events to receive, the servers waits and the GET request 'hangs', until a event arrives. This is called long polling.
 
+	Also see: http://en.wikipedia.org/wiki/Push_technology Long polling.
+	To be implemented: HTML5 HTTP server push, since its more efficient.
+
 
 
 
