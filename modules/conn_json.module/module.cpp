@@ -2,7 +2,7 @@
 #include "synapse.h"
 #include <boost/thread/condition.hpp>
 
-
+//TODO: implement queueing, so we can handle disconnect+reconnects (with a fallback option if a message is missed: this will just end all the sessions like currently happens)
 
 
 #define MAX_MESSAGE 2048
