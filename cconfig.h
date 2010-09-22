@@ -20,7 +20,7 @@
  * cconfig.h
  *
  *  Created on: Jul 28, 2010
- *      Author: psy
+
  */
 
 #ifndef CCONFIG_H_

@@ -20,7 +20,7 @@
  * cconfig.cpp
  *
  *  Created on: Jul 28, 2010
- *      Author: psy
+
  */
 
 #include "cconfig.h"

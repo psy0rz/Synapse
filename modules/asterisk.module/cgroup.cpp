@@ -20,7 +20,7 @@
  * cgroup.cpp
  *
  *  Created on: Jul 14, 2010
- *      Author: psy
+
  */
 
 #include "cgroup.h"

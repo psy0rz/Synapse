@@ -20,7 +20,7 @@
  * cgroup.h
  *
  *  Created on: Jul 14, 2010
- *      Author: psy
+
  */
 
 #ifndef CGROUP_H_
