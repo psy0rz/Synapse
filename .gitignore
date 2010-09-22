@@ -1,0 +1,7 @@
+Makefile
+cmake_install.cmake
+CMakeFiles/
+CMakeCache.txt
+*.a
+*.so
+/synapse
