@@ -16,19 +16,19 @@
     along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-//
-// C++ Interface: cnet
-//
-// Description: the Cnet class that handles a networking session. Its used to implement both servers and clients. 
+
+
+
+
 // Threadsafe because we only post stuff with io_serivce::post()
 // The CnetMan class is responsible for handling the creation of these Cnet-objects.
-//
-//
-// Author:  <>, (C) 2009
-//
-// Copyright: See COPYING file that comes with this distribution
-//
-//
+
+
+
+
+
+
+
 
 #ifndef CNET_H
 #define CNET_H

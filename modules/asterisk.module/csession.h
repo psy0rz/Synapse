@@ -20,7 +20,7 @@
  * csession.h
  *
  *  Created on: Jul 14, 2010
- *      Author: psy
+
  */
 
 #ifndef CSESSION_H_

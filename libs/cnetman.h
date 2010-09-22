@@ -16,7 +16,7 @@
     along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-// Description: Generic thread-safe networking class for synapse modules.
+
 //              Creates and handles Cnet-sessions.
 
 

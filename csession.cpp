@@ -16,17 +16,17 @@
     along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-//
-// C++ Implementation: csession
-//
-// Description: 
-//
-//
-// Author:  <>, (C) 2009
-//
-// Copyright: See COPYING file that comes with this distribution
-//
-//
+
+
+
+
+
+
+
+
+
+
+
 #include "csession.h"
 #include "cuser.h"
 #include "cmodule.h"

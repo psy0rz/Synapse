@@ -16,17 +16,17 @@
     along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-//
-// C++ Interface: ccallman
-//
-// Description: 
-//
-//
-// Author:  <>, (C) 2009
-//
-// Copyright: See COPYING file that comes with this distribution
-//
-//
+
+
+
+
+
+
+
+
+
+
+
 #ifndef CCALLMAN_H
 #define CCALLMAN_H
 #include "cmsg.h"

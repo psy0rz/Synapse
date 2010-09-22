@@ -16,17 +16,17 @@
     along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-//
-// C++ Implementation: cvar
-//
-// Description: 
-//
-//
-// Author:  <>, (C) 2009
-//
-// Copyright: See COPYING file that comes with this distribution
-//
-//
+
+
+
+
+
+
+
+
+
+
+
 #include "cvar.h"
 #include <iostream>
 #include <boost/lexical_cast.hpp>

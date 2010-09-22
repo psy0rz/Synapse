@@ -16,17 +16,17 @@
     along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-//
-// C++ Interface: cevent
-//
-// Description: 
-//
-//
-// Author:  <>, (C) 2009
-//
-// Copyright: See COPYING file that comes with this distribution
-//
-//
+
+
+
+
+
+
+
+
+
+
+
 #ifndef CEVENT_H
 #define CEVENT_H
 #include <string>
