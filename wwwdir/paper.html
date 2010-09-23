@@ -1,0 +1,620 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!-- (C)edwin@datux.nl - released under GPL -->
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<title>internetpapier.nl</title>
+
+	<script type="text/javascript" src="synapse.js"></script>
+
+	<script type="text/javascript">
+
+
+		//(these where member of Cpoint, but thats only annoying and slow)
+		//calculate browser coordinates to game coordinates
+		function toServer(x,y)
+		{
+			return ({
+				"x":Math.round((x * 10000) / $("#mouseField").width()),
+				"y":Math.round((y * 10000) / $("#mouseField").height())
+			});
+		}
+	
+		//calculate game coordinates to browser coordinates 
+		function toBrowser(x,y)
+		{
+			return ({
+				"x":Math.round((x*$("#mouseField").width())/10000),
+				"y":Math.round((y*$("#mouseField").height())/10000)
+			});
+		}				
+
+	
+		function Cpoint(x,y)
+		{
+			this.x=x;
+			this.y=y;
+
+			this.copy=function(point)
+			{
+				this.x=point.x;
+				this.y=point.y;
+			}
+			
+		}
+
+		
+		//this is the class to store vector information in.
+		//position information is always a combination of x,y coordinates and x,y speed.
+		//In combination with timing we can calculate the predicted position.
+		function Cvector() {
+			this.startPoint=new Cpoint(0,0);
+			this.xSpeed=0;
+			this.ySpeed=0;
+			this.startTime=0;
+			this.duration=0;
+			this.stopped=1;
+
+			//duration is in S
+			//Speeds in pixels per S.
+			this.set=function(point, speed, duration)
+			{
+				if (typeof duration !== 'undefined')
+					this.duration=duration;
+
+				this.startPoint.copy(point);
+				this.xSpeed=speed.x;
+				this.ySpeed=speed.y;
+				this.startTime=currentTime;
+				this.stopped=0;
+			}
+
+			
+			//calculate the current x and y coordinates, based on the start position, start time, x,y-speeds and current time.
+			//return a Cpoint with the calculated position.
+			this.get=function()
+			{
+				var duration=(currentTime-this.startTime)/1000;
+				if (this.duration && duration>this.duration)
+				{
+					duration=this.duration;
+					this.stopped=1;
+				}
+				return ({
+					x:this.startPoint.x+((this.xSpeed*duration)), 
+					y:this.startPoint.y+((this.ySpeed*duration))
+				});
+			}
+
+			//move smootly from current position to new position
+			//duration in S.
+			this.move=function(toPoint, duration)
+			{
+				if (duration==0)
+					duration=0.1;
+				
+				//get current calculated position
+				currentPoint=this.get();				
+				//move from there to the new position in duration S.
+				speed=new Cpoint((toPoint.x-currentPoint.x)/duration, (toPoint.y-currentPoint.y)/duration );
+				
+				this.set(currentPoint, speed, duration);  
+			}
+		}
+
+		
+		function Cline(x1,y1,x2,y2) {
+			this.point1=new Cpoint(x1,y1);
+			this.point2=new Cpoint(x2,y2);
+
+			this.copy=function(line)
+			{
+				this.point1.x=line.point1.x;
+				this.point1.y=line.point1.y;
+				this.point2.x=line.point2.x;
+				this.point2.y=line.point2.y;
+			}
+			
+			this.calcSlope=function()
+			{
+				with (this)
+				{
+					return( ( point1.y - point2.y) / ( point1.x - point2.x ) );
+				}
+			}
+			
+			this.calcOffset=function()
+			{
+				with (this)
+				{
+					return ( 
+							( ( point1.y * point2.x ) - ( point2.y * point1.x ) ) /
+							  			( point2.x -point1.x )
+							  );
+				}
+			}
+
+			//calculate intersection of 2 lines.
+			this.calcIntersect=function(other)
+			{
+				//calcIntersect(xaa,yaa,xab,yab,xba,yba,xbb,ybb)
+				//from: http://www.topcoder.com/tc?module=Static&d1=tutorials&d2=geometry2
+				Athis = this.point2.y-this.point1.y;
+				Bthis = this.point1.x-this.point2.x;
+				Cthis = (Athis * this.point1.x) + (Bthis * this.point1.y );
+
+				Aother = other.point2.y-other.point1.y;
+				Bother = other.point1.x-other.point2.x;
+				Cother = (Aother * other.point1.x) + (Bthis * other.point1.y );
+				 
+				det = (Athis*Bother) - (Aother*Bthis);
+
+				if (det==0)
+					return({ "intersect": false});
+				else
+				{
+					return({
+						"intersect": true,
+						"x": (Bother*Cthis - Bthis*Cother)/det,
+						"y": (Athis*Cother - Aother*Cthis)/det
+					});
+				}
+			}
+		}
+
+
+		function Crect() {
+			this.lt=new Cpoint(0,0);
+			this.rb=new Cpoint(0,0);
+
+			this.copy=function(rect)
+			{
+				this.lt.x=rect.lt.x;
+				this.lt.y=rect.lt.y;
+				this.rb.x=rect.rb.x;
+				this.rb.y=rect.rb.y;
+			}
+			
+			//calculate rectangle coordinates from a given middlepoint with width and height
+			this.fromPoint=function(middle, width, height)
+			{
+				this.lt.x= middle.x - (width/2);
+				this.lt.y= middle.y + (height/2); 
+				this.rb.x= middle.x + (width/2);
+				this.rb.y= middle.y - (height/2); 
+			}
+
+			//returns true if point falls within rect.
+			this.pointIsIn=function(point)
+			{
+				if (
+						point.x<this.lt.x || 
+						point.x>this.rb.x || 
+						point.y>this.lt.y || 
+						point.y<this.rb.y
+					)
+						return false;
+					else
+						return true;
+			}
+
+			//returns true if 2 rectangles intersect
+			this.intersect=function(rect)
+			{
+				if (
+						this.lt.x > rect.rb.x || //we are right of it							
+						this.rb.x < rect.lt.x || //we are left of it
+						this.lt.y < rect.rb.y || //we are below it
+						this.rb.y > rect.lt.y  //we are above it
+					)
+					return false;
+				else
+					return true;					
+			}
+
+			
+		}
+
+
+		
+//		var lastTime=0; //last time a frame was analysed.
+		var mouseInterval=50; //max update inteval in mS (can be higer if mouseMax is exceeded)
+		var mouseMax=25; //max mouse pixel offset before sending (regardless of update interval)
+		
+		var currentGameId=0;
+
+		var mousePoint=new Cpoint(); //current mouse position
+
+		//mouse info sending to server:
+		var mouseSendPoint=new Cpoint(); //last mousepoint sent to server
+		var mouseSendTime=0; //last time the mousePosition was anaylsed by updateGameField
+
+		var mouseDraw=0;		
+
+		//dynamic pad positions
+		var padVectors=new Array();
+
+		var ctx;
+		
+
+		function mouseCheck()
+		{
+			if (!mouseDraw)
+				return;
+
+			currentTime=new Date().getTime();
+
+			//send updates at a max fps, or more when the mouse moves fast
+			if (
+					(currentTime-mouseSendTime>=mouseInterval) || 
+					Math.abs(mousePoint.x-mouseSendPoint.x)> mouseMax ||
+					Math.abs(mousePoint.y-mouseSendPoint.y)> mouseMax
+			)
+			{ 
+				if (mouseSendPoint.x)
+				{
+					ctx.moveTo(mouseSendPoint.x, mouseSendPoint.y);
+					ctx.lineTo(mousePoint.x, mousePoint.y);
+					ctx.stroke();  
+				}
+				mouseSendPoint.x=mousePoint.x;
+				mouseSendPoint.y=mousePoint.y;
+					
+					
+				//convert coordinates and send out destination position + time it took to get there.
+	//			pos=toGame(mousePoint.x, mousePoint.y);
+	//				send(0,"pong_SetPosition", [pos.x, pos.y, (currentTime-mouseSendTime)/1000] );
+	//			mouseSendPoint.copy(mousePoint);
+				mouseSendTime=currentTime;
+			}
+		}
+		
+		
+		//here is where we receive the positions of the ball and pads from the server.
+		//We just store the information in Cposition objects. The actual calculation and drawing is done in UpdateGameField().
+		synapse_register("pong_Positions",function(msg_src, msg_dst, msg_event, msg)
+		{	
+			//update global time variable. 
+			currentTime=new Date().getTime();
+
+			//(positions are in a plain array for speed optimisation)
+			
+			//the ball is always first and has id 0
+			if (msg[0]==0)
+			{
+				//ball xy
+				point=toBrowser(msg[1], msg[2]);
+				speed=toBrowser(msg[3], msg[4]);
+				ballVector.set(point, speed);
+				i=5;
+			}
+			else
+			{
+				i=0
+			}
+			
+			while(i<msg.length)
+			{
+				id=msg[i];
+				if (padVectors[id]==undefined)
+				{
+					padVectors[id]=new Cvector();
+				}
+				point=toBrowser(msg[i+1], msg[i+2]);
+				padVectors[id].move(point, msg[i+3]);
+				//console.info("stored ", id, " pos", pos.x," ",pos.y," ", msg[i+3]);
+				i=i+4;		
+			}
+		});
+
+
+		
+		/// SYNAPSE EVENT HANDLERS
+ 		synapse_register("pong_GameStatus",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			if ($("#game_"+msg["id"]).length==0)
+			{
+				//add to gamelist
+				var html="<div class='game' id='game_"+msg["id"]+"'>";
+				html+="</div>";
+				$('#gameList').append(html);
+				$("#game_"+msg["id"]).attr('gameId',msg["id"]);
+				
+				//make it clickable
+				$("#game_"+msg["id"]).click(function()
+						{
+							send(0,"pong_JoinGame", {
+									"name":$("#name").val(),
+									"id":$(this).attr('gameId'),
+								});
+						});
+			}
+
+			//create the html with the actual game info:
+			var html="Game of " + msg["name"]  + " (#" +msg["id"] + "):";
+			for (var playerI in msg["players"])
+			{
+				html+="<div class='playerInfo'>";
+				html+=msg["players"][playerI];
+				html+="</div>";
+			}
+
+			$("#game_"+msg["id"]).html(html);
+		});
+
+ 		synapse_register("pong_GameDeleted",function(msg_src, msg_dst, msg_event, msg)
+		{
+ 			$("#game_"+msg["id"]).remove();
+		});
+ 				
+
+		synapse_register("pong_GameJoined",function(msg_src, msg_dst, msg_event, msg)
+		{	
+			currentGameId=msg["id"];
+			//clear up the old gamefield.
+			$("#gameField .padPlayer").remove();
+		});
+
+
+		
+		
+		
+		
+ 		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			send(0,"pong_GetGames", { 
+			});
+
+			/// start local engine
+			window.setInterval(mouseCheck, mouseInterval);
+
+			
+			/// JAVA SCRIPT EVENT HANDLERS
+			$("#newGame").click(function()
+					{
+						send(0,"pong_NewGame", {
+								"name":$("#name").val()
+							});
+					});
+//				$("#getGames").click(function()
+//					{
+//						$('.game').remove();
+//						send(0,"pong_GetGames", {});
+//					});
+
+
+
+			$("#gameFieldMouse").mousemove(function(m)
+			{
+				mousePoint.x=m.pageX-$("#gameFieldMouse").offset().left;
+				mousePoint.y=m.pageY-$("#gameFieldMouse").offset().top;
+				
+				mouseCheck();
+					
+			});
+
+			$("#gameFieldMouse").mousedown(function(m)
+			{
+				mouseDraw=1;
+				mouseSendPoint
+			});
+					
+			$("#gameFieldMouse").mouseup(function(m)
+			{
+				mouseDraw=0;
+				mouseSendPoint.x=0;
+			});
+					
+
+			canvas=document.getElementById('paper');
+			ctx=canvas.getContext('2d');
+			canvas.width=$("#gameFieldMouse").width();
+			canvas.height=$("#gameFieldMouse").height();
+			
+								
+ 		});
+
+
+
+
+	</script>
+
+	<style>
+		body 
+		{
+			margin:0;
+			padding:0;
+			height:100%;
+		} 
+
+
+		.color1  { color: #ff0000; } 
+		.color2  { color: #00ff00; } 
+		.color3  { color: #0000ff; } 
+		.color4  { color: #ffff00; } 
+		.color5  { color: #ff00ff; } 
+		.color6  { color: #00ffff; } 
+		.color7  { color: #aaff00; } 
+		.color8  { color: #00ffaa; } 
+		.color9  { color: #aa00aa; } 
+		.color10 { color: #aa00ff; } 
+
+		.playerInfo
+		{
+			width:18em;
+			background:yellow;
+			margin-left:1em;
+		}
+
+		#gameManager
+		{
+			position:absolute; 
+			left:0;
+			top: 0;
+			width: 20em;
+			bottom:0;
+			border-style:solid;
+		}
+
+		#gameField
+		{
+			position:absolute; 
+			left:20em;
+			top: 0;
+			right: 0;
+			bottom:0;
+			border-style:solid;
+			border-color:#00ff00;
+			border-width:0;
+			background:black;
+			overflow:hidden;
+		}
+
+		#gameFieldMouse
+		{
+			position:absolute; 
+			left:20em;
+			top: 0;
+			right: 0;
+			bottom:0;
+		}
+		
+		#paper
+		{
+			position:absolute;
+			left:20em;
+			top:0;
+		}
+		
+		
+		#gameFieldMiddle
+		{
+			position:absolute;
+			left:50%;
+			top:0;
+			bottom:0;
+			border-style:dashed;
+			border-color:#00ff00;
+		}
+
+		.score
+		{
+			color: #00ff00;
+			font-size:2em;
+			font-family: monospace;
+			font-weight: bold;
+		}
+
+		#scoreLeft
+		{
+			position:absolute;
+			left:40%;
+			top:1em;
+		}
+		
+		#scoreRight
+		{
+			position:absolute;
+			left:60%;
+			top:1em;
+		}
+
+		.padLocal
+		{
+			position:absolute;
+			left:10%;
+			top:10%;
+			width:1%;
+			height:10%;
+			margin-top:-5%;
+			margin-left:-0.5%;
+			background-color:#ffffff;
+		}
+
+
+
+		
+		.padPlayer
+		{
+			position:absolute;
+			left:10%;
+			top:10%;
+			width:1%;
+			height:10%;
+			background-color:#00ff00;
+		}
+
+		#test1
+		{
+			position:absolute;
+			left:10%;
+			top:10%;
+			width:4px;
+			height:4px;
+			background-color:#ff00ff;
+		}
+		#test2
+		{
+			position:absolute;
+			left:10%;
+			top:10%;
+			width:4px;
+			height:4px;
+			background-color:#00ffff;
+			
+		}
+
+		#test3
+		{
+			position:absolute;
+			left:10%;
+			top:10%;
+			width:4px;
+			height:4px;
+			background-color:#ff0000;
+		}
+
+
+		.ball
+		{
+			position:absolute;
+			left:30%;
+			top:30%;
+			width:1%;
+			margin-left:-0.5%;
+			height:2%;
+			margin-top:-1%;
+			background-color:#00ff00;
+		}
+
+		
+	</style>
+
+</head>
+
+
+<body class='ui-widget'>
+	<p>
+
+	<div class='ui-widget-content' id='gameManager'>
+		<div class='ui-widget-header'>Your name:</div>
+		<input id='name' type='text' value=''>
+
+		<div class='ui-widget-header'>Available games:</div>
+		Click to join...
+		<div id='gameList'></div>
+		<input id='newGame' type='submit' value='New game'>
+	</div>
+
+
+
+
+
+	<canvas width=10 height=10 id='paper'></canvas>		
+	<div id='gameFieldMouse'>
+	</div>
+
+	
+</body>
+</html>
