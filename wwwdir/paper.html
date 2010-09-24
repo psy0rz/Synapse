@@ -16,8 +16,8 @@
 		function toServer(x,y)
 		{
 			return ({
-				"x":Math.round((x * 10000) / $("#mouseField").width()),
-				"y":Math.round((y * 10000) / $("#mouseField").height())
+				"x":Math.round((x * 10000) / $("#canvasMouse").width()),
+				"y":Math.round((y * 10000) / $("#canvasMouse").height())
 			});
 		}
 	
@@ -25,8 +25,8 @@
 		function toBrowser(x,y)
 		{
 			return ({
-				"x":Math.round((x*$("#mouseField").width())/10000),
-				"y":Math.round((y*$("#mouseField").height())/10000)
+				"x":Math.round((x*$("#canvasMouse").width())/10000),
+				"y":Math.round((y*$("#canvasMouse").height())/10000)
 			});
 		}				
 
@@ -236,11 +236,18 @@
 		var padVectors=new Array();
 
 		var ctx;
-		
+
+	
+		var currentObjectId=0;
+		var paperModId=0;
 
 		function mouseCheck()
 		{
 			if (!mouseDraw)
+				return;
+
+			//no change?
+			if (mousePoint.x==mouseSendPoint.x || mousePoint.y==mouseSendPoint.y)
 				return;
 
 			currentTime=new Date().getTime();
@@ -254,9 +261,17 @@
 			{ 
 				if (mouseSendPoint.x)
 				{
-					ctx.moveTo(mouseSendPoint.x, mouseSendPoint.y);
-					ctx.lineTo(mousePoint.x, mousePoint.y);
-					ctx.stroke();  
+
+					a=toServer(mouseSendPoint.x,mouseSendPoint.y);
+					b=toServer(mousePoint.x,mousePoint.y);
+					send(paperModId,"paper_clientDraw", {
+						"x1":a.x, 
+						"y1":a.y, 
+						"x2":b.x, 
+						"y2":b.y,
+						"objectId":currentObjectId 
+					});
+					
 				}
 				mouseSendPoint.x=mousePoint.x;
 				mouseSendPoint.y=mousePoint.y;
@@ -290,30 +305,30 @@
 
 
 
-			$("#canvasFieldMouse").mousemove(function(m)
+			$("#canvasMouse").mousemove(function(m)
 			{
-				mousePoint.x=m.pageX-$("#canvasFieldMouse").offset().left;
-				mousePoint.y=m.pageY-$("#canvasFieldMouse").offset().top;
+				mousePoint.x=m.pageX-$("#canvasMouse").offset().left;
+				mousePoint.y=m.pageY-$("#canvasMouse").offset().top;
 				
 				mouseCheck();
 					
 			});
 
-			$("#canvasFieldMouse").mousedown(function(m)
+			$("#canvasMouse").mousedown(function(m)
 			{
 				m.preventDefault();
 				mouseDraw=1;
 				mouseSendPoint
 			});
 					
-			$("#canvasFieldMouse").mouseup(function(m)
+			$("#canvasMouse").mouseup(function(m)
 			{
 				mouseDraw=0;
 				mouseSendPoint.x=0;
 			});
 					
 
-			$("#canvasFieldMouse").mouseleave(function(m)
+			$("#canvasMouse").mouseleave(function(m)
 			{
 				mouseDraw=0;
 				mouseSendPoint.x=0;
@@ -321,8 +336,8 @@
 					
 			canvas=document.getElementById('canvas');
 			ctx=canvas.getContext('2d');
-			canvas.width=$("#canvasFieldMouse").width();
-			canvas.height=$("#canvasFieldMouse").height();
+			canvas.width=$("#canvasMouse").width();
+			canvas.height=$("#canvasMouse").height();
 			
 								
  		});
@@ -358,15 +373,23 @@
 			$("#object_"+msg["objectId"]).html(html);
 		});
 
-		//update the client list
-		
+		//update the client list or status
+		synapse_register("object_Client",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+	 		//its us?
+			if (msg["clientId"]==msg_dst)
+			{
+				//we've joined a object, from now on draw on it.
+				currentObjectId=msg["objectId"];
+				paperModId=msg_src;
+			}
 //			for (var playerI in msg["players"])
 	//		{
 	//			html+="<div class='playerInfo'>";
 		//		html+=msg["players"][playerI];
 			//	html+="</div>";
 		//	}
-		
+ 		});
 
 		
  		synapse_register("object_Deleted",function(msg_src, msg_dst, msg_event, msg)
@@ -375,6 +398,15 @@
 		});
  				
 
+ 		synapse_register("paper_serverDraw",function(msg_src, msg_dst, msg_event, msg)
+		{
+ 			a=toBrowser(msg["x1"],msg["y1"]);
+			b=toBrowser(msg["x2"],msg["y2"]);
+			ctx.moveTo(a.x, a.y);
+			ctx.lineTo(b.x, b.y);
+			ctx.stroke();  
+		});
+ 		
 		synapse_register("pong_GameJoined",function(msg_src, msg_dst, msg_event, msg)
 		{	
 			currentGameId=msg["id"];
@@ -440,7 +472,7 @@
 			overflow:hidden;
 		}
 
-		#canvasFieldMouse
+		#canvasMouse
 		{
 			position:absolute; 
 			left:20em;
@@ -496,7 +528,7 @@
 
 
 	<canvas width=10 height=10 id='canvas'></canvas>		
-	<div id='canvasFieldMouse'>
+	<div id='canvasMouse'>
 	</div>
 
 	

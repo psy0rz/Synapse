@@ -379,13 +379,16 @@ namespace pong
 	/// Paper Module specific stuff
 	///////////////////////////////////////////////////////////////////////////////////
 
-//	SYNAPSE_REGISTER(paper_clientDraw)
-//	{
-//		Cmsg out;
-//		out.event="paper_serverDraw";
-//		out["objectId"]=msg["objectId"];
-//		out["x1"]=msg["x1"];
-//		objectMan.getObject(msg["objectId"]).send(out);
-//	}
+	SYNAPSE_REGISTER(paper_clientDraw)
+	{
+		Cmsg out;
+		out.event="paper_serverDraw";
+		out["objectId"]=msg["objectId"];
+		out["x1"]=msg["x1"];
+		out["y1"]=msg["y1"];
+		out["x2"]=msg["x2"];
+		out["y2"]=msg["y2"];
+		objectMan.getObject(msg["objectId"]).send(out);
+	}
 
 }
