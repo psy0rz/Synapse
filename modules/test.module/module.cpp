@@ -49,8 +49,8 @@ SYNAPSE_REGISTER(module_Init)
 //  	out["path"]="modules/asterisk.module/libasterisk.so";
 //  	out.send();
 //
-  	out["path"]="modules/pong.module/libpong.so";
-  	out.send();
+//  	out["path"]="modules/pong.module/libpong.so";
+//  	out.send();
 //
 //	out["path"]="modules/conn_json.module/libconn_json.so";
 //	out.send();
@@ -69,6 +69,9 @@ SYNAPSE_REGISTER(module_Init)
 //
 //  	out["path"]="modules/ami.module/libami.so";
 //  	out.send();
+
+  	out["path"]="modules/paper.module/libpaper.so";
+  	out.send();
 
 
 	out["path"]="modules/http_json.module/libhttp_json.so";

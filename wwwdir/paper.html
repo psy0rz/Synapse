@@ -269,83 +269,109 @@
 				mouseSendTime=currentTime;
 			}
 		}
-		
-		
-		//here is where we receive the positions of the ball and pads from the server.
-		//We just store the information in Cposition objects. The actual calculation and drawing is done in UpdateGameField().
-		synapse_register("pong_Positions",function(msg_src, msg_dst, msg_event, msg)
-		{	
-			//update global time variable. 
-			currentTime=new Date().getTime();
 
-			//(positions are in a plain array for speed optimisation)
-			
-			//the ball is always first and has id 0
-			if (msg[0]==0)
-			{
-				//ball xy
-				point=toBrowser(msg[1], msg[2]);
-				speed=toBrowser(msg[3], msg[4]);
-				ballVector.set(point, speed);
-				i=5;
-			}
-			else
-			{
-				i=0
-			}
-			
-			while(i<msg.length)
-			{
-				id=msg[i];
-				if (padVectors[id]==undefined)
-				{
-					padVectors[id]=new Cvector();
-				}
-				point=toBrowser(msg[i+1], msg[i+2]);
-				padVectors[id].move(point, msg[i+3]);
-				//console.info("stored ", id, " pos", pos.x," ",pos.y," ", msg[i+3]);
-				i=i+4;		
-			}
-		});
-
-
-		
-		/// SYNAPSE EVENT HANDLERS
- 		synapse_register("pong_GameStatus",function(msg_src, msg_dst, msg_event, msg)
+ 		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
-			if ($("#game_"+msg["id"]).length==0)
+			send(0,"object_GetObjects", { 
+			});
+
+			/// start local engine
+			window.setInterval(mouseCheck, mouseInterval);
+
+			
+			/// JAVA SCRIPT EVENT HANDLERS
+			$("#newObject").click(function()
+					{
+						send(0,"object_Create", {
+								"objectName":$("#name").val(),
+								"clientName":$("#name").val()
+							});
+					});
+
+
+
+			$("#canvasFieldMouse").mousemove(function(m)
 			{
-				//add to gamelist
-				var html="<div class='game' id='game_"+msg["id"]+"'>";
+				mousePoint.x=m.pageX-$("#canvasFieldMouse").offset().left;
+				mousePoint.y=m.pageY-$("#canvasFieldMouse").offset().top;
+				
+				mouseCheck();
+					
+			});
+
+			$("#canvasFieldMouse").mousedown(function(m)
+			{
+				m.preventDefault();
+				mouseDraw=1;
+				mouseSendPoint
+			});
+					
+			$("#canvasFieldMouse").mouseup(function(m)
+			{
+				mouseDraw=0;
+				mouseSendPoint.x=0;
+			});
+					
+
+			$("#canvasFieldMouse").mouseleave(function(m)
+			{
+				mouseDraw=0;
+				mouseSendPoint.x=0;
+			});
+					
+			canvas=document.getElementById('canvas');
+			ctx=canvas.getContext('2d');
+			canvas.width=$("#canvasFieldMouse").width();
+			canvas.height=$("#canvasFieldMouse").height();
+			
+								
+ 		});
+ 				
+		//update the object list
+		synapse_register("object_Object",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			//clear list?
+			if (msg["first"])
+				$('#objectList').empty();
+
+	 		//new object?
+			if ($("#object_"+msg["objectId"]).length==0)
+			{
+				//add to list
+				var html="<div class='object' id='object_"+msg["objectId"]+"'>";
 				html+="</div>";
-				$('#gameList').append(html);
-				$("#game_"+msg["id"]).attr('gameId',msg["id"]);
+				$('#objectList').append(html);
 				
 				//make it clickable
-				$("#game_"+msg["id"]).click(function()
-						{
-							send(0,"pong_JoinGame", {
-									"name":$("#name").val(),
-									"id":$(this).attr('gameId'),
-								});
+				$("#object_"+msg["objectId"]).attr('objectId',msg["objectId"]);
+				$("#object_"+msg["objectId"]).click(function()
+				{
+					send(0,"object_Join", {
+							"clientName":$("#name").val(),
+							"objectId":$(this).attr('objectId'),
 						});
+				});
 			}
 
-			//create the html with the actual game info:
-			var html="Game of " + msg["name"]  + " (#" +msg["id"] + "):";
-			for (var playerI in msg["players"])
-			{
-				html+="<div class='playerInfo'>";
-				html+=msg["players"][playerI];
-				html+="</div>";
-			}
-
-			$("#game_"+msg["id"]).html(html);
+			//update the html with the actual game info:
+			var html="Paper of " + msg["objectName"]  + " (#" +msg["objectId"] + "):";
+			$("#object_"+msg["objectId"]).html(html);
 		});
 
- 		synapse_register("pong_GameDeleted",function(msg_src, msg_dst, msg_event, msg)
+		//update the client list
+		
+//			for (var playerI in msg["players"])
+	//		{
+	//			html+="<div class='playerInfo'>";
+		//		html+=msg["players"][playerI];
+			//	html+="</div>";
+		//	}
+		
+
+		
+ 		synapse_register("object_Deleted",function(msg_src, msg_dst, msg_event, msg)
 		{
- 			$("#game_"+msg["id"]).remove();
+ 			$("#object_"+msg["objectId"]).remove();
 		});
  				
 
@@ -356,64 +382,7 @@
 			$("#gameField .padPlayer").remove();
 		});
 
-
-		
-		
-		
-		
- 		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
- 		{
-			send(0,"pong_GetGames", { 
-			});
-
-			/// start local engine
-			window.setInterval(mouseCheck, mouseInterval);
-
-			
-			/// JAVA SCRIPT EVENT HANDLERS
-			$("#newGame").click(function()
-					{
-						send(0,"pong_NewGame", {
-								"name":$("#name").val()
-							});
-					});
-//				$("#getGames").click(function()
-//					{
-//						$('.game').remove();
-//						send(0,"pong_GetGames", {});
-//					});
-
-
-
-			$("#gameFieldMouse").mousemove(function(m)
-			{
-				mousePoint.x=m.pageX-$("#gameFieldMouse").offset().left;
-				mousePoint.y=m.pageY-$("#gameFieldMouse").offset().top;
-				
-				mouseCheck();
-					
-			});
-
-			$("#gameFieldMouse").mousedown(function(m)
-			{
-				mouseDraw=1;
-				mouseSendPoint
-			});
-					
-			$("#gameFieldMouse").mouseup(function(m)
-			{
-				mouseDraw=0;
-				mouseSendPoint.x=0;
-			});
-					
-
-			canvas=document.getElementById('paper');
-			ctx=canvas.getContext('2d');
-			canvas.width=$("#gameFieldMouse").width();
-			canvas.height=$("#gameFieldMouse").height();
-			
-								
- 		});
+	
 
 
 
@@ -440,14 +409,14 @@
 		.color9  { color: #aa00aa; } 
 		.color10 { color: #aa00ff; } 
 
-		.playerInfo
+		.clientInfo
 		{
 			width:18em;
 			background:yellow;
 			margin-left:1em;
 		}
 
-		#gameManager
+		#objectManager
 		{
 			position:absolute; 
 			left:0;
@@ -457,7 +426,7 @@
 			border-style:solid;
 		}
 
-		#gameField
+		#canvasField
 		{
 			position:absolute; 
 			left:20em;
@@ -471,7 +440,7 @@
 			overflow:hidden;
 		}
 
-		#gameFieldMouse
+		#canvasFieldMouse
 		{
 			position:absolute; 
 			left:20em;
@@ -480,7 +449,7 @@
 			bottom:0;
 		}
 		
-		#paper
+		#canvas
 		{
 			position:absolute;
 			left:20em;
@@ -488,39 +457,8 @@
 		}
 		
 		
-		#gameFieldMiddle
-		{
-			position:absolute;
-			left:50%;
-			top:0;
-			bottom:0;
-			border-style:dashed;
-			border-color:#00ff00;
-		}
 
-		.score
-		{
-			color: #00ff00;
-			font-size:2em;
-			font-family: monospace;
-			font-weight: bold;
-		}
-
-		#scoreLeft
-		{
-			position:absolute;
-			left:40%;
-			top:1em;
-		}
-		
-		#scoreRight
-		{
-			position:absolute;
-			left:60%;
-			top:1em;
-		}
-
-		.padLocal
+		.cursor
 		{
 			position:absolute;
 			left:10%;
@@ -529,64 +467,12 @@
 			height:10%;
 			margin-top:-5%;
 			margin-left:-0.5%;
-			background-color:#ffffff;
+			background-color:#ff0000;
 		}
 
 
 
 		
-		.padPlayer
-		{
-			position:absolute;
-			left:10%;
-			top:10%;
-			width:1%;
-			height:10%;
-			background-color:#00ff00;
-		}
-
-		#test1
-		{
-			position:absolute;
-			left:10%;
-			top:10%;
-			width:4px;
-			height:4px;
-			background-color:#ff00ff;
-		}
-		#test2
-		{
-			position:absolute;
-			left:10%;
-			top:10%;
-			width:4px;
-			height:4px;
-			background-color:#00ffff;
-			
-		}
-
-		#test3
-		{
-			position:absolute;
-			left:10%;
-			top:10%;
-			width:4px;
-			height:4px;
-			background-color:#ff0000;
-		}
-
-
-		.ball
-		{
-			position:absolute;
-			left:30%;
-			top:30%;
-			width:1%;
-			margin-left:-0.5%;
-			height:2%;
-			margin-top:-1%;
-			background-color:#00ff00;
-		}
 
 		
 	</style>
@@ -597,22 +483,20 @@
 <body class='ui-widget'>
 	<p>
 
-	<div class='ui-widget-content' id='gameManager'>
+	<div class='ui-widget-content' id='objectManager'>
 		<div class='ui-widget-header'>Your name:</div>
 		<input id='name' type='text' value=''>
 
-		<div class='ui-widget-header'>Available games:</div>
+		<div class='ui-widget-header'>Available papers:</div>
 		Click to join...
-		<div id='gameList'></div>
-		<input id='newGame' type='submit' value='New game'>
+		<div id='objectList'></div>
+		<input id='newObject' type='submit' value='New paper'>
 	</div>
 
 
 
-
-
-	<canvas width=10 height=10 id='paper'></canvas>		
-	<div id='gameFieldMouse'>
+	<canvas width=10 height=10 id='canvas'></canvas>		
+	<div id='canvasFieldMouse'>
 	</div>
 
 	

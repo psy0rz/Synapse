@@ -305,9 +305,9 @@ bool Cvar::isSet(const string & key)
 
 void Cvar::erase(const char * key)
 {
-	((CvarMap&)(*this)).erase(
-		((CvarMap&)(*this)).find(key)
-	);
+	CvarMap::iterator I=((CvarMap&)(*this)).find(key);
+	if (I!=((CvarMap&)(*this)).end())
+		((CvarMap&)(*this)).erase(I);
 }
 
 /// CVAR_LIST stuff
