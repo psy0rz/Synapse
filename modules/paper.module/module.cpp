@@ -28,7 +28,7 @@ Internet paper.
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 
-namespace pong
+namespace paper
 {
 
 	using namespace std;
@@ -210,6 +210,11 @@ namespace pong
 			}
 		}
 
+		bool clientExists(int id)
+		{
+			return(clientMap.find(id)!=clientMap.end());
+		}
+
 		void delClient(int id)
 		{
 			if (clientMap.find(id)!= clientMap.end())
@@ -266,6 +271,22 @@ namespace pong
 				throw(runtime_error("Object not found!"));
 
 			return (objectMap[id]);
+		}
+
+		// Get a reference to an object by client id.
+		//TODO: OPTIMIZE: will get slow with a lot of objects
+		CsharedObject & getObjectByClient(int clientId)
+		{
+
+			for (CobjectMap::iterator I=objectMap.begin(); I!=objectMap.end(); I++)
+			{
+				if (I->second.clientExists(clientId))
+				{
+					return (objectMap[I->first]);
+				}
+			}
+
+			throw(runtime_error("You are not joined to an object!"));
 		}
 
 
@@ -383,12 +404,10 @@ namespace pong
 	{
 		Cmsg out;
 		out.event="paper_serverDraw";
-		out["objectId"]=msg["objectId"];
-		out["x1"]=msg["x1"];
-		out["y1"]=msg["y1"];
-		out["x2"]=msg["x2"];
-		out["y2"]=msg["y2"];
-		objectMan.getObject(msg["objectId"]).send(out);
+		out.list()=msg.list();
+		out.list().push_front(msg.src);
+		out.list().push_front(string("i"));
+		objectMan.getObjectByClient(msg.src).send(out);
 	}
 
 }

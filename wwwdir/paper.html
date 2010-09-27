@@ -10,7 +10,6 @@
 
 	<script type="text/javascript">
 
-
 		//(these where member of Cpoint, but thats only annoying and slow)
 		//calculate browser coordinates to game coordinates
 		function toServer(x,y)
@@ -30,7 +29,6 @@
 			});
 		}				
 
-	
 		function Cpoint(x,y)
 		{
 			this.x=x;
@@ -43,178 +41,8 @@
 			}
 			
 		}
-
+	
 		
-		//this is the class to store vector information in.
-		//position information is always a combination of x,y coordinates and x,y speed.
-		//In combination with timing we can calculate the predicted position.
-		function Cvector() {
-			this.startPoint=new Cpoint(0,0);
-			this.xSpeed=0;
-			this.ySpeed=0;
-			this.startTime=0;
-			this.duration=0;
-			this.stopped=1;
-
-			//duration is in S
-			//Speeds in pixels per S.
-			this.set=function(point, speed, duration)
-			{
-				if (typeof duration !== 'undefined')
-					this.duration=duration;
-
-				this.startPoint.copy(point);
-				this.xSpeed=speed.x;
-				this.ySpeed=speed.y;
-				this.startTime=currentTime;
-				this.stopped=0;
-			}
-
-			
-			//calculate the current x and y coordinates, based on the start position, start time, x,y-speeds and current time.
-			//return a Cpoint with the calculated position.
-			this.get=function()
-			{
-				var duration=(currentTime-this.startTime)/1000;
-				if (this.duration && duration>this.duration)
-				{
-					duration=this.duration;
-					this.stopped=1;
-				}
-				return ({
-					x:this.startPoint.x+((this.xSpeed*duration)), 
-					y:this.startPoint.y+((this.ySpeed*duration))
-				});
-			}
-
-			//move smootly from current position to new position
-			//duration in S.
-			this.move=function(toPoint, duration)
-			{
-				if (duration==0)
-					duration=0.1;
-				
-				//get current calculated position
-				currentPoint=this.get();				
-				//move from there to the new position in duration S.
-				speed=new Cpoint((toPoint.x-currentPoint.x)/duration, (toPoint.y-currentPoint.y)/duration );
-				
-				this.set(currentPoint, speed, duration);  
-			}
-		}
-
-		
-		function Cline(x1,y1,x2,y2) {
-			this.point1=new Cpoint(x1,y1);
-			this.point2=new Cpoint(x2,y2);
-
-			this.copy=function(line)
-			{
-				this.point1.x=line.point1.x;
-				this.point1.y=line.point1.y;
-				this.point2.x=line.point2.x;
-				this.point2.y=line.point2.y;
-			}
-			
-			this.calcSlope=function()
-			{
-				with (this)
-				{
-					return( ( point1.y - point2.y) / ( point1.x - point2.x ) );
-				}
-			}
-			
-			this.calcOffset=function()
-			{
-				with (this)
-				{
-					return ( 
-							( ( point1.y * point2.x ) - ( point2.y * point1.x ) ) /
-							  			( point2.x -point1.x )
-							  );
-				}
-			}
-
-			//calculate intersection of 2 lines.
-			this.calcIntersect=function(other)
-			{
-				//calcIntersect(xaa,yaa,xab,yab,xba,yba,xbb,ybb)
-				//from: http://www.topcoder.com/tc?module=Static&d1=tutorials&d2=geometry2
-				Athis = this.point2.y-this.point1.y;
-				Bthis = this.point1.x-this.point2.x;
-				Cthis = (Athis * this.point1.x) + (Bthis * this.point1.y );
-
-				Aother = other.point2.y-other.point1.y;
-				Bother = other.point1.x-other.point2.x;
-				Cother = (Aother * other.point1.x) + (Bthis * other.point1.y );
-				 
-				det = (Athis*Bother) - (Aother*Bthis);
-
-				if (det==0)
-					return({ "intersect": false});
-				else
-				{
-					return({
-						"intersect": true,
-						"x": (Bother*Cthis - Bthis*Cother)/det,
-						"y": (Athis*Cother - Aother*Cthis)/det
-					});
-				}
-			}
-		}
-
-
-		function Crect() {
-			this.lt=new Cpoint(0,0);
-			this.rb=new Cpoint(0,0);
-
-			this.copy=function(rect)
-			{
-				this.lt.x=rect.lt.x;
-				this.lt.y=rect.lt.y;
-				this.rb.x=rect.rb.x;
-				this.rb.y=rect.rb.y;
-			}
-			
-			//calculate rectangle coordinates from a given middlepoint with width and height
-			this.fromPoint=function(middle, width, height)
-			{
-				this.lt.x= middle.x - (width/2);
-				this.lt.y= middle.y + (height/2); 
-				this.rb.x= middle.x + (width/2);
-				this.rb.y= middle.y - (height/2); 
-			}
-
-			//returns true if point falls within rect.
-			this.pointIsIn=function(point)
-			{
-				if (
-						point.x<this.lt.x || 
-						point.x>this.rb.x || 
-						point.y>this.lt.y || 
-						point.y<this.rb.y
-					)
-						return false;
-					else
-						return true;
-			}
-
-			//returns true if 2 rectangles intersect
-			this.intersect=function(rect)
-			{
-				if (
-						this.lt.x > rect.rb.x || //we are right of it							
-						this.rb.x < rect.lt.x || //we are left of it
-						this.lt.y < rect.rb.y || //we are below it
-						this.rb.y > rect.lt.y  //we are above it
-					)
-					return false;
-				else
-					return true;					
-			}
-
-			
-		}
 
 
 		
@@ -237,10 +65,11 @@
 
 		var ctx;
 
-	
 		var currentObjectId=0;
 		var paperModId=0;
 
+		
+		
 		function mouseCheck()
 		{
 			if (!mouseDraw)
@@ -262,25 +91,19 @@
 				if (mouseSendPoint.x)
 				{
 
-					a=toServer(mouseSendPoint.x,mouseSendPoint.y);
-					b=toServer(mousePoint.x,mousePoint.y);
-					send(paperModId,"paper_clientDraw", {
-						"x1":a.x, 
-						"y1":a.y, 
-						"x2":b.x, 
-						"y2":b.y,
-						"objectId":currentObjectId 
-					});
+					a=toServer(mousePoint.x,mousePoint.y);
+					send(paperModId,"paper_clientDraw", [ "l", a.x, a.y ]);
 					
+				}
+				else
+				{
+					//no start point, just move
+					a=toServer(mousePoint.x,mousePoint.y);
+					send(paperModId,"paper_clientDraw", [ "m", a.x, a.y ] );
 				}
 				mouseSendPoint.x=mousePoint.x;
 				mouseSendPoint.y=mousePoint.y;
 					
-					
-				//convert coordinates and send out destination position + time it took to get there.
-	//			pos=toGame(mousePoint.x, mousePoint.y);
-	//				send(0,"pong_SetPosition", [pos.x, pos.y, (currentTime-mouseSendTime)/1000] );
-	//			mouseSendPoint.copy(mousePoint);
 				mouseSendTime=currentTime;
 			}
 		}
@@ -398,13 +221,55 @@
 		});
  				
 
+ 		
+		//incremental draw stuff
+		var clientId=0;
+		var clients=new Array(); 
+		function Cclient(x,y)
+		{
+			this.mode="m";
+			this.x=0;
+			this.y=0;
+			this.color=0;
+		}
+ 		
  		synapse_register("paper_serverDraw",function(msg_src, msg_dst, msg_event, msg)
 		{
- 			a=toBrowser(msg["x1"],msg["y1"]);
-			b=toBrowser(msg["x2"],msg["y2"]);
-			ctx.moveTo(a.x, a.y);
-			ctx.lineTo(b.x, b.y);
-			ctx.stroke();  
+ 			//incremental drawer
+ 			
+ 			i=0;
+ 			while(i<msg.length)
+ 			{
+				//switch to different client 
+ 				if (msg[i]=="i")
+	 			{
+		 			clientId=msg[i+1];
+		 			i=i+2;		 			
+	 			}
+	 			//move to a coordinate
+ 				else if (msg[drawId]=="m")
+ 				{
+ 	 				//just store the new coords
+					clients[clientId]=toBrowser(msg[i+1], msg[i+2]);
+					i=i+3;
+ 				}
+	 			//switch to line mode
+ 				else if (msg[drawId]=="l")
+ 				{
+					clients[clientId].mode="l";
+					i++;
+ 				}
+
+ 				//all other stuff are just coordinates
+ 				if (clientId[drawId].mode=="l")
+ 				{
+ 					a=toBrowser(msg[i], msg[i+1]);
+	 				ctx.moveTo(clients[clientId].x, clients[clientId].y);
+	 				ctx.lineTo(a.x, a.y);
+					ctx.stroke();
+					i=i+2;
+ 				}  			
+ 			}
 		});
  		
 		synapse_register("pong_GameJoined",function(msg_src, msg_dst, msg_event, msg)
