@@ -22,6 +22,9 @@ synapse_authCookie=0;
 //set this to true to stop polling:
 synapse_stop=false;
 
+//enable message debugging (put synapse_debug somehwere in the url to enable!)
+synapse_debug=false;
+
 //does a long poll to get events from the server
 function synapse_receive()
 {
@@ -138,7 +141,9 @@ function synapse_handleMessages(messages, status, XMLHttpRequest)
 	for (var messageI in messages)
 	{
 		message=messages[messageI];
-		console.debug("handling:",message);
+
+		if (synapse_debug)
+			console.debug("handling:",message);
 	
 		if (!synapse_callHandlers(message[2], message[0], message[1], message[2], message[3]))
 		{
@@ -147,33 +152,28 @@ function synapse_handleMessages(messages, status, XMLHttpRequest)
 		}
 	}
 
-	if (!synapse_stop)
+	if (!synapse_stop )
 	{
 		synapse_receive();
 	}
+	
+	
 }
 
-// function synapse_handleSent(result, status, XMLHttpRequest)
-// {
-// 	console.info("KJO",result,status);
-// 	if (result==null)
-// 	{
-// 		synapse_callHandlers("error", "Connection error while sending message. Please reload page.");
-// 	}
-// }
 
 function send(msg_dst, msg_event, msg)
 {
 	var jsonObj=[ 0, msg_dst, msg_event, msg ];
-	console.debug("sending :", jsonObj);
+
+	if (synapse_debug)
+		console.debug("sending :", jsonObj);
 
 	jsonStr=JSON.stringify(jsonObj);
 
 	$.ajax({
-		"dataType":		"text",
+		"dataType":		"test",
 		"url":			'/synapse/send',
 		"error": 		synapse_handleError,
-/*		"success":		synapse_handleSent,*/
 		"type":			"post",
 		"contentType":	"application/json",
 		"beforeSend":	function (XMLHttpRequest) { XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); },
@@ -181,6 +181,8 @@ function send(msg_dst, msg_event, msg)
 		"cache":		false,
 		"data":			jsonStr
 	});
+	
+
 }
 
 $(document).ready(function(){
@@ -188,6 +190,8 @@ $(document).ready(function(){
 	//(hmm this not always prevents the problem, we will figure out a better way later)
 	setTimeout("synapse_receive()",1000);
 	//synapse_receive();
+	
+	synapse_debug=(window.location.search.indexOf('synapse_debug') != -1);
 });
 
 

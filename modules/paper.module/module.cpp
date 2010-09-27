@@ -98,15 +98,90 @@ namespace paper
 		out.send();
 	}
 
-	//a client of a paper
+	//a client of a paper object
 	class CpaperClient : public synapse::Cclient
 	{
+		public:
+		char mode;
+		int x;
+		int y;
+		int color;
+
+		CpaperClient()
+		{
+			mode='m';
+			x=0;
+			y=0;
+			color=0;
+		}
 
 	};
+
 
 	//a server side piece of paper
 	class CpaperObject : public synapse::CsharedObject<CpaperClient>
 	{
+		public:
+		int lastClient;
+		Cvar drawing;
+
+
+		CpaperObject()
+		{
+			lastClient=0;
+		}
+
+		//add data to the drawing and send it (efficiently) to the clients
+		void addDraw(Cmsg & msg)
+		{
+			Cmsg out;
+			out.event="paper_serverDraw";
+
+			//instructions come from a different client then last time?
+			if (msg.src!=lastClient)
+			{
+				//inform every one of the client change
+				out.list().push_back(string("i"));
+				out.list().push_back(msg.src);
+				lastClient=msg.src;
+			}
+
+			//get a reference to the client object
+			//CpaperClient & paperClient=getClient(lastClient);
+
+
+			//TODO: optimize by parsing and skipping stuff
+			//for now just copy all the data
+			out.list().insert(out.list().end(), msg.list().begin(), msg.list().end());
+
+			//parse the draw-data
+//			Cvar::iteratorList I;
+//			I=msg.list().begin();
+//			while(I!=msg.list().end())
+//			{
+//				//a change of mode
+//				if (I->which()==CVAR_STRING)
+//				{
+//					//move
+//					if (I->str()=="m")
+//					{
+//						if (paperClient.mode!='m')
+//						{
+//
+//						}
+//						I++;
+//						continue;
+//					}
+//				}
+//
+//			}
+
+			//send to all connected clients
+			send(out);
+
+			//store instructions permanently
+			drawing.list().insert(drawing.list().end(), out.list().begin(), out.list().end());
+		}
 
 	};
 
@@ -167,12 +242,7 @@ namespace paper
 
 	SYNAPSE_REGISTER(paper_clientDraw)
 	{
-		Cmsg out;
-		out.event="paper_serverDraw";
-		out.list()=msg.list();
-		out.list().push_front(msg.src);
-		out.list().push_front(string("i"));
-		objectMan.getObjectByClient(msg.src).send(out);
+		objectMan.getObjectByClient(msg.src).addDraw(msg);
 	}
 
 }

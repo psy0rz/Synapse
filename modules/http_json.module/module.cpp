@@ -162,7 +162,7 @@ class CnetHttp : public synapse::Cnet
 	*/
  	void connected_server(int id, const string &host, int port, int local_port)
  	{
-		//fire off first acceptor thread
+		//fire off new acceptor thread
 		Cmsg out;
 		out.dst=moduleSessionId;
 		out.event="http_json_Accept";
@@ -369,8 +369,9 @@ class CnetHttp : public synapse::Cnet
 	* If the queue is empty, it doesnt send anything and returns false.
 	* if it does respond with SOMETHING, even an error-response, it returns true.
     * Use abort to send an empty resonse without looking at the queue at all.
+    * When longpoll is set to false, it always responds with data, even if the queue is empty. In this case if wont affect a waiting longpoll netid.
 	*/
-	bool respondJsonQueue(bool abort=false)
+	bool respondJsonQueue(bool abort=false, bool longpoll=true)
 	{
 		string jsonStr;
 		if (abort)
@@ -382,22 +383,31 @@ class CnetHttp : public synapse::Cnet
 		}
 		else
 		{
-			//check if there are messages in the queue, based on the authcookie from the current request:
-			//This function will change authCookie if neccesary and fill jsonStr!
-			httpSessionMan.getJsonQueue(id, authCookie, jsonStr, headers["x-synapse-authcookie-clone"]);
-
-			//authcookie was probably expired, respond with error
-			if (!authCookie)
+			if (longpoll)
 			{
-				respondError(400, "Session is expired, or session limit reached.");
-				return(true);
+				//check if there are messages in the queue, based on the authcookie from the current request:
+				//This function will change authCookie if neccesary and fill jsonStr!
+				httpSessionMan.getJsonQueue(id, authCookie, jsonStr, headers["x-synapse-authcookie-clone"]);
+
+				//authcookie was probably expired, respond with error
+				if (!authCookie)
+				{
+					respondError(400, "Session is expired, or session limit reached.");
+					return(true);
+				}
+			}
+			else
+			{
+				//we DO want to respond with something if its there, but we dont want to do long polling
+				httpSessionMan.getJsonQueue(authCookie, jsonStr);
+				if (jsonStr=="")
+					jsonStr="[]";
 			}
 		}
 
 		if (jsonStr=="")
 		{
-			//nothing to reply (yet), retrun false and wait until there is a message
-			DEB(id << " is now waiting for longpoll results");
+			//nothing to reply (yet), return false
 			return(false);
 		}
 		else
@@ -503,9 +513,14 @@ class CnetHttp : public synapse::Cnet
 				if (requestType=="GET" || (int)headers["content-length"]==0)
 				{
 					if (respond())
+					{
 						state=REQUEST;
+					}
 					else
+					{
+						DEB(id << " is now waiting for longpoll results");
 						state=WAIT_LONGPOLL;
+					}
 					return;
 				}
 				//a POST with content:
@@ -544,7 +559,12 @@ class CnetHttp : public synapse::Cnet
 				{
 					error=httpSessionMan.sendMessage(authCookie, dataStr);
 					if (error=="")
+					{
+						//DONT:respond with jsondata if we have something in the queue anyways
+						//DONT:respondJsonQueue(false,false);
+						//we cant do this, because then the order of messages isnt garanteed. so just respond with a boring empty string:
 						respondString(200, "");
+					}
 					else
 						respondError(400, error);
 
@@ -590,6 +610,7 @@ class CnetHttp : public synapse::Cnet
 
 	/** We receive this when the queue is changed and we are (probably) waiting for a message.
 	 * I say PROBABLY, because the client could have changed its mind in the meanwhile.
+	 * Also its possible that the queue is already sended as a response to a synapse/send url.
 	 */
 	void queueChanged()
 	{

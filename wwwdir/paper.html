@@ -10,22 +10,24 @@
 
 	<script type="text/javascript">
 
-		//(these where member of Cpoint, but thats only annoying and slow)
-		//calculate browser coordinates to game coordinates
+		var canvasWidth=0;
+		var canvasHeight=0;
+	
+		//calculate browser coordinates to server coordinates
 		function toServer(x,y)
 		{
 			return ({
-				"x":Math.round((x * 10000) / $("#canvasMouse").width()),
-				"y":Math.round((y * 10000) / $("#canvasMouse").height())
+				"x":Math.round((x * 10000) / canvasWidth),
+				"y":Math.round((y * 10000) / canvasHeight)
 			});
 		}
 	
-		//calculate game coordinates to browser coordinates 
+		//calculate server coordinates to browser coordinates 
 		function toBrowser(x,y)
 		{
 			return ({
-				"x":Math.round((x*$("#canvasMouse").width())/10000),
-				"y":Math.round((y*$("#canvasMouse").height())/10000)
+				"x":Math.round((x*canvasWidth)/10000),
+				"y":Math.round((y*canvasHeight)/10000)
 			});
 		}				
 
@@ -70,34 +72,30 @@
 
 		
 		
-		function mouseCheck()
+		function mouseCheck(force)
 		{
-			if (!mouseDraw)
-				return;
-
 			//no change?
 			if (mousePoint.x==mouseSendPoint.x && mousePoint.y==mouseSendPoint.y)
 				return;
 
 			currentTime=new Date().getTime();
 
-			//send updates at a max fps, or more when the mouse moves fast
-			if (
+			//send updates at a max fps, or more when the mouse moves fast, or when forced
+			if (	force ||
 					(currentTime-mouseSendTime>=mouseInterval) || 
 					Math.abs(mousePoint.x-mouseSendPoint.x)> mouseMax ||
 					Math.abs(mousePoint.y-mouseSendPoint.y)> mouseMax
 			)
 			{ 
-				if (mouseSendPoint.x)
+				if (mouseDraw)
 				{
 
 					a=toServer(mousePoint.x,mousePoint.y);
-					send(paperModId,"paper_clientDraw", [ "l", a.x, a.y ]);
+					send(paperModId,"paper_clientDraw", [ "L", a.x, a.y ]);
 					
 				}
 				else
 				{
-					//no start point, just move
 					a=toServer(mousePoint.x,mousePoint.y);
 					send(paperModId,"paper_clientDraw", [ "m", a.x, a.y ] );
 				}
@@ -114,7 +112,7 @@
 			});
 
 			/// start local engine
-			window.setInterval(mouseCheck, mouseInterval);
+			window.setInterval("mouseCheck(0)", mouseInterval);
 
 			
 			/// JAVA SCRIPT EVENT HANDLERS
@@ -132,35 +130,42 @@
 			{
 				mousePoint.x=m.pageX-$("#canvasMouse").offset().left;
 				mousePoint.y=m.pageY-$("#canvasMouse").offset().top;
-				
-				mouseCheck();
-					
+				mouseCheck(0);
 			});
 
 			$("#canvasMouse").mousedown(function(m)
 			{
 				m.preventDefault();
 				mouseDraw=1;
-				mouseSendPoint
+				mouseCheck(1);
 			});
 					
 			$("#canvasMouse").mouseup(function(m)
 			{
 				mouseDraw=0;
-				mouseSendPoint.x=0;
+				mouseCheck(1);
 			});
 					
 
 			$("#canvasMouse").mouseleave(function(m)
 			{
 				mouseDraw=0;
-				mouseSendPoint.x=0;
+				mouseCheck(1);
 			});
-					
+
+			canvasWidth=$("#canvasMouse").width();
+			canvasHeight=$("#canvasMouse").height();
+			
 			canvas=document.getElementById('canvas');
 			ctx=canvas.getContext('2d');
-			canvas.width=$("#canvasMouse").width();
-			canvas.height=$("#canvasMouse").height();
+			canvas.width=canvasWidth;
+			canvas.height=canvasHeight;
+
+			canvasTemp=document.getElementById('canvasTemp');
+			ctxTemp=canvasTemp.getContext('2d');
+			canvasTemp.width=canvasWidth;
+			canvasTemp.height=canvasHeight;
+			canvasTemp.globalAlpha=0.5;
 			
 								
  		});
@@ -225,18 +230,34 @@
 		//incremental draw stuff
 		var clientId=0;
 		var clients=new Array(); 
-		function Cclient(x,y)
+		function Cclient()
 		{
 			this.mode="m";
 			this.x=0;
 			this.y=0;
-			this.color=0;
+			this.color="#000000";
+			this.width=1;
 		}
- 		
+
+		/*** Drawing protocol
+		
+		Drawings exist of a list of instructions.
+		Some instructions actually draw, while others just move the cursor or give visual indications.
+		Capital commands make permanent changes and usually actually draw stuff.
+
+		'i',<id>					Select a different client ID. (every client has its own color, line width etc settings) Usually the server automaticly sets this parameter.
+		'c',<htmlcolor>				Set current drawing color
+		'w',<w>						Set current line width
+		't'							Switch to temporary context (only everyones last drawn object is showed)
+		'p'							Switch to permanent context (normal drawing)
+		'm',<x>,<y>,...         	Moves cursor to location(s)
+		'L',<x>,<y>,...				Draw a line to location(s)
+		'R',<x1>,<y1>,<x2>,<y2>		Draw rectangle
+		'A',<x1>,<y1>,<x2>,<y2>		Draw circle
+		'T',<x>,<y>,"text"			Draw text
+		 */
  		synapse_register("paper_serverDraw",function(msg_src, msg_dst, msg_event, msg)
 		{
- 			//incremental drawer
- 			
  			i=0;
  			while(i<msg.length)
  			{
@@ -244,40 +265,80 @@
  				if (msg[i]=="i")
 	 			{
 		 			clientId=msg[i+1];
+		 			//create new client object?
+		 			if (clients[clientId]==undefined)
+		 			{
+			 			clients[clientId]=new Cclient();
+		 			}
 		 			i=i+2;		 			
 	 			}
-	 			//move to a coordinate
- 				else if (msg[drawId]=="m")
+	 			//switch to move mode
+ 				else if (msg[i]=="m")
  				{
- 	 				//just store the new coords
-					clients[clientId]=toBrowser(msg[i+1], msg[i+2]);
-					i=i+3;
+					clients[clientId].mode="m";
+					i=i+1;
  				}
 	 			//switch to line mode
- 				else if (msg[drawId]=="l")
+ 				else if (msg[i]=="L")
  				{
-					clients[clientId].mode="l";
-					i++;
+					clients[clientId].mode="L";
+					i=i+1;
  				}
-
- 				//all other stuff are just coordinates
- 				if (clientId[drawId].mode=="l")
+ 				//select color
+ 				else if (msg[i]=="c")
  				{
- 					a=toBrowser(msg[i], msg[i+1]);
-	 				ctx.moveTo(clients[clientId].x, clients[clientId].y);
-	 				ctx.lineTo(a.x, a.y);
-					ctx.stroke();
+					clients[clientId].color=msg[i+1];
 					i=i+2;
- 				}  			
+ 				}
+ 				//all other stuff are just coordinates for move and line mode.
+ 				else
+ 				{
+					//move
+ 					if (clients[clientId].mode=="m")
+ 					{
+ 	 	 				//just store the new coords
+ 	 	 				c=toBrowser(msg[i], msg[i+1]);
+ 						clients[clientId].x=c.x;
+ 						clients[clientId].y=c.y;
+ 						i=i+2;
+ 					}
+ 					//line
+ 					else 
+ 					{
+	 					destination=toBrowser(msg[i], msg[i+1]);
+	 					ctx.strokeStyle=clients[clientId].color;
+	 					ctx.lineWidth=clients[clientId].width;
+	 					ctx.beginPath();
+		 				ctx.moveTo(clients[clientId].x, clients[clientId].y);
+		 				ctx.lineTo(destination.x, destination.y);
+						ctx.stroke();
+ 						clients[clientId].x=destination.x;
+ 						clients[clientId].y=destination.y;
+						i=i+2;
+	 				}  	
+ 				}		
  			}
+ 			
+			//redraw the temporary context stuff
+			ctxTemp.beginPath();			   
+	
+			//cursors
+			var cW=canvasWidth/100;
+			for (var clientI in clients)
+			{
+				ctxTemp.strokeStyle=clients[clientI].color;
+				ctxTemp.lineWidth=clients[clientI].width;
+				ctxTemp.moveTo(clients[clientI].x-cW, clients[clientI].y);
+				ctxTemp.lineTo(clients[clientI].x+cW, clients[clientI].y);
+				ctxTemp.moveTo(clients[clientI].x, clients[clientI].y-cW);
+				ctxTemp.lineTo(clients[clientI].x, clients[clientI].y+cW);
+			}
+			ctxTemp.clearRect(0, 0, canvasWidth, canvasHeight);
+			ctxTemp.stroke();
+			
+			//temporary shapes
 		});
  		
-		synapse_register("pong_GameJoined",function(msg_src, msg_dst, msg_event, msg)
-		{	
-			currentGameId=msg["id"];
-			//clear up the old gamefield.
-			$("#gameField .padPlayer").remove();
-		});
 
 	
 
@@ -346,7 +407,7 @@
 			bottom:0;
 		}
 		
-		#canvas
+		canvas
 		{
 			position:absolute;
 			left:20em;
@@ -393,6 +454,7 @@
 
 
 	<canvas width=10 height=10 id='canvas'></canvas>		
+	<canvas width=10 height=10 id='canvasTemp'></canvas>		
 	<div id='canvasMouse'>
 	</div>
 

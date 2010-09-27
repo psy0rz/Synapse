@@ -159,6 +159,36 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
 	}
 }
 
+/** Simpeller version, that is used to only get the queue if its there, without affecting netId waiting or creating sessions.
+ *  This is used to efficiently return the json queue while the client is sending a message.
+ *
+ */
+void ChttpSessionMan::getJsonQueue(ThttpCookie & authCookie, string & jsonStr)
+{
+	lock_guard<mutex> lock(threadMutex);
+
+	if (authCookie!=0)
+	{
+		ChttpSessionMap::iterator httpSessionI=findSessionByCookie(authCookie);
+
+		if (httpSessionI!=httpSessionMap.end())
+		{
+			DEB("Unknown or expired authCookie: " << authCookie << ", aborting.");
+			if (!httpSessionI->second.jsonQueue.empty())
+			{
+				//return the queued json messages:
+				jsonStr=httpSessionI->second.jsonQueue+"]";
+				//clear the queue
+				httpSessionI->second.jsonQueue.clear();
+			}
+			else
+			{
+				jsonStr="[]";
+			}
+		}
+	}
+}
+
 /** Called from to indicate that the network session is not interested anymore.
  * Its neccesary to get informed of this, so we know when to expire session.
  */
