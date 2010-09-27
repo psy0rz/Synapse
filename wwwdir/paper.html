@@ -110,7 +110,7 @@
 
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
-			send(0,"object_GetObjects", { 
+			send(0,"paper_GetPapers", { 
 			});
 
 			/// start local engine
@@ -120,7 +120,7 @@
 			/// JAVA SCRIPT EVENT HANDLERS
 			$("#newObject").click(function()
 					{
-						send(0,"object_Create", {
+						send(0,"paper_Create", {
 								"objectName":$("#name").val(),
 								"clientName":$("#name").val()
 							});
@@ -184,7 +184,7 @@
 				$("#object_"+msg["objectId"]).attr('objectId',msg["objectId"]);
 				$("#object_"+msg["objectId"]).click(function()
 				{
-					send(0,"object_Join", {
+					send(0,"paper_Join", {
 							"clientName":$("#name").val(),
 							"objectId":$(this).attr('objectId'),
 						});
