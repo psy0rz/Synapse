@@ -91,13 +91,13 @@
 				{
 
 					a=toServer(mousePoint.x,mousePoint.y);
-					send(paperModId,"paper_clientDraw", [ "L", a.x, a.y ]);
+					send(paperModId,"paper_ClientDraw", [ "L", a.x, a.y ]);
 					
 				}
 				else
 				{
 					a=toServer(mousePoint.x,mousePoint.y);
-					send(paperModId,"paper_clientDraw", [ "m", a.x, a.y ] );
+					send(paperModId,"paper_ClientDraw", [ "m", a.x, a.y ] );
 				}
 				mouseSendPoint.x=mousePoint.x;
 				mouseSendPoint.y=mousePoint.y;
@@ -210,6 +210,11 @@
 				//we've joined a object, from now on draw on it.
 				currentObjectId=msg["objectId"];
 				paperModId=msg_src;
+
+				//also request a redraw so we get the current drawing
+				send(0,"paper_Redraw", {
+				});
+				
 			}
 //			for (var playerI in msg["players"])
 	//		{
@@ -245,6 +250,7 @@
 		Some instructions actually draw, while others just move the cursor or give visual indications.
 		Capital commands make permanent changes and usually actually draw stuff.
 
+		'S'							Start: clear and reset everything
 		'i',<id>					Select a different client ID. (every client has its own color, line width etc settings) Usually the server automaticly sets this parameter.
 		'c',<htmlcolor>				Set current drawing color
 		'w',<w>						Set current line width
@@ -256,7 +262,7 @@
 		'A',<x1>,<y1>,<x2>,<y2>		Draw circle
 		'T',<x>,<y>,"text"			Draw text
 		 */
- 		synapse_register("paper_serverDraw",function(msg_src, msg_dst, msg_event, msg)
+ 		synapse_register("paper_ServerDraw",function(msg_src, msg_dst, msg_event, msg)
 		{
  			i=0;
  			while(i<msg.length)
@@ -289,6 +295,14 @@
  				{
 					clients[clientId].color=msg[i+1];
 					i=i+2;
+ 				}
+ 				//start: clear everything
+ 				else if (msg[i]=="S")
+ 				{
+ 					clients=new Array();
+ 					clientId=0; 
+ 					ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+ 					i=i+1;
  				}
  				//all other stuff are just coordinates for move and line mode.
  				else

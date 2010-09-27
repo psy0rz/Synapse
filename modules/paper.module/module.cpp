@@ -72,8 +72,8 @@ namespace paper
 		out["event"]=	"paper_GetPapers";	out.send(); //a list of all papers (returns object_Object for every object)
 		out["event"]=	"paper_GetClients";	out.send(); //a list of clients that are member of specified object. (returns object_Clients for every object)
 
-		out["event"]=	"paper_clientDraw";		out.send(); //draw something
-		out["event"]=	"paper_clientMove";		out.send(); //just move mouse
+		out["event"]=	"paper_ClientDraw";		out.send(); //draw something
+		out["event"]=	"paper_Redraw";		out.send(); //draw something
 
 		//client receive-only events:
 		out.clear();
@@ -87,8 +87,7 @@ namespace paper
 		out["event"]=	"object_Left";			out.send(); //somebody has left the object
 
 		out["event"]=	"paper_Status";			out.send();
-		out["event"]=	"paper_serverDraw";		out.send(); //draw something
-		out["event"]=	"paper_serverMove";		out.send(); //just move mouse
+		out["event"]=	"paper_ServerDraw";		out.send(); //draw something
 
 
 		//tell the rest of the world we are ready for duty
@@ -135,7 +134,7 @@ namespace paper
 		void addDraw(Cmsg & msg)
 		{
 			Cmsg out;
-			out.event="paper_serverDraw";
+			out.event="paper_ServerDraw";
 
 			//instructions come from a different client then last time?
 			if (msg.src!=lastClient)
@@ -183,6 +182,17 @@ namespace paper
 			drawing.list().insert(drawing.list().end(), out.list().begin(), out.list().end());
 		}
 
+		//send redrawing instructions to dst
+		void redraw(int dst)
+		{
+			Cmsg out;
+			out.event="paper_ServerDraw";
+			out.dst=dst;
+			out.list().push_front(string("S"));
+			out.list().insert(out.list().end(), drawing.list().begin(), drawing.list().end());
+			out.send();
+		}
+
 	};
 
 
@@ -191,11 +201,12 @@ namespace paper
 
 
 	///////////////////////////////////////////////////////////////////////////////////
-	/// Generic object handlers, you can use this for other modules as well
+	/// Generic object handlers, you can use this as an example for other modules as well. Just rename paper_ to something else and change permissions of the events.
 	///////////////////////////////////////////////////////////////////////////////////
 
 	SYNAPSE_REGISTER(paper_Create)
 	{
+		objectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
 		objectMan.create(msg.src, msg["clientName"], msg["objectName"]);
 	}
 
@@ -206,6 +217,7 @@ namespace paper
 
 	SYNAPSE_REGISTER(paper_Join)
 	{
+		objectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
 		objectMan.getObject(msg["objectId"]).addClient(msg.src,msg["clientName"]);
 	}
 
@@ -240,9 +252,14 @@ namespace paper
 	/// Paper Module specific stuff
 	///////////////////////////////////////////////////////////////////////////////////
 
-	SYNAPSE_REGISTER(paper_clientDraw)
+	SYNAPSE_REGISTER(paper_ClientDraw)
 	{
 		objectMan.getObjectByClient(msg.src).addDraw(msg);
+	}
+
+	SYNAPSE_REGISTER(paper_Redraw)
+	{
+		objectMan.getObjectByClient(msg.src).redraw(msg.src);
 	}
 
 }
