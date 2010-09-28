@@ -448,6 +448,9 @@ void Cvar::fromJsonSpirit(Value &spiritValue)
 */
 void Cvar::toJsonSpirit(Value &spiritValue)
 {
+	int i;
+	double d;
+
 	switch(value.which())
 	{
 		case(CVAR_EMPTY):
@@ -457,7 +460,14 @@ void Cvar::toJsonSpirit(Value &spiritValue)
 			spiritValue=get<string&>(value);
 			break;
 		case(CVAR_LONG_DOUBLE):
-			spiritValue=(double)(get<long double>(value));
+			//work around to prevent numbers like 1.00000000000:
+			i=(get<long double>(value));
+			d=(get<long double>(value));
+			if (i==d)
+				spiritValue=i;
+			else
+				spiritValue=d;
+
 			break;
 		case(CVAR_MAP):
 			//convert the CvarMap to a json_spirit Object with (String,Value) pairs 

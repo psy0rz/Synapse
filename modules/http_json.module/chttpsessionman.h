@@ -62,7 +62,7 @@ public:
 	//Called from http-client-side:
 	void getJsonQueue(int netId, ThttpCookie & authCookie, string & jsonStr, ThttpCookie authCookieClone);
 	void getJsonQueue(ThttpCookie & authCookie, string & jsonStr);
-	string sendMessage(ThttpCookie & authCookie, string & jsonStr);
+	string sendMessage(ThttpCookie & authCookie, string & jsonLines);
 	void endGet(int netId, ThttpCookie & authCookie);
 
 /*	int getSessionId(ThttpCookie httpCookie);
