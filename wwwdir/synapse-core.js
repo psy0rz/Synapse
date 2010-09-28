@@ -25,13 +25,19 @@ synapse_stop=false;
 //enable message debugging (put synapse_debug somehwere in the url to enable!)
 synapse_debug=false;
 
+//que of messages that need to be sended.
+synapse_sendQueue=""
+	
+//are we still sending something?
+synapse_sending=false;
+
 //does a long poll to get events from the server
 function synapse_receive()
 {
 	$.ajax({
 		"dataType":		"json",
 		"url":			'/synapse/longpoll',
-		"error": 		synapse_handleError,
+		"error": 		synapse_handleReceiveError,
 		"success":		synapse_handleMessages,
 		"type":			"get",
 		"contentType":	"application/json",
@@ -108,9 +114,9 @@ function synapse_callHandlers(event)
 	return false;
 }
 
-function synapse_handleError(request, status, e)
+function synapse_handleReceiveError(request, status, e)
 {
-	errorTxt="Send/recieve error: " + request.responseText;
+	errorTxt="Recieve error: " + request.responseText;
 	console.error(errorTxt);
 	synapse_callHandlers("error", errorTxt);
 }
@@ -161,28 +167,72 @@ function synapse_handleMessages(messages, status, XMLHttpRequest)
 }
 
 
+function synapse_handleSendError(request, status, e)
+{
+	errorTxt="Send error: " + request.responseText;
+	console.error(errorTxt);
+	synapse_callHandlers("error", errorTxt);
+	synapse_sending=false;
+	sendQueue();
+}
+
+function synapse_handleSend(request, status, e)
+{
+	synapse_sending=false;
+	sendQueue();
+}
+
+
+function sendQueue()
+{
+	//no more to send?
+	if (synapse_sendQueue=="")
+		return;	
+	
+	//still sending?
+	if (synapse_sending)
+		return;
+
+	console.info("queue send:", synapse_sendQueue);
+
+	
+	$.ajax({
+		"dataType":		"text",
+		"url":			'/synapse/send',
+		"success":		synapse_handleSend,
+		"error": 		synapse_handleSendError,
+		"type":			"post",
+		"contentType":	"application/json",
+		"beforeSend":	function (XMLHttpRequest) { XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); },
+		"processData":	false,
+		"cache":		false,
+		"data":			synapse_sendQueue
+	});
+
+	synapse_sending=true;
+	synapse_sendQueue="";
+}
+
+
 function send(msg_dst, msg_event, msg)
 {
 	var jsonObj=[ 0, msg_dst, msg_event, msg ];
 
 	if (synapse_debug)
 		console.debug("sending :", jsonObj);
-
-	jsonStr=JSON.stringify(jsonObj);
-
-	$.ajax({
-		"dataType":		"test",
-		"url":			'/synapse/send',
-		"error": 		synapse_handleError,
-		"type":			"post",
-		"contentType":	"application/json",
-		"beforeSend":	function (XMLHttpRequest) { XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); },
-		"processData":	false,
-		"cache":		false,
-		"data":			jsonStr
-	});
 	
-
+	jsonStr=JSON.stringify(jsonObj);
+	
+	if (synapse_sendQueue=="")
+	{
+		synapse_sendQueue+=jsonStr;
+	}
+	else
+	{
+		synapse_sendQueue+="\n"+jsonStr;
+	}
+	
+	sendQueue();
 }
 
 $(document).ready(function(){

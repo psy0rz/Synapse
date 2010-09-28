@@ -223,47 +223,69 @@ void ChttpSessionMan::endGet(int netId,ThttpCookie & authCookie)
 
 /** A client wants to send a message to the core 
  */
-string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonStr)
+string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonLines)
 {
 	stringstream error;
 	Cmsg msg;
 
-	//we do this unlocked, since parsing probably takes most of the time:
-	try
+	//multiple json messages can be send seperated by newlines.
+	unsigned int nextPos=0;
+	unsigned int pos=0;
+	while(pos<jsonLines.length())
 	{
-		msg.fromJson(jsonStr);
-	}
-	catch(std::exception &e)
-	{	
-		error <<  "Error while parsing JSON message:" << e.what();
-		return (error.str());
-	}
+		bool failed=false;
 
-	{
-		//httpSession stuff, has to be locked offcourse:
-		lock_guard<mutex> lock(threadMutex);
-		ChttpSessionMap::iterator httpSessionI=findSessionByCookie(authCookie);
-	
-		if (httpSessionI==httpSessionMap.end())
+		//find position of next newline
+		nextPos=jsonLines.find('\n',pos+1);
+		if (nextPos==string::npos)
+			nextPos=jsonLines.length();
+
+
+		//we do this unlocked, since parsing probably takes most of the time:
+		try
 		{
-			error << "Cannot send message, authCookie " << authCookie << " not found.";
-			return (error.str());
+			string jsonStr=jsonLines.substr(pos,nextPos-pos);
+			msg.fromJson(jsonStr);
+		}
+		catch(std::exception &e)
+		{
+			error <<  "Error while parsing JSON message:" << e.what() << "\n ";
+			failed=true;
 		}
 
-		//fill in msg.src with the correct session id
-		msg.src=httpSessionI->first;
+		if (!failed)
+		{
+			//httpSession stuff, has to be locked offcourse:
+			lock_guard<mutex> lock(threadMutex);
+			ChttpSessionMap::iterator httpSessionI=findSessionByCookie(authCookie);
+
+			if (httpSessionI==httpSessionMap.end())
+			{
+				error << "Cannot send message, authCookie " << authCookie << " not found.\n ";
+				failed=true;
+			}
+
+			//fill in msg.src with the correct session id
+			msg.src=httpSessionI->first;
+		}
+	
+		if (!failed)
+		{
+			try
+			{
+				msg.send();
+			}
+			catch(const std::exception& e)
+			{
+				error << string(e.what()) << "\n ";
+				failed=true;
+			}
+		}
+
+		pos=nextPos;
 	}
 
-	try
-	{
-		msg.send();
-	}
-	catch(const std::exception& e)
-	{
-		return(string(e.what()));
-	}
-
-	return("");
+	return(error.str());
 }
 
 //core informs us of a new session that is started, probably for a client of us:
