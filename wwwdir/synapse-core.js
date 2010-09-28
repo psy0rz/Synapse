@@ -149,7 +149,7 @@ function synapse_handleMessages(messages, status, XMLHttpRequest)
 		message=messages[messageI];
 
 		if (synapse_debug)
-			console.debug("handling:",message);
+			console.debug("handling:",JSON.stringify(message));
 	
 		if (!synapse_callHandlers(message[2], message[0], message[1], message[2], message[3]))
 		{
@@ -193,8 +193,6 @@ function sendQueue()
 	if (synapse_sending)
 		return;
 
-	console.info("queue send:", synapse_sendQueue);
-
 	
 	$.ajax({
 		"dataType":		"text",
@@ -218,11 +216,12 @@ function send(msg_dst, msg_event, msg)
 {
 	var jsonObj=[ 0, msg_dst, msg_event, msg ];
 
-	if (synapse_debug)
-		console.debug("sending :", jsonObj);
 	
 	jsonStr=JSON.stringify(jsonObj);
-	
+
+	if (synapse_debug)
+		console.debug("sending :", jsonStr);
+
 	if (synapse_sendQueue=="")
 	{
 		synapse_sendQueue+=jsonStr;

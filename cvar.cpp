@@ -463,7 +463,7 @@ void Cvar::toJsonSpirit(Value &spiritValue)
 			//work around to prevent numbers like 1.00000000000:
 			i=(get<long double>(value));
 			d=(get<long double>(value));
-			if (i==d)
+			if (d==i)
 				spiritValue=i;
 			else
 				spiritValue=d;

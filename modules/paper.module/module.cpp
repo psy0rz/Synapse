@@ -140,7 +140,7 @@ namespace paper
 			if (msg.src!=lastClient)
 			{
 				//inform every one of the client change
-				out.list().push_back(string("i"));
+				out.list().push_back(string("I"));
 				out.list().push_back(msg.src);
 				lastClient=msg.src;
 			}

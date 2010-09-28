@@ -44,11 +44,103 @@
 			
 		}
 	
-		
 
+		//informantion about the object a client is currently drawing
+		function Cclient()
+		{
+			this.mode="";
+			this.coords=new Array();
+			this.color="#000000";
+			this.width=1;
+			this.text="";
+			
+			//draw the object in the specified context	
+			this.draw=function(context)
+			{
+				context.strokeStyle=this.color;
+				context.lineWidth=this.width;
+				if (this.mode=="l" && this.coords.length>=4)
+				{
+					context.beginPath();
+	 				context.moveTo(this.coords[0], this.coords[1]);
+	 				var i=2;
+	 				while (i<this.coords.length)
+	 				{
+	 					context.lineTo(this.coords[i], this.coords[i+1]);
+	 					i=i+2;
+	 				}
+					context.stroke();
+				}
+			}
+
+			this.clear=function()
+			{
+				this.mode="";
+				this.coords=[];
+			}
+
+			/*** Drawing protocol
+			//global
+			'S'							Start: clear and reset everything
+			'I',<id>					Select a different client ID. (every client has its own color, line width etc settings) Usually the server automaticly sets this parameter.
+			'W'							Write current object of selected client to permanent canvas and clear object.
+			'C'							Clear/Cancel current object of selected client 
+
+			//per client
+			'c',<htmlcolor>				Set current drawing color
+			'w',<w>						Set current line width
+			'm',<x>,<y>,...         	Moves cursor to location(s)
+			'l',<x>,<y>,...				Draw a line starting at x,y to next x,y locations
+			'r',<x1>,<y1>,<x2>,<y2>		Draw rectangle
+			'a',<x1>,<y1>,<x2>,<y2>		Draw circle
+			't',<x>,<y>,"text"			Draw text
+			'
+			 */
+			//eats and processes the client commands from the array and returns as soon as it encounters a global command
+			this.add=function(commands)
+			{
+				var ok=false;
+				while (commands.length>0)
+				{
+					//color
+					if (commands[0]=='c')
+					{
+						commands.shift();
+						this.color=commands.shift();
+						
+					}
+					//width
+					else if (commands[0]=='w')
+					{
+						commands.shift();
+						this.width=commands.shift();
+					}
+					//line
+					else if (commands[0]=='l')
+					{
+						commands.shift();
+						this.coords=[];
+						this.mode='l';
+						
+					}
+					//all other numbers are coords
+					else if (commands[0] == parseInt(commands[0]))
+					{
+						c=toBrowser(commands.shift(), commands.shift());
+						this.coords.push(c.x, c.y);
+					}
+					else
+					{
+						//we dont know, let caller handle the rest
+						return(ok);
+					}
+					ok=true;
+				}
+				return(ok);
+			}
+		}
 
 		
-//		var lastTime=0; //last time a frame was analysed.
 		var mouseInterval=50; //max update inteval in mS (can be higer if mouseMax is exceeded)
 		var mouseMax=25; //max mouse pixel offset before sending (regardless of update interval)
 		
@@ -62,17 +154,84 @@
 
 		var mouseDraw=0;		
 
-		//dynamic pad positions
-		var padVectors=new Array();
-
-		var ctx;
+		var contextDraw;
+		var contextTemp;
 
 		var currentObjectId=0;
 		var paperModId=0;
 
+		var drawMode="l";
+
+		var ourId=0;
+
+		//redraw all the clients in the temporary context
+		function drawClients()
+		{
+			contextTemp.clearRect(0, 0, canvasWidth, canvasHeight);
+			contextTemp.globalAlpha=0.5;
+	
+			//draw current objects
+			var cW=canvasWidth/100;
+			for (var clientI in clients)
+			{
+				clients[clientI].draw(contextTemp);
+		//		ctxTemp.strokeStyle=clients[clientI].color;
+//				ctxTemp.lineWidth=clients[clientI].width;
+//				ctxTemp.moveTo(clients[clientI].x-cW, clients[clientI].y);
+//				ctxTemp.lineTo(clients[clientI].x+cW, clients[clientI].y);
+//				ctxTemp.moveTo(clients[clientI].x, clients[clientI].y-cW);
+//				ctxTemp.lineTo(clients[clientI].x, clients[clientI].y+cW);
+			}
+			
+			//temporary shapes
+
+		}
+
+		//send drawing commands to server and draw them locally as well
+		//note: you need to specifiy server coordinates instead of browser coordinates here.		
+		function sendDraw(commands)
+		{
+			send(paperModId,"paper_ClientDraw", commands);
+			clients[ourId].add(commands);
+			drawClients();
+		}
+
+		
+		//user started drawing
+		function drawStart()
+		{
+			if (drawMode=="l")
+			{
+				a=toServer(mousePoint.x,mousePoint.y);
+				sendDraw( [ "l", a.x, a.y ]);
+			}
+		}
+
+		//user moves while still drawing
+		function drawMove()
+		{
+			if (drawMode=="l")
+			{
+				a=toServer(mousePoint.x,mousePoint.y);
+				sendDraw([ a.x, a.y ]);
+			}
+		}
+
+		//user aborted drawing (cancel changes)
+		function drawAbort()
+		{
+			sendDraw( [ "C" ]);
+		}
+
+		//user finished drawing (commit changes permanently)
+		function drawEnd()
+		{
+			sendDraw( [ "W" ]);
+		}
 		
 		
-		function mouseCheck(force)
+		//mouse throttling function, to prevent too many updates per second		
+		function mouseMove()
 		{
 			//no change?
 			if (mousePoint.x==mouseSendPoint.x && mousePoint.y==mouseSendPoint.y)
@@ -80,39 +239,31 @@
 
 			currentTime=new Date().getTime();
 
-			//send updates at a max fps, or more when the mouse moves fast, or when forced
-			if (	force ||
-					(currentTime-mouseSendTime>=mouseInterval) || 
+			//send updates at a max fps, or more when the mouse moves fast
+			if (	(currentTime-mouseSendTime>=mouseInterval) || 
 					Math.abs(mousePoint.x-mouseSendPoint.x)> mouseMax ||
 					Math.abs(mousePoint.y-mouseSendPoint.y)> mouseMax
 			)
 			{ 
 				if (mouseDraw)
-				{
+					drawMove();
 
-					a=toServer(mousePoint.x,mousePoint.y);
-					send(paperModId,"paper_ClientDraw", [ "L", a.x, a.y ]);
-					
-				}
-				else
-				{
-					a=toServer(mousePoint.x,mousePoint.y);
-					send(paperModId,"paper_ClientDraw", [ "m", a.x, a.y ] );
-				}
 				mouseSendPoint.x=mousePoint.x;
 				mouseSendPoint.y=mousePoint.y;
-					
 				mouseSendTime=currentTime;
 			}
 		}
 
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
+			ourId=msg_dst;
+			clients[ourId]=new Cclient();
+ 	 		
 			send(0,"paper_GetPapers", { 
 			});
 
 			/// start local engine
-			window.setInterval("mouseCheck(0)", mouseInterval);
+			window.setInterval("mouseMove", mouseInterval);
 
 			
 			/// JAVA SCRIPT EVENT HANDLERS
@@ -130,42 +281,44 @@
 			{
 				mousePoint.x=m.pageX-$("#canvasMouse").offset().left;
 				mousePoint.y=m.pageY-$("#canvasMouse").offset().top;
-				mouseCheck(0);
+				mouseMove();
 			});
 
 			$("#canvasMouse").mousedown(function(m)
 			{
 				m.preventDefault();
 				mouseDraw=1;
-				mouseCheck(1);
+				drawStart();
 			});
 					
 			$("#canvasMouse").mouseup(function(m)
 			{
 				mouseDraw=0;
-				mouseCheck(1);
+				drawEnd();
 			});
 					
 
 			$("#canvasMouse").mouseleave(function(m)
 			{
-				mouseDraw=0;
-				mouseCheck(1);
+				if (mouseDraw)
+				{
+					mouseDraw=0;
+					drawEnd();
+				}
 			});
 
 			canvasWidth=$("#canvasMouse").width();
 			canvasHeight=$("#canvasMouse").height();
 			
 			canvas=document.getElementById('canvas');
-			ctx=canvas.getContext('2d');
+			contextDraw=canvas.getContext('2d');
 			canvas.width=canvasWidth;
 			canvas.height=canvasHeight;
 
 			canvasTemp=document.getElementById('canvasTemp');
-			ctxTemp=canvasTemp.getContext('2d');
+			contextTemp=canvasTemp.getContext('2d');
 			canvasTemp.width=canvasWidth;
 			canvasTemp.height=canvasHeight;
-			canvasTemp.globalAlpha=0.5;
 			
 								
  		});
@@ -235,122 +388,70 @@
 		//incremental draw stuff
 		var clientId=0;
 		var clients=new Array(); 
-		function Cclient()
-		{
-			this.mode="m";
-			this.x=0;
-			this.y=0;
-			this.color="#000000";
-			this.width=1;
-		}
 
-		/*** Drawing protocol
-		
-		Drawings exist of a list of instructions.
-		Some instructions actually draw, while others just move the cursor or give visual indications.
-		Capital commands make permanent changes and usually actually draw stuff.
-
-		'S'							Start: clear and reset everything
-		'i',<id>					Select a different client ID. (every client has its own color, line width etc settings) Usually the server automaticly sets this parameter.
-		'c',<htmlcolor>				Set current drawing color
-		'w',<w>						Set current line width
-		't'							Switch to temporary context (only everyones last drawn object is showed)
-		'p'							Switch to permanent context (normal drawing)
-		'm',<x>,<y>,...         	Moves cursor to location(s)
-		'L',<x>,<y>,...				Draw a line to location(s)
-		'R',<x1>,<y1>,<x2>,<y2>		Draw rectangle
-		'A',<x1>,<y1>,<x2>,<y2>		Draw circle
-		'T',<x>,<y>,"text"			Draw text
-		 */
  		synapse_register("paper_ServerDraw",function(msg_src, msg_dst, msg_event, msg)
 		{
- 			i=0;
- 			while(i<msg.length)
+ 			while(msg.length>0)
  			{
 				//switch to different client 
- 				if (msg[i]=="i")
+ 				if (msg[0]=="I")
 	 			{
-		 			clientId=msg[i+1];
-		 			//create new client object?
+ 		 			msg.shift();
+		 			clientId=msg.shift();
+		 			//need to create new client object?
 		 			if (clients[clientId]==undefined)
 		 			{
 			 			clients[clientId]=new Cclient();
 		 			}
-		 			i=i+2;		 			
-	 			}
-	 			//switch to move mode
- 				else if (msg[i]=="m")
- 				{
-					clients[clientId].mode="m";
-					i=i+1;
- 				}
-	 			//switch to line mode
- 				else if (msg[i]=="L")
- 				{
-					clients[clientId].mode="L";
-					i=i+1;
- 				}
- 				//select color
- 				else if (msg[i]=="c")
- 				{
-					clients[clientId].color=msg[i+1];
-					i=i+2;
  				}
  				//start: clear everything
- 				else if (msg[i]=="S")
+ 				else if (msg[0]=="S")
  				{
- 					clients=new Array();
+ 	 				msg.shift();
+ 					clients=[];
  					clientId=0; 
- 					ctx.clearRect(0, 0, canvasWidth, canvasHeight);
- 					i=i+1;
+ 					contextDraw.clearRect(0, 0, canvasWidth, canvasHeight);
  				}
- 				//all other stuff are just coordinates for move and line mode.
+ 				//cancel/clear current object
+ 				else if (msg[0]=="C")
+ 				{
+ 	 				msg.shift();
+					clients[clientId].clear();
+ 				}
+ 				//delete client
+ 				else if (msg[0]=="D")
+ 				{
+					clients.splice(clientId,1);
+ 				}
+ 				//store current object permanently
+ 				else if (msg[0]=="W")
+ 				{
+ 	 				msg.shift();
+ 	 				clients[clientId].draw(contextDraw);
+ 	 				clients[clientId].clear();
+ 				}
+ 				//let the current client object handle all other stuff
  				else
  				{
-					//move
- 					if (clients[clientId].mode=="m")
- 					{
- 	 	 				//just store the new coords
- 	 	 				c=toBrowser(msg[i], msg[i+1]);
- 						clients[clientId].x=c.x;
- 						clients[clientId].y=c.y;
- 						i=i+2;
- 					}
- 					//line
- 					else 
- 					{
-	 					destination=toBrowser(msg[i], msg[i+1]);
-	 					ctx.strokeStyle=clients[clientId].color;
-	 					ctx.lineWidth=clients[clientId].width;
-	 					ctx.beginPath();
-		 				ctx.moveTo(clients[clientId].x, clients[clientId].y);
-		 				ctx.lineTo(destination.x, destination.y);
-						ctx.stroke();
- 						clients[clientId].x=destination.x;
- 						clients[clientId].y=destination.y;
-						i=i+2;
-	 				}  	
+ 	 				//our own stuff is drawn locally, so ignore it if it comes back from the server
+ 	 				if (clientId!=ourId)
+ 	 				{
+	 	 				if (!clients[clientId].add(msg))
+	 	 				{
+	 	 	 				//object also doesnt know what to do...log error and skip it and hope for the best..
+	 	 	 				console.error("Error parsing draw commands",msg);
+	 	 	 				msg.shift();
+	 	 				}
+ 	 				}
+ 	 				else
+ 	 				{
+						msg.shift();
+ 	 				}
  				}		
  			}
  			
-			//redraw the temporary context stuff
-			ctxTemp.beginPath();			   
-	
-			//cursors
-			var cW=canvasWidth/100;
-			for (var clientI in clients)
-			{
-				ctxTemp.strokeStyle=clients[clientI].color;
-				ctxTemp.lineWidth=clients[clientI].width;
-				ctxTemp.moveTo(clients[clientI].x-cW, clients[clientI].y);
-				ctxTemp.lineTo(clients[clientI].x+cW, clients[clientI].y);
-				ctxTemp.moveTo(clients[clientI].x, clients[clientI].y-cW);
-				ctxTemp.lineTo(clients[clientI].x, clients[clientI].y+cW);
-			}
-			ctxTemp.clearRect(0, 0, canvasWidth, canvasHeight);
-			ctxTemp.stroke();
-			
-			//temporary shapes
+
+			drawClients();
 		});
  		
 
