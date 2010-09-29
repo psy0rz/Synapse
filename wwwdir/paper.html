@@ -53,6 +53,8 @@
 			this.color="#000000";
 			this.width=1;
 			this.text="";
+			this.cursorX=0;
+			this.cursorY=0;
 			
 			//draw the object in the specified context	
 			this.draw=function(context)
@@ -73,24 +75,21 @@
 				}
 			}
 
-			this.clear=function()
-			{
-				this.mode="";
-				this.coords=[];
-			}
 
 			/*** Drawing protocol
-			//global
+			//global:
 			'S'							Start: clear and reset everything
 			'I',<id>					Select a different client ID. (every client has its own color, line width etc settings) Usually the server automaticly sets this parameter.
-			'W'							Write current object of selected client to permanent canvas and clear object.
-			'C'							Clear/Cancel current object of selected client 
 
-			//per client
+			//global AND per client:
+			'W'							globally write current object of selected client. Clear the object.
+
+			//per client:
+			'C'							Clear the object.  
+			<x>,<y>						Update cursor location
 			'c',<htmlcolor>				Set current drawing color
 			'w',<w>						Set current line width
-			'm',<x>,<y>,...         	Moves cursor to location(s)
-			'l',<x>,<y>,...				Draw a line starting at x,y to next x,y locations
+			'l',<x>,<y>,...				Enable line drawing. (next x,y coords will draw from now on)
 			'r',<x1>,<y1>,<x2>,<y2>		Draw rectangle
 			'a',<x1>,<y1>,<x2>,<y2>		Draw circle
 			't',<x>,<y>,"text"			Draw text
@@ -115,7 +114,7 @@
 						commands.shift();
 						this.width=commands.shift();
 					}
-					//line
+					//enable line mode
 					else if (commands[0]=='l')
 					{
 						commands.shift();
@@ -123,11 +122,21 @@
 						this.mode='l';
 						
 					}
-					//all other numbers are coords
+					//write/clear
+					if ((commands[0]=='C') || (commands[0]=='W'))
+					{
+						commands.shift();
+						this.mode="";
+						this.coords=[];
+					}
+					//all other numbers are coords, if we are in some kind of drawing mode.
 					else if (commands[0] == parseInt(commands[0]))
 					{
 						c=toBrowser(commands.shift(), commands.shift());
-						this.coords.push(c.x, c.y);
+						this.cursorX=c.x;
+						this.cursorY=c.y;
+						if (this.mode!="")
+							this.coords.push(c.x, c.y);
 					}
 					else
 					{
@@ -144,7 +153,6 @@
 		var mouseInterval=50; //max update inteval in mS (can be higer if mouseMax is exceeded)
 		var mouseMax=25; //max mouse pixel offset before sending (regardless of update interval)
 		
-		var currentGameId=0;
 
 		var mousePoint=new Cpoint(); //current mouse position
 
@@ -161,8 +169,12 @@
 		var paperModId=0;
 
 		var drawMode="l";
-
+ 		
+		//incremental draw stuff
+		var clientId=0;
+		var clients=new Array(); 
 		var ourId=0;
+		var outstandingDraws
 
 		//redraw all the clients in the temporary context
 		function drawClients()
@@ -174,13 +186,19 @@
 			var cW=canvasWidth/100;
 			for (var clientI in clients)
 			{
-				clients[clientI].draw(contextTemp);
-		//		ctxTemp.strokeStyle=clients[clientI].color;
-//				ctxTemp.lineWidth=clients[clientI].width;
-//				ctxTemp.moveTo(clients[clientI].x-cW, clients[clientI].y);
-//				ctxTemp.lineTo(clients[clientI].x+cW, clients[clientI].y);
-//				ctxTemp.moveTo(clients[clientI].x, clients[clientI].y-cW);
-//				ctxTemp.lineTo(clients[clientI].x, clients[clientI].y+cW);
+				//skip our own id, its cached locally in clients[0]
+				if (clientI!=ourId)
+				{
+					clients[clientI].draw(contextTemp);
+	
+					//draw cursor
+					contextTemp.beginPath();
+					contextTemp.moveTo(clients[clientI].cursorX-cW, clients[clientI].cursorY);
+					contextTemp.lineTo(clients[clientI].cursorX+cW, clients[clientI].cursorY);
+					contextTemp.moveTo(clients[clientI].cursorX, clients[clientI].cursorY-cW);
+					contextTemp.lineTo(clients[clientI].cursorX, clients[clientI].cursorY+cW);
+					contextTemp.stroke();
+				}
 			}
 			
 			//temporary shapes
@@ -191,8 +209,15 @@
 		//note: you need to specifiy server coordinates instead of browser coordinates here.		
 		function sendDraw(commands)
 		{
+			//send it to server
 			send(paperModId,"paper_ClientDraw", commands);
-			clients[ourId].add(commands);
+
+			//add it to client 0, our local cache.
+ 			if (clients[0]==undefined)
+	 			clients[0]=new Cclient();
+			clients[0].add(commands);
+
+			//refresh temporary canvas
 			drawClients();
 		}
 
@@ -204,16 +229,6 @@
 			{
 				a=toServer(mousePoint.x,mousePoint.y);
 				sendDraw( [ "l", a.x, a.y ]);
-			}
-		}
-
-		//user moves while still drawing
-		function drawMove()
-		{
-			if (drawMode=="l")
-			{
-				a=toServer(mousePoint.x,mousePoint.y);
-				sendDraw([ a.x, a.y ]);
 			}
 		}
 
@@ -245,8 +260,9 @@
 					Math.abs(mousePoint.y-mouseSendPoint.y)> mouseMax
 			)
 			{ 
-				if (mouseDraw)
-					drawMove();
+
+				a=toServer(mousePoint.x,mousePoint.y);
+				sendDraw([ a.x, a.y ]);
 
 				mouseSendPoint.x=mousePoint.x;
 				mouseSendPoint.y=mousePoint.y;
@@ -257,13 +273,13 @@
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
 			ourId=msg_dst;
-			clients[ourId]=new Cclient();
+
  	 		
 			send(0,"paper_GetPapers", { 
 			});
 
 			/// start local engine
-			window.setInterval("mouseMove", mouseInterval);
+			window.setInterval(mouseMove, mouseInterval);
 
 			
 			/// JAVA SCRIPT EVENT HANDLERS
@@ -384,10 +400,6 @@
 		});
  				
 
- 		
-		//incremental draw stuff
-		var clientId=0;
-		var clients=new Array(); 
 
  		synapse_register("paper_ServerDraw",function(msg_src, msg_dst, msg_event, msg)
 		{
@@ -412,12 +424,6 @@
  					clientId=0; 
  					contextDraw.clearRect(0, 0, canvasWidth, canvasHeight);
  				}
- 				//cancel/clear current object
- 				else if (msg[0]=="C")
- 				{
- 	 				msg.shift();
-					clients[clientId].clear();
- 				}
  				//delete client
  				else if (msg[0]=="D")
  				{
@@ -426,26 +432,17 @@
  				//store current object permanently
  				else if (msg[0]=="W")
  				{
- 	 				msg.shift();
  	 				clients[clientId].draw(contextDraw);
- 	 				clients[clientId].clear();
+ 	 				clients[clientId].add(msg);
  				}
  				//let the current client object handle all other stuff
  				else
  				{
- 	 				//our own stuff is drawn locally, so ignore it if it comes back from the server
- 	 				if (clientId!=ourId)
+ 	 				if (!clients[clientId].add(msg))
  	 				{
-	 	 				if (!clients[clientId].add(msg))
-	 	 				{
-	 	 	 				//object also doesnt know what to do...log error and skip it and hope for the best..
-	 	 	 				console.error("Error parsing draw commands",msg);
-	 	 	 				msg.shift();
-	 	 				}
- 	 				}
- 	 				else
- 	 				{
-						msg.shift();
+ 	 	 				//object also doesnt know what to do...log error and skip it and hope for the best..
+ 	 	 				console.error("Error parsing draw commands",msg);
+ 	 	 				msg.shift();
  	 				}
  				}		
  			}
