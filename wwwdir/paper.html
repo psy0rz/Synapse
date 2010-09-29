@@ -75,7 +75,12 @@
 				}
 			}
 
-
+			this.clear=function()
+			{
+				this.mode="";
+				this.coords=[];
+			}
+			
 			/*** Drawing protocol
 			//global:
 			'S'							Start: clear and reset everything
@@ -119,15 +124,14 @@
 					{
 						commands.shift();
 						this.coords=[];
-						this.mode='l';
-						
+						this.mode='l';						
 					}
-					//write/clear
-					if ((commands[0]=='C') || (commands[0]=='W'))
+					//clear it
+					else if (commands[0]=='C')
 					{
-						commands.shift();
-						this.mode="";
-						this.coords=[];
+						//dont shift command, the caller will eat it!
+						this.clear();
+						return(ok);
 					}
 					//all other numbers are coords, if we are in some kind of drawing mode.
 					else if (commands[0] == parseInt(commands[0]))
@@ -135,7 +139,7 @@
 						c=toBrowser(commands.shift(), commands.shift());
 						this.cursorX=c.x;
 						this.cursorY=c.y;
-						if (this.mode!="")
+						if (this.mode=='l')
 							this.coords.push(c.x, c.y);
 					}
 					else
@@ -427,15 +431,24 @@
  				//delete client
  				else if (msg[0]=="D")
  				{
+ 	 				msg.shift();
 					clients.splice(clientId,1);
+				}
+ 				//clear the object
+ 				else if (msg[0]=="C")
+ 				{
+ 	 				msg.shift();
+ 					clients[clientId].clear();
  				}
  				//store current object permanently
  				else if (msg[0]=="W")
  				{
+ 	 				console.info("Write");
+ 	 				msg.shift();
  	 				clients[clientId].draw(contextDraw);
- 	 				clients[clientId].add(msg);
+ 	 				clients[clientId].clear(); //clears the object and shifts msg
  				}
- 				//let the current client object handle all other stuff
+ 				//let the current client object parse the rest. it returns when it encounters something unknown.
  				else
  				{
  	 				if (!clients[clientId].add(msg))
@@ -444,9 +457,8 @@
  	 	 				console.error("Error parsing draw commands",msg);
  	 	 				msg.shift();
  	 				}
- 				}		
+ 				}
  			}
- 			
 
 			drawClients();
 		});
