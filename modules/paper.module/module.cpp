@@ -175,8 +175,17 @@ namespace paper
 //
 //			}
 
-			//send to all connected clients
-			send(out);
+			//send to all connected clients, execpt back to the sender
+			CclientMap::iterator I;
+			for (I=clientMap.begin(); I!=clientMap.end(); I++)
+			{
+				if (I->first!=msg.src)
+				{
+					out.dst=I->first;
+					out.send();
+				}
+			}
+
 
 			//store instructions permanently
 			drawing.list().insert(drawing.list().end(), out.list().begin(), out.list().end());

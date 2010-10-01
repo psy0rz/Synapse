@@ -30,6 +30,7 @@ namespace synapse
 		int id;
 		string name;
 
+		protected:
 		typedef map<int,Tclient> CclientMap;
 		CclientMap clientMap;
 

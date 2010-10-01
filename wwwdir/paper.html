@@ -83,17 +83,23 @@
 				this.mode="";
 				this.coords=[];
 			}
+
+			//commit the current drawing to permanent canvas, and clear it.
+			this.commit=function()
+			{
+				this.draw(contextDraw);
+				this.clear(); 			
+			}
 			
 			/*** Drawing protocol
 			//global:
 			'S'							Start: clear and reset everything
 			'I',<id>					Select a different client ID. (every client has its own color, line width etc settings) Usually the server automaticly sets this parameter.
 
-			//global AND per client:
-			'W'							globally write current object of selected client. Clear the object.
 
 			//per client:
-			'C'							Clear the object.  
+			's'							write current drawing action permanently
+			'x'							Cancel the current drawing action.  
 			<x>,<y>						Update cursor location
 			'c',<htmlcolor>				Set current drawing color
 			'w',<w>						Set current line width
@@ -129,13 +135,18 @@
 						this.coords=[];
 						this.mode='l';						
 					}
-//					//clear it
-	//				else if ( (commands[0]=='C') || (commands[0]=='W'))
-//					{
-//						//dont shift command, the caller will eat it!
-//						this.clear();
-	//					return(ok);
-//					}
+	 				//cancel current drawing action
+	 				else if (commands[0]=="x")
+	 				{
+	 	 				commands.shift();
+	 					this.clear();
+	 				}
+	 				//save current action permanently 
+	 				else if (commands[0]=="s")
+	 				{
+	 	 				commands.shift();
+	 	 				this.commit();
+	 				}
 					//all other numbers are coords, if we are in some kind of drawing mode.
 					else if (commands[0] == parseInt(commands[0]))
 					{
@@ -224,8 +235,6 @@
 	 			clients[0]=new Cclient();
 			clients[0].add(commands);
 
-			if ((commands[0]=="W") || (commands[0]=="C"))
-				clients[0].clear();
 
 			//refresh temporary canvas
 			drawClients();
@@ -301,7 +310,7 @@
 			$("#canvasMouse").mouseup(function(m)
 			{
 				mouseDraw=0;
-				sendDraw( [ "W" ]);
+				sendDraw( [ "s" ]);
 			});
 					
 
@@ -310,7 +319,7 @@
 				if (mouseDraw)
 				{
 					mouseDraw=0;
-					sendDraw( [ "C" ]);
+					sendDraw( [ "x" ]);
 				}
 			});
 
@@ -421,19 +430,6 @@
  	 				msg.shift();
 					clients.splice(clientId,1);
 				}      
- 				//clear the object
- 				else if (msg[0]=="C")
- 				{
- 	 				msg.shift();
- 					clients[clientId].clear();
- 				}
- 				//store current object permanently
- 				else if (msg[0]=="W")
- 				{
- 	 				msg.shift();
- 	 				clients[clientId].draw(contextDraw);
- 	 				clients[clientId].clear(); //clears the object and shifts msg
- 				}
  				//let the current client object parse the rest. it returns when it encounters something unknown.
  				else
  				{
