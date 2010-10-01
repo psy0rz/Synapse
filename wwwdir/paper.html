@@ -59,6 +59,9 @@
 			//draw the object in the specified context	
 			this.draw=function(context)
 			{
+				if (this.mode=="")
+					return;
+
 				context.strokeStyle=this.color;
 				context.lineWidth=this.width;
 				if (this.mode=="l" && this.coords.length>=4)
@@ -126,13 +129,13 @@
 						this.coords=[];
 						this.mode='l';						
 					}
-					//clear it
-					else if (commands[0]=='C')
-					{
-						//dont shift command, the caller will eat it!
-						this.clear();
-						return(ok);
-					}
+//					//clear it
+	//				else if ( (commands[0]=='C') || (commands[0]=='W'))
+//					{
+//						//dont shift command, the caller will eat it!
+//						this.clear();
+	//					return(ok);
+//					}
 					//all other numbers are coords, if we are in some kind of drawing mode.
 					else if (commands[0] == parseInt(commands[0]))
 					{
@@ -221,34 +224,14 @@
 	 			clients[0]=new Cclient();
 			clients[0].add(commands);
 
+			if ((commands[0]=="W") || (commands[0]=="C"))
+				clients[0].clear();
+
 			//refresh temporary canvas
 			drawClients();
 		}
 
-		
-		//user started drawing
-		function drawStart()
-		{
-			if (drawMode=="l")
-			{
-				a=toServer(mousePoint.x,mousePoint.y);
-				sendDraw( [ "l", a.x, a.y ]);
-			}
-		}
-
-		//user aborted drawing (cancel changes)
-		function drawAbort()
-		{
-			sendDraw( [ "C" ]);
-		}
-
-		//user finished drawing (commit changes permanently)
-		function drawEnd()
-		{
-			sendDraw( [ "W" ]);
-		}
-		
-		
+	
 		//mouse throttling function, to prevent too many updates per second		
 		function mouseMove()
 		{
@@ -308,13 +291,17 @@
 			{
 				m.preventDefault();
 				mouseDraw=1;
-				drawStart();
+				if (drawMode=="l")
+				{
+					a=toServer(mousePoint.x,mousePoint.y);
+					sendDraw( [ "l", a.x, a.y ]);
+				}
 			});
 					
 			$("#canvasMouse").mouseup(function(m)
 			{
 				mouseDraw=0;
-				drawEnd();
+				sendDraw( [ "W" ]);
 			});
 					
 
@@ -323,7 +310,7 @@
 				if (mouseDraw)
 				{
 					mouseDraw=0;
-					drawEnd();
+					sendDraw( [ "C" ]);
 				}
 			});
 
@@ -433,7 +420,7 @@
  				{
  	 				msg.shift();
 					clients.splice(clientId,1);
-				}
+				}      
  				//clear the object
  				else if (msg[0]=="C")
  				{
@@ -443,7 +430,6 @@
  				//store current object permanently
  				else if (msg[0]=="W")
  				{
- 	 				console.info("Write");
  	 				msg.shift();
  	 				clients[clientId].draw(contextDraw);
  	 				clients[clientId].clear(); //clears the object and shifts msg
