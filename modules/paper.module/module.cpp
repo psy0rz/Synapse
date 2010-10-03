@@ -103,6 +103,7 @@ namespace paper
 		public:
 		map<char,string> settings;
 		list<string> drawing;
+		bool didDraw; //client did draw something?
 
 		//parses and store usefull drawing commands
 		//returns true if the drawing should be commited permanently
@@ -143,6 +144,21 @@ namespace paper
 				{
 					settings[commands.begin()->str().c_str()[0]]=(++commands.begin())->str();
 				}
+				//delete
+				else if (commands.begin()->str()=="D")
+				{
+					drawing.clear();
+					settings.clear();
+					if (didDraw)
+					{
+						//if the client did do SOMETHING worth storing, then store the Delete command as well
+						drawing.push_back(string("D"));
+						return(true);
+					}
+					else
+						return(false);
+				}
+
 			}
 			//numbers, just add them to the drawing
 			else
@@ -153,29 +169,39 @@ namespace paper
 		}
 
 		//add current values to specified drawing
-		void store(synapse::CvarList & addDrawing)
+		bool store(synapse::CvarList & addDrawing)
 		{
+			bool added=false;
 			//store new settings
 			for(map<char,string>::iterator I=settings.begin(); I!=settings.end(); I++)
 			{
 				addDrawing.push_back(I->first);
 				addDrawing.push_back(I->second);
+				added=true;
 			}
 
 			//store drawing commands
-			addDrawing.insert(addDrawing.end(), drawing.begin(), drawing.end());
+			if (!drawing.empty())
+			{
+				addDrawing.insert(addDrawing.end(), drawing.begin(), drawing.end());
+				added=true;
+			}
+
+			return(added);
 		}
 
 		//store current values and reset
 		void commit(synapse::CvarList & addDrawing)
 		{
-			store(addDrawing);
+			if (store(addDrawing))
+				didDraw=true;
 			settings.clear();
 			drawing.clear();
 		}
 
 		CpaperClient()
 		{
+			didDraw=false;
 		}
 
 	};
@@ -211,14 +237,8 @@ namespace paper
 				lastClient=msg.src;
 			}
 
-			//get a reference to the client object
-			//CpaperClient & paperClient=getClient(lastClient);
-
-
-			//TODO: optimize by parsing and skipping stuff
-			//for now just copy all the data
+			//copy the commands to the output message
 			out.list().insert(out.list().end(), msg.list().begin(), msg.list().end());
-
 
 			//send to all connected clients, execpt back to the sender
 			for (CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
@@ -230,8 +250,7 @@ namespace paper
 				}
 			}
 
-
-			//store usefull instructions per client
+			//store usefull drawing instructions permanently
 			if (getClient(msg.src).add(msg.list()))
 			{
 				//its time to commit
@@ -245,6 +264,21 @@ namespace paper
 				}
 				//commit drawing instructions of this client
 				getClient(msg.src).commit(drawing);
+			}
+		}
+
+		virtual void delClient(int id)
+		{
+			if (clientMap.find(id)!= clientMap.end())
+			{
+				Cmsg msg;
+				msg.src=id;
+				msg.list().push_back(string("D"));
+				addDraw(msg);
+				lastClient=0;
+				if (getClient(id).didDraw)
+					lastStoreClient=0;
+				synapse::CsharedObject<CpaperClient>::delClient(id);
 			}
 		}
 
@@ -267,8 +301,12 @@ namespace paper
 			}
 
 			//switch back to current client
-			out.list().push_back(string("I"));
-			out.list().push_back(lastClient);
+			if (lastClient)
+			{
+				out.list().push_back(string("I"));
+				out.list().push_back(lastClient);
+			}
+
 			out.send();
 
 		}

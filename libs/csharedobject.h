@@ -120,7 +120,7 @@ namespace synapse
 			return(clientMap.find(id)!=clientMap.end());
 		}
 
-		void delClient(int id)
+		virtual void delClient(int id)
 		{
 			if (clientMap.find(id)!= clientMap.end())
 			{
