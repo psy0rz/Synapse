@@ -353,6 +353,10 @@
 			canvasTemp.width=canvasWidth;
 			canvasTemp.height=canvasHeight;
 			
+			send(0,"paper_Join", {
+				"clientName":$("#name").val(),
+				"objectId":1,
+			});
 								
  		});
  				
@@ -383,7 +387,7 @@
 			}
 
 			//update the html with the actual game info:
-			var html="Paper of " + msg["objectName"]  + " (#" +msg["objectId"] + "):";
+			var html="Paper #" +msg["objectId"];
 			$("#object_"+msg["objectId"]).html(html);
 		});
 
