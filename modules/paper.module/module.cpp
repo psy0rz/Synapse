@@ -101,17 +101,81 @@ namespace paper
 	class CpaperClient : public synapse::Cclient
 	{
 		public:
-		char mode;
-		int x;
-		int y;
-		int color;
+		map<char,string> settings;
+		list<string> drawing;
+
+		//parses and store usefull drawing commands
+		//returns true if the drawing should be commited permanently
+		bool add(synapse::CvarList & commands )
+		{
+			if (commands.begin()->which()==CVAR_STRING)
+			{
+				//cancel
+				if (commands.begin()->str()=="x")
+				{
+					drawing.clear();
+				}
+				//commit
+				else if (commands.begin()->str()=="s")
+				{
+					return(true);
+				}
+				//mouse movements, ignore
+				else if (commands.begin()->str()=="m")
+				{
+					;
+				}
+				//drawing commands
+				else if (
+						(commands.begin()->str()=="l") ||
+						(commands.begin()->str()=="r") ||
+						(commands.begin()->str()=="a") ||
+						(commands.begin()->str()=="t")
+				)
+				{
+					drawing.insert(drawing.end(), commands.begin(), commands.end());
+				}
+				//drawing settings
+				else if (
+						(commands.begin()->str()=="c") ||
+						(commands.begin()->str()=="w")
+				)
+				{
+					settings[commands.begin()->str().c_str()[0]]=(++commands.begin())->str();
+				}
+			}
+			//numbers, just add them to the drawing
+			else
+			{
+				drawing.insert(drawing.end(), commands.begin(), commands.end());
+			}
+			return(false);
+		}
+
+		//add current values to specified drawing
+		void store(synapse::CvarList & addDrawing)
+		{
+			//store new settings
+			for(map<char,string>::iterator I=settings.begin(); I!=settings.end(); I++)
+			{
+				addDrawing.push_back(I->first);
+				addDrawing.push_back(I->second);
+			}
+
+			//store drawing commands
+			addDrawing.insert(addDrawing.end(), drawing.begin(), drawing.end());
+		}
+
+		//store current values and reset
+		void commit(synapse::CvarList & addDrawing)
+		{
+			store(addDrawing);
+			settings.clear();
+			drawing.clear();
+		}
 
 		CpaperClient()
 		{
-			mode='m';
-			x=0;
-			y=0;
-			color=0;
 		}
 
 	};
@@ -122,12 +186,14 @@ namespace paper
 	{
 		public:
 		int lastClient;
-		Cvar drawing;
+		int lastStoreClient;
+		synapse::CvarList drawing;
 
 
 		CpaperObject()
 		{
 			lastClient=0;
+			lastStoreClient=0;
 		}
 
 		//add data to the drawing and send it (efficiently) to the clients
@@ -153,31 +219,9 @@ namespace paper
 			//for now just copy all the data
 			out.list().insert(out.list().end(), msg.list().begin(), msg.list().end());
 
-			//parse the draw-data
-//			Cvar::iteratorList I;
-//			I=msg.list().begin();
-//			while(I!=msg.list().end())
-//			{
-//				//a change of mode
-//				if (I->which()==CVAR_STRING)
-//				{
-//					//move
-//					if (I->str()=="m")
-//					{
-//						if (paperClient.mode!='m')
-//						{
-//
-//						}
-//						I++;
-//						continue;
-//					}
-//				}
-//
-//			}
 
 			//send to all connected clients, execpt back to the sender
-			CclientMap::iterator I;
-			for (I=clientMap.begin(); I!=clientMap.end(); I++)
+			for (CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
 			{
 				if (I->first!=msg.src)
 				{
@@ -187,8 +231,21 @@ namespace paper
 			}
 
 
-			//store instructions permanently
-			drawing.list().insert(drawing.list().end(), out.list().begin(), out.list().end());
+			//store usefull instructions per client
+			if (getClient(msg.src).add(msg.list()))
+			{
+				//its time to commit
+				//still same client?
+				if (lastStoreClient!=msg.src)
+				{
+					//no, so store client-switch instruction:
+					drawing.push_back(string("I"));
+					drawing.push_back(msg.src);
+					lastStoreClient=msg.src;
+				}
+				//commit drawing instructions of this client
+				getClient(msg.src).commit(drawing);
+			}
 		}
 
 		//send redrawing instructions to dst
@@ -197,9 +254,23 @@ namespace paper
 			Cmsg out;
 			out.event="paper_ServerDraw";
 			out.dst=dst;
-			out.list().push_front(string("S"));
-			out.list().insert(out.list().end(), drawing.list().begin(), drawing.list().end());
+			out.list().push_back(string("S"));
+			out.list().insert(out.list().end(), drawing.begin(), drawing.end());
+			out.list().push_back(string("E"));
+
+			//add current uncommited stuff of all clients
+			for (CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
+			{
+				out.list().push_back(string("I"));
+				out.list().push_back(I->first);
+				I->second.store(out.list());
+			}
+
+			//switch back to current client
+			out.list().push_back(string("I"));
+			out.list().push_back(lastClient);
 			out.send();
+
 		}
 
 	};

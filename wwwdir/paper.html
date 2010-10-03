@@ -48,7 +48,7 @@
 		//informantion about the object a client is currently drawing
 		function Cclient()
 		{
-			this.mode="";
+			this.mode="m";
 			this.coords=new Array();
 			this.color="#000000";
 			this.width=1;
@@ -59,13 +59,13 @@
 			//draw the object in the specified context	
 			this.draw=function(context)
 			{
-				if (this.mode=="")
+				if (this.mode=="m")
 					return;
 
-				context.strokeStyle=this.color;
-				context.lineWidth=this.width;
 				if (this.mode=="l" && this.coords.length>=4)
 				{
+					context.strokeStyle=this.color;
+					context.lineWidth=this.width;
 					context.beginPath();
 	 				context.moveTo(this.coords[0], this.coords[1]);
 	 				var i=2;
@@ -80,7 +80,7 @@
 
 			this.clear=function()
 			{
-				this.mode="";
+				this.mode="m";
 				this.coords=[];
 			}
 
@@ -93,14 +93,15 @@
 			
 			/*** Drawing protocol
 			//global:
-			'S'							Start: clear and reset everything
+			'S'							Start comlete redraw: clear everything, after this all drawing commands will follow, but without explicit commits (to save space)
+			'E'							End of complete redraw. 
 			'I',<id>					Select a different client ID. (every client has its own color, line width etc settings) Usually the server automaticly sets this parameter.
 
 
 			//per client:
 			's'							write current drawing action permanently
 			'x'							Cancel the current drawing action.  
-			<x>,<y>						Update cursor location
+			'm',<x>,<y>					Update cursor location
 			'c',<htmlcolor>				Set current drawing color
 			'w',<w>						Set current line width
 			'l',<x>,<y>,...				Enable line drawing. (next x,y coords will draw from now on)
@@ -128,11 +129,22 @@
 						commands.shift();
 						this.width=commands.shift();
 					}
+					//mouse movement
+					else if (commands[0]=="m")
+	 				{
+		 				commands.shift();
+						c=toBrowser(commands.shift(), commands.shift());
+		 				this.cursorX=c.x;
+		 				this.cursorY=c.y;
+		 				this.mode='m';
+	 				}
 					//enable line mode
 					else if (commands[0]=='l')
 					{
 						commands.shift();
-						this.coords=[];
+						//a new command should automaticly commit the previous one:
+						//(this way the server doesnt have to store all the save-commands)
+						this.commit();
 						this.mode='l';						
 					}
 	 				//cancel current drawing action
@@ -192,7 +204,7 @@
 		var clientId=0;
 		var clients=new Array(); 
 		var ourId=0;
-		var outstandingDraws
+		var autoCommit=false;
 
 		//redraw all the clients in the temporary context
 		function drawClients()
@@ -240,10 +252,9 @@
 			drawClients();
 		}
 
-	
-		//mouse throttling function, to prevent too many updates per second		
 		function mouseMove()
 		{
+			//mouse throttling function, to prevent too many updates per second
 			//no change?
 			if (mousePoint.x==mouseSendPoint.x && mousePoint.y==mouseSendPoint.y)
 				return;
@@ -258,13 +269,18 @@
 			{ 
 
 				a=toServer(mousePoint.x,mousePoint.y);
-				sendDraw([ a.x, a.y ]);
+				if (mouseDraw)
+					sendDraw([ a.x, a.y ]);
+				else
+					sendDraw([ "m", a.x, a.y ]);
+					
 
 				mouseSendPoint.x=mousePoint.x;
 				mouseSendPoint.y=mousePoint.y;
 				mouseSendTime=currentTime;
 			}
-		}
+		}	
+	
 
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
@@ -294,6 +310,7 @@
 				mousePoint.x=m.pageX-$("#canvasMouse").offset().left;
 				mousePoint.y=m.pageY-$("#canvasMouse").offset().top;
 				mouseMove();
+
 			});
 
 			$("#canvasMouse").mousedown(function(m)
@@ -416,18 +433,32 @@
 			 			clients[clientId]=new Cclient();
 		 			}
  				}
- 				//start: clear everything
+ 				//start of complete redraw: clears everything, enables auto commit
  				else if (msg[0]=="S")
  				{
  	 				msg.shift();
  					clients=[];
- 					clientId=0; 
+					clientId=0;
+					autoCommit=true; 
  					contextDraw.clearRect(0, 0, canvasWidth, canvasHeight);
+ 				}
+				//end of complete redraw, disable auto commit.
+ 				else if (msg[0]=="E")
+ 				{
+	 				msg.shift();
+	 				//commit the last bits
+	 				for (var clientI in clients)
+ 					{
+ 	 					clients[clientI].commit();
+ 					}
+					autoCommit=false;
  				}
  				//delete client
  				else if (msg[0]=="D")
  				{
  	 				msg.shift();
+ 	 				if (autoCommit)
+ 	 	 				clients[clientId].commit();
 					clients.splice(clientId,1);
 				}      
  				//let the current client object parse the rest. it returns when it encounters something unknown.
