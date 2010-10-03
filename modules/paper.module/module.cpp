@@ -264,6 +264,9 @@ namespace paper
 				}
 				//commit drawing instructions of this client
 				getClient(msg.src).commit(drawing);
+
+
+
 			}
 		}
 
@@ -325,7 +328,7 @@ namespace paper
 	SYNAPSE_REGISTER(paper_Create)
 	{
 		objectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
-		objectMan.create(msg.src, msg["clientName"], msg["objectName"]);
+		objectMan.create(msg.src);
 	}
 
 	SYNAPSE_REGISTER(paper_Delete)
@@ -336,7 +339,7 @@ namespace paper
 	SYNAPSE_REGISTER(paper_Join)
 	{
 		objectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
-		objectMan.getObject(msg["objectId"]).addClient(msg.src,msg["clientName"]);
+		objectMan.getObject(msg["objectId"]).addClient(msg.src);
 	}
 
 	SYNAPSE_REGISTER(paper_Leave)

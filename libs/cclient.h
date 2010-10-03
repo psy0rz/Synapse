@@ -26,24 +26,17 @@ namespace synapse
 
 	class Cclient
 	{
-		private:
-		string name;
-
 
 		public:
+		int id;
 
 		Cclient()
 		{
 		}
 
-		const string & getName()
+		virtual void getInfo(Cmsg & msg)
 		{
-			return(name);
-		}
-
-		void setName(string name)
-		{
-			this->name=name;
+			msg["clientId"]=id;
 		}
 	};
 };

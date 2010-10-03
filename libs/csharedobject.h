@@ -28,7 +28,6 @@ namespace synapse
 	{
 
 		int id;
-		string name;
 
 		protected:
 		typedef map<int,Tclient> CclientMap;
@@ -39,11 +38,6 @@ namespace synapse
 
 		CsharedObject()
 		{
-		}
-
-		const string & getName()
-		{
-			return(name);
 		}
 
 		//send a message to all clients of the object
@@ -58,16 +52,14 @@ namespace synapse
 		}
 
 
-		void create(int id, string name)
+		void create(int id)
 		{
 			this->id=id;
-			this->name=name;
 		}
 
-		void getInfo(Cmsg & msg)
+		virtual void getInfo(Cmsg & msg)
 		{
 			msg["objectId"]=id;
-			msg["objectName"]=name;
 		}
 
 		//sends a client list to specified destination
@@ -75,7 +67,7 @@ namespace synapse
 		{
 			Cmsg out;
 			out.event="object_Client";
-			out["objectId"]=id;
+			getInfo(out);
 			out["first"]=1;
 			out.dst=dst;
 
@@ -85,28 +77,22 @@ namespace synapse
 				if (I==(--clientMap.end()))
 					out["last"]=1;
 
-				out["clientId"]=I->first;
-				out["clientName"]=I->second.getName();
+				I->second.getInfo(out);
 				out.send();
 
 				out.erase("first");
 			}
 		}
 
-		void addClient(int id, string name)
+		void addClient(int id)
 		{
 			if (clientMap.find(id)==clientMap.end())
 			{
-				if (name=="")
-				{
-					throw(runtime_error("Please enter a name before joining."));
-				}
-
-				clientMap[id].setName(name);
+				clientMap[id].id=id;
 				Cmsg out;
 				out.event="object_Client";
-				out["clientId"]=id;
-				out["objectId"]=this->id;
+				clientMap[id].getInfo(out);
+				getInfo(out);
 				send(out); //inform all members of the new client
 			}
 			else
@@ -124,12 +110,13 @@ namespace synapse
 		{
 			if (clientMap.find(id)!= clientMap.end())
 			{
-				clientMap.erase(id);
 
 				Cmsg out;
 				out.event="object_Left";
-				out["clientId"]=id;
-				out["objectId"]=this->id;
+				getInfo(out);
+				clientMap[id].getInfo(out);
+
+				clientMap.erase(id);
 				send(out); //inform all members of the left client
 			}
 		}
@@ -148,7 +135,7 @@ namespace synapse
 		{
 			Cmsg out;
 			out.event="object_Deleted";
-			out["objectId"]=this->id;
+			getInfo(out);
 			send(out); //inform all members
 
 			//delete all joined clients:

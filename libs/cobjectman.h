@@ -74,17 +74,12 @@ namespace synapse
 		}
 
 
-		void create(int clientId, string clientName, string objectName)
+		void create(int clientId)
 		{
-			if (objectName=="")
-				throw(runtime_error("Please specify the object name!"));
-
-			if (clientName=="")
-				throw(runtime_error("Please specify your name!"));
 
 			lastId++;
-			objectMap[lastId].create(lastId,clientName);
-			objectMap[lastId].addClient(clientId, clientName);
+			objectMap[lastId].create(lastId);
+			objectMap[lastId].addClient(clientId);
 
 			//send the object to the requester
 			Cmsg out;
