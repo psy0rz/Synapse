@@ -317,7 +317,7 @@ namespace paper
 	};
 
 
-	synapse::CobjectMan<CpaperObject> objectMan;
+	synapse::CobjectMan<CpaperObject> objectMan("var/paper");
 
 
 
@@ -328,7 +328,7 @@ namespace paper
 	SYNAPSE_REGISTER(paper_Create)
 	{
 		objectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
-		objectMan.create(msg.src);
+		objectMan.add(msg.src);
 	}
 
 	SYNAPSE_REGISTER(paper_Delete)

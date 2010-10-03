@@ -25,6 +25,7 @@
 #define COBJECTMAN_H_
 
 #include <map>
+#include "cconfig.h"
 
 namespace synapse
 {
@@ -38,23 +39,45 @@ namespace synapse
 		typedef map<int,TsharedObject > CobjectMap ;
 		CobjectMap objectMap;
 
-		int lastId;
+		Cconfig config;
+		string storagePath;
+
 
 		public:
 
-		CobjectMan()
+		CobjectMan(string path="")
 		{
-			lastId=0;
+			storagePath=path;
+			config["lastId"]=0;
+
+			if (storagePath!="")
+			{
+				INFO("Loading object config from " << storagePath << "/config");
+				config.load(storagePath+"/config");
+			}
 		}
 
 
-		// Get a reference to an object or throw exception
-		TsharedObject & getObject(int id)
-		{
-			if (objectMap.find(id)== objectMap.end())
-				throw(runtime_error("Object not found!"));
 
-			return (objectMap[id]);
+		// Get a reference to an object, load it from disk if neccesary, or throw exception
+		//FIXME: unload objects automatically
+		TsharedObject & getObject(int objectId)
+		{
+			if (objectMap.find(objectId)== objectMap.end())
+			{
+				if (getStoragePath(objectId)!="")
+				{
+					DEB("Loading data for object " << objectId << " from " << getStoragePath(objectId))
+					objectMap[objectId].create(objectId);
+					objectMap[objectId].load(getStoragePath(objectId));
+				}
+				else
+				{
+					throw(runtime_error("Object not found!"));
+				}
+			}
+
+			return (objectMap[objectId]);
 		}
 
 		// Get a reference to an object by client id.
@@ -74,19 +97,38 @@ namespace synapse
 		}
 
 
-		void create(int clientId)
+		void add(int clientId)
 		{
 
-			lastId++;
-			objectMap[lastId].create(lastId);
-			objectMap[lastId].addClient(clientId);
+			config["lastId"]=config["lastId"]+1;
+
+			objectMap[config["lastId"]].create(config["lastId"]);
+			objectMap[config["lastId"]].addClient(clientId);
 
 			//send the object to the requester
 			Cmsg out;
 			out.event="object_Object";
-			objectMap[lastId].getInfo(out);
+			objectMap[config["lastId"]].getInfo(out);
 			out.dst=clientId;
 			out.send();
+		}
+
+		string getStoragePath(int objectId)
+		{
+			if (storagePath=="")
+				return ("");
+			stringstream path;
+			path << storagePath << "/" << objectId;
+			return(path.str());
+		}
+
+		//save the object to disk
+		void save(int objectId)
+		{
+			DEB("Saving object " << objectId << " to " << getStoragePath(objectId));
+			getObject(objectId).save(getStoragePath(objectId));
+			//now the lastId needs to be remembered as well:
+			config.save(storagePath+"/config");
 		}
 
 		void destroy(int objectId)

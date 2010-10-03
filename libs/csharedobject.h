@@ -62,6 +62,16 @@ namespace synapse
 			msg["objectId"]=id;
 		}
 
+		virtual void save(string path)
+		{
+			throw(runtime_error("Programming error: This object doesnt support saving to disk (yet?)"));
+		}
+
+		virtual void load(string path)
+		{
+			throw(runtime_error("Programming error: This object doesnt support loading from disk (yet?)"));
+		}
+
 		//sends a client list to specified destination
 		void sendClientList(int dst)
 		{
