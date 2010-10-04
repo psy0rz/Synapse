@@ -366,6 +366,8 @@ namespace paper
 	{
 		objectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
 		objectMan.getObject(msg["objectId"]).addClient(msg.src);
+		objectMan.getObject(msg["objectId"]).redraw(msg.src);
+
 	}
 
 	SYNAPSE_REGISTER(paper_Leave)

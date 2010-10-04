@@ -42,6 +42,10 @@
 
 #include <boost/thread/condition.hpp>
 
+//#include <boost/date_time/local_time/local_time.hpp>
+//#include <boost/date_time/time_facet.hpp>
+
+#include <time.h>
 
 #define MAX_CONTENT 20000
 
@@ -119,8 +123,41 @@ SYNAPSE_REGISTER(module_Init)
 
 }
 
+void getHttpDate(string & s)
+{
+	//(all this crap just to get the right date format :( )
+//ARG!! CRASHES:
+//		using namespace boost::posix_time;
+//		using namespace boost::local_time;
+//		stringstream s;
+//		ptime now = second_clock::local_time();
+//		local_time_facet *output_facet=new local_time_facet();
+//		s.imbue(locale(locale::classic(), output_facet));
+//        //Mon, 04 Oct 2010 22:36:51 GMT
+//		output_facet->format("%a, %d %b %Y %H:%M:%S");
+//		s << now;
+//		extraHeaders["Cache-Control"]="public, max-age=36000000";
+//		extraHeaders["Date"]=s.str();
+//		delete output_facet;
+	//lets use the linux way for now..
+	time_t currTime;
+	tm currTm;
+	currTime=time(NULL);
+	if (gmtime_r(&currTime,&currTm)!=NULL)
+	{
+		char outstr[200];
+		if (strftime(outstr, sizeof(outstr), "%a, %d %b %Y %H:%M:%S GMT", &currTm) != 0)
+		{
+			s=outstr;
+		}
+
+	}
+}
+
 
 ChttpSessionMan httpSessionMan;
+
+
 
 
 // We extent the Cnet class with our own network handlers.
@@ -335,15 +372,16 @@ class CnetHttp : public synapse::Cnet
 		inputFile.seekg (0, ios::beg);
 		extraHeaders["Content-Length"]=fileSize;
 
-		//other headers
-		extraHeaders["Cache-Control"]="public, max-age=3600";
+		//enable browser caching with the right headers:
+		extraHeaders["Cache-Control"]="public, max-age=86000";
+		getHttpDate(extraHeaders["Date"].str());
 
 		sendHeaders(200, extraHeaders);
 
 
 
 		DEB(id << " sending CONTENT of " << path);
-		char buf[1024];
+		char buf[4096];
 		//TODO: is there a better way to do this?
 		int sendSize=0;
 		while (inputFile.good())

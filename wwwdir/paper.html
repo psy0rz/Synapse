@@ -433,9 +433,9 @@
 				currentObjectId=msg["objectId"];
 				paperModId=msg_src;
 
-				//also request a redraw so we get the current drawing
-				send(0,"paper_Redraw", {
-				});
+//				//also request a redraw so we get the current drawing
+//				send(0,"paper_Redraw", {
+//				});
 
 				$("#objectId").html(msg["objectId"]);
 				
@@ -676,15 +676,15 @@
 			<div class='tool' style='background-color:#ffffff' cmd0='c' cmd1='#ffffff'></div>
 		</div>		
 		<div id='widths'>
-			<div class='tool selected' cmd0='w' cmd1='1'><img src='img/pen1.png' style='width:1em' ></img></div>
-			<div class='tool' cmd0='w' cmd1='2'><img src='img/pen1.png' style='width:1.2em'></img></div>
-			<div class='tool' cmd0='w' cmd1='3'><img src='img/pen1.png' style='width:1.3em'></img></div>
-			<div class='tool' cmd0='w' cmd1='4'><img src='img/pen1.png' style='width:1.4em' ></img></div>
+			<div class='tool selected' cmd0='w' cmd1='1'><img src='img/pen1.png' style='width:1em' ></div>
+			<div class='tool' cmd0='w' cmd1='2'><img src='img/pen1.png' style='width:1.2em'></div>
+			<div class='tool' cmd0='w' cmd1='3'><img src='img/pen1.png' style='width:1.3em'></div>
+			<div class='tool' cmd0='w' cmd1='4'><img src='img/pen1.png' style='width:1.4em' ></div>
 			<br>
-			<div class='tool' cmd0='w' cmd1='10'><img src='img/pen2.png' style='width:1em' ></img></div>
-			<div class='tool' cmd0='w' cmd1='20'><img src='img/pen2.png' style='width:1.2em' ></img></div>
-			<div class='tool' cmd0='w' cmd1='30'><img src='img/pen2.png' style='width:1.3em' ></img></div>
-			<div class='tool' cmd0='w' cmd1='40'><img src='img/pen2.png' style='width:1.4em' ></img></div>		
+			<div class='tool' cmd0='w' cmd1='10'><img src='img/pen2.png' style='width:1em' ></div>
+			<div class='tool' cmd0='w' cmd1='20'><img src='img/pen2.png' style='width:1.2em' ></div>
+			<div class='tool' cmd0='w' cmd1='30'><img src='img/pen2.png' style='width:1.3em' ></div>
+			<div class='tool' cmd0='w' cmd1='40'><img src='img/pen2.png' style='width:1.4em' ></div>		
 		</div>
 
 		<div class='ui-widget-header'>Other people:</div>
