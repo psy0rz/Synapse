@@ -373,7 +373,7 @@ class CnetHttp : public synapse::Cnet
 		extraHeaders["Content-Length"]=fileSize;
 
 		//enable browser caching with the right headers:
-		extraHeaders["Cache-Control"]="public, max-age=86000";
+		extraHeaders["Cache-Control"]="public, max-age=290304000";
 		getHttpDate(extraHeaders["Date"].str());
 
 		sendHeaders(200, extraHeaders);
