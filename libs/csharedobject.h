@@ -49,7 +49,14 @@ namespace synapse
 			for (I=clientMap.begin(); I!=clientMap.end(); I++)
 			{
 				msg.dst=I->first;
-				msg.send();
+				try
+				{
+					msg.send();
+				}
+				catch(...)
+				{
+					; //expected raceconditions do occur during session ending, so ignore send errors
+				}
 			}
 		}
 

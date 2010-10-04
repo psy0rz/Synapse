@@ -7,6 +7,7 @@
 	<title>internetpapier.nl</title>
 
 	<script type="text/javascript" src="synapse.js"></script>
+	<script type="text/javascript" src="jquery.url.js"></script>
 
 	<script type="text/javascript">
 
@@ -239,6 +240,10 @@
 		//note: you need to specifiy server coordinates instead of browser coordinates here.		
 		function sendDraw(commands)
 		{
+			//only if we're joined to something
+			if (!currentObjectId)
+				return;
+			
 			//send it to server
 			send(paperModId,"paper_ClientDraw", commands);
 
@@ -287,24 +292,12 @@
 			ourId=msg_dst;
 
  	 		
-			send(0,"paper_GetPapers", { 
-			});
 
 			/// start local engine
 			window.setInterval(mouseMove, mouseInterval);
 
 			
 			/// JAVA SCRIPT EVENT HANDLERS
-			$("#newObject").click(function()
-					{
-						send(0,"paper_Create", {
-								"objectName":$("#name").val(),
-								"clientName":$("#name").val()
-							});
-					});
-
-
-
 			$("#canvasMouse").mousemove(function(m)
 			{
 				mousePoint.x=m.pageX-$("#canvasMouse").offset().left;
@@ -352,44 +345,24 @@
 			contextTemp=canvasTemp.getContext('2d');
 			canvasTemp.width=canvasWidth;
 			canvasTemp.height=canvasHeight;
+
 			
-			send(0,"paper_Join", {
-				"clientName":$("#name").val(),
-				"objectId":1,
-			});
+			//join existing or create new one?
+			if (jQuery.url.param("id"))
+			{
+				send(0,"paper_Join", {
+					"clientName":"bla",
+					"objectId":jQuery.url.param("id"),
+				});
+			}
+			else
+			{
+				send(0,"paper_Create", {
+				});
+			}
 								
  		});
  				
-		//update the object list
-		synapse_register("object_Object",function(msg_src, msg_dst, msg_event, msg)
- 		{
-			//clear list?
-			if (msg["first"])
-				$('#objectList').empty();
-
-	 		//new object?
-			if ($("#object_"+msg["objectId"]).length==0)
-			{
-				//add to list
-				var html="<div class='object' id='object_"+msg["objectId"]+"'>";
-				html+="</div>";
-				$('#objectList').append(html);
-				
-				//make it clickable
-				$("#object_"+msg["objectId"]).attr('objectId',msg["objectId"]);
-				$("#object_"+msg["objectId"]).click(function()
-				{
-					send(0,"paper_Join", {
-							"clientName":$("#name").val(),
-							"objectId":$(this).attr('objectId'),
-						});
-				});
-			}
-
-			//update the html with the actual game info:
-			var html="Paper #" +msg["objectId"];
-			$("#object_"+msg["objectId"]).html(html);
-		});
 
 		//update the client list or status
 		synapse_register("object_Client",function(msg_src, msg_dst, msg_event, msg)
@@ -397,6 +370,13 @@
 	 		//its us?
 			if (msg["clientId"]==msg_dst)
 			{
+				//its a new object?
+				if (!jQuery.url.param("id"))
+				{
+					//redirect client to the nice url, for better userfriendlyness
+					document.location="/paper.html?id="+msg["objectId"];
+				}
+				
 				//we've joined a object, from now on draw on it.
 				currentObjectId=msg["objectId"];
 				paperModId=msg_src;
@@ -406,12 +386,6 @@
 				});
 				
 			}
-//			for (var playerI in msg["players"])
-	//		{
-	//			html+="<div class='playerInfo'>";
-		//		html+=msg["players"][playerI];
-			//	html+="</div>";
-		//	}
  		});
 
 		
@@ -456,6 +430,7 @@
  	 					clients[clientI].commit();
  					}
 					autoCommit=false;
+					$("#loading").hide();
  				}
  				//delete client
  				else if (msg[0]=="D")
@@ -555,8 +530,6 @@
 			top:0;
 		}
 		
-		
-
 		.cursor
 		{
 			position:absolute;
@@ -568,11 +541,13 @@
 			margin-left:-0.5%;
 			background-color:#ff0000;
 		}
-
-
-
 		
-
+		#loading
+		{
+			position:absolute;
+			left:40%;
+			top:40%;
+		}
 		
 	</style>
 
@@ -596,6 +571,7 @@
 
 	<canvas width=10 height=10 id='canvas'></canvas>		
 	<canvas width=10 height=10 id='canvasTemp'></canvas>		
+	<div id='loading' class='ui-state-highlight'>Loading...</div>
 	<div id='canvasMouse'>
 	</div>
 

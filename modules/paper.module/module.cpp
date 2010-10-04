@@ -264,7 +264,15 @@ namespace paper
 				if (I->first!=msg.src)
 				{
 					out.dst=I->first;
-					out.send();
+					try
+					{
+						out.send();
+					}
+					catch(...)
+					{
+						//ignore send errors (expectable race conditions do occur with session ending)
+						;
+					}
 				}
 			}
 
