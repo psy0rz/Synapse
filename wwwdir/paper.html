@@ -79,6 +79,7 @@
 					context.strokeStyle=this.color;
 					context.lineWidth=this.width;
 					context.lineCap="round";
+					context.lineJoin="round";
 	 				context.moveTo(this.coords[0], this.coords[1]);
 	 				var i=2;
 	 				while (i<this.coords.length)
@@ -90,17 +91,28 @@
 				}
 			}
 
+			//draw the cursor of the client
 			this.drawCursor=function(context)
 			{
-				//draw cursor
 				var cW=canvasWidth/100;
+
+				//cross hair
 				context.beginPath();
 				context.strokeStyle=this.color;
-				context.lineWidth=this.width;
+				context.lineWidth=1;
 				context.moveTo(this.cursorX-cW, this.cursorY);
 				context.lineTo(this.cursorX+cW, this.cursorY);
 				context.moveTo(this.cursorX, this.cursorY-cW);
 				context.lineTo(this.cursorX, this.cursorY+cW);
+				context.stroke();
+
+				//pixel
+				context.beginPath();
+				context.lineCap="round";
+				context.strokeStyle=this.color;
+				context.lineWidth=this.width;
+				context.moveTo(this.cursorX, this.cursorY);
+				context.lineTo(this.cursorX+0.001, this.cursorY+0.001);
 				context.stroke();
 			}	
 
@@ -354,6 +366,11 @@
 			//a tool is clicked
 			$(".tool").click(function(m)
 			{
+				//unselect all tools in that group
+				$(this).parent().children(".tool").removeClass('selected');
+				//select this one
+				$(this).addClass('selected');
+				
 				var i=0;
 				var cmds=new Array();
 				while ($(this).attr("cmd"+i))
@@ -460,6 +477,8 @@
 				//switch to different client 
  				if (msg[0]=="I")
 	 			{
+ 	 				if (autoCommit && clientId)
+ 	 	 				clients[clientId].commit();
  		 			msg.shift();
 		 			clientId=msg.shift();
 		 			//need to create new client object?
@@ -486,6 +505,9 @@
  					{
  	 					clients[clientI].commit();
  					}
+ 					//delete the rest of the clients (current client info will be send right after the E)
+ 					clients=[];
+ 					clientId=0;
 					autoCommit=false;
 					$("#loading").hide();
  				}
@@ -496,6 +518,7 @@
  	 				if (autoCommit)
  	 	 				clients[clientId].commit();
 					clients.splice(clientId,1);
+					clientId=0;
 				}      
  				//let the current client object parse the rest. it returns when it encounters something unknown.
  				else
@@ -602,12 +625,28 @@
 		
 		.tool
 		{
-			width:1em;
-			height:1em;
-			border-width:1px;
+			width:2em;
+			max-width:2em;
+			height:2em;
+			max-height:2em;
+			border-width:2px;
 			border-style:solid;
 			cursor:pointer;
 			display:inline-block;
+			border-color:#ffffff;
+		}
+		
+		.selected
+		{
+			border-color:#aaaaaa;
+		}
+		
+		img
+		{
+			border:0;
+			margin:0;
+			padding:0;
+			display:inline;
 		}
 		
 	</style>
@@ -626,22 +665,26 @@
 		<div class='ui-widget-header'>You:</div>
 		Name: <input id='name' type='text' value=''>
 		<div id='colors'>
-			<div class='tool' style='background-color:#000000' cmd0='c' cmd1='#000000'></div>
+			<div class='tool selected' style='background-color:#000000' cmd0='c' cmd1='#000000'></div>
 			<div class='tool' style='background-color:#0000ff' cmd0='c' cmd1='#0000ff'></div>
 			<div class='tool' style='background-color:#00ff00' cmd0='c' cmd1='#00ff00'></div>
 			<div class='tool' style='background-color:#00ffff' cmd0='c' cmd1='#00ffff'></div>
+			<br>
 			<div class='tool' style='background-color:#ff0000' cmd0='c' cmd1='#ff0000'></div>
 			<div class='tool' style='background-color:#ff00ff' cmd0='c' cmd1='#ff00ff'></div>
 			<div class='tool' style='background-color:#ffff00' cmd0='c' cmd1='#ffff00'></div>
 			<div class='tool' style='background-color:#ffffff' cmd0='c' cmd1='#ffffff'></div>
 		</div>		
 		<div id='widths'>
-			<div class='tool' cmd0='w' cmd1='1'>1</div>
-			<div class='tool' cmd0='w' cmd1='2'>2</div>
-			<div class='tool' cmd0='w' cmd1='3'>3</div>
-			<div class='tool' cmd0='w' cmd1='4'>4</div>
-			<div class='tool' cmd0='w' cmd1='10'>10</div>
-		
+			<div class='tool selected' cmd0='w' cmd1='1'><img src='img/pen1.png' style='width:1em' ></img></div>
+			<div class='tool' cmd0='w' cmd1='2'><img src='img/pen1.png' style='width:1.2em'></img></div>
+			<div class='tool' cmd0='w' cmd1='3'><img src='img/pen1.png' style='width:1.3em'></img></div>
+			<div class='tool' cmd0='w' cmd1='4'><img src='img/pen1.png' style='width:1.4em' ></img></div>
+			<br>
+			<div class='tool' cmd0='w' cmd1='10'><img src='img/pen2.png' style='width:1em' ></img></div>
+			<div class='tool' cmd0='w' cmd1='20'><img src='img/pen2.png' style='width:1.2em' ></img></div>
+			<div class='tool' cmd0='w' cmd1='30'><img src='img/pen2.png' style='width:1.3em' ></img></div>
+			<div class='tool' cmd0='w' cmd1='40'><img src='img/pen2.png' style='width:1.4em' ></img></div>		
 		</div>
 
 		<div class='ui-widget-header'>Other people:</div>
