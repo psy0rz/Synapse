@@ -53,7 +53,7 @@ namespace synapse
 			if (storagePath!="")
 			{
 				INFO("Loading object config from " << storagePath << "/config");
-				config.load(storagePath+"/config");
+				config.load(storagePath+"/config",true);
 			}
 		}
 
@@ -165,6 +165,19 @@ namespace synapse
 			}
 
 		}
+
+		void saveAll()
+		{
+			for (typename CobjectMap::iterator I=objectMap.begin(); I!=objectMap.end(); I++)
+			{
+				if (!I->second.isSaved())
+				{
+					save(I->first);
+				}
+			}
+
+		}
+
 	};
 
 }

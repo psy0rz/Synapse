@@ -27,17 +27,19 @@ namespace synapse
 	class CsharedObject
 	{
 
+		private:
 		int id;
 
 		protected:
 		typedef map<int,Tclient> CclientMap;
 		CclientMap clientMap;
-
+		bool saved;
 
 		public:
 
-		CsharedObject()
+		bool isSaved()
 		{
+			return(saved);
 		}
 
 		//send a message to all clients of the object
@@ -55,6 +57,7 @@ namespace synapse
 		void create(int id)
 		{
 			this->id=id;
+			this->saved=true;
 		}
 
 		virtual void getInfo(Cmsg & msg)

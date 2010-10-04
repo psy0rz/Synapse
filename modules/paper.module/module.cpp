@@ -26,6 +26,7 @@ Internet paper.
 #include <time.h>
 #include <set>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include "cconfig.h"
 
 //we use the generic shared object management classes.
 #include "cclient.h"
@@ -89,6 +90,10 @@ namespace paper
 		out["event"]=	"paper_Status";			out.send();
 		out["event"]=	"paper_ServerDraw";		out.send(); //draw something
 
+		out.clear();
+		out.event="core_LoadModule";
+		out["path"]="modules/timer.module/libtimer.so";
+		out.send();
 
 		//tell the rest of the world we are ready for duty
 		//(the core will send a timer_Ready)
@@ -97,12 +102,15 @@ namespace paper
 		out.send();
 	}
 
+
+
+
 	//a client of a paper object
 	class CpaperClient : public synapse::Cclient
 	{
 		public:
-		map<char,string> settings;
-		list<string> drawing;
+		Cvar settings;
+		synapse::CvarList drawing;
 		bool didDraw; //client did draw something?
 
 		//parses and store usefull drawing commands
@@ -142,7 +150,7 @@ namespace paper
 						(commands.begin()->str()=="w")
 				)
 				{
-					settings[commands.begin()->str().c_str()[0]]=(++commands.begin())->str();
+					settings[commands.begin()->str()]=(++commands.begin())->str();
 				}
 				//delete
 				else if (commands.begin()->str()=="D")
@@ -173,7 +181,7 @@ namespace paper
 		{
 			bool added=false;
 			//store new settings
-			for(map<char,string>::iterator I=settings.begin(); I!=settings.end(); I++)
+			for(Cvar::iterator I=settings.begin(); I!=settings.end(); I++)
 			{
 				addDrawing.push_back(I->first);
 				addDrawing.push_back(I->second);
@@ -213,13 +221,23 @@ namespace paper
 		public:
 		int lastClient;
 		int lastStoreClient;
-		synapse::CvarList drawing;
-
+		synapse::Cconfig drawing;
 
 		CpaperObject()
 		{
 			lastClient=0;
 			lastStoreClient=0;
+		}
+
+		void save(string path)
+		{
+			drawing.save(path);
+		}
+
+		void load(string path)
+		{
+			drawing.load(path);
+
 		}
 
 		//add data to the drawing and send it (efficiently) to the clients
@@ -258,15 +276,13 @@ namespace paper
 				if (lastStoreClient!=msg.src)
 				{
 					//no, so store client-switch instruction:
-					drawing.push_back(string("I"));
-					drawing.push_back(msg.src);
+					drawing["data"].list().push_back(string("I"));
+					drawing["data"].list().push_back(msg.src);
 					lastStoreClient=msg.src;
 				}
 				//commit drawing instructions of this client
-				getClient(msg.src).commit(drawing);
-
-
-
+				getClient(msg.src).commit(drawing["data"].list());
+				saved=false;
 			}
 		}
 
@@ -274,6 +290,7 @@ namespace paper
 		{
 			if (clientMap.find(id)!= clientMap.end())
 			{
+				//send out and store the D command to indicate the client is deleted:
 				Cmsg msg;
 				msg.src=id;
 				msg.list().push_back(string("D"));
@@ -292,7 +309,7 @@ namespace paper
 			out.event="paper_ServerDraw";
 			out.dst=dst;
 			out.list().push_back(string("S"));
-			out.list().insert(out.list().end(), drawing.begin(), drawing.end());
+			out.list().insert(out.list().end(), drawing["data"].list().begin(), drawing["data"].list().end());
 			out.list().push_back(string("E"));
 
 			//add current uncommited stuff of all clients
@@ -364,6 +381,7 @@ namespace paper
 
 	SYNAPSE_REGISTER(module_Shutdown)
 	{
+		objectMan.saveAll();
 		shutdown=true;
 	}
 
@@ -372,6 +390,25 @@ namespace paper
 	///////////////////////////////////////////////////////////////////////////////////
 	/// Paper Module specific stuff
 	///////////////////////////////////////////////////////////////////////////////////
+
+	SYNAPSE_REGISTER(timer_Ready)
+	{
+		Cmsg out;
+		out.clear();
+		out.event="timer_Set";
+		out["seconds"]=10;
+		out["repeat"]=-1;
+		out["dst"]=dst;
+		out["event"]="paper_Timer";
+		out.dst=msg["session"];
+		out.send();
+	}
+
+	SYNAPSE_REGISTER(paper_Timer)
+	{
+		objectMan.saveAll();
+	}
+
 
 	SYNAPSE_REGISTER(paper_ClientDraw)
 	{
