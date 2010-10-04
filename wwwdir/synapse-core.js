@@ -42,7 +42,7 @@ function synapse_receive()
 		"type":			"get",
 		"contentType":	"application/json",
 		"beforeSend":	function (XMLHttpRequest) {
-			if (synapse_authCookie!=0) 
+			if (synapse_authCookie) 
 			{
 				XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); 
 			}
@@ -201,7 +201,18 @@ function sendQueue()
 		"error": 		synapse_handleSendError,
 		"type":			"post",
 		"contentType":	"application/json",
-		"beforeSend":	function (XMLHttpRequest) { XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); },
+		"beforeSend":	function (XMLHttpRequest) { 
+			if ( synapse_authCookie) 
+			{
+				XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); 
+			}
+			else
+			{
+				//neccesary when sending DelSession on the window.unload event. 
+				//the browser uninitalizes all the variables.
+				XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", $.readCookie('synapse_lastAuthCookie')); 
+			}
+		},
 		"processData":	false,
 		"cache":		false,
 		"data":			synapse_sendQueue
@@ -241,6 +252,24 @@ $(document).ready(function(){
 	//synapse_receive();
 	
 	synapse_debug=(window.location.search.indexOf('synapse_debug') != -1);
+	
+	//whenver the user leaves the page, try to leave the session
+	//(if it fails its no problem: the session will eventually timeout in http_json)
+
+	//inoffical propiertary way, but earlier so message sending still works
+	window.onbeforeunload=function()
+	{
+		send(0,"core_DelSession");
+	}
+
+	//official way, but too late for browsers like chromium
+	//$(window).unload(function()
+	//{
+	//send(0,"core_DelSession");
+	//});
+
+	
+
 });
 
 

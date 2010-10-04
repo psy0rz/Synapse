@@ -379,7 +379,7 @@ namespace paper
 
 	SYNAPSE_REGISTER(paper_GetClients)
 	{
-		objectMan.getObject(msg["objectId"]).sendClientList(msg.src);
+		objectMan.getObjectByClient(msg.src).sendClientList(msg.src);
 	}
 
 	SYNAPSE_REGISTER(module_SessionEnded)

@@ -291,8 +291,6 @@
  		{
 			ourId=msg_dst;
 
- 	 		
-
 			/// start local engine
 			window.setInterval(mouseMove, mouseInterval);
 
@@ -354,21 +352,23 @@
 					"clientName":"bla",
 					"objectId":jQuery.url.param("id"),
 				});
+
+				send(0,"paper_GetClients");
 			}
 			else
 			{
-				send(0,"paper_Create", {
-				});
+				send(0,"paper_Create");
 			}
-								
+
+			
  		});
  				
 
-		//update the client list or status
+		//update the client list
 		synapse_register("object_Client",function(msg_src, msg_dst, msg_event, msg)
  		{
-	 		//its us?
-			if (msg["clientId"]==msg_dst)
+	 		//we're joining for the first time?
+			if (!currentObjectId && msg["clientId"]==msg_dst)
 			{
 				//its a new object?
 				if (!jQuery.url.param("id"))
@@ -386,12 +386,32 @@
 				});
 				
 			}
+
+	 		//clear list?
+			if (msg["first"])
+				$('#clientList').empty();
+
+	 		//new client?
+			if ($("#client_"+msg["clientId"]).length==0)
+			{
+				//add to list
+				var html="<div class='client' id='client_"+msg["clientId"]+"'>";
+				html+="</div>";
+				$('#clientList').append(html);
+				
+			}
+
+			//update the html of the client
+			var html="Client #" +msg["clientId"];
+			$("#client_"+msg["clientId"]).html(html);
+		
  		});
 
-		
- 		synapse_register("object_Deleted",function(msg_src, msg_dst, msg_event, msg)
+
+		//a user left
+ 		synapse_register("object_Left",function(msg_src, msg_dst, msg_event, msg)
 		{
- 			$("#object_"+msg["objectId"]).remove();
+ 			$("#client_"+msg["clientId"]).remove();
 		});
  				
 
@@ -561,10 +581,8 @@
 		<div class='ui-widget-header'>Your name:</div>
 		<input id='name' type='text' value=''>
 
-		<div class='ui-widget-header'>Available papers:</div>
-		Click to join...
-		<div id='objectList'></div>
-		<input id='newObject' type='submit' value='New paper'>
+		<div class='ui-widget-header'>Users:</div>
+		<div id='clientList'></div>
 	</div>
 
 
