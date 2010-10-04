@@ -27,11 +27,21 @@
 		function toBrowser(x,y)
 		{
 			return ({
-				"x":Math.round((x*canvasWidth)/10000),
-				"y":Math.round((y*canvasHeight)/10000)
+				"x":((x*canvasWidth)/10000),
+				"y":((y*canvasHeight)/10000)
 			});
 		}				
 
+		//calculate server line width to browser linewidth
+		function widthToBrowser(width)
+		{
+			//for now we use the average of canvas width and height
+			return (
+					(((width*canvasWidth)/1000)+((width*canvasWidth)/1000))/2
+			);
+		}
+
+		
 		function Cpoint(x,y)
 		{
 			this.x=x;
@@ -52,7 +62,7 @@
 			this.mode="m";
 			this.coords=new Array();
 			this.color="#000000";
-			this.width=1;
+			this.width=widthToBrowser(1);
 			this.text="";
 			this.cursorX=0;
 			this.cursorY=0;
@@ -65,9 +75,10 @@
 
 				if (this.mode=="l" && this.coords.length>=4)
 				{
+					context.beginPath();
 					context.strokeStyle=this.color;
 					context.lineWidth=this.width;
-					context.beginPath();
+					context.lineCap="round";
 	 				context.moveTo(this.coords[0], this.coords[1]);
 	 				var i=2;
 	 				while (i<this.coords.length)
@@ -79,6 +90,21 @@
 				}
 			}
 
+			this.drawCursor=function(context)
+			{
+				//draw cursor
+				var cW=canvasWidth/100;
+				context.beginPath();
+				context.strokeStyle=this.color;
+				context.lineWidth=this.width;
+				context.moveTo(this.cursorX-cW, this.cursorY);
+				context.lineTo(this.cursorX+cW, this.cursorY);
+				context.moveTo(this.cursorX, this.cursorY-cW);
+				context.lineTo(this.cursorX, this.cursorY+cW);
+				context.stroke();
+			}	
+
+			//clears the current draw-info, not the settings!
 			this.clear=function()
 			{
 				this.mode="m";
@@ -116,10 +142,14 @@
 			{
 				var ok=false;
 				while (commands.length>0)
-				{
+				{	
+					//a new command should automaticly commit the previous one:
+					//(this way the server doesnt have to store all the save-commands)
+					
 					//color
 					if (commands[0]=='c')
 					{
+						this.commit();
 						commands.shift();
 						this.color=commands.shift();
 						
@@ -127,12 +157,14 @@
 					//width
 					else if (commands[0]=='w')
 					{
+						this.commit();
 						commands.shift();
-						this.width=commands.shift();
+						this.width=widthToBrowser(commands.shift());
 					}
 					//mouse movement
 					else if (commands[0]=="m")
 	 				{
+						this.commit();
 		 				commands.shift();
 						c=toBrowser(commands.shift(), commands.shift());
 		 				this.cursorX=c.x;
@@ -142,9 +174,8 @@
 					//enable line mode
 					else if (commands[0]=='l')
 					{
+						this.commit();
 						commands.shift();
-						//a new command should automaticly commit the previous one:
-						//(this way the server doesnt have to store all the save-commands)
 						this.commit();
 						this.mode='l';						
 					}
@@ -211,29 +242,18 @@
 		function drawClients()
 		{
 			contextTemp.clearRect(0, 0, canvasWidth, canvasHeight);
-			contextTemp.globalAlpha=0.5;
+			contextTemp.globalAlpha=0.8;
 	
 			//draw current objects
-			var cW=canvasWidth/100;
 			for (var clientI in clients)
 			{
 				//skip our own id, its cached locally in clients[0]
 				if (clientI!=ourId)
 				{
 					clients[clientI].draw(contextTemp);
-	
-					//draw cursor
-					contextTemp.beginPath();
-					contextTemp.moveTo(clients[clientI].cursorX-cW, clients[clientI].cursorY);
-					contextTemp.lineTo(clients[clientI].cursorX+cW, clients[clientI].cursorY);
-					contextTemp.moveTo(clients[clientI].cursorX, clients[clientI].cursorY-cW);
-					contextTemp.lineTo(clients[clientI].cursorX, clients[clientI].cursorY+cW);
-					contextTemp.stroke();
+					clients[clientI].drawCursor(contextTemp);
 				}
 			}
-			
-			//temporary shapes
-
 		}
 
 		//send drawing commands to server and draw them locally as well
@@ -331,6 +351,21 @@
 				}
 			});
 
+			//a tool is clicked
+			$(".tool").click(function(m)
+			{
+				var i=0;
+				var cmds=new Array();
+				while ($(this).attr("cmd"+i))
+				{
+					cmds.push($(this).attr("cmd"+i));
+					i++;
+				};
+				
+				sendDraw(cmds); 
+			});
+
+			
 			canvasWidth=$("#canvasMouse").width();
 			canvasHeight=$("#canvasMouse").height();
 			
@@ -384,6 +419,8 @@
 				//also request a redraw so we get the current drawing
 				send(0,"paper_Redraw", {
 				});
+
+				$("#objectId").html(msg["objectId"]);
 				
 			}
 
@@ -491,18 +528,6 @@
 			height:100%;
 		} 
 
-
-		.color1  { color: #ff0000; } 
-		.color2  { color: #00ff00; } 
-		.color3  { color: #0000ff; } 
-		.color4  { color: #ffff00; } 
-		.color5  { color: #ff00ff; } 
-		.color6  { color: #00ffff; } 
-		.color7  { color: #aaff00; } 
-		.color8  { color: #00ffaa; } 
-		.color9  { color: #aa00aa; } 
-		.color10 { color: #aa00ff; } 
-
 		.clientInfo
 		{
 			width:18em;
@@ -541,6 +566,7 @@
 			top: 0;
 			right: 0;
 			bottom:0;
+			cursor:crosshair;
 		}
 		
 		canvas
@@ -569,6 +595,21 @@
 			top:40%;
 		}
 		
+		#colors
+		{
+			
+		}
+		
+		.tool
+		{
+			width:1em;
+			height:1em;
+			border-width:1px;
+			border-style:solid;
+			cursor:pointer;
+			display:inline-block;
+		}
+		
 	</style>
 
 </head>
@@ -578,10 +619,32 @@
 	<p>
 
 	<div class='ui-widget-content' id='objectManager'>
-		<div class='ui-widget-header'>Your name:</div>
-		<input id='name' type='text' value=''>
 
-		<div class='ui-widget-header'>Users:</div>
+		<div class='ui-widget-header'>Paper info:</div>
+		Paper number: <span id='objectId'></span>
+
+		<div class='ui-widget-header'>You:</div>
+		Name: <input id='name' type='text' value=''>
+		<div id='colors'>
+			<div class='tool' style='background-color:#000000' cmd0='c' cmd1='#000000'></div>
+			<div class='tool' style='background-color:#0000ff' cmd0='c' cmd1='#0000ff'></div>
+			<div class='tool' style='background-color:#00ff00' cmd0='c' cmd1='#00ff00'></div>
+			<div class='tool' style='background-color:#00ffff' cmd0='c' cmd1='#00ffff'></div>
+			<div class='tool' style='background-color:#ff0000' cmd0='c' cmd1='#ff0000'></div>
+			<div class='tool' style='background-color:#ff00ff' cmd0='c' cmd1='#ff00ff'></div>
+			<div class='tool' style='background-color:#ffff00' cmd0='c' cmd1='#ffff00'></div>
+			<div class='tool' style='background-color:#ffffff' cmd0='c' cmd1='#ffffff'></div>
+		</div>		
+		<div id='widths'>
+			<div class='tool' cmd0='w' cmd1='1'>1</div>
+			<div class='tool' cmd0='w' cmd1='2'>2</div>
+			<div class='tool' cmd0='w' cmd1='3'>3</div>
+			<div class='tool' cmd0='w' cmd1='4'>4</div>
+			<div class='tool' cmd0='w' cmd1='10'>10</div>
+		
+		</div>
+
+		<div class='ui-widget-header'>Other people:</div>
 		<div id='clientList'></div>
 	</div>
 

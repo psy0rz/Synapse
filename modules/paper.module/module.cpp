@@ -232,12 +232,13 @@ namespace paper
 		void save(string path)
 		{
 			drawing.save(path);
+			saved=true;
 		}
 
 		void load(string path)
 		{
 			drawing.load(path);
-
+			saved=true;
 		}
 
 		//add data to the drawing and send it (efficiently) to the clients
