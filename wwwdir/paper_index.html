@@ -1,0 +1,175 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!-- (C)edwin@datux.nl - released under GPL -->
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<link href="css/redmond/jquery-ui.css" rel="stylesheet" type="text/css"/>
+	<title>Internet Papier</title>
+
+	<script type="text/javascript" src="synapse.js"></script>
+
+	<script>
+
+		//submit value to server
+		function submit()
+		{
+			$("#message").show();
+			$("#message").html("Zoeken...");
+			send(0,"paper_Check", {
+				"objectId":$("#objectId").val(),
+			});
+		}
+
+		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
+		{
+
+			//submit on click	
+			$("#editButton").click(function(m)
+			{
+				submit();
+			});
+
+			//submit on enter
+			$('#objectId').keydown(function(e)
+			{
+				if (e.keyCode==13)
+					submit();
+			});
+			
+			$("#objectId").focus();
+			
+		});
+			
+		synapse_register("paper_CheckOk",function(msg_src, msg_dst, msg_event, msg)
+		{
+			$("#message").html("Pagina word ingeladen...");
+			document.location="paper.html?id="+msg["objectId"];			
+		});
+
+		synapse_register("paper_CheckNotFound",function(msg_src, msg_dst, msg_event, msg)
+		{
+			$("#message").html("Deze pagina bestaat niet!");
+		});
+	
+	
+	</script>
+
+
+	<style>
+		body 
+		{
+			margin:0;
+			padding:0;
+			height:100%;
+			width:100%;
+		} 
+		
+		a
+		{
+			border:none;
+			text-decoration:none;
+		}
+		
+		img
+		{
+			border:none;
+		}
+
+		.button
+		{
+			color:#ffffff;
+			font-size:2em;
+			padding:1em;
+			border-size:2px;
+			border-color:#aaaaaa;
+			border-style:solid;
+			width:6em;
+			margin-left:5em;
+			cursor:pointer;
+		}
+		
+		input
+		{
+			background-color:#ffff55;
+		}
+		
+		.button:hover
+		{
+			border-color:yellow;
+		}
+
+		.description
+		{
+			font-size:2em;
+			font-style:italic;
+		}
+
+		#addBox
+		{
+			margin-top:2em;
+			margin-left:auto;
+			margin-right:auto;
+			width:40em;
+		}
+
+		#addButton
+		{
+			background-color:green;
+		}
+
+		#editBox
+		{
+			margin-top:3em;
+			margin-left:auto;
+			margin-right:auto;
+			width:40em;
+		}
+
+
+		#editButton
+		{
+			background-color:blue;
+		}
+
+		#message
+		{
+			display: none;
+		}	
+		
+	</style>
+</head>
+
+
+<body class='ui-widget'>
+	<div class='ui-widget-header' style='text-align:center'>
+		Welkom bij Internet Papier
+	</div>
+
+	<div id='addBox'>
+		<div class='description'>
+			Begin met een schoon papier:
+		</div>
+
+		<a href='paper.html'>
+			<div class='button' id='addButton'>
+				<img src='img/note_add.png'/>	
+				Nieuw...
+			</div>
+		</a>
+	</div>
+
+	<div id='editBox'>
+			<div class='description'>
+					Bekijk dit papier nummer: <input size='5' id='objectId'>
+			</div>	
+			<div class='button' id='editButton'>
+				<img src='img/note_edit.png'/>
+				Bekijk...
+			</div>
+			<br>
+			<div class='ui-state-highlight' id='message'>
+			</div>
+	</div>
+</body>
+</html>
