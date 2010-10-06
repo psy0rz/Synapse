@@ -58,7 +58,6 @@ namespace synapse
 		}
 
 
-
 		// Get a reference to an object, load it from disk if neccesary, or throw exception
 		//FIXME: unload objects automatically
 		TsharedObject & getObject(int objectId)
@@ -67,9 +66,11 @@ namespace synapse
 			{
 				if (getStoragePath(objectId)!="")
 				{
-					DEB("Loading data for object " << objectId << " from " << getStoragePath(objectId))
-					objectMap[objectId].create(objectId);
-					objectMap[objectId].load(getStoragePath(objectId));
+					DEB("Loading data for object " << objectId << " from " << getStoragePath(objectId));
+					TsharedObject object;
+					object.create(objectId);
+					object.load(getStoragePath(objectId));
+					objectMap[objectId]=object;
 				}
 				else
 				{

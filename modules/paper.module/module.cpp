@@ -67,6 +67,7 @@ namespace paper
 		out["sendGroup"]=	"anonymous";
 		out["recvGroup"]=	"modules";
 		out["event"]=	"paper_Create";		out.send(); //create new object
+		out["event"]=	"paper_Check";		out.send(); //check if object exists/access is allowed
 		out["event"]=	"paper_Delete";		out.send(); //delete a object
 		out["event"]=	"paper_Join";		out.send(); //join a object
 		out["event"]=	"paper_Leave";		out.send(); //leave a object
@@ -86,6 +87,9 @@ namespace paper
 		out["event"]=	"object_Deleted";		out.send(); //object you are member of has been deleted
 		out["event"]=	"object_Client";		out.send(); //result of a object_GetClients. first and last clients are indicated. If a new client joins, a object_Client is also emitted.
 		out["event"]=	"object_Left";			out.send(); //somebody has left the object
+
+		out["event"]=	"paper_CheckNotFound";	out.send(); //object not found
+		out["event"]=	"paper_CheckOk";	out.send(); //object found and accesible
 
 		out["event"]=	"paper_Status";			out.send();
 		out["event"]=	"paper_ServerDraw";		out.send(); //draw something
@@ -347,10 +351,6 @@ namespace paper
 
 
 
-	///////////////////////////////////////////////////////////////////////////////////
-	/// Generic object handlers, you can use this as an example for other modules as well. Just rename paper_ to something else and change permissions of the events.
-	///////////////////////////////////////////////////////////////////////////////////
-
 	SYNAPSE_REGISTER(paper_Create)
 	{
 		objectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
@@ -368,6 +368,29 @@ namespace paper
 		objectMan.getObject(msg["objectId"]).addClient(msg.src);
 		objectMan.getObject(msg["objectId"]).redraw(msg.src);
 
+	}
+
+	/** Check if the paper exists and credentials are ok
+	 *
+	 */
+	SYNAPSE_REGISTER(paper_Check)
+	{
+		Cmsg out;
+		out=msg;
+		out.src=msg.dst;
+		out.dst=msg.src;
+
+		try
+		{
+
+			objectMan.getObject(msg["objectId"]);
+			out.event="paper_CheckOk";
+		}
+		catch(...)
+		{
+			out.event="paper_CheckNotFound";
+		}
+		out.send();
 	}
 
 	SYNAPSE_REGISTER(paper_Leave)
@@ -396,11 +419,6 @@ namespace paper
 		shutdown=true;
 	}
 
-
-
-	///////////////////////////////////////////////////////////////////////////////////
-	/// Paper Module specific stuff
-	///////////////////////////////////////////////////////////////////////////////////
 
 	SYNAPSE_REGISTER(timer_Ready)
 	{
