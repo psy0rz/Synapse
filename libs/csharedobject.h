@@ -60,6 +60,11 @@ namespace synapse
 			}
 		}
 
+		void getId()
+		{
+			return(id);
+
+		}
 
 		void create(int id)
 		{

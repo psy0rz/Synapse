@@ -173,7 +173,14 @@ namespace synapse
 			{
 				if (!I->second.isSaved())
 				{
-					save(I->first);
+					try
+					{
+						save(I->first);
+					}
+					catch(...)
+					{
+						ERROR("Error while saving object " << I->first);
+					}
 				}
 			}
 
