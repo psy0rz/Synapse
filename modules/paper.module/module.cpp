@@ -75,7 +75,6 @@ namespace paper
 		out["event"]=	"paper_GetClients";	out.send(); //a list of clients that are member of specified object. (returns object_Clients for every object)
 
 		out["event"]=	"paper_ClientDraw";		out.send(); //draw something
-		out["event"]=	"paper_ClientName";		out.send(); //change client name
 		out["event"]=	"paper_Redraw";		out.send(); //ask the server to send an entire redraw
 
 		//client receive-only events:
@@ -116,7 +115,6 @@ namespace paper
 	{
 		friend class CpaperObject;
 		private:
-		string name;
 
 		public:
 		Cvar settings;
@@ -129,12 +127,12 @@ namespace paper
 		{
 			if (commands.begin()->which()==CVAR_STRING)
 			{
-				//cancel
+				//cancel drawing action (but keep settings!)
 				if (commands.begin()->str()=="x")
 				{
 					drawing.clear();
 				}
-				//commit
+				//commit drawing action and settings
 				else if (commands.begin()->str()=="s")
 				{
 					return(true);
@@ -157,7 +155,8 @@ namespace paper
 				//drawing settings
 				else if (
 						(commands.begin()->str()=="c") ||
-						(commands.begin()->str()=="w")
+						(commands.begin()->str()=="w") ||
+						(commands.begin()->str()=="n")
 				)
 				{
 					settings[commands.begin()->str()]=(++commands.begin())->str();
@@ -208,7 +207,7 @@ namespace paper
 			return(added);
 		}
 
-		//store current values and reset
+		//store current values and forget everything
 		void commit(synapse::CvarList & addDrawing)
 		{
 			if (store(addDrawing))
@@ -216,14 +215,6 @@ namespace paper
 			settings.clear();
 			drawing.clear();
 		}
-
-
-		virtual void getInfo(Cmsg & msg)
-		{
-			Cclient::getInfo(msg);
-			msg["clientName"]=name;
-		}
-
 
 
 		CpaperClient()
@@ -332,11 +323,7 @@ namespace paper
 			}
 		}
 
-		void setClientName(int id, string name)
-		{
-			getClient(id).name=name;
-			sendClientUpdate(id);
-		}
+
 
 		//send redrawing instructions to dst
 		void redraw(int dst)
@@ -499,15 +486,6 @@ namespace paper
 		objectMan.getObjectByClient(msg.src).redraw(msg.src);
 	}
 
-	/** Client wants to set/change name
-	 *
-	 */
-	SYNAPSE_REGISTER(paper_ClientName)
-	{
-		string name;
-		name=msg["clientName"].str().substr(0,30);
-		objectMan.getObjectByClient(msg.src).setClientName(msg.src, name);
-	}
 
 
 

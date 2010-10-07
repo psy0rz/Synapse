@@ -202,7 +202,7 @@ function sendQueue()
 		"type":			"post",
 		"contentType":	"application/json",
 		"beforeSend":	function (XMLHttpRequest) { 
-			if ( synapse_authCookie) 
+			if ( synapse_authCookie!=0) 
 			{
 				XMLHttpRequest.setRequestHeader("X-Synapse-Authcookie", synapse_authCookie); 
 			}

@@ -64,16 +64,19 @@
 		}
 	
 
-		//informantion about the object a client is currently drawing
+		//information about the object a client is currently drawing
 		function Cclient()
 		{
 			this.mode="m";
 			this.coords=new Array();
 			this.color="#000000";
 			this.width=widthToBrowser(1);
+			this.serverWidth=1;
 			this.text="";
 			this.cursorX=0;
 			this.cursorY=0;
+			this.clientName="";
+			this.id=0;
 			
 			//draw the object in the specified context	
 			this.draw=function(context)
@@ -122,8 +125,60 @@
 				context.moveTo(this.cursorX, this.cursorY);
 				context.lineTo(this.cursorX+0.001, this.cursorY+0.001);
 				context.stroke();
-			}	
+			}
 
+			//update the html information about this client in the clientlist
+			this.updateHtml=function()
+			{
+				//dont do html stuff when in autoCommit mode, for performance reasons
+				if (autoCommit)
+					return;
+				
+		 		//no dom object for this client yet?
+				if ($("#client_"+this.id).length==0)
+				{
+					//add dom object to list
+					var html="<div class='client' id='client_"+this.id+"'>";
+					html+="</div>";
+					$('#clientList').append(html);
+				}
+				object=$("#client_"+this.id);
+
+				//name 
+				if (!this.clientName)
+					object.html("Client #" +this.id);
+				else
+					object.html(this.clientName);
+
+				//color
+				object.css('color',this.color);
+
+				//"width"
+				var size=0;
+				if (this.serverWidth<10)
+					size=(90+(this.serverWidth*10));
+				else
+				{
+					size=(160+this.serverWidth);
+				}
+				object.css('font-size',""+size+"%");
+	
+				//drawing
+				if (this.mode!="m")
+					object.css('font-style','italic');
+				else
+					object.css('font-style','');
+			} 	
+
+			//we're going to be removed, clean up any shit
+			this.remove=function()
+			{
+				//remove dom object
+				if ($("#client_"+this.id).length!=0)
+		 			$("#client_"+this.id).remove();
+
+			}
+			
 			//clears the current draw-info, not the settings!
 			this.clear=function()
 			{
@@ -148,6 +203,7 @@
 			//per client:
 			's'							write current drawing action permanently
 			'x'							Cancel the current drawing action.  
+			'n',"name"					Set client name
 			'm',<x>,<y>					Update cursor location
 			'c',<htmlcolor>				Set current drawing color
 			'w',<w>						Set current line width
@@ -172,14 +228,25 @@
 						this.commit();
 						commands.shift();
 						this.color=commands.shift();
-						
+						this.updateHtml();						
+					}
+					//name
+					if (commands[0]=='n')
+					{
+						this.commit();
+						commands.shift();
+						//dont forget to filter!
+						this.clientName=filterInput(commands.shift());
+						this.updateHtml();						
 					}
 					//width
 					else if (commands[0]=='w')
 					{
 						this.commit();
 						commands.shift();
-						this.width=widthToBrowser(commands.shift());
+						this.serverWidth=parseInt(commands.shift());
+						this.width=widthToBrowser(this.serverWidth);
+						this.updateHtml();						
 					}
 					//mouse movement
 					else if (commands[0]=="m")
@@ -196,20 +263,22 @@
 					{
 						this.commit();
 						commands.shift();
-						this.commit();
 						this.mode='l';						
+						this.updateHtml();						
 					}
 	 				//cancel current drawing action
 	 				else if (commands[0]=="x")
 	 				{
 	 	 				commands.shift();
 	 					this.clear();
+						this.updateHtml();						
 	 				}
 	 				//save current action permanently 
 	 				else if (commands[0]=="s")
 	 				{
 	 	 				commands.shift();
 	 	 				this.commit();
+						this.updateHtml();						
 	 				}
 					//all other numbers are coords, if we are in some kind of drawing mode.
 					else if (commands[0] == parseInt(commands[0]))
@@ -267,14 +336,12 @@
 			//draw current objects
 			for (var clientI in clients)
 			{
-				//skip our own id, its cached locally in clients[0]
-				if (clientI!=ourId)
-				{
-					clients[clientI].draw(contextTemp);
-					clients[clientI].drawCursor(contextTemp);
-				}
+				clients[clientI].draw(contextTemp);
+				clients[clientI].drawCursor(contextTemp);
 			}
 		}
+
+
 
 		//send drawing commands to server and draw them locally as well
 		//note: you need to specifiy server coordinates instead of browser coordinates here.		
@@ -287,10 +354,19 @@
 			//send it to server
 			send(paperModId,"paper_ClientDraw", commands);
 
-			//add it to client 0, our local cache.
- 			if (clients[0]==undefined)
-	 			clients[0]=new Cclient();
-			clients[0].add(commands);
+			//we dont get our own stuff back from the server, so we can add here.
+			//this way the users doesnt see his own stuff lagged.
+			//however there is a race condition when 2 users draw over eachother and release the mouse at the same time. 
+			//both users will get a different result. however this is fixed on a refresh and acceptable for now.
+ 			
+ 			if (clients[ourId]==undefined)
+ 			{
+ 	 			//NOTE:code duplication
+	 			clients[ourId]=new Cclient();
+	 			clients[ourId].id=ourId;
+ 			}
+
+			clients[ourId].add(commands);
 
 
 			//refresh temporary canvas
@@ -351,10 +427,7 @@
 			$("#clientName").keyup(function(m)
 			{
 				$.setCookie('clientName', $("#clientName").val(), {});
-				send(0,"paper_ClientName", {
-					"clientName":$("#clientName").val()
-				});
-
+				sendDraw( [ "n" , $("#clientName").val() ] );
 			});
 			
 			
@@ -432,7 +505,6 @@
 				"objectId":jQuery.url.param("id"),
 			});
 
-			send(0,"paper_GetClients");
 
 			
  		});
@@ -444,51 +516,8 @@
 			currentObjectId=msg["objectId"];
 			paperModId=msg_src;
 			$("#objectId").html(msg["objectId"]);
-
-			//let everyone know who we are
-			send(0,"paper_ClientName", {
-				"clientName":$("#clientName").val()
-			});
-		
 		});
  		
-		//update the client list
-		synapse_register("object_Client",function(msg_src, msg_dst, msg_event, msg)
- 		{
-
-	 		//clear list?
-			if (msg["first"])
-				$('#clientList').empty();
-
-	 		//new client?
-			if ($("#client_"+msg["clientId"]).length==0)
-			{
-				//add to list
-				var html="<div class='client' id='client_"+msg["clientId"]+"'>";
-				html+="</div>";
-				$('#clientList').append(html);
-				
-			}
-
-			//update the html of the client
-			var html;	
-			if (!msg["clientName"])
-				html="Client #" +msg["clientId"];
-			else
-			{
-				//filter user input and set html
-				html=filterInput(msg["clientName"]);
-			}
-			$("#client_"+msg["clientId"]).html(html);
-		
- 		});
-
-
-		//a user left
- 		synapse_register("object_Left",function(msg_src, msg_dst, msg_event, msg)
-		{
- 			$("#client_"+msg["clientId"]).remove();
-		});
  				
 
 
@@ -507,6 +536,7 @@
 		 			if (clients[clientId]==undefined)
 		 			{
 			 			clients[clientId]=new Cclient();
+			 			clients[clientId].id=clientId;
 		 			}
  				}
  				//start of complete redraw: clears everything, enables auto commit
@@ -515,6 +545,7 @@
  	 				msg.shift();
  					clients=[];
 					clientId=0;
+					$('#clientList').empty();
 					autoCommit=true; 
  					contextDraw.clearRect(0, 0, canvasWidth, canvasHeight);
  				}
@@ -522,16 +553,17 @@
  				else if (msg[0]=="E")
  				{
 	 				msg.shift();
-	 				//commit the last bits
+					autoCommit=false;
+	 				//commit the last bits and update html status
 	 				for (var clientI in clients)
  					{
  	 					clients[clientI].commit();
+ 	 					clients[clientI].updateHtml();
  					}
- 					//delete the rest of the clients (current client info will be send right after the E)
- 					//NEE:dan verlies je huidige color/line settings
- 					//clients=[];
- 					//clientId=0;
-					autoCommit=false;
+ 					
+	 				//let everyone know who we are
+	 				sendDraw([ "n" , $("#clientName").val() ]);
+	 	 					
 					$("#loading").hide();
  				}
  				//delete client
@@ -540,6 +572,7 @@
  	 				msg.shift();
  	 				if (autoCommit)
  	 	 				clients[clientId].commit();
+	 	 			clients[clientId].remove();
 					clients.splice(clientId,1);
 					clientId=0;
 				}      
