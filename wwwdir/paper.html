@@ -323,6 +323,17 @@
  		{
 			ourId=msg_dst;
 
+			/// figure out client name
+			var clientName=$.readCookie('clientName');
+			if (!clientName)
+			{
+				//make up a "random" guest name
+				clientName="User "+msg.dst;
+			}
+			
+			//set the name input field
+			$("#clientName").val(clientName);
+			
 			/// start local engine
 			window.setInterval(mouseMove, mouseInterval);
 
@@ -644,7 +655,7 @@
 		Paper number: <span id='objectId'></span>
 
 		<div class='ui-widget-header'>You:</div>
-		Name: <input id='name' type='text' value=''>
+		Name: <input id='clientName' type='text' value=''>
 		<div id='colors'>
 			<div class='tool selected' style='background-color:#000000' cmd0='c' cmd1='#000000'></div>
 			<div class='tool' style='background-color:#0000ff' cmd0='c' cmd1='#0000ff'></div>
