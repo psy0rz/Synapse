@@ -506,8 +506,9 @@
  	 					clients[clientI].commit();
  					}
  					//delete the rest of the clients (current client info will be send right after the E)
- 					clients=[];
- 					clientId=0;
+ 					//NEE:dan verlies je huidige color/line settings
+ 					//clients=[];
+ 					//clientId=0;
 					autoCommit=false;
 					$("#loading").hide();
  				}

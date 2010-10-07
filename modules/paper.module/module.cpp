@@ -75,7 +75,7 @@ namespace paper
 		out["event"]=	"paper_GetClients";	out.send(); //a list of clients that are member of specified object. (returns object_Clients for every object)
 
 		out["event"]=	"paper_ClientDraw";		out.send(); //draw something
-		out["event"]=	"paper_Redraw";		out.send(); //draw something
+		out["event"]=	"paper_Redraw";		out.send(); //ask the server to send an entire redraw
 
 		//client receive-only events:
 		out.clear();
@@ -298,6 +298,7 @@ namespace paper
 			if (getClient(msg.src).add(msg.list()))
 			{
 				//its time to commit
+
 				//still same client?
 				if (lastStoreClient!=msg.src)
 				{
@@ -306,6 +307,7 @@ namespace paper
 					drawing["data"].list().push_back(msg.src);
 					lastStoreClient=msg.src;
 				}
+
 				//commit drawing instructions of this client
 				getClient(msg.src).commit(drawing["data"].list());
 				saved=false;
