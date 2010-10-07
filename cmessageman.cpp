@@ -48,6 +48,11 @@
 
 namespace synapse
 {
+
+//keep this many threads left, even though we dont need them right away.
+//This is to prevent useless thread destruction/creation.
+#define SPARE_THREADS 10
+
 using namespace boost;
 
 CmessageMan::CmessageMan()
@@ -514,12 +519,12 @@ int CmessageMan::run(string coreName, string moduleName)
 // 			callMan.print();
 // 			userMan.print();
 
-			if (maxActiveThreads<wantCurrentThreads-1)
+			if (maxActiveThreads+SPARE_THREADS+1 < wantCurrentThreads)
 			{
 				wantCurrentThreads--;
+				DEB("maxActiveThreads was " << maxActiveThreads << " so deceasing wantCurrentThreads to " << wantCurrentThreads);
 				threadCond.notify_one();
 
-				DEB("maxActiveThreads was " << maxActiveThreads << " so deceasing wantCurrentThreads to " << wantCurrentThreads);
 			}
 			maxActiveThreads=activeThreads;
 		}

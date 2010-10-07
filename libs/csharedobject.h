@@ -109,16 +109,23 @@ namespace synapse
 			}
 		}
 
+		/** Sends an update about the client to all other clients
+		 */
+		void sendClientUpdate(int id)
+		{
+			Cmsg out;
+			out.event="object_Client";
+			clientMap[id].getInfo(out);
+			getInfo(out);
+			send(out); //inform all members of the new client
+		}
+
 		void addClient(int id)
 		{
 			if (clientMap.find(id)==clientMap.end())
 			{
 				clientMap[id].id=id;
-				Cmsg out;
-				out.event="object_Client";
-				clientMap[id].getInfo(out);
-				getInfo(out);
-				send(out); //inform all members of the new client
+				sendClientUpdate(id);
 			}
 			else
 			{
@@ -155,8 +162,13 @@ namespace synapse
 			return (clientMap[id]);
 		}
 
+		bool noClients()
+		{
+			return(clientMap.empty());
+		}
 
-		void destroy()
+		//object is going to be removed permanently, inform clients and then let them leave
+		void remove()
 		{
 			Cmsg out;
 			out.event="object_Deleted";

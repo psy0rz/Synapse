@@ -112,6 +112,10 @@ namespace paper
 	//a client of a paper object
 	class CpaperClient : public synapse::Cclient
 	{
+		friend class CpaperObject;
+		private:
+		string name;
+
 		public:
 		Cvar settings;
 		synapse::CvarList drawing;
@@ -210,6 +214,15 @@ namespace paper
 			settings.clear();
 			drawing.clear();
 		}
+
+
+		virtual void getInfo(Cmsg & msg)
+		{
+			Cclient::getInfo(msg);
+			msg["clientName"]=name;
+		}
+
+
 
 		CpaperClient()
 		{
@@ -315,6 +328,12 @@ namespace paper
 			}
 		}
 
+		void setClientName(int id, string name)
+		{
+			getClient(id).name=name;
+			sendClientUpdate(id);
+		}
+
 		//send redrawing instructions to dst
 		void redraw(int dst)
 		{
@@ -350,18 +369,27 @@ namespace paper
 	synapse::CobjectMan<CpaperObject> objectMan("var/paper");
 
 
-
+	/** Client wants new paper
+	 *
+	 */
 	SYNAPSE_REGISTER(paper_Create)
 	{
 		objectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
 		objectMan.add(msg.src);
 	}
 
-	SYNAPSE_REGISTER(paper_Delete)
-	{
-		objectMan.destroy(msg["objectId"]);
-	}
+	/** Clients wants to delete a paper
+	 * TODO: implement credentials first
+	 * TODO: implement delete
+	 */
+//	SYNAPSE_REGISTER(paper_Delete)
+//	{
+//		objectMan.destroy(msg["objectId"]);
+//	}
 
+	/** Client wants to join a paper
+	 *
+	 */
 	SYNAPSE_REGISTER(paper_Join)
 	{
 		objectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
@@ -370,7 +398,8 @@ namespace paper
 
 	}
 
-	/** Check if the paper exists and credentials are ok
+	/** Client wants to check if the paper exists and credentials are ok
+	 * TODO: credential stuff
 	 *
 	 */
 	SYNAPSE_REGISTER(paper_Check)
@@ -382,7 +411,6 @@ namespace paper
 
 		try
 		{
-
 			objectMan.getObject(msg["objectId"]);
 			out.event="paper_CheckOk";
 		}
@@ -393,16 +421,25 @@ namespace paper
 		out.send();
 	}
 
+	/** Clients wants to leave the paper
+	 *
+	 */
 	SYNAPSE_REGISTER(paper_Leave)
 	{
 		objectMan.getObject(msg["objectId"]).delClient(msg.src);
 	}
 
+	/** Client wants to receive a list of papers (those that are currently in memory!)
+	 *
+	 */
 	SYNAPSE_REGISTER(paper_GetPapers)
 	{
 		objectMan.sendObjectList(msg.src);
 	}
 
+	/** Client wants to receive a fresh list of clients
+	 *
+	 */
 	SYNAPSE_REGISTER(paper_GetClients)
 	{
 		objectMan.getObjectByClient(msg.src).sendClientList(msg.src);
@@ -433,20 +470,39 @@ namespace paper
 		out.send();
 	}
 
+	/** Timer to save unsaved stuff every X seconds
+	 *
+	 */
 	SYNAPSE_REGISTER(paper_Timer)
 	{
 		objectMan.saveAll();
 	}
 
 
+	/** Draw commands from the client
+	 *
+	 */
 	SYNAPSE_REGISTER(paper_ClientDraw)
 	{
 		objectMan.getObjectByClient(msg.src).addDraw(msg);
 	}
 
+	/** Clients wants to receive complete redraw instructions
+	 *
+	 */
 	SYNAPSE_REGISTER(paper_Redraw)
 	{
 		objectMan.getObjectByClient(msg.src).redraw(msg.src);
 	}
+
+	/** Client wants to set/change name
+	 *
+	 */
+	SYNAPSE_REGISTER(paper_ClientName)
+	{
+		objectMan.getObjectByClient(msg.src).setClientName(msg.src,msg["clientName"]);
+	}
+
+
 
 }

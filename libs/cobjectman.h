@@ -132,13 +132,15 @@ namespace synapse
 			config.save(storagePath+"/config");
 		}
 
-		void destroy(int objectId)
+		//deletes object from memory.
+		void unload(int objectId)
 		{
-			getObject(objectId).destroy();
+			DEB("Unloading object " << objectId);
 			objectMap.erase(objectId);
 		}
 
 		//sends a object list to specified destination
+		//NOTE: Only sends a list of objects that are currently loaded.
 		void sendObjectList(int dst)
 		{
 			Cmsg out;
@@ -176,6 +178,10 @@ namespace synapse
 					try
 					{
 						save(I->first);
+
+						//if the object doesnt have any clients anymore, unload it from memory.
+						if (I->second.noClients())
+							unload(I->first);
 					}
 					catch(...)
 					{
