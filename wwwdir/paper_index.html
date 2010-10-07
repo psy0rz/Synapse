@@ -36,11 +36,27 @@
 				if (e.keyCode==13)
 					submit();
 			});
+
+			//request new object	
+			$("#addButton").click(function(m)
+			{
+				$("#message").show();
+				$("#message").html("Pagina word aangemaakt...");
+				send(0,"paper_Create");
+			});
+
 			
 			$("#objectId").focus();
 			
 		});
-			
+
+		//we probably created a new object, so go to the editor
+		synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
+		{
+			document.location="paper.html?id="+msg["objectId"];			
+		});
+
+		//the requested paper exists and is accesible, so go to the editor		
 		synapse_register("paper_CheckOk",function(msg_src, msg_dst, msg_event, msg)
 		{
 			$("#message").html("Pagina word ingeladen...");
@@ -166,12 +182,10 @@
 			Begin met een schoon papier:
 		</div>
 
-		<a href='paper.html'>
-			<div class='button' id='addButton'>
-				<img src='img/note_add.png'/>	
-				Nieuw...
-			</div>
-		</a>
+		<div class='button' id='addButton'>
+			<img src='img/note_add.png'/>	
+			Nieuw...
+		</div>
 	</div>
 
 	<div id='editBox'>

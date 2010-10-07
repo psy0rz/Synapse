@@ -396,50 +396,30 @@
 			canvasTemp.width=canvasWidth;
 			canvasTemp.height=canvasHeight;
 
-			
-			//join existing or create new one?
-			if (jQuery.url.param("id"))
-			{
-				send(0,"paper_Join", {
-					"clientName":"bla",
-					"objectId":jQuery.url.param("id"),
-				});
 
-				send(0,"paper_GetClients");
-			}
-			else
-			{
-				send(0,"paper_Create");
-			}
+			//join the specified paper and get a client list
+			send(0,"paper_Join", {
+				"clientName":"bla",
+				"objectId":jQuery.url.param("id"),
+			});
+
+			send(0,"paper_GetClients");
 
 			
  		});
  				
-
+		//we've joined a object
+ 		synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
+		{
+			//we've joined a object, from now on draw on it.
+			currentObjectId=msg["objectId"];
+			paperModId=msg_src;
+			$("#objectId").html(msg["objectId"]);
+		});
+ 		
 		//update the client list
 		synapse_register("object_Client",function(msg_src, msg_dst, msg_event, msg)
  		{
-	 		//we're joining for the first time?
-			if (!currentObjectId && msg["clientId"]==msg_dst)
-			{
-				//its a new object?
-				if (!jQuery.url.param("id"))
-				{
-					//redirect client to the nice url, for better userfriendlyness
-					document.location="/paper.html?id="+msg["objectId"];
-				}
-				
-				//we've joined a object, from now on draw on it.
-				currentObjectId=msg["objectId"];
-				paperModId=msg_src;
-
-//				//also request a redraw so we get the current drawing
-//				send(0,"paper_Redraw", {
-//				});
-
-				$("#objectId").html(msg["objectId"]);
-				
-			}
 
 	 		//clear list?
 			if (msg["first"])

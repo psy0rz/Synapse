@@ -106,12 +106,13 @@ namespace synapse
 			objectMap[config["lastId"]].create(config["lastId"]);
 			objectMap[config["lastId"]].addClient(clientId);
 
-			//send the object to the requester
-			Cmsg out;
-			out.event="object_Object";
-			objectMap[config["lastId"]].getInfo(out);
-			out.dst=clientId;
-			out.send();
+//			//send the object to the requester
+//			Cmsg out;
+//			out.event="object_Object";
+//			objectMap[config["lastId"]].getInfo(out);
+//			out["new"]=1;
+//			out.dst=clientId;
+//			out.send();
 		}
 
 		string getStoragePath(int objectId)
@@ -179,8 +180,8 @@ namespace synapse
 					{
 						save(I->first);
 
-						//if the object doesnt have any clients anymore, unload it from memory.
-						if (I->second.noClients())
+						//is the object ready to be unloaded?
+						if (I->second.isIdle())
 							unload(I->first);
 					}
 					catch(...)

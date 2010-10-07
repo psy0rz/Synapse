@@ -29,6 +29,7 @@ namespace synapse
 
 		private:
 		int id;
+		int lastLeave;
 
 		protected:
 		typedef map<int,Tclient> CclientMap;
@@ -125,6 +126,15 @@ namespace synapse
 			if (clientMap.find(id)==clientMap.end())
 			{
 				clientMap[id].id=id;
+
+				//tell the client they are joined
+				Cmsg out;
+				out.event="object_Joined";
+				out.dst=id;
+				getInfo(out);
+				out.send();
+
+				//send the other clients an update about this new client.
 				sendClientUpdate(id);
 			}
 			else
@@ -150,6 +160,8 @@ namespace synapse
 
 				clientMap.erase(id);
 				send(out); //inform all members of the left client
+
+				lastLeave=time(NULL);
 			}
 		}
 
@@ -162,9 +174,9 @@ namespace synapse
 			return (clientMap[id]);
 		}
 
-		bool noClients()
+		bool isIdle()
 		{
-			return(clientMap.empty());
+			return(clientMap.empty() && lastLeave-time(NULL)>60);
 		}
 
 		//object is going to be removed permanently, inform clients and then let them leave

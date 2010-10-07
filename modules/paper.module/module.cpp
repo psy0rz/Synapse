@@ -86,6 +86,7 @@ namespace paper
 		out["event"]=	"object_Object";		out.send(); //result of a object_GetObjects. first and last objects are indicated. If a new object is created, a object_Object is also emitted.
 		out["event"]=	"object_Deleted";		out.send(); //object you are member of has been deleted
 		out["event"]=	"object_Client";		out.send(); //result of a object_GetClients. first and last clients are indicated. If a new client joins, a object_Client is also emitted.
+		out["event"]=	"object_Joined";		out.send(); //send to client that has just joined the object
 		out["event"]=	"object_Left";			out.send(); //somebody has left the object
 
 		out["event"]=	"paper_CheckNotFound";	out.send(); //object not found
