@@ -13,7 +13,15 @@
 
 		var canvasWidth=0;
 		var canvasHeight=0;
-	
+
+		//filter dangerous stuff from user input.
+		//NOTE: do this when you receive the data back from the server, not when sending to it!
+		function filterInput(s)
+		{
+			return(s.replace(/</g,"&lt;").replace(/>/g,"&gt;"));
+
+		}
+
 		//calculate browser coordinates to server coordinates
 		function toServer(x,y)
 		{
@@ -328,7 +336,7 @@
 			if (!clientName)
 			{
 				//make up a "random" guest name
-				clientName="User "+msg.dst;
+				clientName="User "+msg_dst;
 			}
 			
 			//set the name input field
@@ -339,6 +347,17 @@
 
 			
 			/// JAVA SCRIPT EVENT HANDLERS
+
+			$("#clientName").keyup(function(m)
+			{
+				$.setCookie('clientName', $("#clientName").val(), {});
+				send(0,"paper_ClientName", {
+					"clientName":$("#clientName").val()
+				});
+
+			});
+			
+			
 			$("#canvasMouse").mousemove(function(m)
 			{
 				mousePoint.x=m.pageX-$("#canvasMouse").offset().left;
@@ -410,7 +429,6 @@
 
 			//join the specified paper and get a client list
 			send(0,"paper_Join", {
-				"clientName":"bla",
 				"objectId":jQuery.url.param("id"),
 			});
 
@@ -426,6 +444,12 @@
 			currentObjectId=msg["objectId"];
 			paperModId=msg_src;
 			$("#objectId").html(msg["objectId"]);
+
+			//let everyone know who we are
+			send(0,"paper_ClientName", {
+				"clientName":$("#clientName").val()
+			});
+		
 		});
  		
 		//update the client list
@@ -447,7 +471,14 @@
 			}
 
 			//update the html of the client
-			var html="Client #" +msg["clientId"];
+			var html;	
+			if (!msg["clientName"])
+				html="Client #" +msg["clientId"];
+			else
+			{
+				//filter user input and set html
+				html=filterInput(msg["clientName"]);
+			}
 			$("#client_"+msg["clientId"]).html(html);
 		
  		});

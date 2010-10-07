@@ -75,6 +75,7 @@ namespace paper
 		out["event"]=	"paper_GetClients";	out.send(); //a list of clients that are member of specified object. (returns object_Clients for every object)
 
 		out["event"]=	"paper_ClientDraw";		out.send(); //draw something
+		out["event"]=	"paper_ClientName";		out.send(); //change client name
 		out["event"]=	"paper_Redraw";		out.send(); //ask the server to send an entire redraw
 
 		//client receive-only events:
@@ -503,7 +504,9 @@ namespace paper
 	 */
 	SYNAPSE_REGISTER(paper_ClientName)
 	{
-		objectMan.getObjectByClient(msg.src).setClientName(msg.src,msg["clientName"]);
+		string name;
+		name=msg["clientName"].str().substr(0,30);
+		objectMan.getObjectByClient(msg.src).setClientName(msg.src, name);
 	}
 
 
