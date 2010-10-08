@@ -412,14 +412,16 @@ namespace paper
 	 */
 	SYNAPSE_REGISTER(paper_Create)
 	{
-		int oldObjectId=objectMan.getObjectByClient(msg.src).getId();
-		objectMan.leaveAll(msg.src);
-
-		int newObjectId=objectMan.add(msg.src);
-
 		if (msg["moveClients"])
 		{
+			int oldObjectId=objectMan.getObjectByClient(msg.src).getId();
+			objectMan.leaveAll(msg.src);
+			int newObjectId=objectMan.add(msg.src);
 			objectMan.moveClients(oldObjectId, newObjectId);
+		}
+		else
+		{
+			objectMan.add(msg.src);
 		}
 	}
 
