@@ -4,7 +4,7 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-	<title>internetpapier.nl</title>
+	<title>internetpapier.nl - BETA</title>
 
 	<script type="text/javascript" src="synapse.js"></script>
 	<script type="text/javascript" src="jquery.url.js"></script>
@@ -181,6 +181,10 @@
 
 				//color
 				object.css('color',this.color);
+				if (this.color=="#ffffff")
+					object.css('background-color','#cccccc');
+				else
+					object.css('background-color','#ffffff');
 
 				//"width"
 				var size=0;
@@ -265,7 +269,7 @@
 						this.commit();
 						commands.shift();
 						//dont forget to filter!
-						this.clientName=filterInput(commands.shift());
+						this.clientName=filterInput(commands.shift()).substr(0,20);
 						this.updateHtml();						
 					}
 					//width
@@ -611,11 +615,12 @@
 			height:100%;
 		} 
 
-		.clientInfo
+		.client
 		{
-			width:18em;
-			background:yellow;
-			margin-left:1em;
+			margin-top:2px;
+			padding:5px;
+			border-bottom-style:dashed;
+			border-bottom-color:#aaaaaa;
 		}
 
 		#objectManager
@@ -719,11 +724,11 @@
 
 	<div class='ui-widget-content' id='objectManager'>
 
-		<div class='ui-widget-header'>Paper info:</div>
-		Paper number: <span id='objectId'></span>
+		<div class='ui-widget-header'>Papier:</div>
+		Papier nummer: <span id='objectId'></span>
 
-		<div class='ui-widget-header'>You:</div>
-		Name: <input id='clientName' type='text' value=''>
+		<div class='ui-widget-header'>Gereedschap:</div>
+		Naam: <input id='clientName' type='text' value=''>
 		<div id='colors'>
 			<div class='tool selected' style='background-color:#000000' cmd0='c' cmd1='#000000'></div>
 			<div class='tool' style='background-color:#0000ff' cmd0='c' cmd1='#0000ff'></div>
@@ -753,7 +758,7 @@
 			<div class='tool' cmd0='w' cmd1='40'><img src='img/pen2.png' style='width:1.4em' ></div>		
 		</div>
 
-		<div class='ui-widget-header'>Other people:</div>
+		<div class='ui-widget-header'>Andere mensen:</div>
 		<div id='clientList'></div>
 	</div>
 
