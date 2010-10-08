@@ -249,6 +249,43 @@ namespace paper
 		{
 			drawing.load(path);
 			saved=true;
+
+			//"fsck" for stale clients (they should only exist if we where aborted or crashing)
+			set<int> ids;
+			int lastId;
+			synapse::CvarList & drawingData=drawing["data"].list();
+			synapse::CvarList::iterator I=drawingData.begin();
+			//parse all the clients that joined and left:
+			while (I!=drawingData.end())
+			{
+				if (I->which()==CVAR_STRING)
+				{
+					//new client
+					if (I->str()=="I")
+					{
+						I++;
+						lastId=*I;
+						ids.insert(lastId);
+					}
+					//delete last selected client:
+					else if (I->str()=="D")
+					{
+						ids.erase(lastId);
+					}
+				}
+				I++;
+			}
+
+			//there should be nothing left, otherwise fix it by adding appropriate deletes:
+			while(!ids.empty())
+			{
+				WARNING("Fixed stale client in drawing: " << *ids.begin())
+				drawingData.push_back(string("I"));
+				drawingData.push_back(*ids.begin());
+				drawingData.push_back(string("D"));
+				ids.erase(ids.begin());
+			}
+
 		}
 
 		//add data to the drawing and send it (efficiently) to the clients
