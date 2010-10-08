@@ -19,6 +19,8 @@
 
 #ifndef CSHAREDOBJECT_H_
 #define CSHAREDOBJECT_H_
+
+
 namespace synapse
 {
 	using namespace std;
@@ -61,7 +63,7 @@ namespace synapse
 			}
 		}
 
-		void getId()
+		int getId()
 		{
 			return(id);
 
@@ -121,7 +123,15 @@ namespace synapse
 			send(out); //inform all members of the new client
 		}
 
-		void addClient(int id)
+		void addClients(set<int> & ids)
+		{
+			for(set<int>::iterator I=ids.begin(); I!=ids.end(); I++)
+			{
+				addClient(*I);
+			}
+		}
+
+		virtual void addClient(int id)
 		{
 			if (clientMap.find(id)==clientMap.end())
 			{
@@ -165,6 +175,23 @@ namespace synapse
 			}
 		}
 
+		//deletes all clients and returns id's
+		set<int> delAllClients()
+		{
+			set<int> ids;
+
+			//get clients
+			for (typename CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
+				ids.insert(I->first);
+
+			//now delete them
+			for (set<int>::iterator I=ids.begin(); I!=ids.end(); I++)
+			{
+				delClient(*I);
+			}
+			return(ids);
+		}
+
 		// Get a reference to a client or throw exception
 		Tclient & getClient(int id)
 		{
@@ -179,6 +206,7 @@ namespace synapse
 			return(clientMap.empty() && lastLeave-time(NULL)>60);
 		}
 
+
 		//object is going to be removed permanently, inform clients and then let them leave
 		void remove()
 		{
@@ -187,11 +215,7 @@ namespace synapse
 			getInfo(out);
 			send(out); //inform all members
 
-			//delete all joined clients:
-			for (typename CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
-			{
-				delClient(I->first);
-			}
+			delAllClients();
 		}
 
 

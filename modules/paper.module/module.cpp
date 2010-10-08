@@ -361,7 +361,6 @@ namespace paper
 		}
 
 
-
 		//send redrawing instructions to dst
 		void redraw(int dst)
 		{
@@ -391,7 +390,18 @@ namespace paper
 
 		}
 
+		virtual void addClient(int id)
+		{
+			//let the base class do its work:
+			synapse::CsharedObject<CpaperClient>::addClient(id);
+			//make sure redraw commands are send BEFORE any other draw commands
+			redraw(id);
+
+		}
+
+
 	};
+
 
 
 	synapse::CobjectMan<CpaperObject> objectMan("var/paper");
@@ -402,8 +412,15 @@ namespace paper
 	 */
 	SYNAPSE_REGISTER(paper_Create)
 	{
-		objectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
-		objectMan.add(msg.src);
+		int oldObjectId=objectMan.getObjectByClient(msg.src).getId();
+		objectMan.leaveAll(msg.src);
+
+		int newObjectId=objectMan.add(msg.src);
+
+		if (msg["moveClients"])
+		{
+			objectMan.moveClients(oldObjectId, newObjectId);
+		}
 	}
 
 	/** Clients wants to delete a paper
@@ -422,7 +439,6 @@ namespace paper
 	{
 		objectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
 		objectMan.getObject(msg["objectId"]).addClient(msg.src);
-		objectMan.getObject(msg["objectId"]).redraw(msg.src);
 
 	}
 
@@ -468,10 +484,10 @@ namespace paper
 	/** Client wants to receive a fresh list of clients
 	 *
 	 */
-	SYNAPSE_REGISTER(paper_GetClients)
-	{
-		objectMan.getObjectByClient(msg.src).sendClientList(msg.src);
-	}
+//	SYNAPSE_REGISTER(paper_GetClients)
+//	{
+//		objectMan.getObjectByClient(msg.src).sendClientList(msg.src);
+//	}
 
 	SYNAPSE_REGISTER(module_SessionEnded)
 	{
@@ -515,13 +531,6 @@ namespace paper
 		objectMan.getObjectByClient(msg.src).addDraw(msg);
 	}
 
-	/** Clients wants to receive complete redraw instructions
-	 *
-	 */
-	SYNAPSE_REGISTER(paper_Redraw)
-	{
-		objectMan.getObjectByClient(msg.src).redraw(msg.src);
-	}
 
 
 

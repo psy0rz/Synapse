@@ -254,9 +254,45 @@
 				{	
 					//a new command should automaticly commit the previous one:
 					//(this way the server doesnt have to store all the save-commands)
+
+					//NOTE: try to sort this on the stuff that is used most often in Redraw mode.
 					
+					//all numbers are coords, if we are in some kind of drawing mode.
+					if (commands[0] == parseInt(commands[0]))
+					{
+						c=toBrowser(commands.shift(), commands.shift());
+						this.cursorX=c.x;
+						this.cursorY=c.y;
+						if (this.mode=='l')
+							this.coords.push(c.x, c.y);
+					}
+					//enable line mode
+					else if (commands[0]=='l')
+					{
+						this.commit();
+						commands.shift();
+						this.mode='l';						
+						this.updateHtml();						
+					}
+	 				//save current action permanently 
+	 				else if (commands[0]=="s")
+	 				{
+	 	 				commands.shift();
+	 	 				this.commit();
+						this.updateHtml();						
+	 				}
+					//mouse movement
+					else if (commands[0]=="m")
+	 				{
+						this.commit();
+		 				commands.shift();
+						c=toBrowser(commands.shift(), commands.shift());
+		 				this.cursorX=c.x;
+		 				this.cursorY=c.y;
+		 				this.mode='m';
+	 				}
 					//color
-					if (commands[0]=='c')
+					else if (commands[0]=='c')
 					{
 						this.commit();
 						commands.shift();
@@ -264,7 +300,7 @@
 						this.updateHtml();						
 					}
 					//name
-					if (commands[0]=='n')
+					else if (commands[0]=='n')
 					{
 						this.commit();
 						commands.shift();
@@ -281,24 +317,6 @@
 						this.width=widthToBrowser(this.serverWidth);
 						this.updateHtml();						
 					}
-					//mouse movement
-					else if (commands[0]=="m")
-	 				{
-						this.commit();
-		 				commands.shift();
-						c=toBrowser(commands.shift(), commands.shift());
-		 				this.cursorX=c.x;
-		 				this.cursorY=c.y;
-		 				this.mode='m';
-	 				}
-					//enable line mode
-					else if (commands[0]=='l')
-					{
-						this.commit();
-						commands.shift();
-						this.mode='l';						
-						this.updateHtml();						
-					}
 	 				//cancel current drawing action
 	 				else if (commands[0]=="x")
 	 				{
@@ -306,22 +324,6 @@
 	 					this.clear();
 						this.updateHtml();						
 	 				}
-	 				//save current action permanently 
-	 				else if (commands[0]=="s")
-	 				{
-	 	 				commands.shift();
-	 	 				this.commit();
-						this.updateHtml();						
-	 				}
-					//all other numbers are coords, if we are in some kind of drawing mode.
-					else if (commands[0] == parseInt(commands[0]))
-					{
-						c=toBrowser(commands.shift(), commands.shift());
-						this.cursorX=c.x;
-						this.cursorY=c.y;
-						if (this.mode=='l')
-							this.coords.push(c.x, c.y);
-					}
 					else
 					{
 						//we dont know, let caller handle the rest
@@ -410,13 +412,13 @@
 			}
 		}	
 	
-
+		
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
 			ourId=msg_dst;
 
 			/// figure out client name
-			var clientName=$.readCookie('clientName');
+			var clientName=$.readCookie('clientName', { path:"/" } );
 			if (!clientName)
 			{
 				//make up a "random" guest name
@@ -434,7 +436,7 @@
 
 			$("#clientName").keyup(function(m)
 			{
-				$.setCookie('clientName', $("#clientName").val(), {});
+				$.setCookie('clientName', $("#clientName").val(), { duration:365, path:"/" });
 				sendDraw( [ "n" , $("#clientName").val() ] );
 			});
 			
@@ -493,6 +495,13 @@
 				sendDraw(cmds); 
 			});
 
+			//clear button
+			$("#clear").click(function(m)
+			{
+				//a clear actually creates a new drawing so the old one is preserved
+				send(0,"paper_Create", { "moveClients":1 } );
+			});
+
 			
 			canvasWidth=$("#canvasMouse").width();
 			canvasHeight=$("#canvasMouse").height();
@@ -508,7 +517,7 @@
 			canvasTemp.height=canvasHeight;
 
 
-			//join the specified paper and get a client list
+			//join the specified paper
 			send(0,"paper_Join", {
 				"objectId":jQuery.url.param("id"),
 			});
@@ -556,6 +565,8 @@
 					$('#clientList').empty();
 					autoCommit=true; 
  					contextDraw.clearRect(0, 0, canvasWidth, canvasHeight);
+ 					$(".tool").removeClass('selected');
+ 					$(".defaultTool").addClass('selected');
  				}
 				//end of complete redraw, disable auto commit.
  				else if (msg[0]=="E")
@@ -726,11 +737,13 @@
 
 		<div class='ui-widget-header'>Papier:</div>
 		Papier nummer: <span id='objectId'></span>
+		<br>
+		<input type='submit' value='Wissen' id='clear'>
 
 		<div class='ui-widget-header'>Gereedschap:</div>
 		Naam: <input id='clientName' type='text' value=''>
 		<div id='colors'>
-			<div class='tool selected' style='background-color:#000000' cmd0='c' cmd1='#000000'></div>
+			<div class='tool defaultTool' style='background-color:#000000' cmd0='c' cmd1='#000000'></div>
 			<div class='tool' style='background-color:#0000ff' cmd0='c' cmd1='#0000ff'></div>
 			<div class='tool' style='background-color:#00ff00' cmd0='c' cmd1='#00ff00'></div>
 			<div class='tool' style='background-color:#00ffff' cmd0='c' cmd1='#00ffff'></div>
@@ -747,7 +760,7 @@
 			<div class='tool' style='background-color:#ffffff' cmd0='c' cmd1='#ffffff'>gum</div>
 		</div>		
 		<div id='widths'>
-			<div class='tool selected' cmd0='w' cmd1='1'><img src='img/pen1.png' style='width:1em' ></div>
+			<div class='tool defaultTool' cmd0='w' cmd1='1'><img src='img/pen1.png' style='width:1em' ></div>
 			<div class='tool' cmd0='w' cmd1='2'><img src='img/pen1.png' style='width:1.2em'></div>
 			<div class='tool' cmd0='w' cmd1='3'><img src='img/pen1.png' style='width:1.3em'></div>
 			<div class='tool' cmd0='w' cmd1='4'><img src='img/pen1.png' style='width:1.4em' ></div>

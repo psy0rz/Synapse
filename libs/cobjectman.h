@@ -98,13 +98,14 @@ namespace synapse
 		}
 
 
-		void add(int clientId)
+		int add(int clientId)
 		{
 
 			config["lastId"]=config["lastId"]+1;
 
 			objectMap[config["lastId"]].create(config["lastId"]);
 			objectMap[config["lastId"]].addClient(clientId);
+			return (config["lastId"]);
 
 //			//send the object to the requester
 //			Cmsg out;
@@ -169,6 +170,13 @@ namespace synapse
 			}
 
 		}
+
+		void moveClients(int oldObjectId, int newObjectId)
+		{
+			set<int> ids=getObject(oldObjectId).delAllClients();
+			getObject(newObjectId).addClients(ids);
+		}
+
 
 		void saveAll()
 		{
