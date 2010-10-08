@@ -11,9 +11,49 @@
 
 	<script type="text/javascript">
 
+		function Cpoint(x,y)
+		{
+			this.x=x;
+			this.y=y;
+	
+			this.copy=function(point)
+			{
+				this.x=point.x;
+				this.y=point.y;
+			}
+			
+		}
+	
+		var mouseInterval=50; //max update inteval in mS (can be higer if mouseMax is exceeded)
+		var mouseMax=25; //max mouse pixel offset before sending (regardless of update interval)
+	
+		var mousePoint=new Cpoint(); //current mouse position
+	
+		//mouse info sending to server:
+		var mouseSendPoint=new Cpoint(); //last mousepoint sent to server
+		var mouseSendTime=0; //last time the mousePosition was anaylsed by updateGameField
+	
+		var mouseDraw=0;		
+	
+		var contextDraw;
+		var contextTemp;
+	
+		var currentObjectId=0;
+		var paperModId=0;
+	
+		var drawMode="l";
+			
+		//incremental draw stuff
+		var clientId=0;
+		var clients=new Array(); 
+		var ourId=0;
+
 		var canvasWidth=0;
 		var canvasHeight=0;
 
+		var autoCommit=false;
+
+		
 		//filter dangerous stuff from user input.
 		//NOTE: do this when you receive the data back from the server, not when sending to it!
 		function filterInput(s)
@@ -50,20 +90,9 @@
 		}
 
 		
-		function Cpoint(x,y)
-		{
-			this.x=x;
-			this.y=y;
 
-			this.copy=function(point)
-			{
-				this.x=point.x;
-				this.y=point.y;
-			}
-			
-		}
-	
 
+		
 		//information about the object a client is currently drawing
 		function Cclient()
 		{
@@ -148,7 +177,7 @@
 				if (!this.clientName)
 					object.html("Client #" +this.id);
 				else
-					object.html(this.clientName);
+					object.html(this.clientName+" #"+this.id);
 
 				//color
 				object.css('color',this.color);
@@ -301,31 +330,6 @@
 		}
 
 		
-		var mouseInterval=50; //max update inteval in mS (can be higer if mouseMax is exceeded)
-		var mouseMax=25; //max mouse pixel offset before sending (regardless of update interval)
-		
-
-		var mousePoint=new Cpoint(); //current mouse position
-
-		//mouse info sending to server:
-		var mouseSendPoint=new Cpoint(); //last mousepoint sent to server
-		var mouseSendTime=0; //last time the mousePosition was anaylsed by updateGameField
-
-		var mouseDraw=0;		
-
-		var contextDraw;
-		var contextTemp;
-
-		var currentObjectId=0;
-		var paperModId=0;
-
-		var drawMode="l";
- 		
-		//incremental draw stuff
-		var clientId=0;
-		var clients=new Array(); 
-		var ourId=0;
-		var autoCommit=false;
 
 		//redraw all the clients in the temporary context
 		function drawClients()
@@ -573,7 +577,7 @@
  	 				if (autoCommit)
  	 	 				clients[clientId].commit();
 	 	 			clients[clientId].remove();
-					clients.splice(clientId,1);
+	 	 			delete clients[clientId];
 					clientId=0;
 				}      
  				//let the current client object parse the rest. it returns when it encounters something unknown.
