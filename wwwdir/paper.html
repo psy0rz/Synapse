@@ -227,23 +227,26 @@
 			}
 			
 			/*** Drawing protocol
-			//global:
+			//global commands:
 			'S'							Start comlete redraw: clear everything, after this all drawing commands will follow, but without explicit commits (to save space)
 			'E'							End of complete redraw. 
 			'I',<id>					Select a different client ID. (every client has its own color, line width etc settings) Usually the server automaticly sets this parameter.
 
-
-			//per client:
-			's'							write current drawing action permanently
-			'x'							Cancel the current drawing action.  
-			'n',"name"					Set client name
-			'm',<x>,<y>					Update cursor location
+			//client settings:
 			'c',<htmlcolor>				Set current drawing color
 			'w',<w>						Set current line width
+			'n',"name"					Set client name
+
+			//client commands:
+			's'							write current drawing action permanently
+			'x'							Cancel the current drawing action.  
+			'm',<x>,<y>					Update cursor location
 			'l',<x>,<y>,...				Enable line drawing. (next x,y coords will draw from now on)
 			'r',<x1>,<y1>,<x2>,<y2>		Draw rectangle
 			'a',<x1>,<y1>,<x2>,<y2>		Draw circle
 			't',<x>,<y>,"text"			Draw text
+			'.',"text"					Chat text
+			
 			'
 			 */
 			//eats and processes the client commands from the array and returns as soon as it encounters a global command
@@ -308,6 +311,26 @@
 						this.clientName=filterInput(commands.shift()).substr(0,20);
 						this.updateHtml();						
 					}
+					//chat text
+					else if (commands[0]=='.')
+					{
+						this.commit();
+						commands.shift();
+
+						//add text to chatList
+						var html="";
+						html+="<div class='chatLine'>&lt;";
+						html+=this.clientName;
+						html+="&gt; ";
+						html+=filterInput(commands.shift());
+						html+="</div>";
+						$('#chatList').append(html);
+
+						//scroll to end
+						var objDiv = document.getElementById("chatList");
+						objDiv.scrollTop = objDiv.scrollHeight;
+						
+					}					
 					//width
 					else if (commands[0]=='w')
 					{
@@ -439,7 +462,19 @@
 				$.setCookie('clientName', $("#clientName").val(), { duration:365, path:"/" });
 				sendDraw( [ "n" , $("#clientName").val() ] );
 			});
-			
+
+			$("#chatInput").keydown(function(m)
+			{
+				if (m.keyCode==13)
+				{
+					sendDraw( [ "." , $("#chatInput").val() ] );
+					sendDraw( [ "s" ] );
+					$("#chatInput").val("");						
+				}					
+	 		});
+
+			$("#chatInput").val("");
+			$("#chatInput").focus();
 			
 			$("#canvasMouse").mousemove(function(m)
 			{
@@ -493,6 +528,8 @@
 				};
 				
 				sendDraw(cmds); 
+
+				$("#chatInput").focus();
 			});
 
 			//clear button
@@ -639,29 +676,15 @@
 			position:absolute; 
 			left:0;
 			top: 0;
-			width: 20em;
+			width: 16em;
 			bottom:0;
-			border-style:solid;
-		}
-
-		#canvasField
-		{
-			position:absolute; 
-			left:20em;
-			top: 0;
-			right: 0;
-			bottom:0;
-			border-style:solid;
-			border-color:#00ff00;
-			border-width:0;
-			background:black;
-			overflow:hidden;
+			border-style:none;
 		}
 
 		#canvasMouse
 		{
 			position:absolute; 
-			left:20em;
+			left:16em;
 			top: 0;
 			right: 0;
 			bottom:0;
@@ -671,21 +694,12 @@
 		canvas
 		{
 			position:absolute;
-			left:20em;
+			left:16em;
 			top:0;
+			right:0;
+			bottom:0;
 		}
 		
-		.cursor
-		{
-			position:absolute;
-			left:10%;
-			top:10%;
-			width:1%;
-			height:10%;
-			margin-top:-5%;
-			margin-left:-0.5%;
-			background-color:#ff0000;
-		}
 		
 		#loading
 		{
@@ -725,40 +739,54 @@
 			display:inline;
 		}
 		
+		#chatList
+		{
+			max-height:8em;
+			overflow-y:scroll;
+		}
+		
+		#clientList
+		{
+			max-height:8em;
+			overflow-y:auto;		
+		}
 	</style>
 
 </head>
 
 
 <body class='ui-widget'>
-	<p>
-
 	<div class='ui-widget-content' id='objectManager'>
 
 		<div class='ui-widget-header'>Papier:</div>
+
 		Papier nummer: <span id='objectId'></span>
+
 		<br>
+
 		<input type='submit' value='Nieuw' id='clear'>
 
 		<div class='ui-widget-header'>Gereedschap:</div>
-		Naam: <input id='clientName' type='text' value=''>
+
+		Naam: <input id='clientName' type='text' value='' size=10>
+
 		<div id='colors'>
-			<div class='tool defaultTool' style='background-color:#000000' cmd0='c' cmd1='#000000'></div>
-			<div class='tool' style='background-color:#0000ff' cmd0='c' cmd1='#0000ff'></div>
-			<div class='tool' style='background-color:#00ff00' cmd0='c' cmd1='#00ff00'></div>
-			<div class='tool' style='background-color:#00ffff' cmd0='c' cmd1='#00ffff'></div>
-			<div class='tool' style='background-color:#FF8040' cmd0='c' cmd1='#FF8040'></div>
-			<div class='tool' style='background-color:#82CAFF' cmd0='c' cmd1='#82CAFF'></div>
-			<br>
-			<div class='tool' style='background-color:#ff0000' cmd0='c' cmd1='#ff0000'></div>
-			<div class='tool' style='background-color:#ff00ff' cmd0='c' cmd1='#ff00ff'></div>
-			<div class='tool' style='background-color:#ffff00' cmd0='c' cmd1='#ffff00'></div>
-			<div class='tool' style='background-color:#999999' cmd0='c' cmd1='#999999'></div>
-			<div class='tool' style='background-color:#804000' cmd0='c' cmd1='#804000'></div>
-			<div class='tool' style='background-color:#F87217' cmd0='c' cmd1='#F87217'></div>
-			<br>
+			<div class='tool defaultTool' style='background-color:#000000' cmd0='c' cmd1='#000000'>&nbsp;</div>
+			<div class='tool' style='background-color:#0000ff' cmd0='c' cmd1='#0000ff'>&nbsp;</div>
+			<div class='tool' style='background-color:#00ff00' cmd0='c' cmd1='#00ff00'>&nbsp;</div>
+			<div class='tool' style='background-color:#00ffff' cmd0='c' cmd1='#00ffff'>&nbsp;</div>
+			<div class='tool' style='background-color:#FF8040' cmd0='c' cmd1='#FF8040'>&nbsp;</div>
 			<div class='tool' style='background-color:#ffffff' cmd0='c' cmd1='#ffffff'>gum</div>
+			<br>
+			<div class='tool' style='background-color:#ff0000' cmd0='c' cmd1='#ff0000'>&nbsp;</div>
+			<div class='tool' style='background-color:#ff00ff' cmd0='c' cmd1='#ff00ff'>&nbsp;</div>
+			<div class='tool' style='background-color:#ffff00' cmd0='c' cmd1='#ffff00'>&nbsp;</div>
+			<div class='tool' style='background-color:#999999' cmd0='c' cmd1='#999999'>&nbsp;</div>
+			<div class='tool' style='background-color:#804000' cmd0='c' cmd1='#804000'>&nbsp;</div>
+			<div class='tool' style='background-color:#F87217' cmd0='c' cmd1='#F87217'>&nbsp;</div>
+			<br>
 		</div>		
+
 		<div id='widths'>
 			<div class='tool defaultTool' cmd0='w' cmd1='1'><img src='img/pen1.png' style='width:1em' ></div>
 			<div class='tool' cmd0='w' cmd1='2'><img src='img/pen1.png' style='width:1.2em'></div>
@@ -771,15 +799,24 @@
 			<div class='tool' cmd0='w' cmd1='40'><img src='img/pen2.png' style='width:1.4em' ></div>		
 		</div>
 
+
+		<div class='ui-widget-header'>Chat:</div>
+		<div id='chatList'></div>
+		<input id='chatInput' type='text' value='' >
+
+
 		<div class='ui-widget-header'>Andere mensen:</div>
 		<div id='clientList'></div>
+
+
 	</div>
 
-
-
 	<canvas width=10 height=10 id='canvas'></canvas>		
+
 	<canvas width=10 height=10 id='canvasTemp'></canvas>		
+
 	<div id='loading' class='ui-state-highlight'>Loading...</div>
+
 	<div id='canvasMouse'>
 	</div>
 

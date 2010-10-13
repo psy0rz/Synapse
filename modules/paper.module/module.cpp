@@ -123,6 +123,7 @@ namespace paper
 
 		//parses and store usefull drawing commands
 		//returns true if the drawing should be commited permanently
+		//NOTE: this is not really a "parser": it needs exactly one command with its parameters. The clients should make sure they send it this way.
 		bool add(synapse::CvarList & commands )
 		{
 			if (commands.begin()->which()==CVAR_STRING)
@@ -147,7 +148,8 @@ namespace paper
 						(commands.begin()->str()=="l") ||
 						(commands.begin()->str()=="r") ||
 						(commands.begin()->str()=="a") ||
-						(commands.begin()->str()=="t")
+						(commands.begin()->str()=="t") ||
+						(commands.begin()->str()==".")
 				)
 				{
 					drawing.insert(drawing.end(), commands.begin(), commands.end());
@@ -174,6 +176,10 @@ namespace paper
 					}
 					else
 						return(false);
+				}
+				else
+				{
+					;//ignore the rest for now
 				}
 
 			}
