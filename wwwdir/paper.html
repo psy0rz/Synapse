@@ -59,7 +59,6 @@
 		function filterInput(s)
 		{
 			return(s.replace(/</g,"&lt;").replace(/>/g,"&gt;"));
-
 		}
 
 		//calculate browser coordinates to server coordinates
@@ -90,8 +89,19 @@
 		}
 
 		
+		function paperLink(id,text)
+		{
+			return ("<a class='paperLink' href='paper.html?id="+id+"'>"+text+"</a>");
+		}
 
+		function addChat(html)
+		{
+			$('#chatList').append(html);
 
+			//scroll to end
+			var objDiv = document.getElementById("chatList");
+			objDiv.scrollTop = objDiv.scrollHeight;
+		}
 		
 		//information about the object a client is currently drawing
 		function Cclient()
@@ -326,12 +336,7 @@
 						html+="&gt; ";
 						html+=filterInput(commands.shift());
 						html+="</div>";
-						$('#chatList').append(html);
-
-						//scroll to end
-						var objDiv = document.getElementById("chatList");
-						objDiv.scrollTop = objDiv.scrollHeight;
-						
+						addChat(html);						
 					}					
 					//width
 					else if (commands[0]=='w')
@@ -476,7 +481,6 @@
 	 		});
 
 			$("#chatInput").val("");
-			$("#chatInput").focus();
 			
 			$("#canvasMouse").mousemove(function(m)
 			{
@@ -568,6 +572,10 @@
 		//we've joined a object
  		synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
 		{
+			//doesnt the url match?
+			if (jQuery.url.param("id")!=msg["objectId"])
+				document.location="paper.html?id="+msg["objectId"];
+ 			
 			//we've joined a object, from now on draw on it.
 			currentObjectId=msg["objectId"];
 			paperModId=msg_src;
@@ -624,6 +632,9 @@
 	 				sendDraw([ "n" , $("#clientName").val() ]);
 	 	 					
 					$("#loading").hide();
+
+					$("#chatInput").focus();
+					
  				}
  				//delete client
  				else if (msg[0]=="D")
@@ -635,6 +646,20 @@
 	 	 			delete clients[clientId];
 					clientId=0;
 				}      
+ 				//next paper id
+ 				else if (msg[0]=="N")
+ 				{
+ 	 				msg.shift();
+					var id=msg.shift();
+					addChat(paperLink(id, "Volgend papier: "+id));				
+ 				}
+ 				//previous paper id
+ 				else if (msg[0]=="P")
+ 				{
+ 	 				msg.shift();
+					var id=msg.shift();
+					addChat(paperLink(id, "Vorig papier: "+id));										
+ 				}
  				//let the current client object parse the rest. it returns when it encounters something unknown.
  				else
  				{
@@ -752,6 +777,13 @@
 		{
 			max-height:8em;
 			overflow-y:auto;		
+		}
+		
+		.paperLink
+		{
+			background-color: yellow;
+			text-decoration: none;
+			display:block;
 		}
 	</style>
 
