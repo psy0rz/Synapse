@@ -231,7 +231,9 @@
 			'S'							Start comlete redraw: clear everything, after this all drawing commands will follow, but without explicit commits (to save space)
 			'E'							End of complete redraw. 
 			'I',<id>					Select a different client ID. (every client has its own color, line width etc settings) Usually the server automaticly sets this parameter.
-
+			'N',<id>					To indicate next drawing <id>
+			'P',<id>					To indicate previous drawing <id>
+			
 			//client settings:
 			'c',<htmlcolor>				Set current drawing color
 			'w',<w>						Set current line width
@@ -600,6 +602,7 @@
  					clients=[];
 					clientId=0;
 					$('#clientList').empty();
+					$('#chatList').empty();
 					autoCommit=true; 
  					contextDraw.clearRect(0, 0, canvasWidth, canvasHeight);
  					$(".tool").removeClass('selected');

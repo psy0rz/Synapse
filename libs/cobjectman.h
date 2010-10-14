@@ -98,13 +98,12 @@ namespace synapse
 		}
 
 
-		int add(int clientId)
+		int add()
 		{
 
 			config["lastId"]=config["lastId"]+1;
 
 			objectMap[config["lastId"]].create(config["lastId"]);
-			objectMap[config["lastId"]].addClient(clientId);
 			return (config["lastId"]);
 
 //			//send the object to the requester

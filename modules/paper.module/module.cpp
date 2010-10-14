@@ -121,8 +121,8 @@ namespace paper
 		synapse::CvarList drawing;
 		bool didDraw; //client did draw something?
 
-		//parses and store usefull drawing commands
-		//returns true if the drawing should be commited permanently
+		//parses and collect usefull drawing commands for this client.
+		//returns true if the sharedobject should permanently store the collected data
 		//NOTE: this is not really a "parser": it needs exactly one command with its parameters. The clients should make sure they send it this way.
 		bool add(synapse::CvarList & commands )
 		{
@@ -235,13 +235,13 @@ namespace paper
 	class CpaperObject : public synapse::CsharedObject<CpaperClient>
 	{
 		public:
-		int lastClient;
+		int lastSentClient;
 		int lastStoreClient;
 		synapse::Cconfig drawing;
 
 		CpaperObject()
 		{
-			lastClient=0;
+			lastSentClient=0;
 			lastStoreClient=0;
 		}
 
@@ -294,28 +294,30 @@ namespace paper
 
 		}
 
-		//add data to the drawing and send it (efficiently) to the clients
-		void addDraw(Cmsg & msg)
+
+		//send the commands to the clients and store permanently if neccesary.
+		//on behalf of clientId (use clientId 0 for global commands)
+		void serverDraw(synapse::CvarList & commands, int clientId=0 )
 		{
 			Cmsg out;
 			out.event="paper_ServerDraw";
 
 			//instructions come from a different client then last time?
-			if (msg.src!=lastClient)
+			if (clientId && clientId!=lastSentClient)
 			{
-				//inform every one of the client change
+				//add client change commands
 				out.list().push_back(string("I"));
-				out.list().push_back(msg.src);
-				lastClient=msg.src;
+				out.list().push_back(clientId);
+				lastSentClient=clientId;
 			}
 
-			//copy the commands to the output message
-			out.list().insert(out.list().end(), msg.list().begin(), msg.list().end());
+			//add commands to output message
+			out.list().insert(out.list().end(), commands.begin(), commands.end());
 
-			//send to all connected clients, execpt back to the sender
+			//send to all connected clients, except to skipDst
 			for (CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
 			{
-				if (I->first!=msg.src)
+				if (I->first!=clientId)
 				{
 					out.dst=I->first;
 					try
@@ -330,38 +332,62 @@ namespace paper
 				}
 			}
 
-			//store usefull drawing instructions permanently
-			if (getClient(msg.src).add(msg.list()))
+			//a global command?
+			if (!clientId)
 			{
-				//its time to commit
-
-				//still same client?
-				if (lastStoreClient!=msg.src)
-				{
-					//no, so store client-switch instruction:
-					drawing["data"].list().push_back(string("I"));
-					drawing["data"].list().push_back(msg.src);
-					lastStoreClient=msg.src;
-				}
-
-				//commit drawing instructions of this client
-				getClient(msg.src).commit(drawing["data"].list());
-				saved=false;
+				//always just store it
+				drawing["data"].list().insert(drawing["data"].list().end(), commands.begin(), commands.end());
 			}
+			//a command from specific client?
+			else
+			{
+				//parse drawing and cache instructions for this client
+				if (getClient(clientId).add(commands))
+				{
+					//client object says its ready to commit, store permanently
+
+					//its a different client as the last one we've stored?
+					if (lastStoreClient!=clientId)
+					{
+						//no, so store client-switch instruction:
+						drawing["data"].list().push_back(string("I"));
+						drawing["data"].list().push_back(clientId);
+						lastStoreClient=clientId;
+					}
+
+					//commit drawing instructions of this client
+					getClient(clientId).commit(drawing["data"].list());
+					saved=false;
+				}
+			}
+
+		}
+
+
+		//process drawing data received from a client and pass it to serverDraw for furher processing.
+		void clientDraw(Cmsg & msg)
+		{
+//			synapse::CvarList commands;
+//
+//			//copy the received commands
+//			commands.insert(commands.end(), msg.list().begin(), msg.list().end());
+
+			//sends the commands to other clients and store
+			serverDraw(msg.list(),msg.src);
+
 		}
 
 		virtual void delClient(int id)
 		{
 			if (clientMap.find(id)!= clientMap.end())
 			{
-				//send out and store the D command to indicate the client is deleted:
-				Cmsg msg;
-				msg.src=id;
-				msg.list().push_back(string("D"));
-				addDraw(msg);
-				lastClient=0;
-				if (getClient(id).didDraw)
-					lastStoreClient=0;
+				//do a Del command on behalf of the client
+				synapse::CvarList commands;
+				commands.push_back(string("D"));
+				serverDraw(commands,id);
+				//lastClient=0;
+//				if (getClient(id).didDraw)
+	//				lastStoreClient=0;
 				synapse::CsharedObject<CpaperClient>::delClient(id);
 			}
 		}
@@ -386,11 +412,11 @@ namespace paper
 			}
 
 			//switch back to current client
-			if (lastClient)
-			{
-				out.list().push_back(string("I"));
-				out.list().push_back(lastClient);
-			}
+//			if (lastClient)
+//			{
+//				out.list().push_back(string("I"));
+//				out.list().push_back(lastClient);
+//			}
 
 			out.send();
 
@@ -420,14 +446,16 @@ namespace paper
 	{
 		if (msg["moveClients"])
 		{
+
 			int oldObjectId=objectMan.getObjectByClient(msg.src).getId();
-			objectMan.leaveAll(msg.src);
-			int newObjectId=objectMan.add(msg.src);
+			int newObjectId=objectMan.add();
+	//		objectMan.getObject(oldObjectId).
 			objectMan.moveClients(oldObjectId, newObjectId);
 		}
 		else
 		{
-			objectMan.add(msg.src);
+			int objectId=objectMan.add();
+			objectMan.getObject(objectId).addClient(msg.src);
 		}
 	}
 
@@ -536,7 +564,7 @@ namespace paper
 	 */
 	SYNAPSE_REGISTER(paper_ClientDraw)
 	{
-		objectMan.getObjectByClient(msg.src).addDraw(msg);
+		objectMan.getObjectByClient(msg.src).clientDraw(msg);
 	}
 
 
