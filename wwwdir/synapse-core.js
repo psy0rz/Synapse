@@ -1,16 +1,27 @@
-//disable logging if we dont have firebug.
+//work around missing/different console objects
 //TODO:replace this with custom logging later perhaps.
 if (typeof console == 'undefined')
 {
 	function Cconsole(){
 	};
-	Cconsole.prototype.debug=function() { };
-	Cconsole.prototype.info=function() { };
-	Cconsole.prototype.log=function() { };
-	Cconsole.prototype.error=function() { };
 
 	console=new Cconsole();
 }
+
+if (typeof console.info == 'undefined')
+	console.info=function() { };
+
+//IE8 (and perhaps other?) has no debug, but DOES have an info, so we do it this way:
+if (typeof console.debug == 'undefined')
+	console.debug=console.info;
+
+if (typeof console.log == 'undefined')
+	console.log=console.info;
+
+if (typeof console.error == 'undefined')
+	console.error=console.info;
+
+
 
 //user defined message handlers go in here:
 synapse_handlers=new Array();
@@ -88,26 +99,32 @@ function synapse_callHandlers(event)
 	{
 		for (var handlerI in synapse_handlers[event])
 		{
-			try	
-			{
+			//if we're debugging, let the browser/debugger handle exceptions
+			if (synapse_debug)
 				synapse_handlers[event][handlerI](arguments[1], arguments[2], arguments[3], arguments[4])
-			}
-			catch(e)
+			else
 			{
-				if (typeof e.stack != 'undefined')
-					console.error("Error while calling handler:", e.stack);
-				else
-					console.error("Error while calling handler:", e);
-					
-				if (event!="error")
+				//catch exceptions and generate a "nice" error
+				try	
+				{
+					synapse_handlers[event][handlerI](arguments[1], arguments[2], arguments[3], arguments[4])
+				}
+				catch(e)
 				{
 					if (typeof e.stack != 'undefined')
-						synapse_callHandlers("error", "Exception error: "+e.stack);
+						console.error("Error while calling handler:", e.stack);
 					else
-						synapse_callHandlers("error", "Exception error: "+e.message);
+						console.error("Error while calling handler:", e);
+						
+					if (event!="error")
+					{
+						if (typeof e.stack != 'undefined')
+							synapse_callHandlers("error", "Exception error: "+e.stack);
+						else
+							synapse_callHandlers("error", "Exception error: "+e.message);
+					}
 				}
 			}
-
 		}
 		return true;		
 	}	
@@ -146,7 +163,7 @@ function synapse_handleMessages(messages, status, XMLHttpRequest)
 	//traverse the received events
 	for (var messageI in messages)
 	{
-		message=messages[messageI];
+		var message=messages[messageI];
 
 		if (synapse_debug)
 			console.debug("handling:",JSON.stringify(message));
