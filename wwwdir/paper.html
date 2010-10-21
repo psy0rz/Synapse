@@ -8,7 +8,7 @@
 
 	<script type="text/javascript" src="synapse.js"></script>
 	<script type="text/javascript" src="jquery.url.js"></script>
-
+    <!--[if IE]><script type="text/javascript" src="excanvas.js"></script><![endif]-->
 	<script type="text/javascript">
 
 		function Cpoint(x,y)
@@ -48,6 +48,8 @@
 		var clients=new Array(); 
 		var ourId=0;
 
+		var canvas;
+		var canvasTemp;
 		var canvasWidth=0;
 		var canvasHeight=0;
 
