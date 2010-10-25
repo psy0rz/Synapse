@@ -6,9 +6,9 @@
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
 	<title>internetpapier.nl - BETA</title>
 
+	<script src="svg.js"></script>
 	<script type="text/javascript" src="synapse.js"></script>
 	<script type="text/javascript" src="jquery.url.js"></script>
-    <!--[if IE]><script type="text/javascript" src="excanvas.js"></script><![endif]-->
 	<script type="text/javascript">
 
 		function Cpoint(x,y)
@@ -52,7 +52,8 @@
 		var canvasTemp;
 		var canvasWidth=0;
 		var canvasHeight=0;
-
+		var drawing;
+		
 		var autoCommit=false;
 
 		
@@ -106,18 +107,51 @@
 		}
 		
 		//information about the object a client is currently drawing
-		function Cclient()
+		function Cclient(id)
 		{
+			//init default settings
 			this.mode="m";
 			this.coords=new Array();
 			this.color="#000000";
 			this.width=widthToBrowser(1);
 			this.serverWidth=1;
 			this.text="";
-			this.cursorX=0;
-			this.cursorY=0;
 			this.clientName="";
-			this.id=0;
+			this.id=id;
+
+			//create cursor
+			this.svgCursor = document.createElementNS(svgns, 'circle');
+			this.svgCursor.setAttribute('cx', 200);
+			this.svgCursor.setAttribute('cy', 200);
+			this.svgCursor.setAttribute('r', 50);
+			this.svgCursor.setAttribute('fill', '#ff0000');
+			
+			drawing.appendChild(this.svgCursor);
+
+			test = document.createElementNS(svgns, 'circle');
+			test.setAttribute('cx', 10);
+			test.setAttribute('cy', 10);
+			test.setAttribute('fill', '#223FA3');
+			test.setAttribute('r', 5);
+			this.svgCursor.appendChild(test);
+//			drawing.appendChild(test);
+
+			
+			this.setCursor=function(x,y)
+			{
+				this.svgCursor.setAttribute('cx', x);
+				this.svgCursor.setAttribute('cy', y);
+			}
+			
+			//we're going to be removed, clean up any shit
+			this.remove=function()
+			{
+				//remove dom object
+				if ($("#client_"+this.id).length!=0)
+		 			$("#client_"+this.id).remove();
+
+			}
+
 			
 			//draw the object in the specified context	
 			this.draw=function(context)
@@ -143,30 +177,6 @@
 				}
 			}
 
-			//draw the cursor of the client
-			this.drawCursor=function(context)
-			{
-				var cW=canvasWidth/100;
-
-				//cross hair
-				context.beginPath();
-				context.strokeStyle=this.color;
-				context.lineWidth=1;
-				context.moveTo(this.cursorX-cW, this.cursorY);
-				context.lineTo(this.cursorX+cW, this.cursorY);
-				context.moveTo(this.cursorX, this.cursorY-cW);
-				context.lineTo(this.cursorX, this.cursorY+cW);
-				context.stroke();
-
-				//pixel
-				context.beginPath();
-				context.lineCap="round";
-				context.strokeStyle=this.color;
-				context.lineWidth=this.width;
-				context.moveTo(this.cursorX, this.cursorY);
-				context.lineTo(this.cursorX+0.001, this.cursorY+0.001);
-				context.stroke();
-			}
 
 			//update the html information about this client in the clientlist
 			this.updateHtml=function()
@@ -176,6 +186,7 @@
 					return;
 				
 		 		//no dom object for this client yet?
+		 		//TODO:move to create?
 				if ($("#client_"+this.id).length==0)
 				{
 					//add dom object to list
@@ -215,14 +226,6 @@
 					object.css('font-style','');
 			} 	
 
-			//we're going to be removed, clean up any shit
-			this.remove=function()
-			{
-				//remove dom object
-				if ($("#client_"+this.id).length!=0)
-		 			$("#client_"+this.id).remove();
-
-			}
 			
 			//clears the current draw-info, not the settings!
 			this.clear=function()
@@ -278,8 +281,7 @@
 					if (commands[0] == parseInt(commands[0]))
 					{
 						c=toBrowser(commands.shift(), commands.shift());
-						this.cursorX=c.x;
-						this.cursorY=c.y;
+		 				this.setCursor(c.x,c.y);
 						if (this.mode=='l')
 							this.coords.push(c.x, c.y);
 					}
@@ -304,9 +306,9 @@
 						this.commit();
 		 				commands.shift();
 						c=toBrowser(commands.shift(), commands.shift());
-		 				this.cursorX=c.x;
-		 				this.cursorY=c.y;
 		 				this.mode='m';
+		 				this.setCursor(c.x,c.y);
+		 			 				
 	 				}
 					//color
 					else if (commands[0]=='c')
@@ -379,7 +381,6 @@
 			for (var clientI in clients)
 			{
 				clients[clientI].draw(contextTemp);
-				clients[clientI].drawCursor(contextTemp);
 			}
 		}
 
@@ -403,9 +404,7 @@
  			
  			if (clients[ourId]==undefined)
  			{
- 	 			//NOTE:code duplication
-	 			clients[ourId]=new Cclient();
-	 			clients[ourId].id=ourId;
+	 			clients[ourId]=new Cclient(ourId);
  			}
 
 			clients[ourId].add(commands);
@@ -444,6 +443,9 @@
 			}
 		}	
 	
+		window.onsvgload = function() 
+		{
+		}
 		
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
@@ -547,7 +549,8 @@
 				send(0,"paper_Create", { "moveClients":1 } );
 			});
 
-			
+
+			//prepare canvas
 			canvasWidth=$("#canvasMouse").width();
 			canvasHeight=$("#canvasMouse").height();
 			
@@ -561,14 +564,18 @@
 			canvasTemp.width=canvasWidth;
 			canvasTemp.height=canvasHeight;
 
+			//create a svg node and assign it to global variable "drawing".
+			var container = document.getElementById("drawing");
+			drawing = document.createElementNS(svgns, "svg");
+			drawing.setAttribute("version", "1.2");
+			drawing.setAttribute("baseProfile", "tiny");
+			container.appendChild(drawing);
 
+		
 			//join the specified paper
 			send(0,"paper_Join", {
 				"objectId":jQuery.url.param("id"),
 			});
-
-
-			
  		});
  				
 		//we've joined a object
@@ -601,8 +608,7 @@
 		 			//need to create new client object?
 		 			if (clients[clientId]==undefined)
 		 			{
-			 			clients[clientId]=new Cclient();
-			 			clients[clientId].id=clientId;
+			 			clients[clientId]=new Cclient(clientId);
 		 			}
  				}
  				//start of complete redraw: clears everything, enables auto commit
@@ -720,6 +726,17 @@
 			bottom:0;
 			cursor:crosshair;
 		}
+
+		#drawing
+		{
+			position:absolute; 
+			left:16em;
+			top: 0;
+			right: 0;
+			bottom:0;
+			cursor:crosshair;
+		}
+
 		
 		canvas
 		{
@@ -853,6 +870,9 @@
 	<canvas width=10 height=10 id='canvasTemp'></canvas>		
 
 	<div id='loading' class='ui-state-highlight'>Loading...</div>
+
+	<div id='drawing'></div>		
+
 
 	<div id='canvasMouse'>
 	</div>
