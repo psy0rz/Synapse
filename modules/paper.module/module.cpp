@@ -100,6 +100,10 @@ namespace paper
 		out["path"]="modules/timer.module/libtimer.so";
 		out.send();
 
+		out["path"]="modules/http_json.module/libhttp_json.so";
+		out.send();
+
+
 		//tell the rest of the world we are ready for duty
 		//(the core will send a timer_Ready)
 		out.clear();

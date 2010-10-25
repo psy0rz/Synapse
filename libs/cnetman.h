@@ -91,7 +91,7 @@ namespace synapse
 	{
 
 		public:
-		CnetMan(unsigned int maxConnections);
+		CnetMan(unsigned int maxConnections=100);
 
 		//for server: call runListen to listen on a port.
 		//It returns when doClose is called.

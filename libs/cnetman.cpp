@@ -35,7 +35,7 @@ using asio::ip::tcp;
 
 
 template <class Tnet> 
-CnetMan<Tnet>::CnetMan(unsigned int maxConnections=100)
+CnetMan<Tnet>::CnetMan(unsigned int maxConnections)
 {
 	shutdown=false;
 	autoIdCount=0;	
