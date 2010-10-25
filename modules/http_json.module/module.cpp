@@ -42,14 +42,10 @@
 
 #include <boost/thread/condition.hpp>
 
-//#include <boost/date_time/local_time/local_time.hpp>
-//#include <boost/date_time/time_facet.hpp>
+#include "cconfig.h"
 
 #include <time.h>
 
-#define MAX_CONTENT 20000
-
-#define MAX_CONNECTIONS 100
 
 /**
 
@@ -67,61 +63,17 @@
 */
 
 
-
+//globals
 int moduleSessionId=0;
-
 int netIdCounter=0;
+ChttpSessionMan httpSessionMan;
 
-//int moduleThreads=1;
-
-map<string,string> contentTypes;
-
-
-SYNAPSE_REGISTER(module_Init)
-{
-	Cmsg out;
-
-	moduleSessionId=msg.dst;
-
-	//change module settings.
-	//especially broadcastMulti is important for our "all"-handler
-	out.clear();
-	out.event="core_ChangeModule";
-	out["maxThreads"]=MAX_CONNECTIONS+10;
-	out["broadcastMulti"]=1;
-	out.send();
-
-	//we need multiple threads for network connection handling
-	//(this is done with moduleThreads and sending core_ChangeModule events)
-	out.clear();
-	out.event="core_ChangeSession";
-	out["maxThreads"]=MAX_CONNECTIONS+10;
-	out.send();
-
-	//register a special handler without specified event
-	//this will receive all events that are not handled elsewhere in this module.
-	out.clear();
-	out.event="core_Register";
-	out["handler"]="all";
-	out.send();
-
-	//set content types
-	//TODO: load it from a file?
-	contentTypes["css"]		="text/css";
-	contentTypes["html"]	="text/html";
-	contentTypes["js"]		="application/javascript";
-	contentTypes["gif"]		="image/gif";
-	contentTypes["jpeg"]	="image/jpeg";
-	contentTypes["jpg"]		="image/jpeg";
-	contentTypes["png"]		="image/png";
+//global, read from config file
+int configMaxContent=0;
+int configMaxConnections=0;
+map<string,string> configContentTypes;
 
 
-	//tell the rest of the world we are ready for duty
-	out.clear();
-	out.event="core_Ready";
-	out.send();
-
-}
 
 void getHttpDate(string & s)
 {
@@ -154,8 +106,6 @@ void getHttpDate(string & s)
 	}
 }
 
-
-ChttpSessionMan httpSessionMan;
 
 
 
@@ -355,10 +305,10 @@ class CnetHttp : public synapse::Cnet
 		))
 		{
 			string extention=what[1];
-			if (contentTypes.find(extention)!=contentTypes.end())
+			if (configContentTypes.find(extention)!=configContentTypes.end())
 			{
-				extraHeaders["content-type"]=contentTypes[extention];
-				DEB("Content type of ." << extention << " is " << contentTypes[extention]);
+				extraHeaders["content-type"]=configContentTypes[extention];
+				DEB("Content type of ." << extention << " is " << configContentTypes[extention]);
 			}
 			else
 			{
@@ -564,7 +514,7 @@ class CnetHttp : public synapse::Cnet
 				//a POST with content:
 				else
 				{
-					if ( (int)headers["content-length"]<0  || (int)headers["content-length"] > MAX_CONTENT )
+					if ( (int)headers["content-length"]<0  || (int)headers["content-length"] > configMaxContent )
 					{
 						error="Invalid Content-Length";
 					}
@@ -686,8 +636,71 @@ class CnetHttp : public synapse::Cnet
 
 };
 
-synapse::CnetMan<CnetHttp> net(MAX_CONNECTIONS);
 
+synapse::CnetMan<CnetHttp> net(100);
+
+
+SYNAPSE_REGISTER(module_Init)
+{
+	moduleSessionId=msg.dst;
+
+	Cmsg out;
+
+	//change module settings.
+	//especially broadcastMulti is important for our "all"-handler
+	out.clear();
+	out.event="core_ChangeModule";
+	out["maxThreads"]=configMaxConnections+10;
+	//TODO: modify this module to use the more efficient broadcastCookie method?
+	out["broadcastMulti"]=1;
+	out.send();
+
+	//we need multiple threads for network connection handling
+	//(this is done with moduleThreads and sending core_ChangeModule events)
+	out.clear();
+	out.event="core_ChangeSession";
+	out["maxThreads"]=configMaxConnections+10;
+	out.send();
+
+	//register a special handler without specified event
+	//this will receive all events that are not handled elsewhere in this module.
+	out.clear();
+	out.event="core_Register";
+	out["handler"]="all";
+	out.send();
+
+
+	//load config file
+	synapse::Cconfig config;
+	config.load("etc/synapse/http_json.conf");
+	configMaxContent=config["maxContent"];
+	configMaxConnections=config["maxContent"];
+	net.setMaxConnections(configMaxConnections);
+
+	//set content types
+	for (Cvar::iterator I=config["contentTypes"].begin(); I!=config["contentTypes"].end(); I++)
+	{
+		configContentTypes[I->first]=I->second.str();
+	}
+
+	//listen on configured ports
+	//NOTE: applications may send additional Listen-events for other ports
+	for (Cvar::iteratorList I=config["ports"].list().begin(); I!=config["ports"].list().end(); I++)
+	{
+		out.clear();
+		out.event="http_json_Listen";
+		out.dst=moduleSessionId;
+		out["port"]=*I;
+		out.send();
+	}
+
+
+	//tell the rest of the world we are ready for duty
+	out.clear();
+	out.event="core_Ready";
+	out.send();
+
+}
 
 
 /** Creates a new server and listens specified port
@@ -698,26 +711,7 @@ SYNAPSE_REGISTER(http_json_Listen)
 	{
 		//starts a new thread to accept and handle the incomming connection.
 		Cmsg out;
-		int connections;
 
-		if (msg.isSet("connections"))
-		{
-			connections=msg["connections"];
-		}
-		else
-		{
-			//default is 100 connections
-			connections=100;
-		}
-
-
-		//allow this many threads.
-		//NOTE: the reason why we do this, is to prevent multiple threads from entereing our "all" handler: this would be bad for performance, since httpSessionMan is locked to 1 thread.
-//		moduleThreads+=connections+1;
-//		out.clear();
-//		out.event="core_ChangeModule";
-//		out["maxThreads"]=moduleThreads;
-//		out.send();
 
 		//fire off first acceptor thread
 		out.clear();
