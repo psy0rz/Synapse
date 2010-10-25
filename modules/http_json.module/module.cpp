@@ -697,6 +697,7 @@ SYNAPSE_REGISTER(module_Init)
 
 	//tell the rest of the world we are ready for duty
 	out.clear();
+	out.dst=0;
 	out.event="core_Ready";
 	out.send();
 

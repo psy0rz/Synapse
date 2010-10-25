@@ -146,11 +146,16 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
 			return false;
 		}
 
-		while (!shutdown && acceptors.find(port)==acceptors.end())
+		while (acceptors.find(port)==acceptors.end())
 		{
 			DEB("net port " << port << " is not listening yet, waiting...");
 			threadCond.wait(lock);
+
+			if (shutdown)
+				return(false);
+
 		}
+
 
 		if (id==0)
 		{
@@ -248,6 +253,10 @@ void CnetMan<Tnet>::doShutdown()
 			return;
 
 		shutdown=true;
+
+		//wakeup all that are waiting for a listen to become ready.
+		threadCond.notify_all();
+
 
 		//close all ports
 		DEB("Closing all open ports");	
