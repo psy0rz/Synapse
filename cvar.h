@@ -128,6 +128,7 @@ namespace synapse
 }
 
 typedef synapse::Cvar Cvar;
+typedef synapse::CvarList CvarList;
 
 
 #endif

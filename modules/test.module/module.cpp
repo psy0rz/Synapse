@@ -70,12 +70,12 @@ SYNAPSE_REGISTER(module_Init)
 //  	out["path"]="modules/ami.module/libami.so";
 //  	out.send();
 
-  	out["path"]="modules/paper.module/libpaper.so";
-  	out.send();
-
-
-	out["path"]="modules/http_json.module/libhttp_json.so";
-	out.send();
+//  	out["path"]="modules/paper.module/libpaper.so";
+//  	out.send();
+//
+//
+//	out["path"]="modules/http_json.module/libhttp_json.so";
+//	out.send();
 
 //	out["path"]="modules/play_vlc.module/libplay_vlc.so";
 //	out.send();
@@ -128,81 +128,6 @@ SYNAPSE_REGISTER(play_Ready)
 	out.send();
 }
 
-SYNAPSE_REGISTER(asterisk_Ready)
-{
-	Cmsg out;
-
-//
-/*	out.clear();
-	out.event="asterisk_Connect";
-	out["username"]="manager";
-	out["password"]="insecure";
-	out["host"]="localhost";
-	out["port"]="5038";
-	out.send();*/
-//
-// 	out.clear();
-// 	out.event="asterisk_Connect";
-// 	out["username"]="manager";
-// 	out["password"]="insecure";
-// 	out["host"]="localhost";
-// 	out["port"]="5039";
-// 	out.send();
-//
-// 	out.clear();
-// 	out.event="asterisk_Connect";
-// 	out["username"]="manager";
-// 	out["password"]="insecure";
-// 	out["host"]="localhost";
-// 	out["port"]="5040";
-// 	out.send();
-
-
-	//replay server with:
-	//tcpserver 0.0.0.0 5555 scriptreplay mt2.timing mt2.txt
-
-// 	out.clear();
-// 	out.event="asterisk_Connect";
-// 	out["username"]="bla";
-// 	out["password"]="bla";
-// 	out["host"]="localhost";
-// 	out["port"]="5555";
-// 	out.send();
-
-
-	out.clear();
-	out.event="asterisk_Connect";
-	out["username"]="synapse";
-	out["password"]="f39tgvp095vcnek3";
-	out["host"]="asterisk1";
-	out["port"]="5038";
-	out.send();
-
-	out.clear();
-	out.event="asterisk_Connect";
-	out["username"]="synapse";
-	out["password"]="f39tgvp095vcnek3";
-	out["host"]="asterisk2";
-	out["port"]="5038";
-	out.send();
-
-	out.clear();
-	out.event="asterisk_Connect";
-	out["username"]="synapse";
-	out["password"]="f39tgvp095vcnek3";
-	out["host"]="asterisk3";
-	out["port"]="5038";
-	out.send();
-
-	out.clear();
-	out.event="asterisk_Connect";
-	out["username"]="synapse";
-	out["password"]="f39tgvp095vcnek3";
-	out["host"]="asterisk4";
-	out["port"]="5038";
-	out.send();
-
-}
 
 SYNAPSE_REGISTER(test_Counter)
 {
@@ -252,15 +177,15 @@ SYNAPSE_REGISTER(test_CounterSpeed)
 
 
 
-SYNAPSE_REGISTER(http_json_Ready)
-{
-	Cmsg out;
-	out.clear();
-	out.event="http_json_Listen";
-	out["port"]="10080";
-	out.dst=msg["session"];
-	out.send();
-}
+//SYNAPSE_REGISTER(http_json_Ready)
+//{
+//	Cmsg out;
+//	out.clear();
+//	out.event="http_json_Listen";
+//	out["port"]="10080";
+//	out.dst=msg["session"];
+//	out.send();
+//}
 
 
 

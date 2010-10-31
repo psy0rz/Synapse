@@ -113,7 +113,13 @@ namespace asterisk
 		out.event="core_LoadModule";
 		out["path"]="modules/timer.module/libtimer.so";
 		out.send();
-	
+
+
+		out.clear();
+		out.event="core_LoadModule";
+		out["path"]="modules/http_json.module/libhttp_json.so";
+		out.send();
+
 	
 		out.clear();
 
