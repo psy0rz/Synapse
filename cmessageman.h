@@ -103,6 +103,7 @@ public:
 
 	//initial module that user want to start, after the coremodule is started:
 	string firstModuleName;
+	int coreId;
 
 	//for administrator/debugging
 	string getStatusStr();

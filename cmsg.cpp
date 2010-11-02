@@ -36,7 +36,7 @@
 
 Cmsg::Cmsg()
 {
-	dst=0;
+	dst=DST_CORE;
 	src=0;
 }
 

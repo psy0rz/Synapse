@@ -70,6 +70,10 @@ typical route of a cmsg object
 	@author 
 */
 
+//special destinations
+#define DST_BROADCAST 0
+#define DST_CORE     -1
+
 namespace synapse
 {
 	using namespace std;

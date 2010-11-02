@@ -64,6 +64,7 @@ CmessageMan::CmessageMan()
 	defaultModifyGroup=userMan.getGroup("modules");
 	defaultRecvGroup=userMan.getGroup("everyone");
 
+	coreId=DST_CORE; //this will be set to the correct core session id as soon as possible
 	activeThreads=0;
 	currentThreads=0;
 	maxActiveThreads=0;
@@ -160,60 +161,14 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 	//check if destination(s) are allowed to RECEIVE:
 	FsoHandler soHandler;
 
-	//destination specified:
-	if (msg->dst>0)
-	{
-		CsessionPtr dst;
-		dst=userMan.getSession(msg->dst);
-		//found it?
-		if (!dst)
-		{
-			stringstream s;
-			s << "send: destination session " << msg->dst << " not found";
-			throw(runtime_error(s.str().c_str()));
-		}
 
-		//get the handler, and does it exist?
-		soHandler=dst->module->getHandler(msg->event);
-		if (soHandler==NULL)
-		{
-			WARNING("send ignored message: no handler for " << msg->event << " found in " << dst->module->name );
-			return;
-		}
-
-		//is specified destination allowed?
-		if (!event->isRecvAllowed(dst->user))
-		{
-			stringstream s;
-			s <<  "send: session " << msg->dst << " with user " << dst->user->getName() << " is not allowed to receive event " << msg->event;
-			throw(runtime_error(s.str().c_str()));
-		}
-
-		if (logSends)
-		{
-			msgStr << msg->dst << ":" << dst->user->getName() << "@" << dst->module->name <<
-				" " << msg->getPrint(" |");
-			LOG_SEND(msgStr.str());
-		}
-
-		//all checks ok:
-		//make a copy of the message and add the destionation + handler to the call queue
-		callMan.addCall(msg, dst, soHandler);
-
-		//wake up a thread that calls the actual handler
-		threadCond.notify_one();
-
-
-		return;
-	}
-	//destination <=0 == broadcast
-	else
+	//broadcast?
+	if (msg->dst==DST_BROADCAST)
 	{
 		if (logSends)
 		{
 			msgStr << "broadcast (";
 		}
-
 
 		//TODO:optimize these broadcasting algoritms
 		CsessionPtr dst;
@@ -264,6 +219,59 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		if (!delivered)
 			WARNING("broadcast " << msg->event << " was not received by anyone.");
 	}
+	//no broadcast or anything else, deliver to one specific session:
+	else
+	{
+		CsessionPtr dst;
+
+		//special core destination id?
+		if (msg->dst==DST_CORE)
+			dst=userMan.getSession(coreId);
+		else
+			dst=userMan.getSession(msg->dst);
+
+		//found it?
+		if (!dst)
+		{
+			stringstream s;
+			s << "send: destination session " << msg->dst << " not found";
+			throw(runtime_error(s.str().c_str()));
+		}
+
+		//get the handler, and does it exist?
+		soHandler=dst->module->getHandler(msg->event);
+		if (soHandler==NULL)
+		{
+			WARNING("send ignored message: no handler for " << msg->event << " found in " << dst->module->name );
+			return;
+		}
+
+		//is specified destination allowed?
+		if (!event->isRecvAllowed(dst->user))
+		{
+			stringstream s;
+			s <<  "send: session " << msg->dst << " with user " << dst->user->getName() << " is not allowed to receive event " << msg->event;
+			throw(runtime_error(s.str().c_str()));
+		}
+
+		if (logSends)
+		{
+			msgStr << msg->dst << ":" << dst->user->getName() << "@" << dst->module->name <<
+				" " << msg->getPrint(" |");
+			LOG_SEND(msgStr.str());
+		}
+
+		//all checks ok:
+		//make a copy of the message and add the destionation + handler to the call queue
+		callMan.addCall(msg, dst, soHandler);
+
+		//wake up a thread that calls the actual handler
+		threadCond.notify_one();
+
+
+		return;
+	}
+
 }
 
 /** Use this to send a message.
@@ -272,32 +280,33 @@ Internally it will result in 1 or more calls to sendMappedMessage, if the msg.ds
 
 void CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie)
 {
-	if (msg->dst >= 0)
-	{
+	//FIXME: implement mapped messages differntly?
+//	if (msg->dst >= 0)
+//	{
 		sendMappedMessage(module, msg, cookie);
-	}
-	else
-	{
-		//when we're done send a special mapping message that shows us what is mapped.
-		//used by the mapper GUI.
-		CmsgPtr mappedMsg=CmsgPtr(new Cmsg());
-		mappedMsg->event="core_MappedEvent";
-		//create or find the event in the mapper list, and traverse the list
-		BOOST_FOREACH(string event, eventMappers[msg->event])
-		{
-			//clone the message and change the event-name
-			CmsgPtr mapMsg=CmsgPtr(new Cmsg(*msg));
-			(*mapMsg)["synapse_mappedFrom"]=msg->event; //long synapse-name, since we dont want it to collide with the original parameters of the message.
-			(*mappedMsg)["mappedTo"].list().push_back(event);
-			mapMsg->event=event;
-			mapMsg->dst=0;
-			sendMessage(module, mapMsg, cookie);
-		}
-
-		(*mappedMsg)["mappedFrom"]=msg->event;
-		sendMessage(module, mappedMsg, cookie);
-
-	}
+//	}
+//	else
+//	{
+//		//when we're done send a special mapping message that shows us what is mapped.
+//		//used by the mapper GUI.
+//		CmsgPtr mappedMsg=CmsgPtr(new Cmsg());
+//		mappedMsg->event="core_MappedEvent";
+//		//create or find the event in the mapper list, and traverse the list
+//		BOOST_FOREACH(string event, eventMappers[msg->event])
+//		{
+//			//clone the message and change the event-name
+//			CmsgPtr mapMsg=CmsgPtr(new Cmsg(*msg));
+//			(*mapMsg)["synapse_mappedFrom"]=msg->event; //long synapse-name, since we dont want it to collide with the original parameters of the message.
+//			(*mappedMsg)["mappedTo"].list().push_back(event);
+//			mapMsg->event=event;
+//			mapMsg->dst=0;
+//			sendMessage(module, mapMsg, cookie);
+//		}
+//
+//		(*mappedMsg)["mappedFrom"]=msg->event;
+//		sendMessage(module, mappedMsg, cookie);
+//
+//	}
 }
 
 void CmessageMan::operator()()
@@ -501,8 +510,9 @@ void CmessageMan::checkThread()
 int CmessageMan::run(string coreName, string moduleName)
 {
 	//load the first module as user core UNLOCKED!
-	loadModule(coreName, "core");
-	this->firstModuleName=moduleName;
+	coreId=loadModule(coreName, "core")->id;
+
+	firstModuleName=moduleName;
 
 	//start first thread:
 	checkThread();
@@ -579,7 +589,7 @@ CsessionPtr CmessageMan::loadModule(string path, string userName)
 		CuserPtr user(userMan.getUser(userName));
 		if (user)
 		{
-			//we need a session for the init function of the core-module:
+			//create the default session of the module
 			CsessionPtr session(new Csession(user,module));
 			module->defaultSessionId=userMan.addSession(session);
 			session->description="module default session.";

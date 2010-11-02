@@ -57,8 +57,9 @@ void init()
 
 	INFO("Synapse core v1.0 starting up...");
 
-	//call the normal module-init to do the rest:
+	//normally the module_Init for other modules is send by us. So we have to send our own module_init our selfs.
 	Cmsg out;
+	out.dst=((CmodulePtr)module)->defaultSessionId;
 	out.event="module_Init";
 	out.send();
 

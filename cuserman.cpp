@@ -14,19 +14,6 @@
 
     You should have received a copy of the GNU General Public License
     along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
-
-
-
-
-
-
-
-
-
-
-
-
-
 #include "cuserman.h"
 #include <boost/shared_ptr.hpp>
 #include <iostream>
@@ -37,10 +24,13 @@
 namespace synapse
 {
 
+
+
 using namespace std;
 CuserMan::CuserMan()
 {
 	sessionCounter=0;
+	sessionSegment=12;
 	sessionMaxPerUser=1000;
 	shutdown=false;
 

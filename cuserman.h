@@ -45,6 +45,13 @@ using namespace boost;
 
 #define MAX_SESSIONS 1000
 
+//a session id consists of 2 x 16-bits
+// -the higer 16 bits define the segment id, to identify the synapse instance.
+// -the lower 16 bits define the local session id
+#define SESSION_GET_SEGMENT(id) id >> 16;
+#define SESSION_GET_LOCAL(id) id & 0xffff;
+#define SESSION_GET_ID(segment,local)  (( segment << 16 ) | local )
+
 /**
 	@author 
 */
@@ -53,6 +60,8 @@ public:
 	CuserMan();
 	
 	~CuserMan();
+
+
 	CuserPtr getUser(const string & userName);
 	bool addUser(const CuserPtr & user);
 	CgroupPtr getGroup(const string & groupName);
@@ -70,10 +79,12 @@ private:
 	list<CuserPtr> users;
 	list<CgroupPtr> groups;
 	//performance: we use an oldskool array, so session lookups are quick
-	int sessionCounter;
 	CsessionPtr sessions[MAX_SESSIONS+1];
+
 	int sessionMaxPerUser;
-	
+	int sessionCounter;
+	int sessionSegment; //every synapse instance should have a uniq segment
+
 };
 }
 
