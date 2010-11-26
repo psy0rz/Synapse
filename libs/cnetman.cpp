@@ -173,7 +173,16 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
 	}
 
 	//let the ioservice run, until the connection is closed again:
-	netPtr->run();
+
+	try
+	{
+		netPtr->run();
+	}
+	catch(...)
+	{
+		ERROR("Ignored exception while running acceptor");
+	}
+
 	DEB("ioservice finished for port " << port << " into " << id);
 
 	{
