@@ -124,6 +124,13 @@ namespace paper
 		Cvar settings;
 		CvarList drawing;
 		bool didDraw; //client did draw something?
+		int lastElementId;
+
+		CpaperClient()
+		{
+			didDraw=false;
+			lastElementId=0;
+		}
 
 		//parses and collect usefull drawing commands for this client.
 		//returns true if the sharedobject should permanently store the collected data
@@ -227,10 +234,6 @@ namespace paper
 		}
 
 
-		CpaperClient()
-		{
-			didDraw=false;
-		}
 
 	};
 
@@ -239,14 +242,15 @@ namespace paper
 	class CpaperObject : public synapse::CsharedObject<CpaperClient>
 	{
 		public:
-		int lastSentClient;
-		int lastStoreClient;
+//		int lastSentClient;
+	//	int lastStoreClient;
 		synapse::Cconfig drawing;
 
 		CpaperObject()
 		{
-			lastSentClient=0;
-			lastStoreClient=0;
+//			lastSentClient=0;
+//			lastStoreClient=0;
+			drawing["lastElementId"]=0;
 		}
 
 		void save(string path)
@@ -260,68 +264,70 @@ namespace paper
 			drawing.load(path);
 			saved=true;
 
-			//"fsck" for stale clients (they should only exist if we where aborted or crashing)
-			set<int> ids;
-			int lastId;
-			CvarList & drawingData=drawing["data"].list();
-			CvarList::iterator I=drawingData.begin();
-			//parse all the clients that joined and left:
-			while (I!=drawingData.end())
-			{
-				if (I->which()==CVAR_STRING)
-				{
-					//new client
-					if (I->str()=="I")
-					{
-						I++;
-						lastId=*I;
-						ids.insert(lastId);
-					}
-					//delete last selected client:
-					else if (I->str()=="D")
-					{
-						ids.erase(lastId);
-					}
-				}
-				I++;
-			}
+//			//"fsck" for stale clients (they should only exist if we where aborted or crashing)
+//			set<int> ids;
+//			int lastId;
+//			CvarList & drawingData=drawing["data"].list();
+//			CvarList::iterator I=drawingData.begin();
+//			//parse all the clients that joined and left:
+//			while (I!=drawingData.end())
+//			{
+//				if (I->which()==CVAR_STRING)
+//				{
+//					//new client
+//					if (I->str()=="I")
+//					{
+//						I++;
+//						lastId=*I;
+//						ids.insert(lastId);
+//					}
+//					//delete last selected client:
+//					else if (I->str()=="D")
+//					{
+//						ids.erase(lastId);
+//					}
+//				}
+//				I++;
+//			}
 
-			//there should be nothing left, otherwise fix it by adding appropriate deletes:
-			while(!ids.empty())
-			{
-				WARNING("Fixed stale client in drawing: " << *ids.begin())
-				drawingData.push_back(string("I"));
-				drawingData.push_back(*ids.begin());
-				drawingData.push_back(string("D"));
-				ids.erase(ids.begin());
-			}
+//			//there should be nothing left, otherwise fix it by adding appropriate deletes:
+//			while(!ids.empty())
+//			{
+//				WARNING("Fixed stale client in drawing: " << *ids.begin())
+//				drawingData.push_back(string("I"));
+//				drawingData.push_back(*ids.begin());
+//				drawingData.push_back(string("D"));
+//				ids.erase(ids.begin());
+//			}
 
 		}
 
 
 		//send the commands to the clients and store permanently if neccesary.
 		//on behalf of clientId (use clientId 0 for global commands)
-		void serverDraw(CvarList & commands, int clientId=0 )
+		void serverDraw(Cmsg out, int clientId=0 )
 		{
-			Cmsg out;
 			out.event="paper_ServerDraw";
+			out.src=0;
 
-			//instructions come from a different client then last time?
-			if (clientId && clientId!=lastSentClient)
+			//create new element?
+			if (out["cmd"].str()=="create")
 			{
-				//add client change commands
-				out.list().push_back(string("I"));
-				out.list().push_back(clientId);
-				lastSentClient=clientId;
+				drawing["lastElementId"]=drawing["lastElementId"]+1;
+				getClient(clientId).lastElementId=drawing["lastElementId"];
 			}
 
-			//add commands to output message
-			out.list().insert(out.list().end(), commands.begin(), commands.end());
+			//determine the element id, if its not specified.
+			if (!out.isSet("id"))
+			{
+				out["id"]=getClient(clientId).lastElementId;
+			}
+
 
 			//send to all connected clients, except to skipDst
 			for (CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
 			{
-				if (I->first!=clientId)
+				//if (I->first!=clientId)
 				{
 					out.dst=I->first;
 					try
@@ -336,34 +342,34 @@ namespace paper
 				}
 			}
 
-			//a global command?
-			if (!clientId)
-			{
-				//always just store it
-				drawing["data"].list().insert(drawing["data"].list().end(), commands.begin(), commands.end());
-			}
-			//a command from specific client?
-			else
-			{
-				//parse drawing and cache instructions for this client
-				if (getClient(clientId).add(commands))
-				{
-					//client object says its ready to commit, store permanently
-
-					//its a different client as the last one we've stored?
-					if (lastStoreClient!=clientId)
-					{
-						//no, so store client-switch instruction:
-						drawing["data"].list().push_back(string("I"));
-						drawing["data"].list().push_back(clientId);
-						lastStoreClient=clientId;
-					}
-
-					//commit drawing instructions of this client
-					getClient(clientId).commit(drawing["data"].list());
-					saved=false;
-				}
-			}
+//			//a global command?
+//			if (!clientId)
+//			{
+//				//always just store it
+//				drawing["data"].list().insert(drawing["data"].list().end(), commands.begin(), commands.end());
+//			}
+//			//a command from specific client?
+//			else
+//			{
+//				//parse drawing and cache instructions for this client
+//				if (getClient(clientId).add(commands))
+//				{
+//					//client object says its ready to commit, store permanently
+//
+//					//its a different client as the last one we've stored?
+//					if (lastStoreClient!=clientId)
+//					{
+//						//no, so store client-switch instruction:
+//						drawing["data"].list().push_back(string("I"));
+//						drawing["data"].list().push_back(clientId);
+//						lastStoreClient=clientId;
+//					}
+//
+//					//commit drawing instructions of this client
+//					getClient(clientId).commit(drawing["data"].list());
+//					saved=false;
+//				}
+//			}
 
 		}
 
@@ -377,7 +383,7 @@ namespace paper
 //			commands.insert(commands.end(), msg.list().begin(), msg.list().end());
 
 			//sends the commands to other clients and store
-			serverDraw(msg.list(),msg.src);
+			serverDraw(msg,msg.src);
 
 		}
 
@@ -388,7 +394,7 @@ namespace paper
 				//do a Del command on behalf of the client
 				CvarList commands;
 				commands.push_back(string("D"));
-				serverDraw(commands,id);
+				//serverDraw(commands,id);
 				//lastClient=0;
 //				if (getClient(id).didDraw)
 	//				lastStoreClient=0;
@@ -460,13 +466,13 @@ namespace paper
 			CvarList commands;
 			commands.push_back(string("N"));
 			commands.push_back(newObjectId);
-			objectMan.getObject(oldObjectId).serverDraw(commands);
+			//objectMan.getObject(oldObjectId).serverDraw(commands);
 
 			//store reference to previous object in the new one..
 			commands.clear();
 			commands.push_back(string("P"));
 			commands.push_back(oldObjectId);
-			objectMan.getObject(newObjectId).serverDraw(commands);
+			//objectMan.getObject(newObjectId).serverDraw(commands);
 
 			//now actually move the clients
 			objectMan.moveClients(oldObjectId, newObjectId);
