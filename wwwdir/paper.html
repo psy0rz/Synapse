@@ -33,7 +33,7 @@
 		var mouseSendPoint=new Cpoint(); //last mousepoint sent to server
 		var mouseSendTime=0; //last time the mousePosition was anaylsed by updateGameField
 	
-		var mouseDraw=0;		
+		var mouseMode="";		
 	
 		var contextDraw;
 		var contextTemp;
@@ -105,6 +105,8 @@
 			var objDiv = document.getElementById("chatList");
 			objDiv.scrollTop = objDiv.scrollHeight;
 		}
+
+
 		
 		//information about the object a client is currently drawing
 		function Cclient(id)
@@ -120,20 +122,30 @@
 			this.id=id;
 
 			//create cursor
-			this.svgCursor = document.createElementNS(svgns, 'circle');
-			this.svgCursor.setAttribute('cx', 200);
-			this.svgCursor.setAttribute('cy', 200);
-			this.svgCursor.setAttribute('r', 50);
-			this.svgCursor.setAttribute('fill', '#ff0000');
+//			this.svgCursor = document.createElementNS(svgns, 'circle');
+//			this.svgCursor.setAttribute('cx', 200);
+//			this.svgCursor.setAttribute('cy', 200);
+//			this.svgCursor.setAttribute('r', 100);
+//			this.svgCursor.setAttribute('id', 'test');
+//			//this.svgCursor.setAttribute('fill', '#ff0000');
+//			this.svgCursor.style["fill"]='#ff0000';
+	
+			this.svgCursor = document.createElementNS(svgns, 'polyline');
+			this.svgCursor.setAttribute('points', '10,10 200,200 20,50');
+			this.svgCursor.setAttribute('stroke', '#000000');
+			this.svgCursor.setAttribute('id', 'test');
+			this.svgCursor.setAttribute('fill', 'none');
+			this.svgCursor.setAttribute('transform', 'translate(200,200)');
+			var p=this.svgCursor.points.getItem(1);
+			p.x=1000;
+			p.y=1000;			
+			
+			//this.svgCursor.setAttribute('fill', '#ff0000');
+			//this.svgCursor.style["fill"]='#ff0000';
+
 			
 			drawing.appendChild(this.svgCursor);
 
-			test = document.createElementNS(svgns, 'circle');
-			test.setAttribute('cx', 10);
-			test.setAttribute('cy', 10);
-			test.setAttribute('fill', '#223FA3');
-			test.setAttribute('r', 5);
-			this.svgCursor.appendChild(test);
 //			drawing.appendChild(test);
 
 			
@@ -242,27 +254,23 @@
 			}
 			
 			/*** Drawing protocol
-			//global commands:
-			'S'							Start comlete redraw: clear everything, after this all drawing commands will follow, but without explicit commits (to save space)
-			'E'							End of complete redraw. 
-			'I',<id>					Select a different client ID. (every client has its own color, line width etc settings) Usually the server automaticly sets this parameter.
-			'N',<id>					To indicate next drawing <id>
-			'P',<id>					To indicate previous drawing <id>
-			
-			//client settings:
-			'c',<htmlcolor>				Set current drawing color
-			'w',<w>						Set current line width
-			'n',"name"					Set client name
+			cmd:		command to do:
+							create: create object
+							update: modify object
+							delete: remove object
 
-			//client commands:
-			's'							write current drawing action permanently
-			'x'							Cancel the current drawing action.  
-			'm',<x>,<y>					Update cursor location
-			'l',<x>,<y>,...				Enable line drawing. (next x,y coords will draw from now on)
-			'r',<x1>,<y1>,<x2>,<y2>		Draw rectangle
-			'a',<x1>,<y1>,<x2>,<y2>		Draw circle
-			't',<x>,<y>,"text"			Draw text
-			'.',"text"					Chat text
+			create parameters:
+			element:		svg element type (e.g. circle,rect,polyline)
+			
+			create/modify parameters:
+			add:    	svg attributes to append data to (used for polylines)
+			set:		svg attributes to set/replace
+
+			modify/delete parameters:		
+			id:			object id for modify/delete. if not specified, the server will use the last id.
+			
+					
+			
 			
 			'
 			 */
@@ -305,9 +313,10 @@
 	 				{
 						this.commit();
 		 				commands.shift();
-						c=toBrowser(commands.shift(), commands.shift());
+						//c=toBrowser(commands.shift(), commands.shift());
+						
 		 				this.mode='m';
-		 				this.setCursor(c.x,c.y);
+		 				this.setCursor(commands.shift(), commands.shift());
 		 			 				
 	 				}
 					//color
@@ -386,56 +395,64 @@
 
 
 
-		//send drawing commands to server and draw them locally as well
+		//send drawing msg to server 
 		//note: you need to specifiy server coordinates instead of browser coordinates here.		
-		function sendDraw(commands)
+		function sendDraw(msg)
 		{
 			//only if we're joined to something
 			if (!currentObjectId)
 				return;
 			
 			//send it to server
-			send(paperModId,"paper_ClientDraw", commands);
+			send(paperModId,"paper_ClientDraw", msg);
 
 			//we dont get our own stuff back from the server, so we can add here.
 			//this way the users doesnt see his own stuff lagged.
 			//however there is a race condition when 2 users draw over eachother and release the mouse at the same time. 
 			//both users will get a different result. however this is fixed on a refresh and acceptable for now.
  			
- 			if (clients[ourId]==undefined)
- 			{
-	 			clients[ourId]=new Cclient(ourId);
- 			}
+// 			if (clients[ourId]==undefined)
+ //			{
+	// 			clients[ourId]=new Cclient(ourId);
+ 		//	}
 
-			clients[ourId].add(commands);
+//			clients[ourId].add(commands);
 
 
-			//refresh temporary canvas
-			drawClients();
+	//		//refresh temporary canvas
+//			drawClients();
 		}
 
-		function mouseMove()
+		function mouseMove(force)
 		{
+			
 			//mouse throttling function, to prevent too many updates per second
 			//no change?
-			if (mousePoint.x==mouseSendPoint.x && mousePoint.y==mouseSendPoint.y)
+			if (!force && mousePoint.x==mouseSendPoint.x && mousePoint.y==mouseSendPoint.y)
 				return;
 
 			currentTime=new Date().getTime();
 
 			//send updates at a max fps, or more when the mouse moves fast
-			if (	(currentTime-mouseSendTime>=mouseInterval) || 
+			if (	force ||
+					(currentTime-mouseSendTime>=mouseInterval) || 
 					Math.abs(mousePoint.x-mouseSendPoint.x)> mouseMax ||
-					Math.abs(mousePoint.y-mouseSendPoint.y)> mouseMax
+					Math.abs(mousePoint.y-mouseSendPoint.y)> mouseMax 
 			)
 			{ 
 
-				a=toServer(mousePoint.x,mousePoint.y);
-				if (mouseDraw)
-					sendDraw([ a.x, a.y ]);
-				else
-					sendDraw([ "m", a.x, a.y ]);
-					
+				var c=toServer(mousePoint.x,mousePoint.y);
+
+				if (mouseMode=="line")
+				{
+					sendDraw({
+						'cmd'		:'update',
+						'add'		: {
+							'points'		: c.x+','+c.y+' '
+						}
+					});
+				}
+				
 
 				mouseSendPoint.x=mousePoint.x;
 				mouseSendPoint.y=mousePoint.y;
@@ -443,9 +460,6 @@
 			}
 		}	
 	
-		window.onsvgload = function() 
-		{
-		}
 		
  		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
@@ -494,21 +508,28 @@
 
 			});
 
+			//mouse down clicked
 			$("#canvasMouse").mousedown(function(m)
 			{
-				m.preventDefault();
-				mouseDraw=1;
-				if (drawMode=="l")
+				mouseMode=$('#modes .selected').attr("value");
+				if (mouseMode=="line")
 				{
-					a=toServer(mousePoint.x,mousePoint.y);
-					sendDraw( [ "l", a.x, a.y ]);
+					sendDraw({
+						'cmd'		:'create',
+						'element'	:'line',
+						'set'		: {
+							'stroke'		: $('#colors .selected').attr("value"),
+							'stroke-width'	: $('#widths .selected').attr("value")
+						}
+					});
+					mouseMove(true);
 				}
+				
 			});
 					
 			$("#canvasMouse").mouseup(function(m)
 			{
-				mouseDraw=0;
-				sendDraw( [ "s" ]);
+				mouseMode="";
 			});
 					
 
@@ -529,15 +550,15 @@
 				//select this one
 				$(this).addClass('selected');
 				
-				var i=0;
-				var cmds=new Array();
-				while ($(this).attr("cmd"+i))
-				{
-					cmds.push($(this).attr("cmd"+i));
-					i++;
-				};
-				
-				sendDraw(cmds); 
+//				var i=0;
+//				var cmds=new Array();
+//				while ($(this).attr("cmd"+i))
+//				{
+//					cmds.push($(this).attr("cmd"+i));
+//					i++;
+//				};
+//				
+//				sendDraw(cmds); 
 
 				$("#chatInput").focus();
 			});
@@ -564,12 +585,25 @@
 			canvasTemp.width=canvasWidth;
 			canvasTemp.height=canvasHeight;
 
-			//create a svg node and assign it to global variable "drawing".
-			var container = document.getElementById("drawing");
-			drawing = document.createElementNS(svgns, "svg");
-			drawing.setAttribute("version", "1.2");
-			drawing.setAttribute("baseProfile", "tiny");
-			container.appendChild(drawing);
+		    window.addEventListener('SVGLoad', function() {
+				//create a svg node and assign it to global variable "drawing".
+				var container = document.getElementById("drawing");
+				drawing = document.createElementNS(svgns, "svg");
+				drawing.setAttribute("version", "1.2");
+				drawing.setAttribute("baseProfile", "tiny");
+				//dont use viewBox, because we cant determine mouse coordinates reliable then
+//				drawing.setAttribute("viewBox", "0 0 10000 10000");
+//				drawing.setAttribute("width", "10000");
+//				drawing.setAttribute("height", "10000");
+				//drawing.setAttribute("preserveAspectRatio", "none");
+//				svgweb.appendChild(drawing,container);
+//				drawing.addEventListener('mousemove',function(event) {
+	//				console.log(event.x, event.y,event);
+		//		},false);
+				container.appendChild(drawing);
+				
+
+		     }, false);
 
 		
 			//join the specified paper
@@ -816,7 +850,6 @@
 
 		Papier nummer: <span id='objectId'></span>
 		<br>
-		<a href="http://twitter.com/share" class="twitter-share-button" data-text="papier" data-count="none">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
 		
 		<br>
 
@@ -827,32 +860,38 @@
 		Naam: <input id='clientName' type='text' value='' size=10>
 
 		<div id='colors'>
-			<div class='tool defaultTool' style='background-color:#000000' cmd0='c' cmd1='#000000'>&nbsp;</div>
-			<div class='tool' style='background-color:#0000ff' cmd0='c' cmd1='#0000ff'>&nbsp;</div>
-			<div class='tool' style='background-color:#00ff00' cmd0='c' cmd1='#00ff00'>&nbsp;</div>
-			<div class='tool' style='background-color:#00ffff' cmd0='c' cmd1='#00ffff'>&nbsp;</div>
-			<div class='tool' style='background-color:#FF8040' cmd0='c' cmd1='#FF8040'>&nbsp;</div>
-			<div class='tool' style='background-color:#ffffff' cmd0='c' cmd1='#ffffff'>gum</div>
+			<div class='tool color defaultTool' style='background-color:#000000' value='#000000'>&nbsp;</div>
+			<div class='tool color ' style='background-color:#0000ff' value='#0000ff'>&nbsp;</div>
+			<div class='tool color ' style='background-color:#00ff00' value='#00ff00'>&nbsp;</div>
+			<div class='tool color ' style='background-color:#00ffff' value='#00ffff'>&nbsp;</div>
+			<div class='tool color ' style='background-color:#FF8040' value='#FF8040'>&nbsp;</div>
+			<div class='tool color ' style='background-color:#ffffff' value='#ffffff'>gum</div>
 			<br>
-			<div class='tool' style='background-color:#ff0000' cmd0='c' cmd1='#ff0000'>&nbsp;</div>
-			<div class='tool' style='background-color:#ff00ff' cmd0='c' cmd1='#ff00ff'>&nbsp;</div>
-			<div class='tool' style='background-color:#ffff00' cmd0='c' cmd1='#ffff00'>&nbsp;</div>
-			<div class='tool' style='background-color:#999999' cmd0='c' cmd1='#999999'>&nbsp;</div>
-			<div class='tool' style='background-color:#804000' cmd0='c' cmd1='#804000'>&nbsp;</div>
-			<div class='tool' style='background-color:#F87217' cmd0='c' cmd1='#F87217'>&nbsp;</div>
+			<div class='tool color' style='background-color:#ff0000' value='#ff0000'>&nbsp;</div>
+			<div class='tool color' style='background-color:#ff00ff' value='#ff00ff'>&nbsp;</div>
+			<div class='tool color' style='background-color:#ffff00' value='#ffff00'>&nbsp;</div>
+			<div class='tool color' style='background-color:#999999' value='#999999'>&nbsp;</div>
+			<div class='tool color' style='background-color:#804000' value='#804000'>&nbsp;</div>
+			<div class='tool color' style='background-color:#F87217' value='#F87217'>&nbsp;</div>
 			<br>
 		</div>		
 
 		<div id='widths'>
-			<div class='tool defaultTool' cmd0='w' cmd1='1'><img src='img/pen1.png' style='width:1em' ></div>
-			<div class='tool' cmd0='w' cmd1='2'><img src='img/pen1.png' style='width:1.2em'></div>
-			<div class='tool' cmd0='w' cmd1='3'><img src='img/pen1.png' style='width:1.3em'></div>
-			<div class='tool' cmd0='w' cmd1='4'><img src='img/pen1.png' style='width:1.4em' ></div>
+			<div class='tool width defaultTool' value='1'><img src='img/pen1.png' style='width:1em' ></div>
+			<div class='tool width' value='2'><img src='img/pen1.png' style='width:1.2em'></div>
+			<div class='tool width' value='3'><img src='img/pen1.png' style='width:1.3em'></div>
+			<div class='tool width' value='4'><img src='img/pen1.png' style='width:1.4em' ></div>
 			<br>
-			<div class='tool' cmd0='w' cmd1='10'><img src='img/pen2.png' style='width:1em' ></div>
-			<div class='tool' cmd0='w' cmd1='20'><img src='img/pen2.png' style='width:1.2em' ></div>
-			<div class='tool' cmd0='w' cmd1='30'><img src='img/pen2.png' style='width:1.3em' ></div>
-			<div class='tool' cmd0='w' cmd1='40'><img src='img/pen2.png' style='width:1.4em' ></div>		
+			<div class='tool width' value='10'><img src='img/pen2.png' style='width:1em' ></div>
+			<div class='tool width' value='20'><img src='img/pen2.png' style='width:1.2em' ></div>
+			<div class='tool width' value='30'><img src='img/pen2.png' style='width:1.3em' ></div>
+			<div class='tool width' value='40'><img src='img/pen2.png' style='width:1.4em' ></div>		
+		</div>
+
+		<div id='modes'>
+			<div class='tool mode defaultTool' value='line'>line</div>
+			<div class='tool mode' value='delete'>delete</div>
+			<div class='tool mode' value='move'>move</div>
 		</div>
 
 
@@ -873,8 +912,8 @@
 
 	<div id='loading' class='ui-state-highlight'>Loading...</div>
 
-	<div id='drawing'></div>		
 
+	<div id='drawing'></div>		
 
 	<div id='canvasMouse'>
 	</div>
