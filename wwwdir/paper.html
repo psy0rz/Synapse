@@ -76,6 +76,7 @@
 		//calculate server coordinates to browser coordinates 
 		function toBrowser(x,y)
 		{
+			return ( { "x":x, "y":y } );
 			return ({
 				"x":((x*canvasWidth)/10000),
 				"y":((y*canvasHeight)/10000)
@@ -448,7 +449,7 @@
 					sendDraw({
 						'cmd'		:'update',
 						'add'		: {
-							'points'		: c.x+','+c.y+' '
+							'points'		: ' '+c.x+','+c.y
 						}
 					});
 				}
@@ -516,8 +517,9 @@
 				{
 					sendDraw({
 						'cmd'		:'create',
-						'element'	:'line',
+						'element'	:'polyline',
 						'set'		: {
+							'fill'			: 'none',
 							'stroke'		: $('#colors .selected').attr("value"),
 							'stroke-width'	: $('#widths .selected').attr("value")
 						}
@@ -535,11 +537,7 @@
 
 			$("#canvasMouse").mouseleave(function(m)
 			{
-				if (mouseDraw)
-				{
-					mouseDraw=0;
-					sendDraw( [ "s" ]);
-				}
+				mouseMode="";
 			});
 
 			//a tool is clicked
@@ -592,10 +590,10 @@
 				drawing.setAttribute("version", "1.2");
 				drawing.setAttribute("baseProfile", "tiny");
 				//dont use viewBox, because we cant determine mouse coordinates reliable then
-//				drawing.setAttribute("viewBox", "0 0 10000 10000");
+				drawing.setAttribute("viewBox", "0 0 10000 10000");
 //				drawing.setAttribute("width", "10000");
 //				drawing.setAttribute("height", "10000");
-				//drawing.setAttribute("preserveAspectRatio", "none");
+				drawing.setAttribute("preserveAspectRatio", "none");
 //				svgweb.appendChild(drawing,container);
 //				drawing.addEventListener('mousemove',function(event) {
 	//				console.log(event.x, event.y,event);
@@ -626,95 +624,58 @@
 		});
  		
  				
+		function clear()
+		{
+			$('#clientList').empty();
+			$('#chatList').empty();
+			autoCommit=true; 
+			//drawing.
+			$(".tool").removeClass('selected');
+			$(".defaultTool").addClass('selected');
 
+		}
 
  		synapse_register("paper_ServerDraw",function(msg_src, msg_dst, msg_event, msg)
 		{
- 			while(msg.length>0)
- 			{
-				//switch to different client 
- 				if (msg[0]=="I")
-	 			{
- 	 				if (autoCommit && clientId)
- 	 	 				clients[clientId].commit();
- 		 			msg.shift();
-		 			clientId=msg.shift();
-		 			//need to create new client object?
-		 			if (clients[clientId]==undefined)
-		 			{
-			 			clients[clientId]=new Cclient(clientId);
-		 			}
- 				}
- 				//start of complete redraw: clears everything, enables auto commit
- 				else if (msg[0]=="S")
- 				{
- 	 				msg.shift();
- 					clients=[];
-					clientId=0;
-					$('#clientList').empty();
-					$('#chatList').empty();
-					autoCommit=true; 
- 					contextDraw.clearRect(0, 0, canvasWidth, canvasHeight);
- 					$(".tool").removeClass('selected');
- 					$(".defaultTool").addClass('selected');
- 				}
-				//end of complete redraw, disable auto commit.
- 				else if (msg[0]=="E")
- 				{
-	 				msg.shift();
-					autoCommit=false;
-	 				//commit the last bits and update html status
-	 				for (var clientI in clients)
- 					{
- 	 					clients[clientI].commit();
- 	 					clients[clientI].updateHtml();
- 					}
- 					
-	 				//let everyone know who we are
-	 				sendDraw([ "n" , $("#clientName").val() ]);
-	 	 					
-					$("#loading").hide();
+	 			//	//let everyone know who we are
+	 			//	sendDraw([ "n" , $("#clientName").val() ]);
+				//	$("#loading").hide();
+				//	$("#chatInput").focus();
 
-					$("#chatInput").focus();
+				//create new object
+				if (msg["cmd"]=="create")
+				{
+					console.log("create");
+					var element = document.createElementNS(svgns, msg["element"]);
+					console.log("set");
+					element.setAttribute('id', msg["id"]);
+					console.log("append");
+					drawing.appendChild(element);
+				}
+
+				//we need to add/set attributes?
+				if (msg["add"] || msg["set"])
+				{
+					console.log("getelement");
+					var element=drawing.getElementById(msg["id"]);
 					
- 				}
- 				//delete client
- 				else if (msg[0]=="D")
- 				{
- 	 				msg.shift();
- 	 				if (autoCommit)
- 	 	 				clients[clientId].commit();
-	 	 			clients[clientId].remove();
-	 	 			delete clients[clientId];
-					clientId=0;
-				}      
- 				//next paper id
- 				else if (msg[0]=="N")
- 				{
- 	 				msg.shift();
-					var id=msg.shift();
-					addChat(paperLink(id, "Volgend papier: "+id));				
- 				}
- 				//previous paper id
- 				else if (msg[0]=="P")
- 				{
- 	 				msg.shift();
-					var id=msg.shift();
-					addChat(paperLink(id, "Vorig papier: "+id));										
- 				}
- 				//let the current client object parse the rest. it returns when it encounters something unknown.
- 				else
- 				{
- 	 				if (!clients[clientId].add(msg))
- 	 				{
- 	 	 				//object also doesnt know what to do...log error and skip it and hope for the best..
- 	 	 				console.error("Error parsing draw commands",msg);
- 	 	 				msg.shift();
- 	 				}
- 				}
- 			}
+					console.log("forsetattrgetelement");
+					for (var attrName in msg["set"])
+					{
+						element.setAttribute(attrName, msg["set"][attrName]);
+					}							
 
-			drawClients();
+					console.log("foraddattrgetelement");
+					for (var attrName in msg["add"])
+					{
+						if (element.getAttribute(attrName)!=null)
+							element.setAttribute(attrName, element.getAttribute(attrName)+msg["add"][attrName]);
+						else
+							element.setAttribute(attrName, msg["add"][attrName]);
+							
+						console.log("new is" + element.getAttribute(attrName));
+					}							
+				}
 		});
  		
 
