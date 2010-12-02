@@ -64,6 +64,7 @@
 
 
 //globals
+bool stop=false;
 int moduleSessionId=0;
 int netIdCounter=0;
 ChttpSessionMan httpSessionMan;
@@ -123,7 +124,7 @@ class CnetHttp : public synapse::Cnet
 	//http basically has two states: The request-block and the content-body.
 	//The states alter eachother continuesly during a connection.
 	//We require different read, depending on the state we're in.
-	//We have addition states for event polling
+	//We have an additional state for synapse event polling
 	enum Tstates {
 		REQUEST,
 		CONTENT,
@@ -150,7 +151,7 @@ class CnetHttp : public synapse::Cnet
  	void connected_server(int id, const string &host, int port, int local_port)
  	{
 		//fire off new acceptor thread
-		Cmsg out;
+ 		Cmsg out;
 		out.dst=moduleSessionId;
 		out.event="http_json_Accept";
 		out["port"]=local_port;
@@ -646,6 +647,20 @@ SYNAPSE_REGISTER(module_Init)
 
 	Cmsg out;
 
+
+	//load config file
+	synapse::Cconfig config;
+	config.load("etc/synapse/http_json.conf");
+	configMaxContent=config["maxContent"];
+	configMaxConnections=config["maxConnections"];
+	net.setMaxConnections(configMaxConnections);
+
+	//set content types
+	for (Cvar::iterator I=config["contentTypes"].begin(); I!=config["contentTypes"].end(); I++)
+	{
+		configContentTypes[I->first]=I->second.str();
+	}
+
 	//change module settings.
 	//especially broadcastMulti is important for our "all"-handler
 	out.clear();
@@ -668,20 +683,6 @@ SYNAPSE_REGISTER(module_Init)
 	out.event="core_Register";
 	out["handler"]="all";
 	out.send();
-
-
-	//load config file
-	synapse::Cconfig config;
-	config.load("etc/synapse/http_json.conf");
-	configMaxContent=config["maxContent"];
-	configMaxConnections=config["maxContent"];
-	net.setMaxConnections(configMaxConnections);
-
-	//set content types
-	for (Cvar::iterator I=config["contentTypes"].begin(); I!=config["contentTypes"].end(); I++)
-	{
-		configContentTypes[I->first]=I->second.str();
-	}
 
 	//listen on configured ports
 	//NOTE: applications may send additional Listen-events for other ports
@@ -743,7 +744,15 @@ SYNAPSE_REGISTER(http_json_Accept)
 {
 	if (msg.dst==moduleSessionId)
 	{
-		net.runAccept(msg["port"], 0);
+		while (1)
+		{
+			if  (net.runAccept(msg["port"], 0) || stop)
+				break;
+
+			//somehow failed, so accept again
+			DEB("Acceptor for port " << msg["port"] << " failed, sleeping and trying again.");
+			sleep(1);
+		}
 	}
 }
 
@@ -768,6 +777,7 @@ SYNAPSE_REGISTER(module_Shutdown)
 		return;
 
 	//let the net module shut down to fix the rest
+	stop=true;
 	net.doShutdown();
 }
 
