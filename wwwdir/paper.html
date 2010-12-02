@@ -53,6 +53,7 @@
 		var canvasWidth=0;
 		var canvasHeight=0;
 		var drawing;
+		var drawingHtml;
 		
 		var autoCommit=false;
 
@@ -67,13 +68,16 @@
 		//calculate browser coordinates to server coordinates
 		function toServer(x,y)
 		{
+			
+			//return ( { "x":x, "y":y } );
 			return ({
-				"x":Math.round((x * 10000) / canvasWidth),
-				"y":Math.round((y * 10000) / canvasHeight)
+				"x":Math.round((x * 10000) / $("#drawing").width()),
+				"y":Math.round((y * 10000) / $("#drawing").height())
 			});
 		}
 	
 		//calculate server coordinates to browser coordinates 
+		//OBSOLETE: we use a svg viewbox
 		function toBrowser(x,y)
 		{
 			return ( { "x":x, "y":y } );
@@ -427,15 +431,16 @@
 		function mouseMove(force)
 		{
 			
+			
 			//mouse throttling function, to prevent too many updates per second
 			//no change?
-			if (!force && mousePoint.x==mouseSendPoint.x && mousePoint.y==mouseSendPoint.y)
+			if (force!=true && mousePoint.x==mouseSendPoint.x && mousePoint.y==mouseSendPoint.y)
 				return;
 
 			currentTime=new Date().getTime();
 
 			//send updates at a max fps, or more when the mouse moves fast
-			if (	force ||
+			if (	force==true ||
 					(currentTime-mouseSendTime>=mouseInterval) || 
 					Math.abs(mousePoint.x-mouseSendPoint.x)> mouseMax ||
 					Math.abs(mousePoint.y-mouseSendPoint.y)> mouseMax 
@@ -501,17 +506,22 @@
 
 			$("#chatInput").val("");
 			
-			$("#canvasMouse").mousemove(function(m)
+			$("#drawing").mousemove(function(m)
 			{
-				mousePoint.x=m.pageX-$("#canvasMouse").offset().left;
-				mousePoint.y=m.pageY-$("#canvasMouse").offset().top;
+				mousePoint.x=m.pageX-$("#drawing").offset().left;
+				mousePoint.y=m.pageY-$("#drawing").offset().top;
 				mouseMove();
 
 			});
 
 			//mouse down clicked
-			$("#canvasMouse").mousedown(function(m)
+			$("#drawing").mousedown(function(m)
 			{
+			    if (m.preventDefault)
+			        m.preventDefault();
+			    else
+			        m.returnValue= false;
+							
 				mouseMode=$('#modes .selected').attr("value");
 				if (mouseMode=="line")
 				{
@@ -526,16 +536,17 @@
 					});
 					mouseMove(true);
 				}
-				
+
+				return false;
 			});
 					
-			$("#canvasMouse").mouseup(function(m)
+			$("#drawing").mouseup(function(m)
 			{
 				mouseMode="";
 			});
 					
 
-			$("#canvasMouse").mouseleave(function(m)
+			$("#drawing").mouseleave(function(m)
 			{
 				mouseMode="";
 			});
@@ -570,8 +581,9 @@
 
 
 			//prepare canvas
-			canvasWidth=$("#canvasMouse").width();
-			canvasHeight=$("#canvasMouse").height();
+			canvasWidth=$("#drawing").width();
+			canvasHeight=$("#drawing").height();
+
 			
 			canvas=document.getElementById('canvas');
 			contextDraw=canvas.getContext('2d');
@@ -585,7 +597,6 @@
 
 		    window.addEventListener('SVGLoad', function() {
 				//create a svg node and assign it to global variable "drawing".
-				var container = document.getElementById("drawing");
 				drawing = document.createElementNS(svgns, "svg");
 				drawing.setAttribute("version", "1.2");
 				drawing.setAttribute("baseProfile", "tiny");
@@ -598,7 +609,8 @@
 //				drawing.addEventListener('mousemove',function(event) {
 	//				console.log(event.x, event.y,event);
 		//		},false);
-				container.appendChild(drawing);
+				drawingHtml = document.getElementById("drawing");
+				drawingHtml.appendChild(drawing);
 				
 
 		     }, false);
@@ -657,7 +669,7 @@
 				if (msg["add"] || msg["set"])
 				{
 					console.log("getelement");
-					var element=drawing.getElementById(msg["id"]);
+					var element=document.getElementById(msg["id"]);
 					
 					console.log("forsetattrgetelement");
 					for (var attrName in msg["set"])
@@ -730,6 +742,8 @@
 			right: 0;
 			bottom:0;
 			cursor:crosshair;
+			margin: 0;
+			padding: 0;
 		}
 
 		
@@ -876,8 +890,6 @@
 
 	<div id='drawing'></div>		
 
-	<div id='canvasMouse'>
-	</div>
 
 	
 </body>
