@@ -137,53 +137,54 @@ template <class Tnet>
 bool CnetMan<Tnet>::runAccept(int port, int id)
 {
 	CnetPtr netPtr;
-	{
-		unique_lock<mutex> lock(threadMutex);
-
-		if (nets.size()>=maxConnections)
-		{
-			ERROR("net reached max connections of " << maxConnections << ", cannot accept new connection.");
-			return false;
-		}
-
-		while (acceptors.find(port)==acceptors.end())
-		{
-			DEB("net port " << port << " is not listening yet, waiting...");
-			threadCond.wait(lock);
-
-			if (shutdown)
-				return(false);
-
-		}
-
-
-		if (id==0)
-		{
-			id=getAutoId();
-		}
-		else if (nets.find(id)!=nets.end())
-		{
-			ERROR("net id " << id << " is already busy, ignoring accept-request on port " << port);
-			return false;
-		}
-		//create a new net-object that will async_accept the next connection from acceptors[port]
-		netPtr=(CnetPtr(new Tnet()));
-		nets[id]=netPtr;
-		netPtr->doAccept(id,acceptors[port]);
-	}
-
-	//let the ioservice run, until the connection is closed again:
+	bool ok=true;
 
 	try
 	{
+		{
+			unique_lock<mutex> lock(threadMutex);
+
+			if (nets.size()>=maxConnections)
+			{
+				ERROR("net reached max connections of " << maxConnections << ", cannot accept new connection.");
+				return false;
+			}
+
+			while (acceptors.find(port)==acceptors.end())
+			{
+				DEB("net port " << port << " is not listening yet, waiting...");
+				threadCond.wait(lock);
+
+				if (shutdown)
+					return(false);
+			}
+
+
+			if (id==0)
+			{
+				id=getAutoId();
+			}
+			else if (nets.find(id)!=nets.end())
+			{
+				ERROR("net id " << id << " is already busy, ignoring accept-request on port " << port);
+				return false;
+			}
+			//create a new net-object that will async_accept the next connection from acceptors[port]
+			netPtr=(CnetPtr(new Tnet()));
+			nets[id]=netPtr;
+			netPtr->doAccept(id,acceptors[port]);
+		}
+
+		//let the ioservice run, until the connection is closed again:
 		netPtr->run();
+		DEB("ioservice finished successful for port " << port << " into " << id);
 	}
 	catch(...)
 	{
-		ERROR("Ignored exception while running acceptor");
+		ERROR("Exception while running acceptor on port " << port << " for id " << id);
+		ok=false;
 	}
 
-	DEB("ioservice finished for port " << port << " into " << id);
 
 	{
 		lock_guard<mutex> lock(threadMutex);
@@ -191,7 +192,7 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
  		nets.erase(id);
 	}
 
-	return true;
+	return (ok);
 }
 
 template <class Tnet> 
