@@ -476,6 +476,11 @@
 			drawing.addEventListener('SVGLoad', function(evt) {
 				console.log('SVG loaded');
 				drawing=document.getElementsByTagNameNS(svgns, 'svg')[0];
+
+				drawing.addEventListener('mousemove', function(m) {
+			        console.log("########################move: "+m.target.id);
+				});
+				
 			});
 			console.log("added listern");
 			
@@ -483,6 +488,7 @@
 			drawing.setAttribute("baseProfile", "tiny");
 			//dont use viewBox, because we cant determine mouse coordinates reliable then
 			drawing.setAttribute("viewBox", "0 0 10000 10000");
+			drawing.setAttribute("id","bg");
 //			drawing.setAttribute("width", "10000");
 //			drawing.setAttribute("height", "10000");
 			drawing.setAttribute("preserveAspectRatio", "none");
@@ -557,7 +563,9 @@
 			    if (m.preventDefault)
 			        m.preventDefault();
 			    else
-			        m.returnValue= false;
+			        m.returnValue=false;
+
+		        console.log("########################click: "+m.target.id);
 							
 				mouseMode=$('#modes .selected').attr("value");
 				if (mouseMode=="line")
