@@ -264,7 +264,6 @@
 							create: create object
 							update: modify object
 							delete: remove object
-							cursor: update cursor object
 
 			create parameters:
 			element:		svg element type (e.g. circle,rect,polyline)
@@ -276,7 +275,10 @@
 			modify/delete parameters:		
 			id:			object id for modify/delete. if not specified, the server will use the last id.
 			
-					
+			parameters to update cursor position/indication:
+			cursor.x    : x position
+			cursor.y	: y position
+							
 			
 			
 			'
@@ -433,7 +435,6 @@
 		function mouseMove(force)
 		{
 			
-			
 			//mouse throttling function, to prevent too many updates per second
 			//no change?
 			if (force!=true && mousePoint.x==mouseSendPoint.x && mousePoint.y==mouseSendPoint.y)
@@ -446,31 +447,32 @@
 					(currentTime-mouseSendTime>=mouseInterval) || 
 					Math.abs(mousePoint.x-mouseSendPoint.x)> mouseMax ||
 					Math.abs(mousePoint.y-mouseSendPoint.y)> mouseMax 
-			)
+			)	
 			{ 
 
 				var c=toServer(mousePoint.x,mousePoint.y);
+				var msg={};
 
+				//cursor
+				msg['cursor']=c;
+				
 				if (mouseMode=="line")
 				{
-					sendDraw({
-						'cmd'		:'update',
-						'add'		: {
-							'points'		: ' '+c.x+','+c.y
-						}
-					});
+					msg['cmd']='update';
+					msg['add']={
+						'points': ' '+c.x+','+c.y
+					}
 				}
 				else if (mouseMode=="delete")
 				{ 
 					if (mouseTarget!="bg")
 					{
-						sendDraw({
-							'cmd'		:'delete',
-							'id'		: mouseTarget
-						});
+						msg['cmd']='delete';
+						msg['id']=mouseTarget;
 					}				
-				}		
-				
+				}
+
+				send(paperModId,"paper_ClientDraw", msg);
 
 				mouseSendPoint.x=mousePoint.x;
 				mouseSendPoint.y=mousePoint.y;
@@ -478,96 +480,6 @@
 			}
 		}	
 	
-		//wait until svgloading is complete
-	    window.addEventListener('SVGLoad', function() {
-		    
-			//create a svg node and assign it to global variable "drawing".
-			console.log("creating drawing");
-			drawing = document.createElementNS(svgns, "svg");
-
-		
-			//wait until rootobject is created
-			drawing.addEventListener('SVGLoad', function(evt) 
-			{
-				//when its in flashmode, the references change somehow, so re-get it:				
-				drawing=document.getElementsByTagNameNS(svgns, 'svg')[0];
-				
-				//set mouse move event
-				//NOTE: pageX is not set when using chromium in flash mode? when we use jquery mousemove its ok ,but then we cant see 
-				//which object is hovered over.
-				drawing.addEventListener('mousemove', function(m) 
-//				$('#drawing').mousemove(function(m) 
-				{
-					mouseTarget=m.target.id;
-					//	console.log("########################move: "+m.target.id,m);
-					mousePoint.x=m.pageX-$("#drawing").offset().left;
-					mousePoint.y=m.pageY-$("#drawing").offset().top;
-					mouseMove();
-				});
-
-				//set mouse click event
-				drawing.addEventListener('mousedown', function(m)
-				{
-					if (m.preventDefault)
-						m.preventDefault();
-					else
-						m.returnValue=false;
-
-					console.log("########################click: "+m.target.id);
-								
-					mouseMode=$('#modes .selected').attr("value");
-					mouseTarget=m.target.id;
-					
-					if (mouseMode=="line")
-					{
-						sendDraw({
-							'cmd'		:'create',
-							'element'	:'polyline',
-							'set'		: {
-								'fill'			: 'none',
-								'stroke'		: $('#colors .selected').attr("value"),
-								'stroke-width'	: $('#widths .selected').attr("value")
-							}
-						});
-					}
-
-					//force a mouse move
-					mouseMove(true);
-
-					return false;
-				});
-
-				//set mouse up event
-				drawing.addEventListener('mouseup', function(m)
-				{
-					mouseMode="";
-				});
-						
-				//set mouse leave event
-				drawing.addEventListener('mouseleave', function(m)
-				{
-					mouseMode="";
-				});
-					
-				console.log("READY");				
-			});
-			
-			//set some basic attributes
-			drawing.setAttribute("version", "1.2");
-			drawing.setAttribute("baseProfile", "tiny");
-			drawing.setAttribute("viewBox", "0 0 10000 10000");
-			drawing.setAttribute("id","bg");
-			drawing.setAttribute("preserveAspectRatio", "none");
-
-			drawingHtml = document.getElementById("drawing");
-			console.log("appending");
-//			drawingHtml.appendChild(drawing);
-			svgweb.appendChild(drawing, drawingHtml);
-
-			
-			
-
-	     }, false);
 
 	    
 	    synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
@@ -585,8 +497,6 @@
 			//set the name input field
 			$("#clientName").val(clientName);
 			
-			/// start local engine
-			window.setInterval(mouseMove, mouseInterval);
 
 			
 			/// JAVA SCRIPT EVENT HANDLERS
@@ -653,6 +563,93 @@
 			canvasTemp.width=canvasWidth;
 			canvasTemp.height=canvasHeight;
 
+			//wait until svgloading is complete
+		    window.addEventListener('SVGLoad', function() {
+			    
+				//create a svg node and assign it to global variable "drawing".
+				console.log("creating drawing");
+				drawing = document.createElementNS(svgns, "svg");
+
+				//wait until rootobject is created
+				drawing.addEventListener('SVGLoad', function(evt) 
+				{
+					//when its in flashmode, the references change somehow, so re-get it:				
+					drawing=document.getElementsByTagNameNS(svgns, 'svg')[0];
+					
+					//set mouse move event
+					//NOTE: pageX is not set when using chromium in flash mode? when we use jquery mousemove its ok ,but then we cant see 
+					//which object is hovered over.
+					drawing.addEventListener('mousemove', function(m) 
+					{
+						mouseTarget=m.target.id;
+						//	console.log("########################move: "+m.target.id,m);
+						mousePoint.x=m.pageX-$("#drawing").offset().left;
+						mousePoint.y=m.pageY-$("#drawing").offset().top;
+						mouseMove();
+					});
+
+					//set mouse click event
+					drawing.addEventListener('mousedown', function(m)
+					{
+						if (m.preventDefault)
+							m.preventDefault();
+						else
+							m.returnValue=false;
+
+						console.log("########################click: "+m.target.id);
+									
+						mouseMode=$('#modes .selected').attr("value");
+						mouseTarget=m.target.id;
+						
+						if (mouseMode=="line")
+						{
+							sendDraw({
+								'cmd'		:'create',
+								'element'	:'polyline',
+								'set'		: {
+									'fill'			: 'none',
+									'stroke'		: $('#colors .selected').attr("value"),
+									'stroke-width'	: $('#widths .selected').attr("value")
+								}
+							});
+						}
+
+						//force a mouse move
+						mouseMove(true);
+
+						return false;
+					});
+
+					//set mouse up event
+					drawing.addEventListener('mouseup', function(m)
+					{
+						mouseMode="";
+					});
+							
+					//set mouse leave event
+					//(doesnt work with addeventlistener!)
+					$("#drawing").mouseleave(function(m)
+					{
+						mouseMode="";
+					});
+						
+					/// start mouse update engine
+					window.setInterval(mouseMove, mouseInterval);
+
+					console.log("READY");				
+				});
+				
+				//set some basic attributes
+				drawing.setAttribute("version", "1.2");
+				drawing.setAttribute("baseProfile", "tiny");
+				drawing.setAttribute("viewBox", "0 0 10000 10000");
+				drawing.setAttribute("id","bg");
+				drawing.setAttribute("preserveAspectRatio", "none");
+
+				//add drawing rootobject to html container
+				drawingHtml = document.getElementById("drawing");
+				svgweb.appendChild(drawing, drawingHtml);
+		     }, false);
 
 		
 			//join the specified paper
@@ -696,13 +693,9 @@
 				//create new object
 				if (msg["cmd"]=="create")
 				{
-					console.log("create");
 					var element = document.createElementNS(svgns, msg["element"]);
-					console.log("set");
 					element.setAttribute('id', msg["id"]);
-					console.log("append");
 					drawing.appendChild(element);
-					//svgweb.appendChild(element,drawing);
 				}
 				//delete object
 				else if (msg["cmd"]=="delete")
@@ -736,6 +729,23 @@
 						}
 					}
 				}
+
+				//update cursor?
+				if (msg.cursor!=null)
+				{
+					var cursor=document.getElementById('cursor'+msg_src);
+					if (cursor==null)
+					{
+						//create a cursor for this client
+						cursor = document.createElementNS(svgns, 'circle');
+						cursor.setAttribute('id', 'cursor'+msg_src);
+						cursor.setAttribute('r', '200');
+						drawing.appendChild(cursor);					
+					}
+					cursor.setAttribute('cx', msg.cursor.x);
+					cursor.setAttribute('cy', msg.cursor.y);
+				}
+					
 		});
  		
 
