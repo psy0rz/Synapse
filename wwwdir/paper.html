@@ -260,6 +260,8 @@
 			}
 			
 			/*** Drawing protocol
+			
+			CAN BE SET BY CLIENT:
 			cmd:		command to do:
 							create: create object
 							update: modify object
@@ -272,12 +274,14 @@
 			add:    	svg attributes to append data to (used for polylines)
 			set:		svg attributes to set/replace
 
-			modify/delete parameters:		
-			id:			object id for modify/delete. if not specified, the server will use the last id.
+
+			create/modify/delete parameters:		
+			id:			object id for modify/delete. 
+						when an object is created, the server will assign a new id.
+						if not specified, the server will use the last known id for this src session. 
 			
-			parameters to update cursor position/indication:
-			cursor.x    : x position
-			cursor.y	: y position
+			ONLY SET BY SERVER:
+			src:		added by server. session id that send the message
 							
 			
 			
@@ -434,7 +438,7 @@
 
 		function mouseMove(force)
 		{
-			
+
 			//mouse throttling function, to prevent too many updates per second
 			//no change?
 			if (force!=true && mousePoint.x==mouseSendPoint.x && mousePoint.y==mouseSendPoint.y)
@@ -567,7 +571,6 @@
 		    window.addEventListener('SVGLoad', function() {
 			    
 				//create a svg node and assign it to global variable "drawing".
-				console.log("creating drawing");
 				drawing = document.createElementNS(svgns, "svg");
 
 				//wait until rootobject is created
@@ -582,7 +585,6 @@
 					drawing.addEventListener('mousemove', function(m) 
 					{
 						mouseTarget=m.target.id;
-						//	console.log("########################move: "+m.target.id,m);
 						mousePoint.x=m.pageX-$("#drawing").offset().left;
 						mousePoint.y=m.pageY-$("#drawing").offset().top;
 						mouseMove();
@@ -596,7 +598,6 @@
 						else
 							m.returnValue=false;
 
-						console.log("########################click: "+m.target.id);
 									
 						mouseMode=$('#modes .selected').attr("value");
 						mouseTarget=m.target.id;
@@ -636,7 +637,6 @@
 					/// start mouse update engine
 					window.setInterval(mouseMove, mouseInterval);
 
-					console.log("READY");				
 				});
 				
 				//set some basic attributes
@@ -657,7 +657,19 @@
 				"objectId":jQuery.url.param("id"),
 			});
  		});
- 				
+
+		function reset()
+		{
+			$('#clientList').empty();
+			$('#chatList').empty();
+			autoCommit=true; 
+			//drawing.
+			$(".tool").removeClass('selected');
+			$(".defaultTool").addClass('selected');
+
+		}
+
+	    
 		//we've joined a object
  		synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
 		{
@@ -669,19 +681,10 @@
 			currentObjectId=msg["objectId"];
 			paperModId=msg_src;
 			$("#objectId").html(msg["objectId"]);
+			reset();
 		});
  		
  				
-		function clear()
-		{
-			$('#clientList').empty();
-			$('#chatList').empty();
-			autoCommit=true; 
-			//drawing.
-			$(".tool").removeClass('selected');
-			$(".defaultTool").addClass('selected');
-
-		}
 
  		synapse_register("paper_ServerDraw",function(msg_src, msg_dst, msg_event, msg)
 		{
@@ -733,17 +736,45 @@
 				//update cursor?
 				if (msg.cursor!=null)
 				{
-					var cursor=document.getElementById('cursor'+msg_src);
+					var cursor=document.getElementById('cursor'+msg["src"]);
 					if (cursor==null)
 					{
-						//create a cursor for this client
-						cursor = document.createElementNS(svgns, 'circle');
-						cursor.setAttribute('id', 'cursor'+msg_src);
-						cursor.setAttribute('r', '200');
-						drawing.appendChild(cursor);					
+						console.log("CREATE");
+						//create a group for this client's cursor
+						cursor = document.createElementNS(svgns, 'g');
+						cursor.setAttribute('id', 'cursor'+msg["src"]);
+						cursor.setAttribute('stroke', '#000000');
+						cursor.setAttribute('stroke-width', '10');
+						drawing.appendChild(cursor);
+
+						//add drawing to the cursor group
+						var e = document.createElementNS(svgns, 'line');
+						e.setAttribute('x1', '-200');
+						e.setAttribute('x2', '+200');
+						e.setAttribute('y1', '0');
+						e.setAttribute('y2', '0');
+						cursor.appendChild(e);					
+
+						var e = document.createElementNS(svgns, 'line');
+						e.setAttribute('x1', '0');
+						e.setAttribute('x2', '0');
+						e.setAttribute('y1', '-200');
+						e.setAttribute('y2', '+200');
+						cursor.appendChild(e);					
+
+						var e = document.createElementNS(svgns, 'text');
+						e.setAttribute('x', '0');
+						e.setAttribute('y', '300');
+						e.setAttribute('font-size','200');
+						e.setAttribute('stroke','#aaaaaa');
+						
+						cursor.appendChild(e);					
+
+						var textNode = document.createTextNode('psy0rz', true);
+						e.appendChild(textNode);
 					}
-					cursor.setAttribute('cx', msg.cursor.x);
-					cursor.setAttribute('cy', msg.cursor.y);
+					cursor.setAttribute('transform', 'translate('+msg.cursor.x+','+msg.cursor.y+')');
+					
 				}
 					
 		});
@@ -910,15 +941,15 @@
 		</div>		
 
 		<div id='widths'>
-			<div class='tool width defaultTool' value='1'><img src='img/pen1.png' style='width:1em' ></div>
-			<div class='tool width' value='2'><img src='img/pen1.png' style='width:1.2em'></div>
-			<div class='tool width' value='3'><img src='img/pen1.png' style='width:1.3em'></div>
-			<div class='tool width' value='4'><img src='img/pen1.png' style='width:1.4em' ></div>
+			<div class='tool width defaultTool' value='10'><img src='img/pen1.png' style='width:1em' ></div>
+			<div class='tool width' value='20'><img src='img/pen1.png' style='width:1.2em'></div>
+			<div class='tool width' value='30'><img src='img/pen1.png' style='width:1.3em'></div>
+			<div class='tool width' value='40'><img src='img/pen1.png' style='width:1.4em' ></div>
 			<br>
-			<div class='tool width' value='10'><img src='img/pen2.png' style='width:1em' ></div>
-			<div class='tool width' value='20'><img src='img/pen2.png' style='width:1.2em' ></div>
-			<div class='tool width' value='30'><img src='img/pen2.png' style='width:1.3em' ></div>
-			<div class='tool width' value='40'><img src='img/pen2.png' style='width:1.4em' ></div>		
+			<div class='tool width' value='100'><img src='img/pen2.png' style='width:1em' ></div>
+			<div class='tool width' value='200'><img src='img/pen2.png' style='width:1.2em' ></div>
+			<div class='tool width' value='300'><img src='img/pen2.png' style='width:1.3em' ></div>
+			<div class='tool width' value='400'><img src='img/pen2.png' style='width:1.4em' ></div>		
 		</div>
 
 		<div id='modes'>
