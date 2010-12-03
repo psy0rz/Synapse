@@ -467,44 +467,98 @@
 			}
 		}	
 	
-
+		//wait until svgloading is complete
 	    window.addEventListener('SVGLoad', function() {
 		    
 			//create a svg node and assign it to global variable "drawing".
 			console.log("creating drawing");
 			drawing = document.createElementNS(svgns, "svg");
-			drawing.addEventListener('SVGLoad', function(evt) {
-				console.log('SVG loaded');
-				drawing=document.getElementsByTagNameNS(svgns, 'svg')[0];
 
-				drawing.addEventListener('mousemove', function(m) {
-			        console.log("########################move: "+m.target.id);
-				});
+		
+			//wait until rootobject is created
+			drawing.addEventListener('SVGLoad', function(evt) 
+			{
+				//when its in flashmode, the references change somehow, so re-get it:				
+				drawing=document.getElementsByTagNameNS(svgns, 'svg')[0];
 				
+				//set mouse move event
+				//NOTE: pageX is not set when using chromium in flash mode? when we use jquery mousemove its ok ,but then we cant see 
+				//which object is hovered over.
+				drawing.addEventListener('mousemove', function(m) 
+//				$('#drawing').mousemove(function(m) 
+				{
+					console.log("########################move: "+m.target.id,m);
+					mousePoint.x=m.pageX-$("#drawing").offset().left;
+					mousePoint.y=m.pageY-$("#drawing").offset().top;
+					mouseMove();
+				});
+
+				//set mouse click event
+				drawing.addEventListener('mousedown', function(m)
+				{
+					if (m.preventDefault)
+						m.preventDefault();
+					else
+						m.returnValue=false;
+
+					console.log("########################click: "+m.target.id);
+								
+					mouseMode=$('#modes .selected').attr("value");
+					if (mouseMode=="line")
+					{
+						sendDraw({
+							'cmd'		:'create',
+							'element'	:'polyline',
+							'set'		: {
+								'fill'			: 'none',
+								'stroke'		: $('#colors .selected').attr("value"),
+								'stroke-width'	: $('#widths .selected').attr("value")
+							}
+						});
+						mouseMove(true);
+					}
+					else if (mouseMode=="delete")
+					{
+						if (m.target.id!="bg")
+						{
+							sendDraw({
+								'cmd'		:'delete',
+								'id'		:m.target.id
+							});
+						}				
+					}
+
+					return false;
+				});
+
+				//set mouse up event
+				drawing.addEventListener('mouseup', function(m)
+				{
+					mouseMode="";
+				});
+						
+				//set mouse leave event
+				drawing.addEventListener('mouseleave', function(m)
+				{
+					mouseMode="";
+				});
+					
+				console.log("READY");				
 			});
-			console.log("added listern");
 			
+			//set some basic attributes
 			drawing.setAttribute("version", "1.2");
 			drawing.setAttribute("baseProfile", "tiny");
-			//dont use viewBox, because we cant determine mouse coordinates reliable then
 			drawing.setAttribute("viewBox", "0 0 10000 10000");
 			drawing.setAttribute("id","bg");
-//			drawing.setAttribute("width", "10000");
-//			drawing.setAttribute("height", "10000");
 			drawing.setAttribute("preserveAspectRatio", "none");
-//			svgweb.appendChild(drawing,container);
-//			drawing.addEventListener('mousemove',function(event) {
-//				console.log(event.x, event.y,event);
-	//		},false);
-	
-	
+
 			drawingHtml = document.getElementById("drawing");
 			console.log("appending");
 //			drawingHtml.appendChild(drawing);
 			svgweb.appendChild(drawing, drawingHtml);
 
 			
-			console.log("done");
 			
 
 	     }, false);
@@ -549,53 +603,6 @@
 
 			$("#chatInput").val("");
 			
-			$("#drawing").mousemove(function(m)
-			{
-				mousePoint.x=m.pageX-$("#drawing").offset().left;
-				mousePoint.y=m.pageY-$("#drawing").offset().top;
-				mouseMove();
-
-			});
-
-			//mouse down clicked
-			$("#drawing").mousedown(function(m)
-			{
-			    if (m.preventDefault)
-			        m.preventDefault();
-			    else
-			        m.returnValue=false;
-
-		        console.log("########################click: "+m.target.id);
-							
-				mouseMode=$('#modes .selected').attr("value");
-				if (mouseMode=="line")
-				{
-					sendDraw({
-						'cmd'		:'create',
-						'element'	:'polyline',
-						'set'		: {
-							'fill'			: 'none',
-							'stroke'		: $('#colors .selected').attr("value"),
-							'stroke-width'	: $('#widths .selected').attr("value")
-						}
-					});
-					mouseMove(true);
-				}
-
-				return false;
-			});
-					
-			$("#drawing").mouseup(function(m)
-			{
-				mouseMode="";
-			});
-					
-
-			$("#drawing").mouseleave(function(m)
-			{
-				mouseMode="";
-			});
-
 			//a tool is clicked
 			$(".tool").click(function(m)
 			{
@@ -691,15 +698,20 @@
 					drawing.appendChild(element);
 					//svgweb.appendChild(element,drawing);
 				}
+				//delete object
+				else if (msg["cmd"]=="delete")
+				{
+					var element=document.getElementById(msg["id"]);
+					//svgweb.removeChild(drawing, element);
+					drawing.removeChild(element);					
+				}
+				
 
 				//we need to add/set attributes?
 				if (msg["add"] || msg["set"])
 				{
 					console.log("getelement");
-//					var element=drawing.getElementById(msg["id"]);
 					var element=document.getElementById(msg["id"]);
-					//var element=drawingHtml.getElementById(msg["id"]);
-//					var element=drawingHtml.contentDocument.getElementById(msg["id"]);
 
 					if (element==null)
 						console.log("WTF?");
