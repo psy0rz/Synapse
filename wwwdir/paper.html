@@ -646,6 +646,11 @@
 				drawing.setAttribute("id","bg");
 				drawing.setAttribute("preserveAspectRatio", "none");
 
+				//default settings
+				drawing.setAttribute("stroke-linecap","round");
+				drawing.setAttribute("stroke-linejoin","round");
+						
+				
 				//add drawing rootobject to html container
 				drawingHtml = document.getElementById("drawing");
 				svgweb.appendChild(drawing, drawingHtml);
@@ -941,10 +946,10 @@
 		</div>		
 
 		<div id='widths'>
-			<div class='tool width defaultTool' value='10'><img src='img/pen1.png' style='width:1em' ></div>
+			<div class='tool width' value='10'><img src='img/pen1.png' style='width:1em' ></div>
 			<div class='tool width' value='20'><img src='img/pen1.png' style='width:1.2em'></div>
 			<div class='tool width' value='30'><img src='img/pen1.png' style='width:1.3em'></div>
-			<div class='tool width' value='40'><img src='img/pen1.png' style='width:1.4em' ></div>
+			<div class='tool width defaultTool' value='40'><img src='img/pen1.png' style='width:1.4em' ></div>
 			<br>
 			<div class='tool width' value='100'><img src='img/pen2.png' style='width:1em' ></div>
 			<div class='tool width' value='200'><img src='img/pen2.png' style='width:1.2em' ></div>
