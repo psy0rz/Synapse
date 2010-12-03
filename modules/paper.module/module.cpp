@@ -308,6 +308,7 @@ namespace paper
 		void serverDraw(Cmsg out, int clientId=0 )
 		{
 			out.event="paper_ServerDraw";
+			out["src"]=out.src;
 			out.src=0;
 
 			//create new element?
@@ -317,8 +318,8 @@ namespace paper
 				getClient(clientId).lastElementId=drawing["lastElementId"];
 			}
 
-			//determine the element id, if its not specified.
-			if (!out.isSet("id"))
+			//add the last known, if its not specified for a command
+			if (out["cmd"].str()!="" && !out.isSet("id"))
 			{
 				out["id"]=getClient(clientId).lastElementId;
 			}
