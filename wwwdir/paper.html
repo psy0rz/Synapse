@@ -34,6 +34,7 @@
 		var mouseSendTime=0; //last time the mousePosition was anaylsed by updateGameField
 	
 		var mouseMode="";		
+		var mouseTarget="";
 	
 		var contextDraw;
 		var contextTemp;
@@ -459,6 +460,16 @@
 						}
 					});
 				}
+				else if (mouseMode=="delete")
+				{ 
+					if (mouseTarget!="bg")
+					{
+						sendDraw({
+							'cmd'		:'delete',
+							'id'		: mouseTarget
+						});
+					}				
+				}		
 				
 
 				mouseSendPoint.x=mousePoint.x;
@@ -487,7 +498,8 @@
 				drawing.addEventListener('mousemove', function(m) 
 //				$('#drawing').mousemove(function(m) 
 				{
-					console.log("########################move: "+m.target.id,m);
+					mouseTarget=m.target.id;
+					//	console.log("########################move: "+m.target.id,m);
 					mousePoint.x=m.pageX-$("#drawing").offset().left;
 					mousePoint.y=m.pageY-$("#drawing").offset().top;
 					mouseMove();
@@ -504,6 +516,8 @@
 					console.log("########################click: "+m.target.id);
 								
 					mouseMode=$('#modes .selected').attr("value");
+					mouseTarget=m.target.id;
+					
 					if (mouseMode=="line")
 					{
 						sendDraw({
@@ -515,18 +529,10 @@
 								'stroke-width'	: $('#widths .selected').attr("value")
 							}
 						});
-						mouseMove(true);
 					}
-					else if (mouseMode=="delete")
-					{
-						if (m.target.id!="bg")
-						{
-							sendDraw({
-								'cmd'		:'delete',
-								'id'		:m.target.id
-							});
-						}				
-					}
+
+					//force a mouse move
+					mouseMove(true);
 
 					return false;
 				});
@@ -702,36 +708,33 @@
 				else if (msg["cmd"]=="delete")
 				{
 					var element=document.getElementById(msg["id"]);
-					//svgweb.removeChild(drawing, element);
-					drawing.removeChild(element);					
+					if (element!=null)
+					{
+						drawing.removeChild(element);
+					}	
 				}
 				
 
 				//we need to add/set attributes?
 				if (msg["add"] || msg["set"])
 				{
-					console.log("getelement");
 					var element=document.getElementById(msg["id"]);
 
-					if (element==null)
-						console.log("WTF?");
-					
-					console.log("forsetattrgetelement");
-					for (var attrName in msg["set"])
+					if (element!=null)
 					{
-						element.setAttribute(attrName, msg["set"][attrName]);
-					}							
-
-					console.log("foraddattrgetelement");
-					for (var attrName in msg["add"])
-					{
-						if (element.getAttribute(attrName)!=null)
-							element.setAttribute(attrName, element.getAttribute(attrName)+msg["add"][attrName]);
-						else
-							element.setAttribute(attrName, msg["add"][attrName]);
-							
-						console.log("new is" + element.getAttribute(attrName));
-					}							
+						for (var attrName in msg["set"])
+						{
+							element.setAttribute(attrName, msg["set"][attrName]);
+						}							
+	
+						for (var attrName in msg["add"])
+						{
+							if (element.getAttribute(attrName)!=null)
+								element.setAttribute(attrName, element.getAttribute(attrName)+msg["add"][attrName]);
+							else
+								element.setAttribute(attrName, msg["add"][attrName]);
+						}
+					}
 				}
 		});
  		
