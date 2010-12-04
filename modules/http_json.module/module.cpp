@@ -646,6 +646,13 @@ SYNAPSE_REGISTER(module_Init)
 
 	Cmsg out;
 
+	//load config file
+	synapse::Cconfig config;
+	config.load("etc/synapse/http_json.conf");
+	configMaxContent=config["maxContent"];
+	configMaxConnections=config["maxContent"];
+	net.setMaxConnections(configMaxConnections);
+
 	//change module settings.
 	//especially broadcastMulti is important for our "all"-handler
 	out.clear();
@@ -670,12 +677,6 @@ SYNAPSE_REGISTER(module_Init)
 	out.send();
 
 
-	//load config file
-	synapse::Cconfig config;
-	config.load("etc/synapse/http_json.conf");
-	configMaxContent=config["maxContent"];
-	configMaxConnections=config["maxContent"];
-	net.setMaxConnections(configMaxConnections);
 
 	//set content types
 	for (Cvar::iterator I=config["contentTypes"].begin(); I!=config["contentTypes"].end(); I++)
