@@ -462,6 +462,10 @@ namespace paper
 				element2msg(elementI->first, out);
 				out.send();
 			}
+
+			out.clear();
+			out["cmd"]="ready";
+			out.send();
 		}
 
 		virtual void addClient(int id)

@@ -124,12 +124,6 @@
 
 		/*** Drawing protocol
 		
-		1. alles via server: nadeel lag
-		2. lokaal dingen afhandellen: inconsitency by lag/tegelijk editten
-			oplossingen: 
-				locking: complex, teveel message overhead en dus meer lag
-				complete objectrefresh requesten als je klaar bent. nadeel: kan veel data zijn bij lange lijnen, maar dit is te optimizen door bijv points-velden weg te laten.
-
 		Drawing stuff is done with paper_clientDraw.
 		The message is translated to a paper_serverDraw and forwarded to all clients.
 		The message is normally not echoed back, unless requested
@@ -140,9 +134,10 @@
 						delete: remove element
 						refresh: 	let the server resend an update cmd with all info about the element, to this client. 
 									this is used to prevent inconsitencys due to local caching.
+						ready: when doing a full redraw on join, this indicates the drawing is "ready"					
 
 						
-		only for updates with new (not yet existing) objects:
+		Only for updates with new (not yet existing) objects:
 		element:		svg element type (e.g. circle,rect,polyline)
 		
 		update parameters:
@@ -159,7 +154,6 @@
 		
 		ONLY SET BY SERVER:
 		src:		added by server. session id that send the message
-						
 		
 		
 		'
@@ -244,7 +238,11 @@
 					drawing.removeChild(element);
 				}	
 			}
-			
+			else if (msg["cmd"]=="ready")
+			{
+				//NOTE: this also works around a weird chromuim refresh bug.
+				$("#loading").hide();
+			}			
 
 			//update cursor?
 			if (msg.cursor!=null)
@@ -549,6 +547,7 @@
 					/// start mouse update engine
 					window.setInterval(mouseMove, mouseInterval);
 
+
 					//join the specified paper
 					send(0,"paper_Join", {
 						"objectId":jQuery.url.param("id")
@@ -648,8 +647,14 @@
 		#loading
 		{
 			position:absolute;
-			left:40%;
-			top:40%;
+			left:0;
+			right:0;
+			top:0;
+			bottom:0;
+			background-fill:none;
+			text-align:center;
+			color: red;
+			font-size: 1000%;
 		}
 		
 		#colors
@@ -770,7 +775,7 @@
 	</div>
 
 
-	<div id='loading' class='ui-state-highlight'>Loading...</div>
+	<div id='loading' >Loading...</div>
 
 
 	<div id='drawing'></div>		
