@@ -259,34 +259,6 @@
 				this.clear(); 			
 			}
 			
-			/*** Drawing protocol
-			
-			CAN BE SET BY CLIENT:
-			cmd:		command to do:
-							create: create object
-							update: modify object
-							delete: remove object
-
-			create parameters:
-			element:		svg element type (e.g. circle,rect,polyline)
-			
-			create/modify parameters:
-			add:    	svg attributes to append data to (used for polylines)
-			set:		svg attributes to set/replace
-
-
-			create/modify/delete parameters:		
-			id:			object id for modify/delete. 
-						when an object is created, the server will assign a new id.
-						if not specified, the server will use the last known id for this src session. 
-			
-			ONLY SET BY SERVER:
-			src:		added by server. session id that send the message
-							
-			
-			
-			'
-			 */
 			//eats and processes the client commands from the array and returns as soon as it encounters a global command
 			this.add=function(commands)
 			{
@@ -436,6 +408,8 @@
 //			drawClients();
 		}
 
+
+		//user moves mouse		
 		function mouseMove(force)
 		{
 
@@ -483,8 +457,43 @@
 				mouseSendTime=currentTime;
 			}
 		}	
-	
 
+		//user starts a mouse operation (clicks somewhere)
+		function mouseStart(m)
+		{
+
+			mouseMode=$('#modes .selected').attr("value");
+			mouseTarget=m.target.id;
+			
+			if (mouseMode=="line")
+			{
+				sendDraw({
+					'cmd'		:'update',
+					'id'		:'new',
+					'element'	:'polyline',
+					'set'		: {
+						'fill'			: 'none',
+						'stroke'		: $('#colors .selected').attr("value"),
+						'stroke-width'	: $('#widths .selected').attr("value")
+					}
+				});
+			}
+
+			//force a mouse move
+			mouseMove(true);
+		}
+
+		//user ends operation (leaves or mouse up)
+		function mouseEnd(m)
+		{
+			if (mouseMode!="")
+			{
+				mouseMode="";
+				sendDraw({
+					'cmd'		:'refresh'
+				});
+			};
+		}
 	    
 	    synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
@@ -598,41 +607,18 @@
 						else
 							m.returnValue=false;
 
-									
-						mouseMode=$('#modes .selected').attr("value");
-						mouseTarget=m.target.id;
-						
-						if (mouseMode=="line")
-						{
-							sendDraw({
-								'cmd'		:'create',
-								'element'	:'polyline',
-								'set'		: {
-									'fill'			: 'none',
-									'stroke'		: $('#colors .selected').attr("value"),
-									'stroke-width'	: $('#widths .selected').attr("value")
-								}
-							});
-						}
 
-						//force a mouse move
-						mouseMove(true);
+						mouseStart(m);
 
 						return false;
 					});
 
 					//set mouse up event
-					drawing.addEventListener('mouseup', function(m)
-					{
-						mouseMode="";
-					});
+					drawing.addEventListener('mouseup', mouseEnd)
 							
 					//set mouse leave event
 					//(doesnt work with addeventlistener!)
-					$("#drawing").mouseleave(function(m)
-					{
-						mouseMode="";
-					});
+					$("#drawing").mouseleave(mouseEnd);
 						
 					/// start mouse update engine
 					window.setInterval(mouseMove, mouseInterval);
@@ -691,37 +677,72 @@
  		
  				
 
+		/*** Drawing protocol
+		
+		1. alles via server: nadeel lag
+		2. lokaal dingen afhandellen: inconsitency by lag/tegelijk editten
+			oplossingen: 
+				locking: complex, teveel message overhead en dus meer lag
+				complete objectrefresh requesten als je klaar bent. nadeel: kan veel data zijn bij lange lijnen, maar dit is te optimizen door bijv points-velden weg te laten.
+
+		Drawing stuff is done with paper_clientDraw.
+		The message is translated to a paper_serverDraw and forwarded to all clients.
+		The message is normally not echoed back, unless requested
+		
+		CAN BE SET BY CLIENT:
+		cmd:		command to do:
+						update: create/modify element 
+						delete: remove element
+						refresh: 	let the server resend an update cmd with all info about the element, to this client. 
+									this is used to prevent inconsitencys due to local caching.
+
+						
+		only for updates with new (not yet existing) objects:
+		element:		svg element type (e.g. circle,rect,polyline)
+		
+		update parameters:
+		add:    	svg attributes to append data to (used for polylines)
+		set:		svg attributes to set/replace
+
+
+		update/delete parameters:		
+		id:			element id for update/delete. 
+					if set to 'new' with an update, the server will create a new element and replace it with its id.
+					if not set by with an update/refresh, the id is replaced by id used in the last 'update' for this client. 
+		beforeId:   set by server to the id of the element this element should be inserted before. this is important to keep the order of all the elements correct.
+					normally only set when requesting a refresh.
+		
+		ONLY SET BY SERVER:
+		src:		added by server. session id that send the message
+						
+		
+		
+		'
+		 */
  		synapse_register("paper_ServerDraw",function(msg_src, msg_dst, msg_event, msg)
 		{
-	 			//	//let everyone know who we are
-	 			//	sendDraw([ "n" , $("#clientName").val() ]);
-				//	$("#loading").hide();
-				//	$("#chatInput").focus();
 
-				//create new object
-				if (msg["cmd"]=="create")
-				{
-					var element = document.createElementNS(svgns, msg["element"]);
-					element.setAttribute('id', msg["id"]);
-					drawing.appendChild(element);
-				}
-				//delete object
-				else if (msg["cmd"]=="delete")
+				//create/update object
+				if (msg["cmd"]=="update")
 				{
 					var element=document.getElementById(msg["id"]);
-					if (element!=null)
+					//element not found? 
+					if (element==null)
 					{
-						drawing.removeChild(element);
-					}	
-				}
-				
+						//create new element
+						var element = document.createElementNS(svgns, msg["element"]);
+						element.setAttribute('id', msg["id"]);
 
-				//we need to add/set attributes?
-				if (msg["add"] || msg["set"])
-				{
-					var element=document.getElementById(msg["id"]);
+						//insert before existing or just append?
+						var beforeElement=null;
+						if (msg["beforeId"]!=null)
+							beforeElement=document.getElementById(msg["beforeId"]);
 
-					if (element!=null)
+						drawing.insertBefore(element, beforeElement);							
+					}
+					
+					//we need to add/set attributes?
+					if (msg["add"] || msg["set"])
 					{
 						for (var attrName in msg["set"])
 						{
@@ -736,7 +757,19 @@
 								element.setAttribute(attrName, msg["add"][attrName]);
 						}
 					}
+						
+
 				}
+				//delete object
+				else if (msg["cmd"]=="delete")
+				{
+					var element=document.getElementById(msg["id"]);
+					if (element!=null)
+					{
+						drawing.removeChild(element);
+					}	
+				}
+				
 
 				//update cursor?
 				if (msg.cursor!=null)

@@ -196,7 +196,7 @@ namespace synapse
 		Tclient & getClient(int id)
 		{
 			if (clientMap.find(id)== clientMap.end())
-				throw(runtime_error("Client not found in this object!"));
+				throw(runtime_error("You are not joined to this object."));
 
 			return (clientMap[id]);
 		}
