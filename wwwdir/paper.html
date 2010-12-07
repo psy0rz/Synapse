@@ -117,250 +117,7 @@
 		//information about the object a client is currently drawing
 		function Cclient(id)
 		{
-			//init default settings
-			this.mode="m";
-			this.coords=new Array();
-			this.color="#000000";
-			this.width=widthToBrowser(1);
-			this.serverWidth=1;
-			this.text="";
-			this.clientName="";
-			this.id=id;
-
-			//create cursor
-//			this.svgCursor = document.createElementNS(svgns, 'circle');
-//			this.svgCursor.setAttribute('cx', 200);
-//			this.svgCursor.setAttribute('cy', 200);
-//			this.svgCursor.setAttribute('r', 100);
-//			this.svgCursor.setAttribute('id', 'test');
-//			//this.svgCursor.setAttribute('fill', '#ff0000');
-//			this.svgCursor.style["fill"]='#ff0000';
-	
-			this.svgCursor = document.createElementNS(svgns, 'polyline');
-			this.svgCursor.setAttribute('points', '10,10 200,200 20,50');
-			this.svgCursor.setAttribute('stroke', '#000000');
-			this.svgCursor.setAttribute('id', 'test');
-			this.svgCursor.setAttribute('fill', 'none');
-			this.svgCursor.setAttribute('transform', 'translate(200,200)');
-			var p=this.svgCursor.points.getItem(1);
-			p.x=1000;
-			p.y=1000;			
 			
-			//this.svgCursor.setAttribute('fill', '#ff0000');
-			//this.svgCursor.style["fill"]='#ff0000';
-
-			
-			svgweb.appendChild(this.svgCursor);
-
-//			drawing.appendChild(test);
-
-			
-			this.setCursor=function(x,y)
-			{
-				this.svgCursor.setAttribute('cx', x);
-				this.svgCursor.setAttribute('cy', y);
-			}
-			
-			//we're going to be removed, clean up any shit
-			this.remove=function()
-			{
-				//remove dom object
-				if ($("#client_"+this.id).length!=0)
-		 			$("#client_"+this.id).remove();
-
-			}
-
-			
-			//draw the object in the specified context	
-			this.draw=function(context)
-			{
-				if (this.mode=="m")
-					return;
-
-				if (this.mode=="l" && this.coords.length>=4)
-				{
-					context.beginPath();
-					context.strokeStyle=this.color;
-					context.lineWidth=this.width;
-					context.lineCap="round";
-					context.lineJoin="round";
-	 				context.moveTo(this.coords[0], this.coords[1]);
-	 				var i=2;
-	 				while (i<this.coords.length)
-	 				{
-	 					context.lineTo(this.coords[i], this.coords[i+1]);
-	 					i=i+2;
-	 				}
-					context.stroke();
-				}
-			}
-
-
-			//update the html information about this client in the clientlist
-			this.updateHtml=function()
-			{
-				//dont do html stuff when in autoCommit mode, for performance reasons
-				if (autoCommit)
-					return;
-				
-		 		//no dom object for this client yet?
-		 		//TODO:move to create?
-				if ($("#client_"+this.id).length==0)
-				{
-					//add dom object to list
-					var html="<div class='client' id='client_"+this.id+"'>";
-					html+="</div>";
-					$('#clientList').append(html);
-				}
-				object=$("#client_"+this.id);
-
-				//name 
-				if (!this.clientName)
-					object.html("Client #" +this.id);
-				else
-					object.html(this.clientName);
-
-				//color
-				object.css('color',this.color);
-				if (this.color=="#ffffff")
-					object.css('background-color','#cccccc');
-				else
-					object.css('background-color','#ffffff');
-
-				//"width"
-				var size=0;
-				if (this.serverWidth<10)
-					size=(90+(this.serverWidth*10));
-				else
-				{
-					size=(160+this.serverWidth);
-				}
-				object.css('font-size',""+size+"%");
-	
-				//drawing
-				if (this.mode!="m")
-					object.css('font-style','italic');
-				else
-					object.css('font-style','');
-			} 	
-
-			
-			//clears the current draw-info, not the settings!
-			this.clear=function()
-			{
-				this.mode="m";
-				this.coords=[];
-			}
-
-			//commit the current drawing to permanent canvas, and clear it.
-			this.commit=function()
-			{
-				this.draw(contextDraw);
-				this.clear(); 			
-			}
-			
-			//eats and processes the client commands from the array and returns as soon as it encounters a global command
-			this.add=function(commands)
-			{
-				var ok=false;
-				while (commands.length>0)
-				{	
-					//a new command should automaticly commit the previous one:
-					//(this way the server doesnt have to store all the save-commands)
-
-					//NOTE: try to sort this on the stuff that is used most often in Redraw mode.
-					
-					//all numbers are coords, if we are in some kind of drawing mode.
-					if (commands[0] == parseInt(commands[0]))
-					{
-						c=toBrowser(commands.shift(), commands.shift());
-		 				this.setCursor(c.x,c.y);
-						if (this.mode=='l')
-							this.coords.push(c.x, c.y);
-					}
-					//enable line mode
-					else if (commands[0]=='l')
-					{
-						this.commit();
-						commands.shift();
-						this.mode='l';						
-						this.updateHtml();						
-					}
-	 				//save current action permanently 
-	 				else if (commands[0]=="s")
-	 				{
-	 	 				commands.shift();
-	 	 				this.commit();
-						this.updateHtml();						
-	 				}
-					//mouse movement
-					else if (commands[0]=="m")
-	 				{
-						this.commit();
-		 				commands.shift();
-						//c=toBrowser(commands.shift(), commands.shift());
-						
-		 				this.mode='m';
-		 				this.setCursor(commands.shift(), commands.shift());
-		 			 				
-	 				}
-					//color
-					else if (commands[0]=='c')
-					{
-						this.commit();
-						commands.shift();
-						this.color=commands.shift();
-						this.updateHtml();						
-					}
-					//name
-					else if (commands[0]=='n')
-					{
-						this.commit();
-						commands.shift();
-						//dont forget to filter!
-						this.clientName=filterInput(commands.shift()).substr(0,20);
-						this.updateHtml();						
-					}
-					//chat text
-					else if (commands[0]=='.')
-					{
-						this.commit();
-						commands.shift();
-
-						//add text to chatList
-						var html="";
-						html+="<div class='chatLine'>&lt;";
-						html+=this.clientName;
-						html+="&gt; ";
-						html+=filterInput(commands.shift());
-						html+="</div>";
-						addChat(html);						
-					}					
-					//width
-					else if (commands[0]=='w')
-					{
-						this.commit();
-						commands.shift();
-						this.serverWidth=parseInt(commands.shift());
-						this.width=widthToBrowser(this.serverWidth);
-						this.updateHtml();						
-					}
-	 				//cancel current drawing action
-	 				else if (commands[0]=="x")
-	 				{
-	 	 				commands.shift();
-	 					this.clear();
-						this.updateHtml();						
-	 				}
-					else
-					{
-						//we dont know, let caller handle the rest
-						return(ok);
-					}
-					ok=true;
-				}
-				return(ok);
-			}
 		}
 
 		
@@ -379,6 +136,156 @@
 		}
 
 
+		/*** Drawing protocol
+		
+		1. alles via server: nadeel lag
+		2. lokaal dingen afhandellen: inconsitency by lag/tegelijk editten
+			oplossingen: 
+				locking: complex, teveel message overhead en dus meer lag
+				complete objectrefresh requesten als je klaar bent. nadeel: kan veel data zijn bij lange lijnen, maar dit is te optimizen door bijv points-velden weg te laten.
+
+		Drawing stuff is done with paper_clientDraw.
+		The message is translated to a paper_serverDraw and forwarded to all clients.
+		The message is normally not echoed back, unless requested
+		
+		CAN BE SET BY CLIENT:
+		cmd:		command to do:
+						update: create/modify element 
+						delete: remove element
+						refresh: 	let the server resend an update cmd with all info about the element, to this client. 
+									this is used to prevent inconsitencys due to local caching.
+
+						
+		only for updates with new (not yet existing) objects:
+		element:		svg element type (e.g. circle,rect,polyline)
+		
+		update parameters:
+		add:    	svg attributes to append data to (used for polylines)
+		set:		svg attributes to set/replace
+
+
+		update/delete parameters:		
+		id:			element id for update/delete. 
+					if set to 'new' with an update, the server will create a new element and replace it with its id.
+					if not set by with an update/refresh, the id is replaced by id used in the last 'update' for this client. 
+		beforeId:   set by server to the id of the element this element should be inserted before. this is important to keep the order of all the elements correct.
+					normally only set when requesting a refresh.
+		
+		ONLY SET BY SERVER:
+		src:		added by server. session id that send the message
+						
+		
+		
+		'
+		 */
+
+
+		function draw(msg)
+		{
+			//create/update object
+			if (msg["cmd"]=="update")
+			{
+				var element=document.getElementById(msg["id"]);
+				//element not found? 
+				if (element==null)
+				{
+					//create new element
+					var element = document.createElementNS(svgns, msg["element"]);
+					element.setAttribute('id', msg["id"]);
+
+					//insert before existing or just append?
+					var beforeElement=null;
+					if (msg["beforeId"]!=null)
+						beforeElement=document.getElementById(msg["beforeId"]);
+
+					//NOTE: svgweb is buggy and doesnt support insertbefore with a null element, so work around:
+					if (beforeElement==null)
+						drawing.appendChild(element);
+					else
+						drawing.insertBefore(element, beforeElement);							
+				}
+				
+				//we need to add/set attributes?
+				if (msg["add"] || msg["set"])
+				{
+					for (var attrName in msg["set"])
+					{
+						element.setAttribute(attrName, msg["set"][attrName]);
+					}							
+
+					for (var attrName in msg["add"])
+					{
+						if (element.getAttribute(attrName)!=null)
+							element.setAttribute(attrName, element.getAttribute(attrName)+msg["add"][attrName]);
+						else
+							element.setAttribute(attrName, msg["add"][attrName]);
+					}
+				}
+					
+
+			}
+			//delete object
+			else if (msg["cmd"]=="delete")
+			{
+				var element=document.getElementById(msg["id"]);
+				if (element!=null)
+				{
+					drawing.removeChild(element);
+				}	
+			}
+			
+
+			//update cursor?
+			if (msg.cursor!=null)
+			{
+				var cursor=document.getElementById('cursor'+msg["src"]);
+				if (cursor==null)
+				{
+					console.log("CREATE");
+					//create a group for this client's cursor
+					cursor = document.createElementNS(svgns, 'g');
+					cursor.setAttribute('id', 'cursor'+msg["src"]);
+					cursor.setAttribute('stroke', '#000000');
+					cursor.setAttribute('stroke-width', '10');
+					drawing.appendChild(cursor);
+
+					//add drawing to the cursor group
+					var e = document.createElementNS(svgns, 'line');
+					e.setAttribute('x1', '-200');
+					e.setAttribute('x2', '+200');
+					e.setAttribute('y1', '0');
+					e.setAttribute('y2', '0');
+					cursor.appendChild(e);					
+
+					var e = document.createElementNS(svgns, 'line');
+					e.setAttribute('x1', '0');
+					e.setAttribute('x2', '0');
+					e.setAttribute('y1', '-200');
+					e.setAttribute('y2', '+200');
+					cursor.appendChild(e);					
+
+					var e = document.createElementNS(svgns, 'text');
+					e.setAttribute('x', '0');
+					e.setAttribute('y', '300');
+					e.setAttribute('font-size','200');
+					e.setAttribute('stroke','#aaaaaa');
+					
+					cursor.appendChild(e);					
+
+					var textNode = document.createTextNode('psy0rz', true);
+					e.appendChild(textNode);
+				}
+				cursor.setAttribute('transform', 'translate('+msg.cursor.x+','+msg.cursor.y+')');
+				
+			}
+								
+		}
+		
+
+		synapse_register("paper_ServerDraw",function(msg_src, msg_dst, msg_event, msg)
+		{
+			draw(msg);
+		});
 
 		//send drawing msg to server 
 		//note: you need to specifiy server coordinates instead of browser coordinates here.		
@@ -391,21 +298,11 @@
 			//send it to server
 			send(paperModId,"paper_ClientDraw", msg);
 
-			//we dont get our own stuff back from the server, so we can add here.
-			//this way the users doesnt see his own stuff lagged.
-			//however there is a race condition when 2 users draw over eachother and release the mouse at the same time. 
-			//both users will get a different result. however this is fixed on a refresh and acceptable for now.
- 			
-// 			if (clients[ourId]==undefined)
- //			{
-	// 			clients[ourId]=new Cclient(ourId);
- 		//	}
-
-//			clients[ourId].add(commands);
-
-
-	//		//refresh temporary canvas
-//			drawClients();
+			//the server doesnt echo our stuff back, so we can handle it locally without lag
+			//call the draw function and emulate the server by adding some stuff
+			msg["src"]=ourId;
+			msg["id"]="temp";
+			draw(msg);
 		}
 
 
@@ -450,7 +347,7 @@
 					}				
 				}
 
-				send(paperModId,"paper_ClientDraw", msg);
+				sendDraw(msg);
 
 				mouseSendPoint.x=mousePoint.x;
 				mouseSendPoint.y=mousePoint.y;
@@ -492,6 +389,11 @@
 				sendDraw({
 					'cmd'		:'refresh'
 				});
+
+				var element=document.getElementById("temp");
+				if (element!=null)
+					drawing.removeChild(element);
+				
 			};
 		}
 	    
@@ -677,149 +579,6 @@
  		
  				
 
-		/*** Drawing protocol
-		
-		1. alles via server: nadeel lag
-		2. lokaal dingen afhandellen: inconsitency by lag/tegelijk editten
-			oplossingen: 
-				locking: complex, teveel message overhead en dus meer lag
-				complete objectrefresh requesten als je klaar bent. nadeel: kan veel data zijn bij lange lijnen, maar dit is te optimizen door bijv points-velden weg te laten.
-
-		Drawing stuff is done with paper_clientDraw.
-		The message is translated to a paper_serverDraw and forwarded to all clients.
-		The message is normally not echoed back, unless requested
-		
-		CAN BE SET BY CLIENT:
-		cmd:		command to do:
-						update: create/modify element 
-						delete: remove element
-						refresh: 	let the server resend an update cmd with all info about the element, to this client. 
-									this is used to prevent inconsitencys due to local caching.
-
-						
-		only for updates with new (not yet existing) objects:
-		element:		svg element type (e.g. circle,rect,polyline)
-		
-		update parameters:
-		add:    	svg attributes to append data to (used for polylines)
-		set:		svg attributes to set/replace
-
-
-		update/delete parameters:		
-		id:			element id for update/delete. 
-					if set to 'new' with an update, the server will create a new element and replace it with its id.
-					if not set by with an update/refresh, the id is replaced by id used in the last 'update' for this client. 
-		beforeId:   set by server to the id of the element this element should be inserted before. this is important to keep the order of all the elements correct.
-					normally only set when requesting a refresh.
-		
-		ONLY SET BY SERVER:
-		src:		added by server. session id that send the message
-						
-		
-		
-		'
-		 */
- 		synapse_register("paper_ServerDraw",function(msg_src, msg_dst, msg_event, msg)
-		{
-
-				//create/update object
-				if (msg["cmd"]=="update")
-				{
-					var element=document.getElementById(msg["id"]);
-					//element not found? 
-					if (element==null)
-					{
-						//create new element
-						var element = document.createElementNS(svgns, msg["element"]);
-						element.setAttribute('id', msg["id"]);
-
-						//insert before existing or just append?
-						var beforeElement=null;
-						if (msg["beforeId"]!=null)
-							beforeElement=document.getElementById(msg["beforeId"]);
-
-						//NOTE: svgweb is buggy and doesnt support insertbefore with a null element, so work around:
-						if (beforeElement==null)
-							drawing.appendChild(element);
-						else
-							drawing.insertBefore(element, beforeElement);							
-					}
-					
-					//we need to add/set attributes?
-					if (msg["add"] || msg["set"])
-					{
-						for (var attrName in msg["set"])
-						{
-							element.setAttribute(attrName, msg["set"][attrName]);
-						}							
-	
-						for (var attrName in msg["add"])
-						{
-							if (element.getAttribute(attrName)!=null)
-								element.setAttribute(attrName, element.getAttribute(attrName)+msg["add"][attrName]);
-							else
-								element.setAttribute(attrName, msg["add"][attrName]);
-						}
-					}
-						
-
-				}
-				//delete object
-				else if (msg["cmd"]=="delete")
-				{
-					var element=document.getElementById(msg["id"]);
-					if (element!=null)
-					{
-						drawing.removeChild(element);
-					}	
-				}
-				
-
-				//update cursor?
-				if (msg.cursor!=null)
-				{
-					var cursor=document.getElementById('cursor'+msg["src"]);
-					if (cursor==null)
-					{
-						console.log("CREATE");
-						//create a group for this client's cursor
-						cursor = document.createElementNS(svgns, 'g');
-						cursor.setAttribute('id', 'cursor'+msg["src"]);
-						cursor.setAttribute('stroke', '#000000');
-						cursor.setAttribute('stroke-width', '10');
-						drawing.appendChild(cursor);
-
-						//add drawing to the cursor group
-						var e = document.createElementNS(svgns, 'line');
-						e.setAttribute('x1', '-200');
-						e.setAttribute('x2', '+200');
-						e.setAttribute('y1', '0');
-						e.setAttribute('y2', '0');
-						cursor.appendChild(e);					
-
-						var e = document.createElementNS(svgns, 'line');
-						e.setAttribute('x1', '0');
-						e.setAttribute('x2', '0');
-						e.setAttribute('y1', '-200');
-						e.setAttribute('y2', '+200');
-						cursor.appendChild(e);					
-
-						var e = document.createElementNS(svgns, 'text');
-						e.setAttribute('x', '0');
-						e.setAttribute('y', '300');
-						e.setAttribute('font-size','200');
-						e.setAttribute('stroke','#aaaaaa');
-						
-						cursor.appendChild(e);					
-
-						var textNode = document.createTextNode('psy0rz', true);
-						e.appendChild(textNode);
-					}
-					cursor.setAttribute('transform', 'translate('+msg.cursor.x+','+msg.cursor.y+')');
-					
-				}
-					
-		});
  		
 
 	
