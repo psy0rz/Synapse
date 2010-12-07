@@ -278,12 +278,25 @@
 
 			drawing.unsuspendRedraw(suspendID);
 		}
-		
 
+		//someone left, remove their cursor and stuff
+		synapse_register("object_Left",function(msg_src, msg_dst, msg_event, msg)
+		{
+			var cursor=document.getElementById('cursor'+msg["clientId"]);
+			if (cursor!=null)
+			{
+				drawing.removeChild(cursor);
+			}
+		
+		});
+
+
+		//received a drawing command from the server
 		synapse_register("paper_ServerDraw",function(msg_src, msg_dst, msg_event, msg)
 		{
 			draw(msg);
 		});
+
 
 		//send drawing msg to server 
 		//note: you need to specifiy server coordinates instead of browser coordinates here.		
@@ -308,7 +321,7 @@
 		//user moves mouse		
 		function mouseMove(force)
 		{
-
+			
 			//mouse throttling function, to prevent too many updates per second
 			//no change?
 			if (force!=true && mousePoint.x==mouseSendPoint.x && mousePoint.y==mouseSendPoint.y)
@@ -598,7 +611,7 @@
 						{
 							//normal
 							mousePoint.x=m.clientX-$("#drawing").offset().left;
-							mousePoint.y=m.clientY-$("#drawing").offset().top+document.body.scrollTop ;
+							mousePoint.y=m.clientY-$("#drawing").offset().top ;
 						}
 													
 						mouseMove(false);
@@ -626,7 +639,7 @@
 					$("#drawing").mouseleave(mouseEnd);
 						
 					/// start mouse update engine
-					window.setInterval(mouseMove, mouseInterval);
+					window.setInterval(function() { mouseMove(false) }, mouseInterval);
 
 
 					//join the specified paper
@@ -675,7 +688,9 @@
 			//tell people who we are
 			sendDraw({
 				'cursor':{
-					'clientName':$("#clientName").val()
+					'clientName':$("#clientName").val(),
+					'x':Math.round(9000*Math.random())+1000,
+					'y':Math.round(9000*Math.random())+1000
 				}
 			});
 		});
@@ -858,19 +873,20 @@
 
 		<div id='styles'>
 			<div class='tool mode defaultTool' value='none'>norm</div>
-			<div class='tool mode' value='10,100'>stip</div>
-			<div class='tool mode' value='100,100'>streep</div>
+			<div class='tool mode' value='20,200'>stip</div>
+			<div class='tool mode' value='200,200'>streep</div>
 		</div>
 
 
-		<div class='ui-widget-header'>Chat:</div>
+<!-- 
+ 		<div class='ui-widget-header'>Chat:</div>
 		<div id='chatList'></div>
 		<input id='chatInput' type='text' value='' >
 
 
 		<div class='ui-widget-header'>Andere mensen:</div>
 		<div id='clientList'></div>
-
+-->
 
 	</div>
 

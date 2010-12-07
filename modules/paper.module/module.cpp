@@ -109,6 +109,7 @@ namespace paper
 		out.clear();
 		out.event="core_Ready";
 		out.send();
+
 	}
 
 
@@ -121,120 +122,13 @@ namespace paper
 		private:
 
 		public:
-		Cvar settings;
-		CvarList drawing;
-		bool didDraw; //client did draw something?
+		Cvar cursor;
 		int lastElementId;
 
 		CpaperClient()
 		{
-			didDraw=false;
 			lastElementId=0;
 		}
-
-		//parses and collect usefull drawing commands for this client.
-		//returns true if the sharedobject should permanently store the collected data
-		//NOTE: this is not really a "parser": it needs exactly one command with its parameters. The clients should make sure they send it this way.
-		bool add(CvarList & commands )
-		{
-			if (commands.begin()->which()==CVAR_STRING)
-			{
-				//cancel drawing action (but keep settings!)
-				if (commands.begin()->str()=="x")
-				{
-					drawing.clear();
-				}
-				//commit drawing action and settings
-				else if (commands.begin()->str()=="s")
-				{
-					return(true);
-				}
-				//mouse movements, ignore
-				else if (commands.begin()->str()=="m")
-				{
-					;
-				}
-				//drawing commands
-				else if (
-						(commands.begin()->str()=="l") ||
-						(commands.begin()->str()=="r") ||
-						(commands.begin()->str()=="a") ||
-						(commands.begin()->str()=="t") ||
-						(commands.begin()->str()==".")
-				)
-				{
-					drawing.insert(drawing.end(), commands.begin(), commands.end());
-				}
-				//drawing settings
-				else if (
-						(commands.begin()->str()=="c") ||
-						(commands.begin()->str()=="w") ||
-						(commands.begin()->str()=="n")
-				)
-				{
-					settings[commands.begin()->str()]=(++commands.begin())->str();
-				}
-				//delete
-				else if (commands.begin()->str()=="D")
-				{
-					drawing.clear();
-					settings.clear();
-					if (didDraw)
-					{
-						//if the client did do SOMETHING worth storing, then store the Delete command as well
-						drawing.push_back(string("D"));
-						return(true);
-					}
-					else
-						return(false);
-				}
-				else
-				{
-					;//ignore the rest for now
-				}
-
-			}
-			//numbers, just add them to the drawing
-			else
-			{
-				drawing.insert(drawing.end(), commands.begin(), commands.end());
-			}
-			return(false);
-		}
-
-		//add current values to specified drawing
-		bool store(CvarList & addDrawing)
-		{
-			bool added=false;
-			//store new settings
-			for(Cvar::iterator I=settings.begin(); I!=settings.end(); I++)
-			{
-				addDrawing.push_back(I->first);
-				addDrawing.push_back(I->second);
-				added=true;
-			}
-
-			//store drawing commands
-			if (!drawing.empty())
-			{
-				addDrawing.insert(addDrawing.end(), drawing.begin(), drawing.end());
-				added=true;
-			}
-
-			return(added);
-		}
-
-		//store current values and forget everything
-		void commit(CvarList & addDrawing)
-		{
-			if (store(addDrawing))
-				didDraw=true;
-			settings.clear();
-			drawing.clear();
-		}
-
-
-
 	};
 
 
@@ -254,14 +148,13 @@ namespace paper
 		{
 			drawing.save(path);
 			saved=true;
+
 		}
 
 		void load(string path)
 		{
 			drawing.load(path);
 			saved=true;
-
-
 		}
 
 
@@ -339,6 +232,17 @@ namespace paper
 		void clientDraw(Cmsg & msg)
 		{
 			msg["src"]=msg.src;
+
+			//received cursor information?
+			if (msg.isSet("cursor"))
+			{
+				//store the new fields in the clients cursor object:
+				Cvar & cursor=getClient(msg.src).cursor;
+				for(Cvar::iterator I=msg["cursor"].begin(); I!=msg["cursor"].end(); I++)
+				{
+					cursor[I->first]=I->second.str();
+				}
+			}
 
 			//create object or update element?
 			if (msg["cmd"].str()=="update")
@@ -431,20 +335,20 @@ namespace paper
 
 		}
 
-		virtual void delClient(int id)
-		{
-			if (clientMap.find(id)!= clientMap.end())
-			{
-				//do a Del command on behalf of the client
-				CvarList commands;
-				commands.push_back(string("D"));
-				//serverDraw(commands,id);
-				//lastClient=0;
-//				if (getClient(id).didDraw)
-	//				lastStoreClient=0;
-				synapse::CsharedObject<CpaperClient>::delClient(id);
-			}
-		}
+//		virtual void delClient(int id)
+//		{
+//			if (clientMap.find(id)!= clientMap.end())
+//			{
+//				//do a Del command on behalf of the client
+//				CvarList commands;
+//				commands.push_back(string("D"));
+//				//serverDraw(commands,id);
+//				//lastClient=0;
+////				if (getClient(id).didDraw)
+//	//				lastStoreClient=0;
+//				synapse::CsharedObject<CpaperClient>::delClient(id);
+//			}
+//		}
 
 
 		//send redrawing instructions to dst
@@ -454,7 +358,7 @@ namespace paper
 			out.event="paper_ServerDraw";
 			out.dst=dst;
 
-			//resend all elements
+			//send all elements
 			for(Cvar::iterator elementI=drawing["data"].begin(); elementI!=drawing["data"].end(); elementI++)
 			{
 				out.clear();
@@ -462,6 +366,16 @@ namespace paper
 				element2msg(elementI->first, out);
 				out.send();
 			}
+
+			//send all cursors
+			for(CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
+			{
+				out.clear();
+				out["cursor"].map()=I->second.cursor;
+				out["src"]=I->first;
+				out.send();
+			}
+
 
 			out.clear();
 			out["cmd"]="ready";
@@ -498,17 +412,17 @@ namespace paper
 			int oldObjectId=objectMan.getObjectByClient(msg.src).getId();
 			int newObjectId=objectMan.add();
 
-			//store reference to next object in the old one..
-			CvarList commands;
-			commands.push_back(string("N"));
-			commands.push_back(newObjectId);
-			//objectMan.getObject(oldObjectId).serverDraw(commands);
-
-			//store reference to previous object in the new one..
-			commands.clear();
-			commands.push_back(string("P"));
-			commands.push_back(oldObjectId);
-			//objectMan.getObject(newObjectId).serverDraw(commands);
+//			//store reference to next object in the old one..
+//			CvarList commands;
+//			commands.push_back(string("N"));
+//			commands.push_back(newObjectId);
+//			//objectMan.getObject(oldObjectId).serverDraw(commands);
+//
+//			//store reference to previous object in the new one..
+//			commands.clear();
+//			commands.push_back(string("P"));
+//			commands.push_back(oldObjectId);
+//			//objectMan.getObject(newObjectId).serverDraw(commands);
 
 			//now actually move the clients
 			objectMan.moveClients(oldObjectId, newObjectId);
