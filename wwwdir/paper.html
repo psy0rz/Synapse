@@ -25,7 +25,7 @@
 		}
 	
 		var mouseInterval=50; //max update inteval in mS (can be higer if mouseMax is exceeded)
-		var mouseMax=25; //max mouse pixel offset before sending (regardless of update interval)
+		var mouseMax=50; //max mouse pixel offset before sending (regardless of update interval)
 	
 		var mousePoint=new Cpoint(); //current mouse position
 		var mousePointStart=new Cpoint(); //mouse position at start of current operation
@@ -95,16 +95,6 @@
 
 
 		
-		//information about the object a client is currently drawing
-		function Cclient(id)
-		{
-			
-		}
-
-		
-
-
-
 		/*** Drawing protocol
 		
 		Drawing stuff is done with paper_clientDraw.
@@ -132,20 +122,21 @@
 		id:			element id for update/delete. 
 					if set to 'new' with an update, the server will create a new element and replace it with its id.
 					if not set by with an update/refresh, the id is replaced by id used in the last 'update' for this client. 
-		beforeId:   set by server to the id of the element this element should be inserted before. this is important to keep the order of all the elements correct.
-					normally only set when requesting a refresh.
-		
+
+		cursor:     Cursor and name information (x,y,clientName)
+					
 		ONLY SET BY SERVER:
 		src:		added by server. session id that send the message
 		
-		
+		beforeId:   set by server to the id of the element this element should be inserted before. this is important to keep the order of all the elements correct.
+		normally only set when requesting a refresh.
+				
 		'
 		 */
 
 
 		function draw(msg)
 		{
-//			drawing=document.getElementsByTagNameNS(svgns, 'svg')[0];
 			var suspendID = drawing.suspendRedraw(250);
 			 
 			//create/update object
@@ -250,9 +241,12 @@
 			
 				}
 
-				//update cursor position
-				cursor.setAttribute('transform', 'translate('+msg["cursor"]["x"]+','+msg["cursor"]["y"]+')');
-
+				//update cursor position?
+				if (msg["cursor"]["x"]!=null)
+				{
+					cursor.setAttribute('transform', 'translate('+msg["cursor"]["x"]+','+msg["cursor"]["y"]+')');
+				}
+					
 				//update clientname?
 				if (msg["cursor"]["clientName"]!=null)
 				{
@@ -269,7 +263,7 @@
 					e.setAttribute('y', '300');
 					e.setAttribute('font-size','200');
 					e.setAttribute('font-weight','bold');
-					e.setAttribute('stroke','#aaaaaa');
+					e.setAttribute('stroke','#000000');
 					e.setAttribute('fill','#ffffff');
 					cursor.appendChild(e);					
 
@@ -283,8 +277,6 @@
 			}
 
 			drawing.unsuspendRedraw(suspendID);
-//			drawing.forceRedraw();
-			//drawing.unsuspendRedrawAll();			
 		}
 		
 
@@ -543,15 +535,6 @@
 				//select this one
 				$(this).addClass('selected');
 				
-//				var i=0;
-//				var cmds=new Array();
-//				while ($(this).attr("cmd"+i))
-//				{
-//					cmds.push($(this).attr("cmd"+i));
-//					i++;
-//				};
-//				
-//				sendDraw(cmds); 
 
 				$("#chatInput").focus();
 			});
