@@ -17,7 +17,7 @@ function synapse_login()
 				send(0,"core_Login", 
 				{
 					'username': $('#synapse_login .username').val(),
-					'password': $('#synapse_login .password').val(),
+					'password': $('#synapse_login .password').val()
 				});
 			}
 		},
@@ -25,7 +25,7 @@ function synapse_login()
 		{ 
 			$('#synapse_login').remove(); 
 		},
-		modal: true,
+		modal: true
 	});
 	$('#synapse_login .username').focus();
 };
@@ -60,7 +60,7 @@ function synapse_showError(description)
 			{ 
 				$('#synapse_error').remove(); 
 			},
-			'modal': true,
+			'modal': true
 		});
 	}
 	$('#synapse_error .description').append("<p>"+description+"</p>");

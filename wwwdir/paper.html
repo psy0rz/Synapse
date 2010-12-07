@@ -168,8 +168,9 @@
 
 		function draw(msg)
 		{
-		//	var suspendID = drawing.suspendRedraw(250);
-						  
+//			drawing=document.getElementsByTagNameNS(svgns, 'svg')[0];
+			var suspendID = drawing.suspendRedraw(250);
+			 
 			//create/update object
 			if (msg["cmd"]=="update")
 			{
@@ -288,9 +289,9 @@
 				
 			}
 
-	//		drawing.unsuspendRedraw(suspendID);
+			drawing.unsuspendRedraw(suspendID);
 //			drawing.forceRedraw();
-//			drawing.unsuspendRedrawAll();			
+			//drawing.unsuspendRedrawAll();			
 		}
 		
 
@@ -507,8 +508,20 @@
 					drawing.addEventListener('mousemove', function(m) 
 					{
 						mouseTarget=m.target.id;
-						mousePoint.x=m.pageX-$("#drawing").offset().left;
-						mousePoint.y=m.pageY-$("#drawing").offset().top;
+						//work around SVG bug http://code.google.com/p/svgweb/issues/detail?id=244
+						if(drawing.fake)
+						{
+							//flash workaround
+							mousePoint.x=m.clientX;
+							mousePoint.y=m.clientY;
+						} 
+						else 
+						{
+							//normal
+							mousePoint.x=m.clientX-$("#drawing").offset().left;
+							mousePoint.y=m.clientY-$("#drawing").offset().top+document.body.scrollTop ;
+						}
+													
 						mouseMove(false);
 					});
 
@@ -536,6 +549,12 @@
 					/// start mouse update engine
 					window.setInterval(mouseMove, mouseInterval);
 
+					//join the specified paper
+					send(0,"paper_Join", {
+						"objectId":jQuery.url.param("id")
+					});
+							
+
 				});
 				
 						
@@ -546,10 +565,6 @@
 		     }, false);
 
 		
-			//join the specified paper
-			send(0,"paper_Join", {
-				"objectId":jQuery.url.param("id"),
-			});
  		});
 
 		function reset()
