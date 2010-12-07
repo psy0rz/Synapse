@@ -28,6 +28,7 @@
 		var mouseMax=25; //max mouse pixel offset before sending (regardless of update interval)
 	
 		var mousePoint=new Cpoint(); //current mouse position
+		var mousePointStart=new Cpoint(); //mouse position at start of current operation
 	
 		//mouse info sending to server:
 		var mouseSendPoint=new Cpoint(); //last mousepoint sent to server
@@ -76,25 +77,6 @@
 			});
 		}
 	
-		//calculate server coordinates to browser coordinates 
-		//OBSOLETE: we use a svg viewbox
-		function toBrowser(x,y)
-		{
-			return ( { "x":x, "y":y } );
-			return ({
-				"x":((x*canvasWidth)/10000),
-				"y":((y*canvasHeight)/10000)
-			});
-		}				
-
-		//calculate server line width to browser linewidth
-		function widthToBrowser(width)
-		{
-			//for now we use the average of canvas width and height
-			return (
-					(((width*canvasWidth)/1000)+((width*canvasWidth)/1000))/2
-			);
-		}
 
 		
 		function paperLink(id,text)
@@ -363,6 +345,40 @@
 						'points': ' '+c.x+','+c.y
 					}
 				}
+				else if (mouseMode=="rect")
+				{
+					var cStart=toServer(mousePointStart.x,mousePointStart.y);
+					var w=c.x-cStart.x;
+					var h=c.y-cStart.y;
+					if (w<10)
+						w=10;
+					if (h<10)
+						h=10;
+					
+					msg['cmd']='update';
+					msg['set']={
+						'width': w,
+						'height': h					
+					}
+				}
+				else if (mouseMode=="circle")
+				{
+					var cStart=toServer(mousePointStart.x,mousePointStart.y);
+					var rx=Math.abs(c.x-cStart.x);
+					var ry=Math.abs(c.y-cStart.y);
+					//var r=Math.sqrt(Math.pow(xoffset,2)+Math.pow(yoffset,2));
+					
+					if (rx<100)
+						rx=10;
+					if (ry<100)
+						ry=10;
+					
+					msg['cmd']='update';
+					msg['set']={
+						'rx': rx,
+						'ry': ry
+					}
+				}
 				else if (mouseMode=="delete")
 				{ 
 					//only allow numeric id's to be deleted. otherwise you could delete cursors and stuff as well :P
@@ -386,17 +402,76 @@
 		{
 			tempCount++;
 			mouseMode=$('#modes .selected').attr("value");
-			
+			mousePointStart.x=mousePoint.x;
+			mousePointStart.y=mousePoint.y;
+
+			//filled alternative off the tools:
+			var fill='none';
+			if (mouseMode=="linefill")
+			{
+				mouseMode='line';
+				fill=$('#colors .selected').attr("value");
+			}
+			else if (mouseMode=="rectfill")
+			{
+				mouseMode='rect';
+				fill=$('#colors .selected').attr("value");
+			}
+			else if (mouseMode=="circlefill")
+			{
+				mouseMode='circle';
+				fill=$('#colors .selected').attr("value");
+			}
+
+			//normal tools:
 			if (mouseMode=="line")
 			{
+				
 				sendDraw({
 					'cmd'		:'update',
 					'id'		:'new',
 					'element'	:'polyline',
 					'set'		: {
-						'fill'			: 'none',
-						'stroke'		: $('#colors .selected').attr("value"),
-						'stroke-width'	: $('#widths .selected').attr("value")
+						'fill'				: fill,
+						'stroke'			: $('#colors .selected').attr("value"),
+						'stroke-width'		: $('#widths .selected').attr("value"),
+						'stroke-dasharray'	: $('#styles .selected').attr("value")
+					}
+				});
+			}
+			else if (mouseMode=="rect")
+			{
+				var c=toServer(mousePoint.x,mousePoint.y);
+
+				sendDraw({
+					'cmd'		:'update',
+					'id'		:'new',
+					'element'	:'rect',
+					'set'		: {
+						'fill'				: fill,
+						'stroke'			: $('#colors .selected').attr("value"),
+						'stroke-width'		: $('#widths .selected').attr("value"),
+						'stroke-dasharray'	: $('#styles .selected').attr("value"),
+						'x'					: c.x, 
+						'y'					: c.y
+					}
+				});
+			}
+			else if (mouseMode=="circle")
+			{
+				var c=toServer(mousePoint.x,mousePoint.y);
+
+				sendDraw({
+					'cmd'		:'update',
+					'id'		:'new',
+					'element'	:'ellipse',
+					'set'		: {
+						'fill'				: fill,
+						'stroke'			: $('#colors .selected').attr("value"),
+						'stroke-width'		: $('#widths .selected').attr("value"),
+						'stroke-dasharray'	: $('#styles .selected').attr("value"),
+						'cx'				: c.x, 
+						'cy'				: c.y
 					}
 				});
 			}
@@ -763,7 +838,7 @@
 			<div class='tool color ' style='background-color:#00ff00' value='#00ff00'>&nbsp;</div>
 			<div class='tool color ' style='background-color:#00ffff' value='#00ffff'>&nbsp;</div>
 			<div class='tool color ' style='background-color:#FF8040' value='#FF8040'>&nbsp;</div>
-			<div class='tool color ' style='background-color:#ffffff' value='#ffffff'>gum</div>
+			<div class='tool color ' style='background-color:#ffffff' value='#ffffff'>&nbsp;</div>
 			<br>
 			<div class='tool color' style='background-color:#ff0000' value='#ff0000'>&nbsp;</div>
 			<div class='tool color' style='background-color:#ff00ff' value='#ff00ff'>&nbsp;</div>
@@ -787,9 +862,21 @@
 		</div>
 
 		<div id='modes'>
-			<div class='tool mode defaultTool' value='line'>line</div>
-			<div class='tool mode' value='delete'>delete</div>
-			<div class='tool mode' value='move'>move</div>
+			<div class='tool mode defaultTool' value='line'>lijn</div>
+			<div class='tool mode' value='linefill'>LIJN</div>
+			<div class='tool mode' value='delete'>gum</div>
+			<br></br>
+			<div class='tool mode' value='rect'>vierk</div>
+			<div class='tool mode' value='rectfill'>VIERK</div>
+			<br></br>
+			<div class='tool mode' value='circle'>cirkel</div>
+			<div class='tool mode' value='circlefill'>CIRKEL</div>
+		</div>
+
+		<div id='styles'>
+			<div class='tool mode defaultTool' value='none'>norm</div>
+			<div class='tool mode' value='10,100'>stip</div>
+			<div class='tool mode' value='100,100'>streep</div>
 		</div>
 
 
