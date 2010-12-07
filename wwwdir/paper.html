@@ -173,52 +173,55 @@
 			//create/update object
 			if (msg["cmd"]=="update")
 			{
-				var element=document.getElementById(msg["id"]);
-				//element not found? 
-				if (element==null)
+				if (msg["id"]!=null)
 				{
-					//create new element
-					var element = document.createElementNS(svgns, msg["element"]);
-					element.setAttribute('id', msg["id"]);
-
-					//insert before existing or just append?
-					var beforeElement=null;
-					if (msg["beforeId"]!=null)
-						beforeElement=document.getElementById(msg["beforeId"]);
-
-					//NOTE: svgweb is buggy and doesnt support insertbefore with a null element, so work around:
-					if (beforeElement==null)
+					var element=document.getElementById(msg["id"]);
+					//element not found? 
+					if (element==null)
 					{
-						drawing.appendChild(element);
-//						svgweb.appendChild(element,drawing);
-//						svgweb.appendChild(drawing,element);
-					}
-					else
-						drawing.insertBefore(element, beforeElement);							
-				}
-				
-				//we need to add/set attributes?
-				if (msg["add"] || msg["set"])
-				{
-					for (var attrName in msg["set"])
-					{
-						element.setAttribute(attrName, msg["set"][attrName]);
-					}							
-
-					for (var attrName in msg["add"])
-					{
-						if (element.getAttribute(attrName)!=null)
+						//create new element
+						var element = document.createElementNS(svgns, msg["element"]);
+						element.setAttribute('id', msg["id"]);
+	
+						//insert before existing or just append?
+						var beforeElement=null;
+						if (msg["beforeId"]!=null)
+							beforeElement=document.getElementById(msg["beforeId"]);
+	
+						//NOTE: svgweb is buggy and doesnt support insertbefore with a null element, so work around:
+						if (beforeElement==null)
 						{
-							element.setAttribute(attrName, element.getAttribute(attrName)+msg["add"][attrName]);
-//							var s=msg["add"][attrName].substr(1).split(",");
-//							element.points.appendItem({x:s[0],y:s[1] });
-
+							drawing.appendChild(element);
+	//						svgweb.appendChild(element,drawing);
+	//						svgweb.appendChild(drawing,element);
 						}
 						else
-							element.setAttribute(attrName, msg["add"][attrName]);
+							drawing.insertBefore(element, beforeElement);							
+					}
+					
+					//we need to add/set attributes?
+					if (msg["add"] || msg["set"])
+					{
+						for (var attrName in msg["set"])
+						{
+							element.setAttribute(attrName, msg["set"][attrName]);
+						}							
+	
+						for (var attrName in msg["add"])
+						{
+							if (element.getAttribute(attrName)!=null)
+							{
+								element.setAttribute(attrName, element.getAttribute(attrName)+msg["add"][attrName]);
+	//							var s=msg["add"][attrName].substr(1).split(",");
+	//							element.points.appendItem({x:s[0],y:s[1] });
+	
+							}
+							else
+								element.setAttribute(attrName, msg["add"][attrName]);
+						}
 					}
 				}
-
+				
 				//remove any temporary objects
 				if (msg["tempId"]!=null)
 				{
@@ -233,6 +236,7 @@
 			//delete object
 			else if (msg["cmd"]=="delete")
 			{
+				console.log("DEL"+msg["id"]);
 				var element=document.getElementById(msg["id"]);
 				if (element!=null)
 				{
@@ -247,7 +251,6 @@
 				var cursor=document.getElementById('cursor'+msg["src"]);
 				if (cursor==null)
 				{
-					console.log("CREATE");
 					//create a group for this client's cursor
 					cursor = document.createElementNS(svgns, 'g');
 					cursor.setAttribute('id', 'cursor'+msg["src"]);
@@ -310,7 +313,8 @@
 			//the server doesnt echo our stuff back, so we can handle it locally without lag
 			//call the draw function and emulate the server by adding some stuff
 			msg["src"]=ourId;
-			msg["id"]="temp"+tempCount;
+			if (msg["id"]==null || msg["id"]=="new")
+				msg["id"]="temp"+tempCount;
 			draw(msg);
 		}
 
@@ -349,7 +353,7 @@
 				}
 				else if (mouseMode=="delete")
 				{ 
-					if (mouseTarget!="bg")
+					if (mouseTarget!="" && mouseTarget!="bg")
 					{
 						msg['cmd']='delete';
 						msg['id']=mouseTarget;
@@ -369,7 +373,6 @@
 		{
 			tempCount++;
 			mouseMode=$('#modes .selected').attr("value");
-			mouseTarget=m.target.id;
 			
 			if (mouseMode=="line")
 			{
@@ -506,7 +509,7 @@
 						mouseTarget=m.target.id;
 						mousePoint.x=m.pageX-$("#drawing").offset().left;
 						mousePoint.y=m.pageY-$("#drawing").offset().top;
-						mouseMove();
+						mouseMove(false);
 					});
 
 					//set mouse click event

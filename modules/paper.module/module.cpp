@@ -397,7 +397,8 @@ namespace paper
 				//id not set? the use the last one that was used by this client
 				if (!msg.isSet("id"))
 				{
-					msg["id"]=getClient(msg.src).lastElementId;
+					if (getClient(msg.src).lastElementId)
+						msg["id"]=getClient(msg.src).lastElementId;
 				}
 
 				//reply with a serverdraw to this client only
@@ -405,7 +406,8 @@ namespace paper
 				msg.dst=msg.src;
 				msg.src=0;
 				msg["cmd"]="update";
-				element2msg(msg["id"].str(), msg);
+				if (msg.isSet("id"))
+					element2msg(msg["id"].str(), msg);
 				msg.send();
 			}
 			//delete object?
@@ -415,6 +417,8 @@ namespace paper
 				Cvar::iterator elementI=getElement(msg["id"]);
 				drawing["data"].map().erase(elementI);
 				saved=false;
+
+				getClient(msg.src).lastElementId=0;
 
 				//relay the command to other clients
 				serverDraw(msg,msg.src);
