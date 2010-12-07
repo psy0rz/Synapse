@@ -242,15 +242,12 @@ namespace paper
 	class CpaperObject : public synapse::CsharedObject<CpaperClient>
 	{
 		public:
-//		int lastSentClient;
-	//	int lastStoreClient;
 		synapse::Cconfig drawing;
 
 		CpaperObject()
 		{
-//			lastSentClient=0;
-//			lastStoreClient=0;
-			drawing["lastElementId"]=0;
+			//we start at 1000 so the order stays correct in the stl map. once we get to 10000 the order gets screwed up, but that probably never happens ;)
+			drawing["lastElementId"]=1000;
 		}
 
 		void save(string path)
@@ -308,27 +305,20 @@ namespace paper
 		void serverDraw(Cmsg out, int clientId=0 )
 		{
 			out.event="paper_ServerDraw";
-			out["src"]=out.src;
 			out.src=0;
 
-			//create new element?
-			if (out["cmd"].str()=="create")
-			{
-				drawing["lastElementId"]=drawing["lastElementId"]+1;
-				getClient(clientId).lastElementId=drawing["lastElementId"];
-			}
+			//echo the command + extra echo-data back to the client?
+//			 if (clientId && out.isSet("echo"))
+//			 {
+//					out.dst=clientId;
+//					out.send();
+//					out.erase("echo");
+//			 }
 
-			//add the last known, if its not specified for a command
-			if (out["cmd"].str()!="" && !out.isSet("id"))
-			{
-				out["id"]=getClient(clientId).lastElementId;
-			}
-
-
-			//send to all connected clients, except to skipDst
+			//send to all connected clients, but not back to the original clientId
 			for (CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
 			{
-				//if (I->first!=clientId)
+				if (I->first!=clientId)
 				{
 					out.dst=I->first;
 					try
@@ -374,17 +364,135 @@ namespace paper
 
 		}
 
+		//get an iterator to specified element id.
+		//throws error if not found.
+		Cvar::iterator getElement(const string & id)
+		{
+			Cvar::iterator elementI;
+			elementI=drawing["data"].map().find(id);
+			if (elementI==drawing["data"].map().end())
+				throw(runtime_error("Specified element id not found."));
+			return (elementI);
+		}
 
-		//process drawing data received from a client and pass it to serverDraw for furher processing.
+
+		//transform the specified elementid into a message-data that can be send to clients
+		//sets:
+		//["element"]=elementtype
+		//["set"][attributename]=attributevalue
+		//["beforeId"]=id
+		void element2msg(const string & id, Cmsg & msg)
+		{
+			//get an iterator to requested id
+			Cvar::iterator elementI=getElement(id);
+
+			//fill in element type
+			msg["element"]=elementI->second["element"];
+
+			//fill in all element attributes
+			for(Cvar::iterator I=elementI->second.begin(); I!=elementI->second.end(); I++)
+			{
+				msg["set"][I->first]=I->second;
+			}
+
+			//is there an item after this?
+			elementI++;
+			if (elementI!=drawing["data"].end())
+			{
+				//yes, so fill in beforeId,  so the objects stay in the correct order
+				msg["beforeId"]=elementI->first;
+			}
+		}
+
+		//process drawing data received from a client store it, and relay it to other clients via serverDraw
 		void clientDraw(Cmsg & msg)
 		{
-//			CvarList commands;
-//
-//			//copy the received commands
-//			commands.insert(commands.end(), msg.list().begin(), msg.list().end());
+			msg["src"]=msg.src;
 
-			//sends the commands to other clients and store
-			serverDraw(msg,msg.src);
+			//create object or update element?
+			if (msg["cmd"].str()=="update")
+			{
+				//id specified?
+				if (msg.isSet("id"))
+				{
+					//add new object?
+					if (msg["id"].str()=="new")
+					{
+						//figure out a fresh new id
+						drawing["lastElementId"]=drawing["lastElementId"]+1;
+
+						//store the new id in the message
+						msg["id"]=drawing["lastElementId"];
+
+						//create new element
+						drawing["data"][msg["id"]]["element"]=msg["element"].str();
+
+					}
+
+					//store the last id for this client
+					getClient(msg.src).lastElementId=msg["id"];
+				}
+				//id not specified, automaticly add the last used id from this client
+				else
+				{
+					msg["id"]=getClient(msg.src).lastElementId;
+				}
+
+
+				Cvar::iterator elementI=getElement(msg["id"]);
+
+				//add the data from the 'add' field to the drawing data
+				for(Cvar::iterator I=msg["add"].begin(); I!=msg["add"].end(); I++)
+				{
+					//this basically means: drawing["data"][key]+=value;
+					elementI->second[I->first].str()+=I->second.str();
+				}
+
+				//set the data from the 'set' field over the drawing data
+				for(Cvar::iterator I=msg["set"].begin(); I!=msg["set"].end(); I++)
+				{
+					elementI->second[I->first]=I->second.str();
+				}
+
+				saved=false;
+
+				//relay the command to other clients
+				serverDraw(msg,msg.src);
+
+			}
+			//send refresh?
+			else if (msg["cmd"].str()=="refresh")
+			{
+				//id not set? the use the last one that was used by this client
+				if (!msg.isSet("id"))
+				{
+					msg["id"]=getClient(msg.src).lastElementId;
+				}
+
+				//reply with a serverdraw to this client only
+				msg.event="paper_ServerDraw";
+				msg.dst=msg.src;
+				msg.src=0;
+				msg["cmd"]="update";
+				element2msg(msg["id"].str(), msg);
+				msg.send();
+			}
+			//delete object?
+			else if (msg["cmd"].str()=="delete")
+			{
+				//delete it
+				Cvar::iterator elementI=getElement(msg["id"]);
+				drawing["data"].map().erase(elementI);
+				saved=false;
+
+				//relay the command to other clients
+				serverDraw(msg,msg.src);
+			}
+			//other stuff? just relay it without looking at it
+			else
+			{
+				serverDraw(msg,msg.src);
+			}
 
 		}
 
