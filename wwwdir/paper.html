@@ -52,6 +52,7 @@
 		var canvasWidth=0;
 		var canvasHeight=0;
 		var drawing;
+		var drawingInsert;
 		var drawingHtml;
 		
 		var autoCommit=false;
@@ -183,13 +184,9 @@
 						if (msg["beforeId"]!=null)
 							beforeElement=document.getElementById(msg["beforeId"]);
 	
-						//NOTE: svgweb is buggy and doesnt support insertbefore with a null element, so work around:
+						//NOTE: svgweb is buggy and doesnt support insertbefore with a null element
 						if (beforeElement==null)
-						{
-							drawing.appendChild(element);
-	//						svgweb.appendChild(element,drawing);
-	//						svgweb.appendChild(drawing,element);
-						}
+							drawing.insertBefore(element, drawingInsert);							
 						else
 							drawing.insertBefore(element, beforeElement);							
 					}
@@ -207,9 +204,6 @@
 							if (element.getAttribute(attrName)!=null)
 							{
 								element.setAttribute(attrName, element.getAttribute(attrName)+msg["add"][attrName]);
-	//							var s=msg["add"][attrName].substr(1).split(",");
-	//							element.points.appendItem({x:s[0],y:s[1] });
-	
 							}
 							else
 								element.setAttribute(attrName, msg["add"][attrName]);
@@ -231,7 +225,7 @@
 			//delete object
 			else if (msg["cmd"]=="delete")
 			{
-				console.log("DEL"+msg["id"]);
+				//console.log("DEL"+msg["id"]);
 				var element=document.getElementById(msg["id"]);
 				if (element!=null)
 				{
@@ -245,7 +239,7 @@
 			}			
 
 			//update cursor?
-			if (msg.cursor!=null)
+			if (msg["cursor"]!=null)
 			{
 				var cursor=document.getElementById('cursor'+msg["src"]);
 				if (cursor==null)
@@ -271,19 +265,38 @@
 					e.setAttribute('y1', '-200');
 					e.setAttribute('y2', '+200');
 					cursor.appendChild(e);					
+			
+				}
 
+				//update cursor position
+				cursor.setAttribute('transform', 'translate('+msg["cursor"]["x"]+','+msg["cursor"]["y"]+')');
+
+				//update clientname?
+				if (msg["cursor"]["clientName"]!=null)
+				{
+					//we need to re-add this node on every update..
+					var oldE=document.getElementById('clientName'+msg["src"]);
+
+					if (oldE!=null)
+						cursor.removeChild(oldE);
+					
+					//create text element
 					var e = document.createElementNS(svgns, 'text');
+					e.setAttribute('id', 'clientName'+msg["src"]);
 					e.setAttribute('x', '0');
 					e.setAttribute('y', '300');
 					e.setAttribute('font-size','200');
+					e.setAttribute('font-weight','bold');
 					e.setAttribute('stroke','#aaaaaa');
-					
+					e.setAttribute('fill','#ffffff');
 					cursor.appendChild(e);					
 
-					var textNode = document.createTextNode('psy0rz', true);
+					//add the actual text
+					var textNode = document.createTextNode(msg["cursor"]["clientName"], true);
 					e.appendChild(textNode);
+				
 				}
-				cursor.setAttribute('transform', 'translate('+msg.cursor.x+','+msg.cursor.y+')');
+
 				
 			}
 
@@ -352,7 +365,8 @@
 				}
 				else if (mouseMode=="delete")
 				{ 
-					if (mouseTarget!="" && mouseTarget!="bg")
+					//only allow numeric id's to be deleted. otherwise you could delete cursors and stuff as well :P
+					if (mouseTarget == parseInt(mouseTarget))
 					{
 						msg['cmd']='delete';
 						msg['id']=mouseTarget;
@@ -426,7 +440,12 @@
 			$("#clientName").keyup(function(m)
 			{
 				$.setCookie('clientName', $("#clientName").val(), { duration:365, path:"/" });
-				sendDraw( [ "n" , $("#clientName").val() ] );
+				sendDraw({
+					'cursor':{
+						'clientName':$("#clientName").val()
+					}
+				});
+					
 			});
 
 			$("#chatInput").keydown(function(m)
@@ -499,6 +518,10 @@
 				{
 					//when its in flashmode, the references change somehow, so re-get it:				
 					drawing=document.getElementsByTagNameNS(svgns, 'svg')[0];
+
+					//add a node that indicates where drawing elements should be inserted before
+					drawingInsert = document.createElementNS(svgns, 'g');
+					drawing.appendChild(drawingInsert);
 					
 					//set mouse move event
 					//NOTE: pageX is not set when using chromium in flash mode? when we use jquery mousemove its ok ,but then we cant see 
@@ -590,6 +613,13 @@
 			paperModId=msg_src;
 			$("#objectId").html(msg["objectId"]);
 			reset();
+
+			//tell people who we are
+			sendDraw({
+				'cursor':{
+					'clientName':$("#clientName").val()
+				}
+			});
 		});
  		
  				

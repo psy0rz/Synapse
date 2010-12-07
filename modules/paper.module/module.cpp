@@ -625,7 +625,14 @@ namespace paper
 	 */
 	SYNAPSE_REGISTER(paper_ClientDraw)
 	{
-		objectMan.getObjectByClient(msg.src).clientDraw(msg);
+		try
+		{
+			objectMan.getObjectByClient(msg.src).clientDraw(msg);
+		}
+		catch(...)
+		{
+			; //ignore exceptions, due to race conditions in deletes etc.
+		}
 	}
 
 
