@@ -35,10 +35,10 @@
 	
 		var mouseMode="";		
 		var mouseTarget="";
-	
-		var contextDraw;
-		var contextTemp;
-	
+
+		//temporary local objects counter
+		var tempCount=0;
+		
 		var currentObjectId=0;
 		var paperModId=0;
 	
@@ -49,8 +49,6 @@
 		var clients=new Array(); 
 		var ourId=0;
 
-		var canvas;
-		var canvasTemp;
 		var canvasWidth=0;
 		var canvasHeight=0;
 		var drawing;
@@ -122,18 +120,6 @@
 
 		
 
-		//redraw all the clients in the temporary context
-		function drawClients()
-		{
-			contextTemp.clearRect(0, 0, canvasWidth, canvasHeight);
-			contextTemp.globalAlpha=0.8;
-	
-			//draw current objects
-			for (var clientI in clients)
-			{
-				clients[clientI].draw(contextTemp);
-			}
-		}
 
 
 		/*** Drawing protocol
@@ -182,6 +168,8 @@
 
 		function draw(msg)
 		{
+		//	var suspendID = drawing.suspendRedraw(250);
+						  
 			//create/update object
 			if (msg["cmd"]=="update")
 			{
@@ -200,7 +188,11 @@
 
 					//NOTE: svgweb is buggy and doesnt support insertbefore with a null element, so work around:
 					if (beforeElement==null)
+					{
 						drawing.appendChild(element);
+//						svgweb.appendChild(element,drawing);
+//						svgweb.appendChild(drawing,element);
+					}
 					else
 						drawing.insertBefore(element, beforeElement);							
 				}
@@ -216,12 +208,26 @@
 					for (var attrName in msg["add"])
 					{
 						if (element.getAttribute(attrName)!=null)
+						{
 							element.setAttribute(attrName, element.getAttribute(attrName)+msg["add"][attrName]);
+//							var s=msg["add"][attrName].substr(1).split(",");
+//							element.points.appendItem({x:s[0],y:s[1] });
+
+						}
 						else
 							element.setAttribute(attrName, msg["add"][attrName]);
 					}
 				}
-					
+
+				//remove any temporary objects
+				if (msg["tempId"]!=null)
+				{
+					var element=document.getElementById(msg["tempId"]);
+					if (element!=null)
+					{
+						drawing.removeChild(element);
+					}
+				}		
 
 			}
 			//delete object
@@ -278,7 +284,10 @@
 				cursor.setAttribute('transform', 'translate('+msg.cursor.x+','+msg.cursor.y+')');
 				
 			}
-								
+
+	//		drawing.unsuspendRedraw(suspendID);
+//			drawing.forceRedraw();
+//			drawing.unsuspendRedrawAll();			
 		}
 		
 
@@ -301,7 +310,7 @@
 			//the server doesnt echo our stuff back, so we can handle it locally without lag
 			//call the draw function and emulate the server by adding some stuff
 			msg["src"]=ourId;
-			msg["id"]="temp";
+			msg["id"]="temp"+tempCount;
 			draw(msg);
 		}
 
@@ -358,7 +367,7 @@
 		//user starts a mouse operation (clicks somewhere)
 		function mouseStart(m)
 		{
-
+			tempCount++;
 			mouseMode=$('#modes .selected').attr("value");
 			mouseTarget=m.target.id;
 			
@@ -387,13 +396,9 @@
 			{
 				mouseMode="";
 				sendDraw({
-					'cmd'		:'refresh'
-				});
-
-				var element=document.getElementById("temp");
-				if (element!=null)
-					drawing.removeChild(element);
-				
+					'cmd'		:'refresh',
+					'tempId'	:'temp'+tempCount
+				});				
 			};
 		}
 	    
@@ -463,26 +468,29 @@
 			});
 
 
-			//prepare canvas
-			canvasWidth=$("#drawing").width();
-			canvasHeight=$("#drawing").height();
-
-			
-			canvas=document.getElementById('canvas');
-			contextDraw=canvas.getContext('2d');
-			canvas.width=canvasWidth;
-			canvas.height=canvasHeight;
-
-			canvasTemp=document.getElementById('canvasTemp');
-			contextTemp=canvasTemp.getContext('2d');
-			canvasTemp.width=canvasWidth;
-			canvasTemp.height=canvasHeight;
 
 			//wait until svgloading is complete
 		    window.addEventListener('SVGLoad', function() {
 			    
 				//create a svg node and assign it to global variable "drawing".
 				drawing = document.createElementNS(svgns, "svg");
+
+				//set some basic attributes
+				drawing.setAttribute("version", "1.2");
+				drawing.setAttribute("baseProfile", "tiny");
+				drawing.setAttribute("viewBox", "0 0 10000 10000");
+				drawing.setAttribute("id","bg");
+				drawing.setAttribute("preserveAspectRatio", "none");
+
+				//default settings
+				drawing.setAttribute("stroke-linecap","round");
+				drawing.setAttribute("stroke-linejoin","round");
+
+//				drawing.setAttribute("color-rendering","optimizeSpeed");
+//				drawing.setAttribute("shape-rendering","optimizeSpeed");
+//				drawing.setAttribute("text-rendering","optimizeSpeed");
+//				drawing.setAttribute("image-rendering","optimizeSpeed");
+				
 
 				//wait until rootobject is created
 				drawing.addEventListener('SVGLoad', function(evt) 
@@ -527,16 +535,6 @@
 
 				});
 				
-				//set some basic attributes
-				drawing.setAttribute("version", "1.2");
-				drawing.setAttribute("baseProfile", "tiny");
-				drawing.setAttribute("viewBox", "0 0 10000 10000");
-				drawing.setAttribute("id","bg");
-				drawing.setAttribute("preserveAspectRatio", "none");
-
-				//default settings
-				drawing.setAttribute("stroke-linecap","round");
-				drawing.setAttribute("stroke-linejoin","round");
 						
 				
 				//add drawing rootobject to html container
@@ -614,16 +612,6 @@
 			border-style:none;
 		}
 
-		#canvasMouse
-		{
-			position:absolute; 
-			left:16em;
-			top: 0;
-			right: 0;
-			bottom:0;
-			cursor:crosshair;
-		}
-
 		#drawing
 		{
 			position:absolute; 
@@ -637,14 +625,6 @@
 		}
 
 		
-		canvas
-		{
-			position:absolute;
-			left:16em;
-			top:0;
-			right:0;
-			bottom:0;
-		}
 		
 		
 		#loading
@@ -771,9 +751,6 @@
 
 	</div>
 
-	<canvas width=10 height=10 id='canvas'></canvas>		
-
-	<canvas width=10 height=10 id='canvasTemp'></canvas>		
 
 	<div id='loading' class='ui-state-highlight'>Loading...</div>
 
