@@ -261,41 +261,6 @@ namespace paper
 			drawing.load(path);
 			saved=true;
 
-//			//"fsck" for stale clients (they should only exist if we where aborted or crashing)
-//			set<int> ids;
-//			int lastId;
-//			CvarList & drawingData=drawing["data"].list();
-//			CvarList::iterator I=drawingData.begin();
-//			//parse all the clients that joined and left:
-//			while (I!=drawingData.end())
-//			{
-//				if (I->which()==CVAR_STRING)
-//				{
-//					//new client
-//					if (I->str()=="I")
-//					{
-//						I++;
-//						lastId=*I;
-//						ids.insert(lastId);
-//					}
-//					//delete last selected client:
-//					else if (I->str()=="D")
-//					{
-//						ids.erase(lastId);
-//					}
-//				}
-//				I++;
-//			}
-
-//			//there should be nothing left, otherwise fix it by adding appropriate deletes:
-//			while(!ids.empty())
-//			{
-//				WARNING("Fixed stale client in drawing: " << *ids.begin())
-//				drawingData.push_back(string("I"));
-//				drawingData.push_back(*ids.begin());
-//				drawingData.push_back(string("D"));
-//				ids.erase(ids.begin());
-//			}
 
 		}
 
@@ -306,14 +271,6 @@ namespace paper
 		{
 			out.event="paper_ServerDraw";
 			out.src=0;
-
-			//echo the command + extra echo-data back to the client?
-//			 if (clientId && out.isSet("echo"))
-//			 {
-//					out.dst=clientId;
-//					out.send();
-//					out.erase("echo");
-//			 }
 
 			//send to all connected clients, but not back to the original clientId
 			for (CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
@@ -333,34 +290,6 @@ namespace paper
 				}
 			}
 
-//			//a global command?
-//			if (!clientId)
-//			{
-//				//always just store it
-//				drawing["data"].list().insert(drawing["data"].list().end(), commands.begin(), commands.end());
-//			}
-//			//a command from specific client?
-//			else
-//			{
-//				//parse drawing and cache instructions for this client
-//				if (getClient(clientId).add(commands))
-//				{
-//					//client object says its ready to commit, store permanently
-//
-//					//its a different client as the last one we've stored?
-//					if (lastStoreClient!=clientId)
-//					{
-//						//no, so store client-switch instruction:
-//						drawing["data"].list().push_back(string("I"));
-//						drawing["data"].list().push_back(clientId);
-//						lastStoreClient=clientId;
-//					}
-//
-//					//commit drawing instructions of this client
-//					getClient(clientId).commit(drawing["data"].list());
-//					saved=false;
-//				}
-//			}
 
 		}
 
@@ -380,7 +309,8 @@ namespace paper
 		//sets:
 		//["element"]=elementtype
 		//["set"][attributename]=attributevalue
-		//["beforeId"]=id
+		//["id"]=id
+		//["beforeId"]=id of element this element comes before
 		void element2msg(const string & id, Cmsg & msg)
 		{
 			//get an iterator to requested id
@@ -388,6 +318,7 @@ namespace paper
 
 			//fill in element type
 			msg["element"]=elementI->second["element"];
+			msg["id"]=id;
 
 			//fill in all element attributes
 			for(Cvar::iterator I=elementI->second.begin(); I!=elementI->second.end(); I++)
@@ -518,27 +449,15 @@ namespace paper
 			Cmsg out;
 			out.event="paper_ServerDraw";
 			out.dst=dst;
-			out.list().push_back(string("S"));
-			out.list().insert(out.list().end(), drawing["data"].list().begin(), drawing["data"].list().end());
-			out.list().push_back(string("E"));
 
-			//add current uncommited stuff of all clients
-			for (CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
+			//resend all elements
+			for(Cvar::iterator elementI=drawing["data"].begin(); elementI!=drawing["data"].end(); elementI++)
 			{
-				out.list().push_back(string("I"));
-				out.list().push_back(I->first);
-				I->second.store(out.list());
+				out.clear();
+				out["cmd"]="update";
+				element2msg(elementI->first, out);
+				out.send();
 			}
-
-			//switch back to current client
-//			if (lastClient)
-//			{
-//				out.list().push_back(string("I"));
-//				out.list().push_back(lastClient);
-//			}
-
-			out.send();
-
 		}
 
 		virtual void addClient(int id)

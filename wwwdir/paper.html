@@ -738,7 +738,11 @@
 						if (msg["beforeId"]!=null)
 							beforeElement=document.getElementById(msg["beforeId"]);
 
-						drawing.insertBefore(element, beforeElement);							
+						//NOTE: svgweb is buggy and doesnt support insertbefore with a null element, so work around:
+						if (beforeElement==null)
+							drawing.appendChild(element);
+						else
+							drawing.insertBefore(element, beforeElement);							
 					}
 					
 					//we need to add/set attributes?
