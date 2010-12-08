@@ -1,0 +1,15 @@
+#!/bin/bash
+# Use this if you get tired of restarting the program after every change/rebuild cycle :)
+
+ARGS="./modules/paper.module/libpaper.so"
+while true; do
+	STAT=`stat $PROG modules/*.module/*.so`
+	#echo $STAT
+	if [ "$STAT" != "$OLDSTAT" ]; then
+		OLDSTAT=$STAT
+		killall -9 synapse
+		echo "############# PROGRAM CHANGED, RESTARTING #############"
+		./synapse $ARGS &
+	fi
+	sleep 2 || exit 0
+done

@@ -23,7 +23,7 @@
 			}
 			
 		}
-	
+ 	
 		var mouseInterval=50; //max update inteval in mS (can be higer if mouseMax is exceeded)
 		var mouseMax=50; //max mouse pixel offset before sending (regardless of update interval)
 	
@@ -50,13 +50,10 @@
 		var clients=new Array(); 
 		var ourId=0;
 
-		var canvasWidth=0;
-		var canvasHeight=0;
 		var drawing;
 		var drawingInsert;
 		var drawingHtml;
 		
-		var autoCommit=false;
 
 		
 		//filter dangerous stuff from user input.
@@ -101,15 +98,17 @@
 		The message is translated to a paper_serverDraw and forwarded to all clients.
 		The message is normally not echoed back, unless requested
 		
-		CAN BE SET BY CLIENT:
+		### Common parameters
+		src:		added by server. session id that send the message
+		noreplay:	dont relay the command to other clients
+
+		### Drawing commands and parameters:
 		cmd:		command to do:
 						update: create/modify element 
 						delete: remove element
 						refresh: 	let the server resend an update cmd with all info about the element, to this client. 
-									this is used to prevent inconsitencys due to local caching.
 						ready: when doing a full redraw on join, this indicates the drawing is "ready"					
-
-						
+					
 		Only for updates with new (not yet existing) objects:
 		element:		svg element type (e.g. circle,rect,polyline)
 		
@@ -123,13 +122,14 @@
 					if set to 'new' with an update, the server will create a new element and replace it with its id.
 					if not set by with an update/refresh, the id is replaced by id used in the last 'update' for this client. 
 
-		cursor:     Cursor and name information (x,y,clientName)
-					
-		ONLY SET BY SERVER:
-		src:		added by server. session id that send the message
-		
 		beforeId:   set by server to the id of the element this element should be inserted before. this is important to keep the order of all the elements correct.
 		normally only set when requesting a refresh.
+
+		#### Cursor indication
+		cursor:     Cursor and name information: x,y,clientName
+
+		### Chat
+		chat:		Chat text: text, clientName
 				
 		'
 		 */
@@ -212,7 +212,7 @@
 			}			
 
 			//update cursor?
-			if (msg["cursor"]!=null)
+			if (msg["cursor"]!=null && msg["src"]!=ourId)
 			{
 				var cursor=document.getElementById('cursor'+msg["src"]);
 				if (cursor==null)
@@ -247,7 +247,7 @@
 					cursor.setAttribute('transform', 'translate('+msg["cursor"]["x"]+','+msg["cursor"]["y"]+')');
 				}
 					
-				//update clientname?
+				//update cursor clientname?
 				if (msg["cursor"]["clientName"]!=null)
 				{
 					//we need to re-add this node on every update..
@@ -273,7 +273,14 @@
 				
 				}
 
-				
+			}
+
+			//update chat?
+			if (msg["chat"] != null)
+			{
+				addChat(
+					"<b>"+filterInput(msg["chat"]["clientName"])+"</b> "+filterInput(msg["chat"]["text"])+"<br>"
+				);
 			}
 
 			drawing.unsuspendRedraw(suspendID);
@@ -405,6 +412,8 @@
 		//user starts a mouse operation (clicks somewhere)
 		function mouseStart(m)
 		{
+			if (mousePoint.x==null || mousePoint.y==null)
+				return;
 			tempCount++;
 			mouseMode=$('#modes .selected').attr("value");
 			mousePointStart.x=mousePoint.x;
@@ -493,6 +502,7 @@
 				mouseMode="";
 				sendDraw({
 					'cmd'		:'refresh',
+					'norelay'	:1,
 					'tempId'	:'temp'+tempCount
 				});				
 			};
@@ -517,6 +527,7 @@
 			
 			/// JAVA SCRIPT EVENT HANDLERS
 
+			//user changes name
 			$("#clientName").keyup(function(m)
 			{
 				$.setCookie('clientName', $("#clientName").val(), { duration:365, path:"/" });
@@ -528,17 +539,21 @@
 					
 			});
 
+			//user presses enter in chatbox:
 			$("#chatInput").keydown(function(m)
 			{
 				if (m.keyCode==13)
 				{
-					sendDraw( [ "." , $("#chatInput").val() ] );
-					sendDraw( [ "s" ] );
+					sendDraw( {
+						'chat':{
+							'clientName'	:$("#clientName").val(),
+							'text'			:$("#chatInput").val()
+						}
+					});
 					$("#chatInput").val("");						
 				}					
 	 		});
 
-			$("#chatInput").val("");
 			
 			//a tool is clicked
 			$(".tool").click(function(m)
@@ -650,8 +665,6 @@
 
 				});
 				
-						
-				
 				//add drawing rootobject to html container
 				drawingHtml = document.getElementById("drawing");
 				svgweb.appendChild(drawing, drawingHtml);
@@ -664,8 +677,11 @@
 		{
 			$('#clientList').empty();
 			$('#chatList').empty();
-			autoCommit=true; 
-			//drawing.
+			$("#chatInput").val("");
+			$("#chatInput").focus();
+			
+			
+			//select default tools
 			$(".tool").removeClass('selected');
 			$(".defaultTool").addClass('selected');
 
@@ -683,9 +699,11 @@
 			currentObjectId=msg["objectId"];
 			paperModId=msg_src;
 			$("#objectId").html(msg["objectId"]);
+
+			//reset stuff
 			reset();
 
-			//tell people who we are
+			//tell people who we are and set random mouse position
 			sendDraw({
 				'cursor':{
 					'clientName':$("#clientName").val(),
@@ -878,10 +896,10 @@
 		</div>
 
 
-<!-- 
  		<div class='ui-widget-header'>Chat:</div>
 		<div id='chatList'></div>
 		<input id='chatInput' type='text' value='' >
+<!-- 
 
 
 		<div class='ui-widget-header'>Andere mensen:</div>
