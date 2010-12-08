@@ -437,6 +437,18 @@
 						msg['id']=mouseTarget;
 					}				
 				}
+				else if (mouseMode=="move")
+				{
+					var cStart=toServer(mousePointStart.x,mousePointStart.y);
+					var dx=(c.x-cStart.x);
+					var dy=(c.y-cStart.y);
+					
+					msg['cmd']='update';
+					msg['id']=mouseTargetStart;
+					msg['set']={
+						'transform':'translate('+dx+','+dy+')'
+					}
+				}
 
 				sendDraw(msg);
 
@@ -453,15 +465,16 @@
 				return;
 			tempCount++;
 			mouseMode=$('#modes .selected').attr("value");
+			mouseTargetStart=mouseTarget;
 			mousePointStart.x=mousePoint.x;
 			mousePointStart.y=mousePoint.y;
 
-			//filled alternative off the tools:
+			//enable filling?
 			var fill='none';
 			if ($('#modes .selected').attr("fill")==1)
 				fill=$('#colors .selected').attr("value");
 	
-			//normal tools:
+			//do the action:
 			if (mouseMode=="line")
 			{
 				
@@ -914,7 +927,7 @@
 			<div class='tool defaultTool' value='line' highlight=0>lijn</div>
 			<div class='tool' value='line' fill=1 highlight=0>LIJN</div>
 			<div class='tool' value='delete' highlight='1'>[gum]</div>
-			<div class='tool' value='movee' highlight='1'>[move]</div>
+			<div class='tool' value='move' highlight='1'>[move]</div>
 			<br></br>
 			<div class='tool' value='rect' highlight=0>vierk</div>
 			<div class='tool' value='rect' fill=1 highlight=0>VIERK</div>
