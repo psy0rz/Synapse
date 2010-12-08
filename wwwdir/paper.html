@@ -458,22 +458,9 @@
 
 			//filled alternative off the tools:
 			var fill='none';
-			if (mouseMode=="linefill")
-			{
-				mouseMode='line';
+			if ($('#modes .selected').attr("fill")==1)
 				fill=$('#colors .selected').attr("value");
-			}
-			else if (mouseMode=="rectfill")
-			{
-				mouseMode='rect';
-				fill=$('#colors .selected').attr("value");
-			}
-			else if (mouseMode=="circlefill")
-			{
-				mouseMode='circle';
-				fill=$('#colors .selected').attr("value");
-			}
-
+	
 			//normal tools:
 			if (mouseMode=="line")
 			{
@@ -545,7 +532,6 @@
 			};
 			unhighlight(mouseTargetHigh);
 			mouseTargetHigh="";
-			
 		}
 	    
 	    synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
@@ -913,33 +899,34 @@
 		</div>		
 
 		<div id='widths'>
-			<div class='tool width' value='10'><img src='img/pen1.png' style='width:1em' ></div>
-			<div class='tool width' value='20'><img src='img/pen1.png' style='width:1.2em'></div>
-			<div class='tool width' value='30'><img src='img/pen1.png' style='width:1.3em'></div>
-			<div class='tool width defaultTool' value='40'><img src='img/pen1.png' style='width:1.4em' ></div>
+			<div class='tool' value='10'><img src='img/pen1.png' style='width:1em' ></div>
+			<div class='tool' value='20'><img src='img/pen1.png' style='width:1.2em'></div>
+			<div class='tool' value='30'><img src='img/pen1.png' style='width:1.3em'></div>
+			<div class='tool defaultTool' value='40'><img src='img/pen1.png' style='width:1.4em' ></div>
 			<br>
-			<div class='tool width' value='100'><img src='img/pen2.png' style='width:1em' ></div>
-			<div class='tool width' value='200'><img src='img/pen2.png' style='width:1.2em' ></div>
-			<div class='tool width' value='300'><img src='img/pen2.png' style='width:1.3em' ></div>
-			<div class='tool width' value='400'><img src='img/pen2.png' style='width:1.4em' ></div>		
+			<div class='tool' value='100'><img src='img/pen2.png' style='width:1em' ></div>
+			<div class='tool' value='200'><img src='img/pen2.png' style='width:1.2em' ></div>
+			<div class='tool' value='300'><img src='img/pen2.png' style='width:1.3em' ></div>
+			<div class='tool' value='400'><img src='img/pen2.png' style='width:1.4em' ></div>		
 		</div>
 
 		<div id='modes'>
-			<div class='tool mode defaultTool' value='line' highlight=0>lijn</div>
-			<div class='tool mode' value='linefill' highlight=0>LIJN</div>
-			<div class='tool mode' value='delete' highlight='1'>gum</div>
+			<div class='tool defaultTool' value='line' highlight=0>lijn</div>
+			<div class='tool' value='line' fill=1 highlight=0>LIJN</div>
+			<div class='tool' value='delete' highlight='1'>[gum]</div>
+			<div class='tool' value='movee' highlight='1'>[move]</div>
 			<br></br>
-			<div class='tool mode' value='rect' highlight=0>vierk</div>
-			<div class='tool mode' value='rectfill' highlight=0>VIERK</div>
+			<div class='tool' value='rect' highlight=0>vierk</div>
+			<div class='tool' value='rect' fill=1 highlight=0>VIERK</div>
 			<br></br>
-			<div class='tool mode' value='circle' highlight=0>cirkel</div>
-			<div class='tool mode' value='circlefill' highlight=0>CIRKEL</div>
+			<div class='tool' value='circle' highlight=0>cirkel</div>
+			<div class='tool' value='circle' fill=1 highlight=0>CIRKEL</div>
 		</div>
 
 		<div id='styles'>
-			<div class='tool mode defaultTool' value='none'>norm</div>
-			<div class='tool mode' value='20,200'>stip</div>
-			<div class='tool mode' value='200,200'>streep</div>
+			<div class='tool defaultTool' value='none'>norm</div>
+			<div class='tool' value='20,200'>stip</div>
+			<div class='tool' value='200,200'>streep</div>
 		</div>
 
 
