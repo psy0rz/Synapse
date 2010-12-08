@@ -36,6 +36,8 @@
 	
 		var mouseMode="";		
 		var mouseTarget="";
+		var mouseTargetHigh="";
+		var mouseHighlight=0;
 
 		//temporary local objects counter
 		var tempCount=0;
@@ -91,6 +93,28 @@
 		}
 
 
+		//highlight an object
+		function highlight(id)
+		{
+			//add highlite, if we can find the element:
+			var element=document.getElementById(id);
+			if (element!=null)
+			{
+				element.setAttribute('stroke-opacity','0.5');
+				element.setAttribute('fill-opacity','0.5');
+			}
+		}
+
+		function unhighlight(id)
+		{
+			//remove highlite, if we can find the element:
+			var element=document.getElementById(id);
+			if (element!=null)
+			{
+				element.removeAttribute('stroke-opacity');
+				element.removeAttribute('fill-opacity');
+			}
+		}
 		
 		/*** Drawing protocol
 		
@@ -343,7 +367,20 @@
 					Math.abs(mousePoint.y-mouseSendPoint.y)> mouseMax 
 			)	
 			{ 
+				//highlighting target changed?
+				if (mouseHighlight && mouseTarget!=mouseTargetHigh)
+				{
+					//remove old highlite (if any)
+					unhighlight(mouseTargetHigh);
+					//valid new target?
+					if (mouseTarget == parseInt(mouseTarget))
+					{
+						highlight(mouseTarget);
+					}
+					mouseTargetHigh=mouseTarget;
+				}
 
+				
 				var c=toServer(mousePoint.x,mousePoint.y);
 				var msg={};
 
@@ -506,6 +543,9 @@
 					'tempId'	:'temp'+tempCount
 				});				
 			};
+			unhighlight(mouseTargetHigh);
+			mouseTargetHigh="";
+			
 		}
 	    
 	    synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
@@ -562,8 +602,15 @@
 				$(this).parent().children(".tool").removeClass('selected');
 				//select this one
 				$(this).addClass('selected');
-				
 
+				//switch highlite mode on?
+				if ($(this).attr('highlight')=='1')
+					mouseHighlight=1;
+
+				//switch highlite mode off?
+				if ($(this).attr('highlight')=='0')
+					mouseHighlight=0;
+				
 				$("#chatInput").focus();
 			});
 
@@ -878,15 +925,15 @@
 		</div>
 
 		<div id='modes'>
-			<div class='tool mode defaultTool' value='line'>lijn</div>
-			<div class='tool mode' value='linefill'>LIJN</div>
-			<div class='tool mode' value='delete'>gum</div>
+			<div class='tool mode defaultTool' value='line' highlight=0>lijn</div>
+			<div class='tool mode' value='linefill' highlight=0>LIJN</div>
+			<div class='tool mode' value='delete' highlight='1'>gum</div>
 			<br></br>
-			<div class='tool mode' value='rect'>vierk</div>
-			<div class='tool mode' value='rectfill'>VIERK</div>
+			<div class='tool mode' value='rect' highlight=0>vierk</div>
+			<div class='tool mode' value='rectfill' highlight=0>VIERK</div>
 			<br></br>
-			<div class='tool mode' value='circle'>cirkel</div>
-			<div class='tool mode' value='circlefill'>CIRKEL</div>
+			<div class='tool mode' value='circle' highlight=0>cirkel</div>
+			<div class='tool mode' value='circlefill' highlight=0>CIRKEL</div>
 		</div>
 
 		<div id='styles'>
