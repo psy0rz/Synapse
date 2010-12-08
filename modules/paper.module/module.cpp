@@ -244,7 +244,14 @@ namespace paper
 				}
 			}
 
-			//create object or update element?
+			//received chat?
+			if (msg.isSet("chat"))
+			{
+				//store in chat log for this object
+				drawing["chat"].list().push_back(msg["chat"]);
+			}
+
+			//received drawing commands?
 			if (msg["cmd"].str()=="update")
 			{
 				//id specified?
@@ -290,10 +297,6 @@ namespace paper
 				}
 
 				saved=false;
-
-				//relay the command to other clients
-				serverDraw(msg,msg.src);
-
 			}
 			//send refresh?
 			else if (msg["cmd"].str()=="refresh")
@@ -306,13 +309,15 @@ namespace paper
 				}
 
 				//reply with a serverdraw to this client only
-				msg.event="paper_ServerDraw";
-				msg.dst=msg.src;
-				msg.src=0;
-				msg["cmd"]="update";
+				Cmsg out;
+				out=msg;
+				out.event="paper_ServerDraw";
+				out.dst=msg.src;
+				out.src=0;
+				out["cmd"]="update";
 				if (msg.isSet("id"))
-					element2msg(msg["id"].str(), msg);
-				msg.send();
+					element2msg(msg["id"].str(), out);
+				out.send();
 			}
 			//delete object?
 			else if (msg["cmd"].str()=="delete")
@@ -323,16 +328,12 @@ namespace paper
 				saved=false;
 
 				getClient(msg.src).lastElementId=0;
-
-				//relay the command to other clients
-				serverDraw(msg,msg.src);
-			}
-			//other stuff? just relay it without looking at it
-			else
-			{
-				serverDraw(msg,msg.src);
 			}
 
+
+			//relay the command to other clients
+			if (!msg.isSet("norelay"))
+				serverDraw(msg,msg.src);
 		}
 
 //		virtual void delClient(int id)
@@ -373,6 +374,14 @@ namespace paper
 				out.clear();
 				out["cursor"].map()=I->second.cursor;
 				out["src"]=I->first;
+				out.send();
+			}
+
+			//send chat log
+			for(CvarList::iterator I=drawing["chat"].list().begin(); I!=drawing["chat"].list().end(); I++)
+			{
+				out.clear();
+				out["chat"]=*I;
 				out.send();
 			}
 
