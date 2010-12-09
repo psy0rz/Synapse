@@ -27,6 +27,8 @@ Internet paper.
 #include <set>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include "cconfig.h"
+#include "boost/filesystem/operations.hpp"
+#include "boost/filesystem/fstream.hpp"
 
 //we use the generic shared object management classes.
 #include "cclient.h"
@@ -40,6 +42,8 @@ namespace paper
 	using namespace std;
 	using namespace boost;
 	using namespace boost::posix_time;
+	using boost::filesystem::ofstream;
+	using boost::filesystem::ifstream;
 
 	bool shutdown;
 
@@ -109,6 +113,7 @@ namespace paper
 		out.clear();
 		out.event="core_Ready";
 		out.send();
+
 	}
 
 
@@ -121,117 +126,13 @@ namespace paper
 		private:
 
 		public:
-		Cvar settings;
-		CvarList drawing;
-		bool didDraw; //client did draw something?
-
-		//parses and collect usefull drawing commands for this client.
-		//returns true if the sharedobject should permanently store the collected data
-		//NOTE: this is not really a "parser": it needs exactly one command with its parameters. The clients should make sure they send it this way.
-		bool add(CvarList & commands )
-		{
-			if (commands.begin()->which()==CVAR_STRING)
-			{
-				//cancel drawing action (but keep settings!)
-				if (commands.begin()->str()=="x")
-				{
-					drawing.clear();
-				}
-				//commit drawing action and settings
-				else if (commands.begin()->str()=="s")
-				{
-					return(true);
-				}
-				//mouse movements, ignore
-				else if (commands.begin()->str()=="m")
-				{
-					;
-				}
-				//drawing commands
-				else if (
-						(commands.begin()->str()=="l") ||
-						(commands.begin()->str()=="r") ||
-						(commands.begin()->str()=="a") ||
-						(commands.begin()->str()=="t") ||
-						(commands.begin()->str()==".")
-				)
-				{
-					drawing.insert(drawing.end(), commands.begin(), commands.end());
-				}
-				//drawing settings
-				else if (
-						(commands.begin()->str()=="c") ||
-						(commands.begin()->str()=="w") ||
-						(commands.begin()->str()=="n")
-				)
-				{
-					settings[commands.begin()->str()]=(++commands.begin())->str();
-				}
-				//delete
-				else if (commands.begin()->str()=="D")
-				{
-					drawing.clear();
-					settings.clear();
-					if (didDraw)
-					{
-						//if the client did do SOMETHING worth storing, then store the Delete command as well
-						drawing.push_back(string("D"));
-						return(true);
-					}
-					else
-						return(false);
-				}
-				else
-				{
-					;//ignore the rest for now
-				}
-
-			}
-			//numbers, just add them to the drawing
-			else
-			{
-				drawing.insert(drawing.end(), commands.begin(), commands.end());
-			}
-			return(false);
-		}
-
-		//add current values to specified drawing
-		bool store(CvarList & addDrawing)
-		{
-			bool added=false;
-			//store new settings
-			for(Cvar::iterator I=settings.begin(); I!=settings.end(); I++)
-			{
-				addDrawing.push_back(I->first);
-				addDrawing.push_back(I->second);
-				added=true;
-			}
-
-			//store drawing commands
-			if (!drawing.empty())
-			{
-				addDrawing.insert(addDrawing.end(), drawing.begin(), drawing.end());
-				added=true;
-			}
-
-			return(added);
-		}
-
-		//store current values and forget everything
-		void commit(CvarList & addDrawing)
-		{
-			if (store(addDrawing))
-				didDraw=true;
-			settings.clear();
-			drawing.clear();
-		}
-
+		Cvar cursor;
+		int lastElementId;
 
 		CpaperClient()
 		{
-			didDraw=false;
+			lastElementId=0;
 		}
-
 	};
 
 
@@ -239,86 +140,85 @@ namespace paper
 	class CpaperObject : public synapse::CsharedObject<CpaperClient>
 	{
 		public:
-		int lastSentClient;
-		int lastStoreClient;
 		synapse::Cconfig drawing;
 
 		CpaperObject()
 		{
-			lastSentClient=0;
-			lastStoreClient=0;
+			//we start at 1000 so the order stays correct in the stl map. once we get to 10000 the order gets screwed up, but that probably never happens ;)
+			drawing["lastElementId"]=1000;
 		}
 
 		void save(string path)
 		{
 			drawing.save(path);
+
+			//export to svg
+			ofstream svgStream;
+			svgStream.exceptions ( ofstream::eofbit | ofstream::failbit | ofstream::badbit );
+			stringstream f;
+			f << "wwwdir/p/" << id << ".svg";
+			svgStream.open(f.str());
+
+			//svg header
+			svgStream << "<?xml version=\"1.0\" standalone=\"no\"?>\n";
+			svgStream << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n\n";
+
+			svgStream << "<svg width=\"100%\" height=\"100%\" version=\"1.1\"";
+
+			//default settings
+			svgStream << " viewBox=\"0 0 10000 10000\"";
+			svgStream << " stroke-linecap=\"round\"";
+			svgStream << " stroke-linejoin=\"round\"";
+			svgStream << " preserveAspectRatio=\"none\"\n";
+			svgStream << " xmlns=\"http://www.w3.org/2000/svg\">\n\n";
+
+			svgStream << "<title>internetpapier.nl tekening #" << id << "</title>\n";
+
+			//export all elements
+			for(Cvar::iterator elementI=drawing["data"].begin(); elementI!=drawing["data"].end(); elementI++)
+			{
+				//start element
+				svgStream << "<" << elementI->second["element"].str();
+
+				//add id
+				svgStream << " id=\"" << elementI->first << "\"";
+
+				//fill in all element attributes
+				for(Cvar::iterator I=elementI->second.begin(); I!=elementI->second.end(); I++)
+				{
+					if (I->first!="element")
+						svgStream << " " << I->first << "=\"" << I->second.str() << "\"";
+				}
+
+				//end element
+				svgStream << "/>\n";
+			}
+
+
+			//svg footer
+			svgStream << "\n</svg>\n";
+
+			svgStream.close();
+
 			saved=true;
+
 		}
 
 		void load(string path)
 		{
 			drawing.load(path);
 			saved=true;
-
-			//"fsck" for stale clients (they should only exist if we where aborted or crashing)
-			set<int> ids;
-			int lastId;
-			CvarList & drawingData=drawing["data"].list();
-			CvarList::iterator I=drawingData.begin();
-			//parse all the clients that joined and left:
-			while (I!=drawingData.end())
-			{
-				if (I->which()==CVAR_STRING)
-				{
-					//new client
-					if (I->str()=="I")
-					{
-						I++;
-						lastId=*I;
-						ids.insert(lastId);
-					}
-					//delete last selected client:
-					else if (I->str()=="D")
-					{
-						ids.erase(lastId);
-					}
-				}
-				I++;
-			}
-
-			//there should be nothing left, otherwise fix it by adding appropriate deletes:
-			while(!ids.empty())
-			{
-				WARNING("Fixed stale client in drawing: " << *ids.begin())
-				drawingData.push_back(string("I"));
-				drawingData.push_back(*ids.begin());
-				drawingData.push_back(string("D"));
-				ids.erase(ids.begin());
-			}
-
 		}
 
 
 		//send the commands to the clients and store permanently if neccesary.
 		//on behalf of clientId (use clientId 0 for global commands)
-		void serverDraw(CvarList & commands, int clientId=0 )
+		void serverDraw(Cmsg out, int clientId=0 )
 		{
-			Cmsg out;
 			out.event="paper_ServerDraw";
+			out.src=0;
 
-			//instructions come from a different client then last time?
-			if (clientId && clientId!=lastSentClient)
-			{
-				//add client change commands
-				out.list().push_back(string("I"));
-				out.list().push_back(clientId);
-				lastSentClient=clientId;
-			}
-
-			//add commands to output message
-			out.list().insert(out.list().end(), commands.begin(), commands.end());
-
-			//send to all connected clients, except to skipDst
+			//send to all connected clients, but not back to the original clientId
 			for (CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
 			{
 				if (I->first!=clientId)
@@ -336,65 +236,174 @@ namespace paper
 				}
 			}
 
-			//a global command?
-			if (!clientId)
+
+		}
+
+		//get an iterator to specified element id.
+		//throws error if not found.
+		Cvar::iterator getElement(const string & id)
+		{
+			Cvar::iterator elementI;
+			elementI=drawing["data"].map().find(id);
+			if (elementI==drawing["data"].map().end())
+				throw(runtime_error("Specified element id not found."));
+			return (elementI);
+		}
+
+
+		//transform the specified elementid into a message-data that can be send to clients
+		//sets:
+		//["element"]=elementtype
+		//["set"][attributename]=attributevalue
+		//["id"]=id
+		//["beforeId"]=id of element this element comes before
+		void element2msg(const string & id, Cmsg & msg)
+		{
+			//get an iterator to requested id
+			Cvar::iterator elementI=getElement(id);
+
+			//fill in element type
+			msg["element"]=elementI->second["element"];
+			msg["id"]=id;
+
+			//fill in all element attributes
+			for(Cvar::iterator I=elementI->second.begin(); I!=elementI->second.end(); I++)
 			{
-				//always just store it
-				drawing["data"].list().insert(drawing["data"].list().end(), commands.begin(), commands.end());
+				if (I->first!="element")
+					msg["set"][I->first]=I->second;
 			}
-			//a command from specific client?
-			else
+
+			//is there an item after this?
+			elementI++;
+			if (elementI!=drawing["data"].end())
 			{
-				//parse drawing and cache instructions for this client
-				if (getClient(clientId).add(commands))
+				//yes, so fill in beforeId,  so the objects stay in the correct order
+				msg["beforeId"]=elementI->first;
+			}
+		}
+
+		//process drawing data received from a client store it, and relay it to other clients via serverDraw
+		void clientDraw(Cmsg & msg)
+		{
+			msg["src"]=msg.src;
+
+			//received cursor information?
+			if (msg.isSet("cursor"))
+			{
+				//store the new fields in the clients cursor object:
+				Cvar & cursor=getClient(msg.src).cursor;
+				for(Cvar::iterator I=msg["cursor"].begin(); I!=msg["cursor"].end(); I++)
 				{
-					//client object says its ready to commit, store permanently
-
-					//its a different client as the last one we've stored?
-					if (lastStoreClient!=clientId)
-					{
-						//no, so store client-switch instruction:
-						drawing["data"].list().push_back(string("I"));
-						drawing["data"].list().push_back(clientId);
-						lastStoreClient=clientId;
-					}
-
-					//commit drawing instructions of this client
-					getClient(clientId).commit(drawing["data"].list());
-					saved=false;
+					cursor[I->first]=I->second.str();
 				}
 			}
 
-		}
-
-
-		//process drawing data received from a client and pass it to serverDraw for furher processing.
-		void clientDraw(Cmsg & msg)
-		{
-//			CvarList commands;
-//
-//			//copy the received commands
-//			commands.insert(commands.end(), msg.list().begin(), msg.list().end());
-
-			//sends the commands to other clients and store
-			serverDraw(msg.list(),msg.src);
-
-		}
-
-		virtual void delClient(int id)
-		{
-			if (clientMap.find(id)!= clientMap.end())
+			//received chat?
+			if (msg.isSet("chat"))
 			{
-				//do a Del command on behalf of the client
-				CvarList commands;
-				commands.push_back(string("D"));
-				serverDraw(commands,id);
-				//lastClient=0;
-//				if (getClient(id).didDraw)
-	//				lastStoreClient=0;
-				synapse::CsharedObject<CpaperClient>::delClient(id);
+				//store in chat log for this object
+				drawing["chat"].list().push_back(msg["chat"]);
 			}
+
+			//received drawing commands?
+			if (msg["cmd"].str()=="update")
+			{
+				//id specified?
+				if (msg.isSet("id"))
+				{
+					//add new object?
+					if (msg["id"].str()=="new")
+					{
+						//figure out a fresh new id
+						drawing["lastElementId"]=drawing["lastElementId"]+1;
+
+						//store the new id in the message
+						msg["id"]=drawing["lastElementId"];
+
+						//create new element
+						drawing["data"][msg["id"]]["element"]=msg["element"].str();
+
+					}
+
+					//store the last id for this client
+					getClient(msg.src).lastElementId=msg["id"];
+				}
+				//id not specified, automaticly add the last used id from this client
+				else
+				{
+					msg["id"]=getClient(msg.src).lastElementId;
+				}
+
+
+				Cvar::iterator elementI=getElement(msg["id"]);
+
+				//add the data from the 'add' field to the drawing data
+				for(Cvar::iterator I=msg["add"].begin(); I!=msg["add"].end(); I++)
+				{
+					//this basically means: drawing["data"][key]+=value;
+					elementI->second[I->first].str()+=I->second.str();
+				}
+
+				//set the data from the 'set' field over the drawing data
+				for(Cvar::iterator I=msg["set"].begin(); I!=msg["set"].end(); I++)
+				{
+					elementI->second[I->first]=I->second.str();
+				}
+
+				saved=false;
+			}
+			//send refresh?
+			else if (msg["cmd"].str()=="refresh")
+			{
+				//id not set? the use the last one that was used by this client
+				if (!msg.isSet("id"))
+				{
+					if (getClient(msg.src).lastElementId)
+						msg["id"]=getClient(msg.src).lastElementId;
+				}
+
+				//reply with a serverdraw to this client only
+				Cmsg out;
+				out=msg;
+				out.event="paper_ServerDraw";
+				out.dst=msg.src;
+				out.src=0;
+				out["cmd"]="update";
+				if (msg.isSet("id"))
+					element2msg(msg["id"].str(), out);
+				out.send();
+			}
+			//delete object?
+			else if (msg["cmd"].str()=="delete")
+			{
+				//delete it
+				Cvar::iterator elementI=getElement(msg["id"]);
+				drawing["data"].map().erase(elementI);
+				saved=false;
+
+				getClient(msg.src).lastElementId=0;
+			}
+
+
+			//relay the command to other clients
+			if (!msg.isSet("norelay"))
+				serverDraw(msg,msg.src);
 		}
+
+//		virtual void delClient(int id)
+//		{
+//			if (clientMap.find(id)!= clientMap.end())
+//			{
+//				//do a Del command on behalf of the client
+//				CvarList commands;
+//				commands.push_back(string("D"));
+//				//serverDraw(commands,id);
+//				//lastClient=0;
+////				if (getClient(id).didDraw)
+//	//				lastStoreClient=0;
+//				synapse::CsharedObject<CpaperClient>::delClient(id);
+//			}
+//		}
 
 
 		//send redrawing instructions to dst
@@ -403,27 +412,37 @@ namespace paper
 			Cmsg out;
 			out.event="paper_ServerDraw";
 			out.dst=dst;
-			out.list().push_back(string("S"));
-			out.list().insert(out.list().end(), drawing["data"].list().begin(), drawing["data"].list().end());
-			out.list().push_back(string("E"));
 
-			//add current uncommited stuff of all clients
-			for (CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
+			//send all elements
+			for(Cvar::iterator elementI=drawing["data"].begin(); elementI!=drawing["data"].end(); elementI++)
 			{
-				out.list().push_back(string("I"));
-				out.list().push_back(I->first);
-				I->second.store(out.list());
+				out.clear();
+				out["cmd"]="update";
+				element2msg(elementI->first, out);
+				out.send();
 			}
 
-			//switch back to current client
-//			if (lastClient)
-//			{
-//				out.list().push_back(string("I"));
-//				out.list().push_back(lastClient);
-//			}
+			//send all cursors
+			for(CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
+			{
+				out.clear();
+				out["cursor"].map()=I->second.cursor;
+				out["src"]=I->first;
+				out.send();
+			}
 
+			//send chat log
+			for(CvarList::iterator I=drawing["chat"].list().begin(); I!=drawing["chat"].list().end(); I++)
+			{
+				out.clear();
+				out["chat"]=*I;
+				out.send();
+			}
+
+
+			out.clear();
+			out["cmd"]="ready";
 			out.send();
-
 		}
 
 		virtual void addClient(int id)
@@ -456,17 +475,17 @@ namespace paper
 			int oldObjectId=objectMan.getObjectByClient(msg.src).getId();
 			int newObjectId=objectMan.add();
 
-			//store reference to next object in the old one..
-			CvarList commands;
-			commands.push_back(string("N"));
-			commands.push_back(newObjectId);
-			objectMan.getObject(oldObjectId).serverDraw(commands);
-
-			//store reference to previous object in the new one..
-			commands.clear();
-			commands.push_back(string("P"));
-			commands.push_back(oldObjectId);
-			objectMan.getObject(newObjectId).serverDraw(commands);
+//			//store reference to next object in the old one..
+//			CvarList commands;
+//			commands.push_back(string("N"));
+//			commands.push_back(newObjectId);
+//			//objectMan.getObject(oldObjectId).serverDraw(commands);
+//
+//			//store reference to previous object in the new one..
+//			commands.clear();
+//			commands.push_back(string("P"));
+//			commands.push_back(oldObjectId);
+//			//objectMan.getObject(newObjectId).serverDraw(commands);
 
 			//now actually move the clients
 			objectMan.moveClients(oldObjectId, newObjectId);
@@ -583,7 +602,14 @@ namespace paper
 	 */
 	SYNAPSE_REGISTER(paper_ClientDraw)
 	{
-		objectMan.getObjectByClient(msg.src).clientDraw(msg);
+		try
+		{
+			objectMan.getObjectByClient(msg.src).clientDraw(msg);
+		}
+		catch(...)
+		{
+			; //ignore exceptions, due to race conditions in deletes etc.
+		}
 	}
 
 

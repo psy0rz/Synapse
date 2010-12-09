@@ -6,9 +6,9 @@
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
 	<title>internetpapier.nl - BETA</title>
 
+	<script src="svg.js"></script>
 	<script type="text/javascript" src="synapse.js"></script>
 	<script type="text/javascript" src="jquery.url.js"></script>
-    <!--[if IE]><script type="text/javascript" src="excanvas.js"></script><![endif]-->
 	<script type="text/javascript">
 
 		function Cpoint(x,y)
@@ -23,21 +23,25 @@
 			}
 			
 		}
-	
+ 	
 		var mouseInterval=50; //max update inteval in mS (can be higer if mouseMax is exceeded)
-		var mouseMax=25; //max mouse pixel offset before sending (regardless of update interval)
+		var mouseMax=50; //max mouse pixel offset before sending (regardless of update interval)
 	
 		var mousePoint=new Cpoint(); //current mouse position
+		var mousePointStart=new Cpoint(); //mouse position at start of current operation
 	
 		//mouse info sending to server:
 		var mouseSendPoint=new Cpoint(); //last mousepoint sent to server
 		var mouseSendTime=0; //last time the mousePosition was anaylsed by updateGameField
 	
-		var mouseDraw=0;		
-	
-		var contextDraw;
-		var contextTemp;
-	
+		var mouseMode="";		
+		var mouseTarget="";
+		var mouseTargetHigh="";
+		var mouseHighlight=0;
+
+		//temporary local objects counter
+		var tempCount=0;
+		
 		var currentObjectId=0;
 		var paperModId=0;
 	
@@ -48,12 +52,10 @@
 		var clients=new Array(); 
 		var ourId=0;
 
-		var canvas;
-		var canvasTemp;
-		var canvasWidth=0;
-		var canvasHeight=0;
-
-		var autoCommit=false;
+		var drawing;
+		var drawingInsert;
+		var drawingHtml;
+		
 
 		
 		//filter dangerous stuff from user input.
@@ -66,29 +68,14 @@
 		//calculate browser coordinates to server coordinates
 		function toServer(x,y)
 		{
+			
+			//return ( { "x":x, "y":y } );
 			return ({
-				"x":Math.round((x * 10000) / canvasWidth),
-				"y":Math.round((y * 10000) / canvasHeight)
+				"x":Math.round((x * 10000) / $("#drawing").width()),
+				"y":Math.round((y * 10000) / $("#drawing").height())
 			});
 		}
 	
-		//calculate server coordinates to browser coordinates 
-		function toBrowser(x,y)
-		{
-			return ({
-				"x":((x*canvasWidth)/10000),
-				"y":((y*canvasHeight)/10000)
-			});
-		}				
-
-		//calculate server line width to browser linewidth
-		function widthToBrowser(width)
-		{
-			//for now we use the average of canvas width and height
-			return (
-					(((width*canvasWidth)/1000)+((width*canvasWidth)/1000))/2
-			);
-		}
 
 		
 		function paperLink(id,text)
@@ -104,348 +91,463 @@
 			var objDiv = document.getElementById("chatList");
 			objDiv.scrollTop = objDiv.scrollHeight;
 		}
-		
-		//information about the object a client is currently drawing
-		function Cclient()
+
+
+		//highlight an object
+		function highlight(id)
 		{
-			this.mode="m";
-			this.coords=new Array();
-			this.color="#000000";
-			this.width=widthToBrowser(1);
-			this.serverWidth=1;
-			this.text="";
-			this.cursorX=0;
-			this.cursorY=0;
-			this.clientName="";
-			this.id=0;
-			
-			//draw the object in the specified context	
-			this.draw=function(context)
+			//add highlite, if we can find the element:
+			var element=document.getElementById(id);
+			if (element!=null)
 			{
-				if (this.mode=="m")
-					return;
-
-				if (this.mode=="l" && this.coords.length>=4)
-				{
-					context.beginPath();
-					context.strokeStyle=this.color;
-					context.lineWidth=this.width;
-					context.lineCap="round";
-					context.lineJoin="round";
-	 				context.moveTo(this.coords[0], this.coords[1]);
-	 				var i=2;
-	 				while (i<this.coords.length)
-	 				{
-	 					context.lineTo(this.coords[i], this.coords[i+1]);
-	 					i=i+2;
-	 				}
-					context.stroke();
-				}
+				element.setAttribute('stroke-opacity','0.5');
+				element.setAttribute('fill-opacity','0.5');
 			}
+		}
 
-			//draw the cursor of the client
-			this.drawCursor=function(context)
+		function unhighlight(id)
+		{
+			//remove highlite, if we can find the element:
+			var element=document.getElementById(id);
+			if (element!=null)
 			{
-				var cW=canvasWidth/100;
-
-				//cross hair
-				context.beginPath();
-				context.strokeStyle=this.color;
-				context.lineWidth=1;
-				context.moveTo(this.cursorX-cW, this.cursorY);
-				context.lineTo(this.cursorX+cW, this.cursorY);
-				context.moveTo(this.cursorX, this.cursorY-cW);
-				context.lineTo(this.cursorX, this.cursorY+cW);
-				context.stroke();
-
-				//pixel
-				context.beginPath();
-				context.lineCap="round";
-				context.strokeStyle=this.color;
-				context.lineWidth=this.width;
-				context.moveTo(this.cursorX, this.cursorY);
-				context.lineTo(this.cursorX+0.001, this.cursorY+0.001);
-				context.stroke();
+				element.removeAttribute('stroke-opacity');
+				element.removeAttribute('fill-opacity');
 			}
+		}
+		
+		/*** Drawing protocol
+		
+		Drawing stuff is done with paper_clientDraw.
+		The message is translated to a paper_serverDraw and forwarded to all clients.
+		The message is normally not echoed back, unless requested
+		
+		### Common parameters
+		src:		added by server. session id that send the message
+		noreplay:	dont relay the command to other clients
 
-			//update the html information about this client in the clientlist
-			this.updateHtml=function()
-			{
-				//dont do html stuff when in autoCommit mode, for performance reasons
-				if (autoCommit)
-					return;
-				
-		 		//no dom object for this client yet?
-				if ($("#client_"+this.id).length==0)
-				{
-					//add dom object to list
-					var html="<div class='client' id='client_"+this.id+"'>";
-					html+="</div>";
-					$('#clientList').append(html);
-				}
-				object=$("#client_"+this.id);
-
-				//name 
-				if (!this.clientName)
-					object.html("Client #" +this.id);
-				else
-					object.html(this.clientName);
-
-				//color
-				object.css('color',this.color);
-				if (this.color=="#ffffff")
-					object.css('background-color','#cccccc');
-				else
-					object.css('background-color','#ffffff');
-
-				//"width"
-				var size=0;
-				if (this.serverWidth<10)
-					size=(90+(this.serverWidth*10));
-				else
-				{
-					size=(160+this.serverWidth);
-				}
-				object.css('font-size',""+size+"%");
-	
-				//drawing
-				if (this.mode!="m")
-					object.css('font-style','italic');
-				else
-					object.css('font-style','');
-			} 	
-
-			//we're going to be removed, clean up any shit
-			this.remove=function()
-			{
-				//remove dom object
-				if ($("#client_"+this.id).length!=0)
-		 			$("#client_"+this.id).remove();
-
-			}
-			
-			//clears the current draw-info, not the settings!
-			this.clear=function()
-			{
-				this.mode="m";
-				this.coords=[];
-			}
-
-			//commit the current drawing to permanent canvas, and clear it.
-			this.commit=function()
-			{
-				this.draw(contextDraw);
-				this.clear(); 			
-			}
-			
-			/*** Drawing protocol
-			//global commands:
-			'S'							Start comlete redraw: clear everything, after this all drawing commands will follow, but without explicit commits (to save space)
-			'E'							End of complete redraw. 
-			'I',<id>					Select a different client ID. (every client has its own color, line width etc settings) Usually the server automaticly sets this parameter.
-			'N',<id>					To indicate next drawing <id>
-			'P',<id>					To indicate previous drawing <id>
-			
-			//client settings:
-			'c',<htmlcolor>				Set current drawing color
-			'w',<w>						Set current line width
-			'n',"name"					Set client name
-
-			//client commands:
-			's'							write current drawing action permanently
-			'x'							Cancel the current drawing action.  
-			'm',<x>,<y>					Update cursor location
-			'l',<x>,<y>,...				Enable line drawing. (next x,y coords will draw from now on)
-			'r',<x1>,<y1>,<x2>,<y2>		Draw rectangle
-			'a',<x1>,<y1>,<x2>,<y2>		Draw circle
-			't',<x>,<y>,"text"			Draw text
-			'.',"text"					Chat text
-			
-			'
-			 */
-			//eats and processes the client commands from the array and returns as soon as it encounters a global command
-			this.add=function(commands)
-			{
-				var ok=false;
-				while (commands.length>0)
-				{	
-					//a new command should automaticly commit the previous one:
-					//(this way the server doesnt have to store all the save-commands)
-
-					//NOTE: try to sort this on the stuff that is used most often in Redraw mode.
+		### Drawing commands and parameters:
+		cmd:		command to do:
+						update: create/modify element 
+						delete: remove element
+						refresh: 	let the server resend an update cmd with all info about the element, to this client. 
+						ready: when doing a full redraw on join, this indicates the drawing is "ready"					
 					
-					//all numbers are coords, if we are in some kind of drawing mode.
-					if (commands[0] == parseInt(commands[0]))
-					{
-						c=toBrowser(commands.shift(), commands.shift());
-						this.cursorX=c.x;
-						this.cursorY=c.y;
-						if (this.mode=='l')
-							this.coords.push(c.x, c.y);
-					}
-					//enable line mode
-					else if (commands[0]=='l')
-					{
-						this.commit();
-						commands.shift();
-						this.mode='l';						
-						this.updateHtml();						
-					}
-	 				//save current action permanently 
-	 				else if (commands[0]=="s")
-	 				{
-	 	 				commands.shift();
-	 	 				this.commit();
-						this.updateHtml();						
-	 				}
-					//mouse movement
-					else if (commands[0]=="m")
-	 				{
-						this.commit();
-		 				commands.shift();
-						c=toBrowser(commands.shift(), commands.shift());
-		 				this.cursorX=c.x;
-		 				this.cursorY=c.y;
-		 				this.mode='m';
-	 				}
-					//color
-					else if (commands[0]=='c')
-					{
-						this.commit();
-						commands.shift();
-						this.color=commands.shift();
-						this.updateHtml();						
-					}
-					//name
-					else if (commands[0]=='n')
-					{
-						this.commit();
-						commands.shift();
-						//dont forget to filter!
-						this.clientName=filterInput(commands.shift()).substr(0,20);
-						this.updateHtml();						
-					}
-					//chat text
-					else if (commands[0]=='.')
-					{
-						this.commit();
-						commands.shift();
-
-						//add text to chatList
-						var html="";
-						html+="<div class='chatLine'>&lt;";
-						html+=this.clientName;
-						html+="&gt; ";
-						html+=filterInput(commands.shift());
-						html+="</div>";
-						addChat(html);						
-					}					
-					//width
-					else if (commands[0]=='w')
-					{
-						this.commit();
-						commands.shift();
-						this.serverWidth=parseInt(commands.shift());
-						this.width=widthToBrowser(this.serverWidth);
-						this.updateHtml();						
-					}
-	 				//cancel current drawing action
-	 				else if (commands[0]=="x")
-	 				{
-	 	 				commands.shift();
-	 					this.clear();
-						this.updateHtml();						
-	 				}
-					else
-					{
-						//we dont know, let caller handle the rest
-						return(ok);
-					}
-					ok=true;
-				}
-				return(ok);
-			}
-		}
-
+		Only for updates with new (not yet existing) objects:
+		element:		svg element type (e.g. circle,rect,polyline)
 		
+		update parameters:
+		add:    	svg attributes to append data to (used for polylines)
+		set:		svg attributes to set/replace
 
-		//redraw all the clients in the temporary context
-		function drawClients()
+
+		update/delete parameters:		
+		id:			element id for update/delete. 
+					if set to 'new' with an update, the server will create a new element and replace it with its id.
+					if not set by with an update/refresh, the id is replaced by id used in the last 'update' for this client. 
+
+		beforeId:   set by server to the id of the element this element should be inserted before. this is important to keep the order of all the elements correct.
+		normally only set when requesting a refresh.
+
+		#### Cursor indication
+		cursor:     Cursor and name information: x,y,clientName
+
+		### Chat
+		chat:		Chat text: text, clientName
+				
+		'
+		 */
+
+
+		function draw(msg)
 		{
-			contextTemp.clearRect(0, 0, canvasWidth, canvasHeight);
-			contextTemp.globalAlpha=0.8;
-	
-			//draw current objects
-			for (var clientI in clients)
+			var suspendID = drawing.suspendRedraw(250);
+			 
+			//create/update object
+			if (msg["cmd"]=="update")
 			{
-				clients[clientI].draw(contextTemp);
-				clients[clientI].drawCursor(contextTemp);
+				if (msg["id"]!=null)
+				{
+					var element=document.getElementById(msg["id"]);
+					//element not found? 
+					if (element==null)
+					{
+						//create new element
+						var element = document.createElementNS(svgns, msg["element"]);
+						element.setAttribute('id', msg["id"]);
+	
+						//insert before existing or just append?
+						var beforeElement=null;
+						if (msg["beforeId"]!=null)
+							beforeElement=document.getElementById(msg["beforeId"]);
+	
+						//NOTE: svgweb is buggy and doesnt support insertbefore with a null element
+						if (beforeElement==null)
+							drawing.insertBefore(element, drawingInsert);							
+						else
+							drawing.insertBefore(element, beforeElement);							
+					}
+					
+					//we need to add/set attributes?
+					if (msg["add"] || msg["set"])
+					{
+						for (var attrName in msg["set"])
+						{
+							element.setAttribute(attrName, msg["set"][attrName]);
+						}							
+	
+						for (var attrName in msg["add"])
+						{
+							if (element.getAttribute(attrName)!=null)
+							{
+								element.setAttribute(attrName, element.getAttribute(attrName)+msg["add"][attrName]);
+							}
+							else
+								element.setAttribute(attrName, msg["add"][attrName]);
+						}
+					}
+				}
+				
+				//remove any temporary objects
+				if (msg["tempId"]!=null)
+				{
+					var element=document.getElementById(msg["tempId"]);
+					if (element!=null)
+					{
+						drawing.removeChild(element);
+					}
+				}		
+
 			}
+			//delete object
+			else if (msg["cmd"]=="delete")
+			{
+				//console.log("DEL"+msg["id"]);
+				var element=document.getElementById(msg["id"]);
+				if (element!=null)
+				{
+					drawing.removeChild(element);
+				}	
+			}
+			else if (msg["cmd"]=="ready")
+			{
+				//NOTE: this also works around a weird chromuim refresh bug.
+				$("#loading").hide();
+			}			
+
+			//update cursor?
+			if (msg["cursor"]!=null && msg["src"]!=ourId)
+			{
+				var cursor=document.getElementById('cursor'+msg["src"]);
+				if (cursor==null)
+				{
+					//create a group for this client's cursor
+					cursor = document.createElementNS(svgns, 'g');
+					cursor.setAttribute('id', 'cursor'+msg["src"]);
+					cursor.setAttribute('stroke', '#000000');
+					cursor.setAttribute('stroke-width', '10');
+					drawing.appendChild(cursor);
+
+					//add drawing to the cursor group
+					var e = document.createElementNS(svgns, 'line');
+					e.setAttribute('x1', '-200');
+					e.setAttribute('x2', '+200');
+					e.setAttribute('y1', '0');
+					e.setAttribute('y2', '0');
+					cursor.appendChild(e);					
+
+					var e = document.createElementNS(svgns, 'line');
+					e.setAttribute('x1', '0');
+					e.setAttribute('x2', '0');
+					e.setAttribute('y1', '-200');
+					e.setAttribute('y2', '+200');
+					cursor.appendChild(e);					
+			
+				}
+
+				//update cursor position?
+				if (msg["cursor"]["x"]!=null)
+				{
+					cursor.setAttribute('transform', 'translate('+msg["cursor"]["x"]+','+msg["cursor"]["y"]+')');
+				}
+					
+				//update cursor clientname?
+				if (msg["cursor"]["clientName"]!=null)
+				{
+					//we need to re-add this node on every update..
+					var oldE=document.getElementById('clientName'+msg["src"]);
+
+					if (oldE!=null)
+						cursor.removeChild(oldE);
+					
+					//create text element
+					var e = document.createElementNS(svgns, 'text');
+					e.setAttribute('id', 'clientName'+msg["src"]);
+					e.setAttribute('x', '0');
+					e.setAttribute('y', '300');
+					e.setAttribute('font-size','200');
+					e.setAttribute('font-weight','bold');
+					e.setAttribute('stroke','#000000');
+					e.setAttribute('fill','#ffffff');
+					cursor.appendChild(e);					
+
+					//add the actual text
+					var textNode = document.createTextNode(msg["cursor"]["clientName"], true);
+					e.appendChild(textNode);
+				
+				}
+
+			}
+
+			//update chat?
+			if (msg["chat"] != null)
+			{
+				addChat(
+					"<b>"+filterInput(msg["chat"]["clientName"])+"</b> "+filterInput(msg["chat"]["text"])+"<br>"
+				);
+			}
+
+			drawing.unsuspendRedraw(suspendID);
 		}
 
+		//someone left, remove their cursor and stuff
+		synapse_register("object_Left",function(msg_src, msg_dst, msg_event, msg)
+		{
+			var cursor=document.getElementById('cursor'+msg["clientId"]);
+			if (cursor!=null)
+			{
+				drawing.removeChild(cursor);
+			}
+		
+		});
 
 
-		//send drawing commands to server and draw them locally as well
+		//received a drawing command from the server
+		synapse_register("paper_ServerDraw",function(msg_src, msg_dst, msg_event, msg)
+		{
+			draw(msg);
+		});
+
+
+		//send drawing msg to server 
 		//note: you need to specifiy server coordinates instead of browser coordinates here.		
-		function sendDraw(commands)
+		function sendDraw(msg)
 		{
 			//only if we're joined to something
 			if (!currentObjectId)
 				return;
 			
 			//send it to server
-			send(paperModId,"paper_ClientDraw", commands);
+			send(paperModId,"paper_ClientDraw", msg);
 
-			//we dont get our own stuff back from the server, so we can add here.
-			//this way the users doesnt see his own stuff lagged.
-			//however there is a race condition when 2 users draw over eachother and release the mouse at the same time. 
-			//both users will get a different result. however this is fixed on a refresh and acceptable for now.
- 			
- 			if (clients[ourId]==undefined)
- 			{
- 	 			//NOTE:code duplication
-	 			clients[ourId]=new Cclient();
-	 			clients[ourId].id=ourId;
- 			}
-
-			clients[ourId].add(commands);
-
-
-			//refresh temporary canvas
-			drawClients();
+			//the server doesnt echo our stuff back, so we can handle it locally without lag
+			//call the draw function and emulate the server by adding some stuff
+			msg["src"]=ourId;
+			if (msg["id"]==null || msg["id"]=="new")
+				msg["id"]="temp"+tempCount;
+			draw(msg);
 		}
 
-		function mouseMove()
+
+		//user moves mouse		
+		function mouseMove(force)
 		{
+			
 			//mouse throttling function, to prevent too many updates per second
 			//no change?
-			if (mousePoint.x==mouseSendPoint.x && mousePoint.y==mouseSendPoint.y)
+			if (force!=true && mousePoint.x==mouseSendPoint.x && mousePoint.y==mouseSendPoint.y)
 				return;
 
 			currentTime=new Date().getTime();
 
 			//send updates at a max fps, or more when the mouse moves fast
-			if (	(currentTime-mouseSendTime>=mouseInterval) || 
+			if (	force==true ||
+					(currentTime-mouseSendTime>=mouseInterval) || 
 					Math.abs(mousePoint.x-mouseSendPoint.x)> mouseMax ||
-					Math.abs(mousePoint.y-mouseSendPoint.y)> mouseMax
-			)
+					Math.abs(mousePoint.y-mouseSendPoint.y)> mouseMax 
+			)	
 			{ 
+				//highlighting target changed?
+				if (mouseHighlight && mouseTarget!=mouseTargetHigh)
+				{
+					//remove old highlite (if any)
+					unhighlight(mouseTargetHigh);
+					//valid new target?
+					if (mouseTarget == parseInt(mouseTarget))
+					{
+						highlight(mouseTarget);
+					}
+					mouseTargetHigh=mouseTarget;
+				}
 
-				a=toServer(mousePoint.x,mousePoint.y);
-				if (mouseDraw)
-					sendDraw([ a.x, a.y ]);
-				else
-					sendDraw([ "m", a.x, a.y ]);
+				
+				var c=toServer(mousePoint.x,mousePoint.y);
+				var msg={};
+
+				//cursor
+				msg['cursor']=c;
+				
+				if (mouseMode=="line")
+				{
+					msg['cmd']='update';
+					msg['add']={
+						'points': ' '+c.x+','+c.y
+					}
+				}
+				else if (mouseMode=="rect")
+				{
+					var cStart=toServer(mousePointStart.x,mousePointStart.y);
+					var w=c.x-cStart.x;
+					var h=c.y-cStart.y;
+					if (w<10)
+						w=10;
+					if (h<10)
+						h=10;
 					
+					msg['cmd']='update';
+					msg['set']={
+						'width': w,
+						'height': h					
+					}
+				}
+				else if (mouseMode=="circle")
+				{
+					var cStart=toServer(mousePointStart.x,mousePointStart.y);
+					var rx=Math.abs(c.x-cStart.x);
+					var ry=Math.abs(c.y-cStart.y);
+					//var r=Math.sqrt(Math.pow(xoffset,2)+Math.pow(yoffset,2));
+					
+					if (rx<100)
+						rx=10;
+					if (ry<100)
+						ry=10;
+					
+					msg['cmd']='update';
+					msg['set']={
+						'rx': rx,
+						'ry': ry
+					}
+				}
+				else if (mouseMode=="delete")
+				{ 
+					//only allow numeric id's to be deleted. otherwise you could delete cursors and stuff as well :P
+					if (mouseTarget == parseInt(mouseTarget))
+					{
+						msg['cmd']='delete';
+						msg['id']=mouseTarget;
+					}				
+				}
+				else if (mouseMode=="move")
+				{
+					var cStart=toServer(mousePointStart.x,mousePointStart.y);
+					var dx=(c.x-cStart.x);
+					var dy=(c.y-cStart.y);
+					
+					msg['cmd']='update';
+					msg['id']=mouseTargetStart;
+					msg['set']={
+						'transform':'translate('+dx+','+dy+')'
+					}
+				}
+
+				sendDraw(msg);
 
 				mouseSendPoint.x=mousePoint.x;
 				mouseSendPoint.y=mousePoint.y;
 				mouseSendTime=currentTime;
 			}
 		}	
+
+		//user starts a mouse operation (clicks somewhere)
+		function mouseStart(m)
+		{
+			if (mousePoint.x==null || mousePoint.y==null)
+				return;
+			tempCount++;
+			mouseMode=$('#modes .selected').attr("value");
+			mouseTargetStart=mouseTarget;
+			mousePointStart.x=mousePoint.x;
+			mousePointStart.y=mousePoint.y;
+
+			//enable filling?
+			var fill='none';
+			if ($('#modes .selected').attr("fill")==1)
+				fill=$('#colors .selected').attr("value");
 	
-		
- 		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
+			//do the action:
+			if (mouseMode=="line")
+			{
+				
+				sendDraw({
+					'cmd'		:'update',
+					'id'		:'new',
+					'element'	:'polyline',
+					'set'		: {
+						'fill'				: fill,
+						'stroke'			: $('#colors .selected').attr("value"),
+						'stroke-width'		: $('#widths .selected').attr("value"),
+						'stroke-dasharray'	: $('#styles .selected').attr("value")
+					}
+				});
+			}
+			else if (mouseMode=="rect")
+			{
+				var c=toServer(mousePoint.x,mousePoint.y);
+
+				sendDraw({
+					'cmd'		:'update',
+					'id'		:'new',
+					'element'	:'rect',
+					'set'		: {
+						'fill'				: fill,
+						'stroke'			: $('#colors .selected').attr("value"),
+						'stroke-width'		: $('#widths .selected').attr("value"),
+						'stroke-dasharray'	: $('#styles .selected').attr("value"),
+						'x'					: c.x, 
+						'y'					: c.y
+					}
+				});
+			}
+			else if (mouseMode=="circle")
+			{
+				var c=toServer(mousePoint.x,mousePoint.y);
+
+				sendDraw({
+					'cmd'		:'update',
+					'id'		:'new',
+					'element'	:'ellipse',
+					'set'		: {
+						'fill'				: fill,
+						'stroke'			: $('#colors .selected').attr("value"),
+						'stroke-width'		: $('#widths .selected').attr("value"),
+						'stroke-dasharray'	: $('#styles .selected').attr("value"),
+						'cx'				: c.x, 
+						'cy'				: c.y
+					}
+				});
+			}
+
+			//force a mouse move
+			mouseMove(true);
+		}
+
+		//user ends operation (leaves or mouse up)
+		function mouseEnd(m)
+		{
+			if (mouseMode!="")
+			{
+				mouseMode="";
+				sendDraw({
+					'cmd'		:'refresh',
+					'norelay'	:1,
+					'tempId'	:'temp'+tempCount
+				});				
+			};
+			unhighlight(mouseTargetHigh);
+			mouseTargetHigh="";
+		}
+	    
+	    synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
 			ourId=msg_dst;
 
@@ -460,65 +562,38 @@
 			//set the name input field
 			$("#clientName").val(clientName);
 			
-			/// start local engine
-			window.setInterval(mouseMove, mouseInterval);
 
 			
 			/// JAVA SCRIPT EVENT HANDLERS
 
+			//user changes name
 			$("#clientName").keyup(function(m)
 			{
 				$.setCookie('clientName', $("#clientName").val(), { duration:365, path:"/" });
-				sendDraw( [ "n" , $("#clientName").val() ] );
+				sendDraw({
+					'cursor':{
+						'clientName':$("#clientName").val()
+					}
+				});
+					
 			});
 
+			//user presses enter in chatbox:
 			$("#chatInput").keydown(function(m)
 			{
 				if (m.keyCode==13)
 				{
-					sendDraw( [ "." , $("#chatInput").val() ] );
-					sendDraw( [ "s" ] );
+					sendDraw( {
+						'chat':{
+							'clientName'	:$("#clientName").val(),
+							'text'			:$("#chatInput").val()
+						}
+					});
 					$("#chatInput").val("");						
 				}					
 	 		});
 
-			$("#chatInput").val("");
 			
-			$("#canvasMouse").mousemove(function(m)
-			{
-				mousePoint.x=m.pageX-$("#canvasMouse").offset().left;
-				mousePoint.y=m.pageY-$("#canvasMouse").offset().top;
-				mouseMove();
-
-			});
-
-			$("#canvasMouse").mousedown(function(m)
-			{
-				m.preventDefault();
-				mouseDraw=1;
-				if (drawMode=="l")
-				{
-					a=toServer(mousePoint.x,mousePoint.y);
-					sendDraw( [ "l", a.x, a.y ]);
-				}
-			});
-					
-			$("#canvasMouse").mouseup(function(m)
-			{
-				mouseDraw=0;
-				sendDraw( [ "s" ]);
-			});
-					
-
-			$("#canvasMouse").mouseleave(function(m)
-			{
-				if (mouseDraw)
-				{
-					mouseDraw=0;
-					sendDraw( [ "s" ]);
-				}
-			});
-
 			//a tool is clicked
 			$(".tool").click(function(m)
 			{
@@ -526,17 +601,15 @@
 				$(this).parent().children(".tool").removeClass('selected');
 				//select this one
 				$(this).addClass('selected');
-				
-				var i=0;
-				var cmds=new Array();
-				while ($(this).attr("cmd"+i))
-				{
-					cmds.push($(this).attr("cmd"+i));
-					i++;
-				};
-				
-				sendDraw(cmds); 
 
+				//switch highlite mode on?
+				if ($(this).attr('highlight')=='1')
+					mouseHighlight=1;
+
+				//switch highlite mode off?
+				if ($(this).attr('highlight')=='0')
+					mouseHighlight=0;
+				
 				$("#chatInput").focus();
 			});
 
@@ -547,30 +620,120 @@
 				send(0,"paper_Create", { "moveClients":1 } );
 			});
 
-			
-			canvasWidth=$("#canvasMouse").width();
-			canvasHeight=$("#canvasMouse").height();
-			
-			canvas=document.getElementById('canvas');
-			contextDraw=canvas.getContext('2d');
-			canvas.width=canvasWidth;
-			canvas.height=canvasHeight;
-
-			canvasTemp=document.getElementById('canvasTemp');
-			contextTemp=canvasTemp.getContext('2d');
-			canvasTemp.width=canvasWidth;
-			canvasTemp.height=canvasHeight;
 
 
-			//join the specified paper
-			send(0,"paper_Join", {
-				"objectId":jQuery.url.param("id"),
-			});
+			//wait until svgloading is complete
+		    window.addEventListener('SVGLoad', function() {
+			    
+				//create a svg node and assign it to global variable "drawing".
+				drawing = document.createElementNS(svgns, "svg");
+
+				//set some basic attributes
+				drawing.setAttribute("version", "1.2");
+				drawing.setAttribute("baseProfile", "tiny");
+				drawing.setAttribute("viewBox", "0 0 10000 10000");
+				drawing.setAttribute("id","bg");
+				drawing.setAttribute("preserveAspectRatio", "none");
+
+				//default settings
+				drawing.setAttribute("stroke-linecap","round");
+				drawing.setAttribute("stroke-linejoin","round");
+
+//				drawing.setAttribute("color-rendering","optimizeSpeed");
+//				drawing.setAttribute("shape-rendering","optimizeSpeed");
+//				drawing.setAttribute("text-rendering","optimizeSpeed");
+//				drawing.setAttribute("image-rendering","optimizeSpeed");
+				
+
+				//wait until rootobject is created
+				drawing.addEventListener('SVGLoad', function(evt) 
+				{
+					//when its in flashmode, the references change somehow, so re-get it:				
+					drawing=document.getElementsByTagNameNS(svgns, 'svg')[0];
+
+					//add a node that indicates where drawing elements should be inserted before
+					drawingInsert = document.createElementNS(svgns, 'g');
+					drawing.appendChild(drawingInsert);
+					
+					//set mouse move event
+					//NOTE: pageX is not set when using chromium in flash mode? when we use jquery mousemove its ok ,but then we cant see 
+					//which object is hovered over.
+					drawing.addEventListener('mousemove', function(m) 
+					{
+						mouseTarget=m.target.id;
+						//work around SVG bug http://code.google.com/p/svgweb/issues/detail?id=244
+						if(drawing.fake)
+						{
+							//flash workaround
+							mousePoint.x=m.clientX;
+							mousePoint.y=m.clientY;
+						} 
+						else 
+						{
+							//normal
+							mousePoint.x=m.clientX-$("#drawing").offset().left;
+							mousePoint.y=m.clientY-$("#drawing").offset().top ;
+						}
+													
+						mouseMove(false);
+					});
+
+					//set mouse click event
+					drawing.addEventListener('mousedown', function(m)
+					{
+						if (m.preventDefault)
+							m.preventDefault();
+						else
+							m.returnValue=false;
 
 
-			
+						mouseStart(m);
+
+						return false;
+					});
+
+					//set mouse up event
+					drawing.addEventListener('mouseup', mouseEnd)
+							
+					//set mouse leave event
+					//(doesnt work with addeventlistener!)
+					$("#drawing").mouseleave(mouseEnd);
+						
+					/// start mouse update engine
+					window.setInterval(function() { mouseMove(false) }, mouseInterval);
+
+
+					//join the specified paper
+					send(0,"paper_Join", {
+						"objectId":jQuery.url.param("id")
+					});
+							
+
+				});
+				
+				//add drawing rootobject to html container
+				drawingHtml = document.getElementById("drawing");
+				svgweb.appendChild(drawing, drawingHtml);
+		     }, false);
+
+		
  		});
- 				
+
+		function reset()
+		{
+			$('#clientList').empty();
+			$('#chatList').empty();
+			$("#chatInput").val("");
+			$("#chatInput").focus();
+			
+			
+			//select default tools
+			$(".tool").removeClass('selected');
+			$(".defaultTool").addClass('selected');
+
+		}
+
+	    
 		//we've joined a object
  		synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
 		{
@@ -582,100 +745,24 @@
 			currentObjectId=msg["objectId"];
 			paperModId=msg_src;
 			$("#objectId").html(msg["objectId"]);
+			//TODO:dynamic svg-path
+			$("#svgURL").attr("href","p/"+msg["objectId"]+".svg");
+			
+			//reset stuff
+			reset();
+
+			//tell people who we are and set random mouse position
+			sendDraw({
+				'cursor':{
+					'clientName':$("#clientName").val(),
+					'x':Math.round(9000*Math.random())+1000,
+					'y':Math.round(9000*Math.random())+1000
+				}
+			});
 		});
  		
  				
 
-
- 		synapse_register("paper_ServerDraw",function(msg_src, msg_dst, msg_event, msg)
-		{
- 			while(msg.length>0)
- 			{
-				//switch to different client 
- 				if (msg[0]=="I")
-	 			{
- 	 				if (autoCommit && clientId)
- 	 	 				clients[clientId].commit();
- 		 			msg.shift();
-		 			clientId=msg.shift();
-		 			//need to create new client object?
-		 			if (clients[clientId]==undefined)
-		 			{
-			 			clients[clientId]=new Cclient();
-			 			clients[clientId].id=clientId;
-		 			}
- 				}
- 				//start of complete redraw: clears everything, enables auto commit
- 				else if (msg[0]=="S")
- 				{
- 	 				msg.shift();
- 					clients=[];
-					clientId=0;
-					$('#clientList').empty();
-					$('#chatList').empty();
-					autoCommit=true; 
- 					contextDraw.clearRect(0, 0, canvasWidth, canvasHeight);
- 					$(".tool").removeClass('selected');
- 					$(".defaultTool").addClass('selected');
- 				}
-				//end of complete redraw, disable auto commit.
- 				else if (msg[0]=="E")
- 				{
-	 				msg.shift();
-					autoCommit=false;
-	 				//commit the last bits and update html status
-	 				for (var clientI in clients)
- 					{
- 	 					clients[clientI].commit();
- 	 					clients[clientI].updateHtml();
- 					}
- 					
-	 				//let everyone know who we are
-	 				sendDraw([ "n" , $("#clientName").val() ]);
-	 	 					
-					$("#loading").hide();
-
-					$("#chatInput").focus();
-					
- 				}
- 				//delete client
- 				else if (msg[0]=="D")
- 				{
- 	 				msg.shift();
- 	 				if (autoCommit)
- 	 	 				clients[clientId].commit();
-	 	 			clients[clientId].remove();
-	 	 			delete clients[clientId];
-					clientId=0;
-				}      
- 				//next paper id
- 				else if (msg[0]=="N")
- 				{
- 	 				msg.shift();
-					var id=msg.shift();
-					addChat(paperLink(id, "Volgend papier: "+id));				
- 				}
- 				//previous paper id
- 				else if (msg[0]=="P")
- 				{
- 	 				msg.shift();
-					var id=msg.shift();
-					addChat(paperLink(id, "Vorig papier: "+id));										
- 				}
- 				//let the current client object parse the rest. it returns when it encounters something unknown.
- 				else
- 				{
- 	 				if (!clients[clientId].add(msg))
- 	 				{
- 	 	 				//object also doesnt know what to do...log error and skip it and hope for the best..
- 	 	 				console.error("Error parsing draw commands",msg);
- 	 	 				msg.shift();
- 	 				}
- 				}
- 			}
-
-			drawClients();
-		});
  		
 
 	
@@ -711,7 +798,7 @@
 			border-style:none;
 		}
 
-		#canvasMouse
+		#drawing
 		{
 			position:absolute; 
 			left:16em;
@@ -719,23 +806,24 @@
 			right: 0;
 			bottom:0;
 			cursor:crosshair;
+			margin: 0;
+			padding: 0;
 		}
+
 		
-		canvas
-		{
-			position:absolute;
-			left:16em;
-			top:0;
-			right:0;
-			bottom:0;
-		}
 		
 		
 		#loading
 		{
 			position:absolute;
-			left:40%;
-			top:40%;
+			left:0;
+			right:0;
+			top:0;
+			bottom:0;
+			background-fill:none;
+			text-align:center;
+			color: red;
+			font-size: 1000%;
 		}
 		
 		#colors
@@ -795,11 +883,12 @@
 <body class='ui-widget'>
 	<div class='ui-widget-content' id='objectManager'>
 
-		<div class='ui-widget-header'>Papier:</div>
+		<div class='ui-widget-header'>Delen met anderen:</div>
 
-		Papier nummer: <span id='objectId'></span>
+		Papier nummer: <span id='objectId'></span><br>
+		<a id='svgURL' target='_blank'>SVG link</a>
+
 		<br>
-		<a href="http://twitter.com/share" class="twitter-share-button" data-text="papier" data-count="none">Tweet</a><script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
 		
 		<br>
 
@@ -810,54 +899,72 @@
 		Naam: <input id='clientName' type='text' value='' size=10>
 
 		<div id='colors'>
-			<div class='tool defaultTool' style='background-color:#000000' cmd0='c' cmd1='#000000'>&nbsp;</div>
-			<div class='tool' style='background-color:#0000ff' cmd0='c' cmd1='#0000ff'>&nbsp;</div>
-			<div class='tool' style='background-color:#00ff00' cmd0='c' cmd1='#00ff00'>&nbsp;</div>
-			<div class='tool' style='background-color:#00ffff' cmd0='c' cmd1='#00ffff'>&nbsp;</div>
-			<div class='tool' style='background-color:#FF8040' cmd0='c' cmd1='#FF8040'>&nbsp;</div>
-			<div class='tool' style='background-color:#ffffff' cmd0='c' cmd1='#ffffff'>gum</div>
+			<div class='tool color defaultTool' style='background-color:#000000' value='#000000'>&nbsp;</div>
+			<div class='tool color ' style='background-color:#0000ff' value='#0000ff'>&nbsp;</div>
+			<div class='tool color ' style='background-color:#00ff00' value='#00ff00'>&nbsp;</div>
+			<div class='tool color ' style='background-color:#00ffff' value='#00ffff'>&nbsp;</div>
+			<div class='tool color ' style='background-color:#FF8040' value='#FF8040'>&nbsp;</div>
+			<div class='tool color ' style='background-color:#ffffff' value='#ffffff'>&nbsp;</div>
 			<br>
-			<div class='tool' style='background-color:#ff0000' cmd0='c' cmd1='#ff0000'>&nbsp;</div>
-			<div class='tool' style='background-color:#ff00ff' cmd0='c' cmd1='#ff00ff'>&nbsp;</div>
-			<div class='tool' style='background-color:#ffff00' cmd0='c' cmd1='#ffff00'>&nbsp;</div>
-			<div class='tool' style='background-color:#999999' cmd0='c' cmd1='#999999'>&nbsp;</div>
-			<div class='tool' style='background-color:#804000' cmd0='c' cmd1='#804000'>&nbsp;</div>
-			<div class='tool' style='background-color:#F87217' cmd0='c' cmd1='#F87217'>&nbsp;</div>
+			<div class='tool color' style='background-color:#ff0000' value='#ff0000'>&nbsp;</div>
+			<div class='tool color' style='background-color:#ff00ff' value='#ff00ff'>&nbsp;</div>
+			<div class='tool color' style='background-color:#ffff00' value='#ffff00'>&nbsp;</div>
+			<div class='tool color' style='background-color:#999999' value='#999999'>&nbsp;</div>
+			<div class='tool color' style='background-color:#804000' value='#804000'>&nbsp;</div>
+			<div class='tool color' style='background-color:#F87217' value='#F87217'>&nbsp;</div>
 			<br>
 		</div>		
 
 		<div id='widths'>
-			<div class='tool defaultTool' cmd0='w' cmd1='1'><img src='img/pen1.png' style='width:1em' ></div>
-			<div class='tool' cmd0='w' cmd1='2'><img src='img/pen1.png' style='width:1.2em'></div>
-			<div class='tool' cmd0='w' cmd1='3'><img src='img/pen1.png' style='width:1.3em'></div>
-			<div class='tool' cmd0='w' cmd1='4'><img src='img/pen1.png' style='width:1.4em' ></div>
+			<div class='tool' value='10'><img src='img/pen1.png' style='width:1em' ></div>
+			<div class='tool' value='20'><img src='img/pen1.png' style='width:1.2em'></div>
+			<div class='tool' value='30'><img src='img/pen1.png' style='width:1.3em'></div>
+			<div class='tool defaultTool' value='40'><img src='img/pen1.png' style='width:1.4em' ></div>
 			<br>
-			<div class='tool' cmd0='w' cmd1='10'><img src='img/pen2.png' style='width:1em' ></div>
-			<div class='tool' cmd0='w' cmd1='20'><img src='img/pen2.png' style='width:1.2em' ></div>
-			<div class='tool' cmd0='w' cmd1='30'><img src='img/pen2.png' style='width:1.3em' ></div>
-			<div class='tool' cmd0='w' cmd1='40'><img src='img/pen2.png' style='width:1.4em' ></div>		
+			<div class='tool' value='100'><img src='img/pen2.png' style='width:1em' ></div>
+			<div class='tool' value='200'><img src='img/pen2.png' style='width:1.2em' ></div>
+			<div class='tool' value='300'><img src='img/pen2.png' style='width:1.3em' ></div>
+			<div class='tool' value='400'><img src='img/pen2.png' style='width:1.4em' ></div>		
+		</div>
+
+		<div id='modes'>
+			<div class='tool defaultTool' value='line' highlight=0>lijn</div>
+			<div class='tool' value='line' fill=1 highlight=0>LIJN</div>
+			<div class='tool' value='delete' highlight='1'>[gum]</div>
+			<div class='tool' value='move' highlight='1'>[move]</div>
+			<br></br>
+			<div class='tool' value='rect' highlight=0>vierk</div>
+			<div class='tool' value='rect' fill=1 highlight=0>VIERK</div>
+			<br></br>
+			<div class='tool' value='circle' highlight=0>cirkel</div>
+			<div class='tool' value='circle' fill=1 highlight=0>CIRKEL</div>
+		</div>
+
+		<div id='styles'>
+			<div class='tool defaultTool' value='none'>norm</div>
+			<div class='tool' value='20,200'>stip</div>
+			<div class='tool' value='200,200'>streep</div>
 		</div>
 
 
-		<div class='ui-widget-header'>Chat:</div>
+ 		<div class='ui-widget-header'>Chat:</div>
 		<div id='chatList'></div>
 		<input id='chatInput' type='text' value='' >
+<!-- 
 
 
 		<div class='ui-widget-header'>Andere mensen:</div>
 		<div id='clientList'></div>
-
+-->
 
 	</div>
 
-	<canvas width=10 height=10 id='canvas'></canvas>		
 
-	<canvas width=10 height=10 id='canvasTemp'></canvas>		
+	<div id='loading' >Loading...</div>
 
-	<div id='loading' class='ui-state-highlight'>Loading...</div>
 
-	<div id='canvasMouse'>
-	</div>
+	<div id='drawing'></div>		
+
 
 	
 </body>
