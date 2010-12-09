@@ -745,7 +745,9 @@
 			currentObjectId=msg["objectId"];
 			paperModId=msg_src;
 			$("#objectId").html(msg["objectId"]);
-
+			//TODO:dynamic svg-path
+			$("#svgURL").attr("href","p/"+msg["objectId"]+".svg");
+			
 			//reset stuff
 			reset();
 
@@ -881,9 +883,11 @@
 <body class='ui-widget'>
 	<div class='ui-widget-content' id='objectManager'>
 
-		<div class='ui-widget-header'>Papier:</div>
+		<div class='ui-widget-header'>Delen met anderen:</div>
 
-		Papier nummer: <span id='objectId'></span>
+		Papier nummer: <span id='objectId'></span><br>
+		<a id='svgURL' target='_blank'>SVG link</a>
+
 		<br>
 		
 		<br>

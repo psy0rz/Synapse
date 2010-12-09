@@ -27,6 +27,8 @@ Internet paper.
 #include <set>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include "cconfig.h"
+#include "boost/filesystem/operations.hpp"
+#include "boost/filesystem/fstream.hpp"
 
 //we use the generic shared object management classes.
 #include "cclient.h"
@@ -40,6 +42,8 @@ namespace paper
 	using namespace std;
 	using namespace boost;
 	using namespace boost::posix_time;
+	using boost::filesystem::ofstream;
+	using boost::filesystem::ifstream;
 
 	bool shutdown;
 
@@ -147,6 +151,55 @@ namespace paper
 		void save(string path)
 		{
 			drawing.save(path);
+
+			//export to svg
+			ofstream svgStream;
+			svgStream.exceptions ( ofstream::eofbit | ofstream::failbit | ofstream::badbit );
+			stringstream f;
+			f << "wwwdir/p/" << id << ".svg";
+			svgStream.open(f.str());
+
+			//svg header
+			svgStream << "<?xml version=\"1.0\" standalone=\"no\"?>\n";
+			svgStream << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n\n";
+
+			svgStream << "<svg width=\"100%\" height=\"100%\" version=\"1.1\"";
+
+			//default settings
+			svgStream << " viewBox=\"0 0 10000 10000\"";
+			svgStream << " stroke-linecap=\"round\"";
+			svgStream << " stroke-linejoin=\"round\"";
+			svgStream << " preserveAspectRatio=\"none\"\n";
+			svgStream << " xmlns=\"http://www.w3.org/2000/svg\">\n\n";
+
+			svgStream << "<title>internetpapier.nl tekening #" << id << "</title>\n";
+
+			//export all elements
+			for(Cvar::iterator elementI=drawing["data"].begin(); elementI!=drawing["data"].end(); elementI++)
+			{
+				//start element
+				svgStream << "<" << elementI->second["element"].str();
+
+				//add id
+				svgStream << " id=\"" << elementI->first << "\"";
+
+				//fill in all element attributes
+				for(Cvar::iterator I=elementI->second.begin(); I!=elementI->second.end(); I++)
+				{
+					if (I->first!="element")
+						svgStream << " " << I->first << "=\"" << I->second.str() << "\"";
+				}
+
+				//end element
+				svgStream << "/>\n";
+			}
+
+
+			//svg footer
+			svgStream << "\n</svg>\n";
+
+			svgStream.close();
+
 			saved=true;
 
 		}
@@ -216,7 +269,8 @@ namespace paper
 			//fill in all element attributes
 			for(Cvar::iterator I=elementI->second.begin(); I!=elementI->second.end(); I++)
 			{
-				msg["set"][I->first]=I->second;
+				if (I->first!="element")
+					msg["set"][I->first]=I->second;
 			}
 
 			//is there an item after this?
