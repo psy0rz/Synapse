@@ -30,10 +30,10 @@ namespace synapse
 	{
 
 		private:
-		int id;
 		int lastLeave;
 
 		protected:
+		int id;
 		typedef map<int,Tclient> CclientMap;
 		CclientMap clientMap;
 		bool saved;
