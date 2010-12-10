@@ -210,15 +210,15 @@ namespace paper
 			pngFilename.flush();
 			pngFilename << "wwwdir/p/" << id;
 			out.event="exec_Start";
-			out["cmd"]="nice convert  " + svgFilename.str() + " " + pngFilename.str() + ".large.png";
+			out["cmd"]="nice convert -density 10 " + svgFilename.str() + " " + pngFilename.str() + ".large.png";
 			out.send();
 
 			out.event="exec_Start";
-			out["cmd"]="nice convert -density 25 " + svgFilename.str() + " " + pngFilename.str() + ".medium.png";
+			out["cmd"]="nice convert -density 2 " + svgFilename.str() + " " + pngFilename.str() + ".medium.png";
 			out.send();
 
 			out.event="exec_Start";
-			out["cmd"]="nice convert -density 10 " + svgFilename.str() + " " + pngFilename.str() + ".small.png";
+			out["cmd"]="nice convert -density 1 " + svgFilename.str() + " " + pngFilename.str() + ".small.png";
 			out.send();
 
 
