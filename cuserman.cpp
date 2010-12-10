@@ -33,6 +33,7 @@
 
 #include "cmodule.h"
 #include "clog.h"
+#include "cconfig.h"
 
 namespace synapse
 {
@@ -43,6 +44,10 @@ CuserMan::CuserMan()
 	sessionCounter=0;
 	sessionMaxPerUser=1000;
 	shutdown=false;
+
+	Cconfig config;
+
+
 
 	addGroup(CgroupPtr(new Cgroup("core")));
 	addGroup(CgroupPtr(new Cgroup("modules")));
@@ -112,7 +117,7 @@ CuserPtr CuserMan::getUser(const string & userName)
 			return(*userI);
 		}
 	}
-	ERROR("User " << userName << " not found!");
+	throw(runtime_error("User not found"));
 	return (CuserPtr());
 }
 
@@ -161,7 +166,7 @@ CgroupPtr CuserMan::getGroup(const string &groupName)
 			return(*groupI);
 		}
 	}
-	return (CgroupPtr());
+	throw(runtime_error("Group not found"));
 }
 
 

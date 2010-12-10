@@ -87,8 +87,9 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 	// -our job is to verify if everything is ok and populate the call queue
 	// -internally the core only works with smartpointers, so most stuff thats not in msg will be a smartpointer.
 
-	if (shutdown)
-		throw(runtime_error("Shutting down, ignored message"));
+//edwin: why?
+//	if (shutdown)
+//		throw(runtime_error("Shutting down, ignored message"));
 
 	//no src session specified means use default session of module:
 	//NOTE: this is the only case where modify the actual msg object.

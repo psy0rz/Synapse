@@ -3,7 +3,7 @@
 
 ARGS="./modules/paper.module/libpaper.so"
 while true; do
-	STAT=`stat $PROG modules/*.module/*.so`
+	STAT=`stat synapse modules/*.module/*.so`
 	#echo $STAT
 	if [ "$STAT" != "$OLDSTAT" ]; then
 		OLDSTAT=$STAT
