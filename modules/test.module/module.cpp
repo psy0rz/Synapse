@@ -80,6 +80,8 @@ SYNAPSE_REGISTER(module_Init)
 //	out["path"]="modules/play_vlc.module/libplay_vlc.so";
 //	out.send();
 
+		out["path"]="modules/exec.module/libexec.so";
+		out.send();
 
 	// Counter that ever counterSleep seconds emits a message.
 	// Speed can be changed with appropriate messages
@@ -117,10 +119,60 @@ SYNAPSE_REGISTER(module_Init)
 
 }
 
+//TODO: make a regression test that verifies results.
+SYNAPSE_REGISTER(exec_Ready)
+{
+	Cmsg out;
+	out.dst=msg["session"];
+	out.event="exec_Start";
+
+	out["cmd"]="echo 'line1\\nline2\\nline3'";
+	out["id"]="read test";
+	out.send();
+
+	out["cmd"]="exit 13";
+	out["id"]="should return exit 13";
+	out.send();
+
+	out["cmd"]="kill $$";
+	out["id"]="should return signal 15";
+	out.send();
+
+	out["cmd"]="/non/existing";
+	out["id"]="should return exit 127";
+	out.send();
+
+	out["cmd"]="sleep 5";
+	out["id"]="should take a while";
+	out.send();
+
+}
+
+SYNAPSE_REGISTER(exec_Started)
+{
+	;
+}
+
+SYNAPSE_REGISTER(exec_Data)
+{
+	;
+}
+
+SYNAPSE_REGISTER(exec_Error)
+{
+	;
+}
+
+SYNAPSE_REGISTER(exec_Ended)
+{
+	;
+}
+
+
 SYNAPSE_REGISTER(play_Ready)
 {
 	Cmsg out;
-	out.dst=msg.src;
+	out.dst=msg["session"];
 	out.event="play_Open";
 	out["url"]="http://listen.di.fm/public3/chilloutdreams.pls";
 //	out["url"]="/home/psy/09-orbital-style-rns.mp3";
