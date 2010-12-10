@@ -87,8 +87,9 @@ namespace exec
 
 	\par Replies exec_Ended:
 		To indicate the process has ended. No more messages follow after this.
-		\param id	The user supplied id.
-		\param exit The exitcode
+		\param id	  The user supplied id.
+		\param exit   The program exited normally, with this code.
+		\param signal The program terminated with this signal.
 
 
 	*/

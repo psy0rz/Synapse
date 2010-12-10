@@ -107,6 +107,8 @@ namespace paper
 		out["path"]="modules/http_json.module/libhttp_json.so";
 		out.send();
 
+		out["path"]="modules/exec.module/libexec.so";
+		out.send();
 
 		//tell the rest of the world we are ready for duty
 		//(the core will send a timer_Ready)
@@ -155,9 +157,9 @@ namespace paper
 			//export to svg
 			ofstream svgStream;
 			svgStream.exceptions ( ofstream::eofbit | ofstream::failbit | ofstream::badbit );
-			stringstream f;
-			f << "wwwdir/p/" << id << ".svg";
-			svgStream.open(f.str());
+			stringstream svgFilename;
+			svgFilename << "wwwdir/p/" << id << ".svg";
+			svgStream.open(svgFilename.str());
 
 			//svg header
 			svgStream << "<?xml version=\"1.0\" standalone=\"no\"?>\n";
@@ -200,7 +202,28 @@ namespace paper
 
 			svgStream.close();
 
+
+			//now let imagemagic convert it to some nice pngs :)
+			stringstream pngFilename;
+			Cmsg out;
+
+			pngFilename.flush();
+			pngFilename << "wwwdir/p/" << id;
+			out.event="exec_Start";
+			out["cmd"]="nice convert  " + svgFilename.str() + " " + pngFilename.str() + ".large.png";
+			out.send();
+
+			out.event="exec_Start";
+			out["cmd"]="nice convert -density 25 " + svgFilename.str() + " " + pngFilename.str() + ".medium.png";
+			out.send();
+
+			out.event="exec_Start";
+			out["cmd"]="nice convert -density 10 " + svgFilename.str() + " " + pngFilename.str() + ".small.png";
+			out.send();
+
+
 			saved=true;
+
 
 		}
 

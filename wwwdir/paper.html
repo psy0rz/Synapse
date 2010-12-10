@@ -747,6 +747,9 @@
 			$("#objectId").html(msg["objectId"]);
 			//TODO:dynamic svg-path
 			$("#svgURL").attr("href","p/"+msg["objectId"]+".svg");
+			$("#pngURLsmall").attr("href","p/"+msg["objectId"]+".small.png");
+			$("#pngURLmedium").attr("href","p/"+msg["objectId"]+".medium.png");
+			$("#pngURLlarge").attr("href","p/"+msg["objectId"]+".large.png");
 			
 			//reset stuff
 			reset();
@@ -887,6 +890,11 @@
 
 		Papier nummer: <span id='objectId'></span><br>
 		<a id='svgURL' target='_blank'>SVG link</a>
+		<br>
+		PNG: 
+		<a id='pngURLsmall' target='_blank'>small</a>
+		<a id='pngURLmedium' target='_blank'>medium</a>
+		<a id='pngURLlarge' target='_blank'>large</a>
 
 		<br>
 		
@@ -896,7 +904,6 @@
 
 		<div class='ui-widget-header'>Gereedschap:</div>
 
-		Naam: <input id='clientName' type='text' value='' size=10>
 
 		<div id='colors'>
 			<div class='tool color defaultTool' style='background-color:#000000' value='#000000'>&nbsp;</div>
@@ -948,6 +955,7 @@
 
 
  		<div class='ui-widget-header'>Chat:</div>
+		Naam: <input id='clientName' type='text' value='' size=10>
 		<div id='chatList'></div>
 		<input id='chatInput' type='text' value='' >
 <!-- 
