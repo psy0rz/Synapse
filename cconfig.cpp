@@ -53,7 +53,9 @@ namespace synapse
 
 	void Cconfig::load(path configPath, bool merge)
 	{
+		INFO("Loading config file "<< configPath);
 		//errors are handled with exceptions
+
 
 		if (!merge)
 			clear();

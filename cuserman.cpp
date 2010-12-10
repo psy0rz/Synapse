@@ -46,53 +46,29 @@ CuserMan::CuserMan()
 	shutdown=false;
 
 	Cconfig config;
+	config.load("etc/synapse/userman.conf");
 
+	//create groups
+	for(CvarList::iterator groupI=config["groups"].list().begin(); groupI!=config["groups"].list().end(); groupI++)
+	{
+		addGroup(CgroupPtr(new Cgroup(*groupI)));
+	}
 
+	//create users
+	for(Cvar::iterator userI=config["users"].begin(); userI!=config["users"].end(); userI++)
+	{
+		//create user
+		CuserPtr user;
+		user=CuserPtr(new Cuser(userI->first, userI->second["passwd"].str()));
 
-	addGroup(CgroupPtr(new Cgroup("core")));
-	addGroup(CgroupPtr(new Cgroup("modules")));
-	addGroup(CgroupPtr(new Cgroup("users")));
-	addGroup(CgroupPtr(new Cgroup("everyone")));
-	addGroup(CgroupPtr(new Cgroup("anonymous")));
+		//add member groups
+		for(CvarList::iterator groupI=userI->second["groups"].list().begin(); groupI!=userI->second["groups"].list().end(); groupI++)
+		{
+			user->addMemberGroup(getGroup(*groupI));
+		}
 
-	//default core user
-	CuserPtr user;
-	user=CuserPtr(new Cuser("core",""));
-	user->addMemberGroup(getGroup("core"));
-	user->addMemberGroup(getGroup("modules"));
-	user->addMemberGroup(getGroup("everyone"));
-	addUser(user);
-
-	//default module user
-	user=CuserPtr(new Cuser("module",""));
-	user->addMemberGroup(getGroup("modules"));
-	user->addMemberGroup(getGroup("everyone"));
-	user->addMemberGroup(getGroup("anonymous"));
-	addUser(user);
-
-	//anonymous is only member of anonymous and probably only can send a core_Login.
-	user=CuserPtr(new Cuser("anonymous","anonymous"));
-	user->addMemberGroup(getGroup("anonymous"));
-	addUser(user);
-
-	//testusers
-	user=CuserPtr(new Cuser("psy","as"));
-	user->addMemberGroup(getGroup("users"));
-	user->addMemberGroup(getGroup("everyone"));
-	user->addMemberGroup(getGroup("anonymous"));
-	addUser(user);
-
-	//this admin receives EVERYTHING, including coreshizzle
-	user=CuserPtr(new Cuser("admin","bs"));
-	user->addMemberGroup(getGroup("users"));
-	user->addMemberGroup(getGroup("core"));
-	user->addMemberGroup(getGroup("modules"));
-	user->addMemberGroup(getGroup("everyone"));
-	user->addMemberGroup(getGroup("anonymous"));
-	addUser(user);  
-
-// 	for (int i=0; i<MAX_SESSIONS; i++)
-// 		sessions[i]=CsessionPtr();
+		addUser(user);
+	}
 
 }
 
