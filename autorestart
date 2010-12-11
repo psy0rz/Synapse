@@ -8,6 +8,7 @@ while true; do
 	if [ "$STAT" != "$OLDSTAT" ]; then
 		OLDSTAT=$STAT
 		killall -9 synapse
+		sleep 1
 		echo "############# PROGRAM CHANGED, RESTARTING #############"
 		./synapse $ARGS &
 	fi

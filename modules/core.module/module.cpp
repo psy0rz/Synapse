@@ -899,7 +899,7 @@ SYNAPSE_REGISTER(core_ChangeLogging)
 Usefull for debugging and administration.
 
 \par Replies \c core_Status:
-	Contains several status fields.
+	Contains several status fields. Mainly used by status.html.
 */
 SYNAPSE_REGISTER(core_GetStatus)
 {
@@ -908,9 +908,9 @@ SYNAPSE_REGISTER(core_GetStatus)
 		lock_guard<mutex> lock(messageMan->threadMutex);
 		out.event="core_Status";
 		out.dst=msg.src;
-		out["callMan"]=messageMan->callMan.getStatusStr(msg["queue"], msg["verbose"]);
-		out["userMan"]=messageMan->userMan.getStatusStr();
-		out["threads"]=messageMan->getStatusStr();
+		messageMan->callMan.getStatus(out);
+		messageMan->userMan.getStatus(out);
+		messageMan->getStatus(out);
 
 	}
 	out.send();

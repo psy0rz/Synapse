@@ -41,6 +41,7 @@ namespace synapse
 using namespace std;
 CuserMan::CuserMan()
 {
+	statMaxSessions=0;
 	sessionCounter=0;
 	sessionMaxPerUser=1000;
 	shutdown=false;
@@ -159,20 +160,27 @@ int CuserMan::addSession( CsessionPtr session)
 
 	//too much for this user already?
 	int userSessions=0;
+	int activeSessions=0;
 	for (int sessionId=1; sessionId<MAX_SESSIONS; sessionId++)
 	{
 		CsessionPtr chkSession;
 		chkSession=getSession(sessionId);
-		if (chkSession && chkSession->user==session->user)
+		if (chkSession)
 		{
-			userSessions++;
-			if (userSessions>=sessionMaxPerUser)
+			activeSessions++;
+			if (chkSession->user==session->user)
 			{
-				ERROR("User " << session->user->getName() << " has reached max sessions of " << sessionMaxPerUser);
-				return (SESSION_DISABLED);
+				userSessions++;
+				if (userSessions>=sessionMaxPerUser)
+				{
+					ERROR("User " << session->user->getName() << " has reached max sessions of " << sessionMaxPerUser);
+					return (SESSION_DISABLED);
+				}
 			}
 		}
 	}
+	if (activeSessions>statMaxSessions)
+		statMaxSessions=activeSessions;
 
 	//find free session ID. Start at the counter position, to prevent that we use the same numbers 
 	//all the time. (which will be confusing)
@@ -262,17 +270,25 @@ list<int> CuserMan::delCookieSessions(int cookie, CmodulePtr module)
 }
 
 
-string CuserMan::getStatusStr()
+void CuserMan::getStatus(Cvar & var)
 {
-	stringstream s;
+	int activeSessions=0;
 	for (int sessionId=0; sessionId<MAX_SESSIONS; sessionId++)
 	{
 		if (sessions[sessionId])
 		{
-			s << "session " << sessionId << " = " << sessions[sessionId]->user->getName() << "@" << sessions[sessionId]->module->name << ": " << sessions[sessionId]->description << "\n";
+			activeSessions++;
+			Cvar s;
+			s["id"]=sessionId;
+			s["user"]=sessions[sessionId]->user->getName();
+			s["module"]=sessions[sessionId]->module->name;
+			s["desc"]=sessions[sessionId]->description;
+			var["sessions"].list().push_back(s);
 		}
 	}
-	return (s.str());
+
+	var["statMaxSessions"]=statMaxSessions;
+	var["activeSessions"]=activeSessions;
 }
 
 void CuserMan::doShutdown()

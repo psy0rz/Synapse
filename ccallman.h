@@ -51,9 +51,11 @@ public:
 	void endCall(CcallList::iterator callI);
 	bool interruptCall(string event, int src, int dst);
 	bool interruptAll();
-	string getStatusStr(bool queue, bool verbose);
+	void getStatus(Cvar & var);
 
-	int statsTotal;
+	int statCallsTotal; //total calls processed
+	int statCallsQueued;//current length of queued calls
+	int statCallsQueuedMax; //maximum length of queued calls
 
 	CcallList callList;
 	

@@ -1,0 +1,199 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<title>Synapse status page</title>
+
+	<script type="text/javascript" src="synapse.js"></script>
+
+	<script type="text/javascript">
+
+		/// SYNAPSE EVENT HANDLERS
+
+		synapse_register("error",function(errortxt)
+		{
+			$('#error').html(errortxt);
+		});	
+				
+		synapse_register("default",function(msg_src, msg_dst, msg_event, msg)
+		{
+			var msgStr="(undefined)";
+			if (typeof msg != "undefined")
+			{
+				msgStr=JSON.stringify(msg);
+			}
+
+			$('#broadcastLog').append(
+				"<pre>From: "+msg_src+
+				" To:"+msg_dst+
+				" Event:"+msg_event+
+				"\n"+msgStr+"</pre>");
+
+			var objDiv = document.getElementById("broadcastLog");
+			objDiv.scrollTop = objDiv.scrollHeight;
+
+		});
+
+ 		synapse_register("core_Status",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+ 			
+			$('#queueBar').progressbar("option", "value", msg["statCallsQueued"]/msg["statCallsQueuedMax"]*100);
+			$('#queueValue').html(
+				"Queued: "+ msg["statCallsQueued"]+
+				"/"+msg["statCallsQueuedMax"]+
+				"<br>("+msg["statCallsTotal"]+
+				" calls)");
+
+			$('#threadValue').html("Threads: "+msg["activeThreads"]+"/"+msg["statMaxThreads"]);
+			$('#threadBar').progressbar("option", "value", msg["activeThreads"]/msg["statMaxThreads"]*100);
+
+			$('#sessionValue').html("Sessions: "+msg["activeSessions"]+"/"+msg["statMaxSessions"]);
+			$('#sessionBar').progressbar("option", "value", msg["activeSessions"]/msg["statMaxSessions"]*100);
+			
+ 			$('#core_Status').html(
+				"Call queue:\n"+msg["callMan"]+"\nThreads:\n"+msg["threads"]+"\nSessions:\n"+msg["userMan"]
+			);
+ 		});
+
+ 		synapse_register("http_json_Status",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+ 			$('#http_json_Status').html(
+				"Network status:\n"+msg["net"] + "\nHTTP sessions:\n"+msg["httpSessionMan"]
+
+			);
+ 		});
+
+
+ 		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+			$('.bar').progressbar();
+			
+ 			$('#authCookie').html(msg["authCookie"]);
+ 			$('#dst').html(msg_dst);
+			//synapse_login();
+			send(0,"core_Login", { 
+				"username": "admin",
+				"password": "bla"
+			});				
+ 			
+ 		});
+
+ 		synapse_register("module_Error",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+ 			$('#module_Error').html(msg["description"]);
+ 		});
+
+ 		synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
+ 		{
+ 			$('#module_Login').html("Logged in as " + msg["username"]);
+
+ 			window.setInterval(function() { 
+				send(1,"core_GetStatus", { 
+					"queue": 1,
+					"verbose": 0
+				});				
+
+				send(0,"http_json_GetStatus", { 
+				});				
+
+			}, 1000);
+ 		});
+
+
+		/// JAVA SCRIPT EVENT HANDLERS
+		$(document).ready(function(){
+			
+
+		});
+
+
+	</script>
+
+<style>
+.bar {
+	width:50%;
+	display: inline-block;
+}
+.value {
+	width:30%;
+	display: inline-block;
+}
+
+</style>
+
+</head>
+
+<body 
+	class='ui-widget'
+	style='
+			height:100%;
+'>
+	<div 
+		class='ui-widget-content'
+		style='
+			position:absolute;
+			left:0;
+			top:0;
+			width:50%; 
+			height:50%;
+			overflow:auto; 
+	'>
+		<div class='ui-widget-header'>Core status:</div>
+		<pre  >
+		<div id='core_Status'	></div>
+		</pre>
+	</div> 
+
+	<div 
+	class='ui-widget-content'
+	style='
+		position:absolute;
+		left:50%;
+		top:0;
+		width:50%; 
+		height:50%;
+		overflow:auto;
+	'>
+		<div class='ui-widget-header'>HTTP server status:</div>
+		<pre>
+		<div id='http_json_Status'	></div>
+		</pre>
+	</div> 
+
+	<div 
+	class='ui-widget-content'
+	id='broadcastLog'
+	style='
+		position:absolute;
+		left:0%;
+		top:50%;
+		width:50%; 
+		height:50%;
+		overflow:auto;
+	'>
+		<div class='ui-widget-header'>Broadcast messages:</div>
+	</div> 
+
+	<div 
+	class='ui-widget-content'
+	style='
+		position:absolute;
+		left:50%;
+		top:50%;
+		width:50%; 
+		height:50%;
+		overflow:auto;
+	'>
+		<div class='ui-widget-header'>Statistieken:</div>
+
+		<div class='value' id='queueValue'></div><div class='bar' id='queueBar'></div>
+
+		<div class='value' id='threadValue'></div><div class='bar' id='threadBar'	></div>
+
+		<div class='value' id='sessionValue'></div><div class='bar' id='sessionBar'	></div>
+	</div> 
+
+</body>
+</html>

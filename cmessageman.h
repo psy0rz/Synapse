@@ -105,7 +105,7 @@ public:
 	string firstModuleName;
 
 	//for administrator/debugging
-	string getStatusStr();
+	void getStatus(Cvar & var);
 
 	void setModuleThreads(CmodulePtr module, int maxThreads);
 	void setSessionThreads(CsessionPtr session, int maxThreads);
@@ -129,8 +129,9 @@ private:
 	int 	currentThreads; //number of  threads in memory
 	int	wantCurrentThreads;	//number of threads we want. threads will be added/deleted accordingly.
 	int 	maxThreads;     //max number of threads. system will never create more then this many 
-	int	activeThreads;	//threads that are actually executing actively
+	int	    activeThreads;	//threads that are actually executing actively
 	int 	maxActiveThreads; //max number of active threads seen (reset every X seconds by reaper)
+	int     statMaxThreads; //maximum number of threads ever reached, just for statistics
 	bool    shutdown; //program shutdown: end all threads
 	int 	exit;     //shutdown exit code	
 

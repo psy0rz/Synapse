@@ -64,6 +64,7 @@ CmessageMan::CmessageMan()
 	defaultModifyGroup=userMan.getGroup("modules");
 	defaultRecvGroup=userMan.getGroup("everyone");
 
+	statMaxThreads=0;
 	activeThreads=0;
 	currentThreads=0;
 	maxActiveThreads=0;
@@ -444,8 +445,11 @@ void CmessageMan::activeThread()
 	activeThreads++;
 	//keep maximum active threads, so the reaper knows when there are too much threads
 	if (activeThreads>maxActiveThreads)
+	{
 		maxActiveThreads=activeThreads;
-
+		if (activeThreads>statMaxThreads)
+			statMaxThreads=activeThreads;
+	}
 }
 
 
@@ -703,12 +707,12 @@ void CmessageMan::doShutdown(int exit=0)
 	threadCond.notify_all();
 }
 
-string CmessageMan::getStatusStr()
+void CmessageMan::getStatus(Cvar & var)
 {
-	stringstream s;
-	s << maxActiveThreads << "/" << wantCurrentThreads << " threads running. ";
+	var["activeThreads"]=activeThreads;
+	var["currentThreads"]=currentThreads;
+	var["statMaxThreads"]=statMaxThreads;
 
-	return(s.str());
 }
 
 

@@ -61,7 +61,7 @@ public:
 	CsessionPtr getSession(const int & sessionId);
 	bool delSession(const int id);
 	list<int> delCookieSessions(int cookie, CmodulePtr module);
-    string getStatusStr();
+    void getStatus(Cvar & var);
 	void doShutdown();
 	string login(const int & sessionId, const string & userName, const string & password);
 
@@ -73,6 +73,7 @@ private:
 	int sessionCounter;
 	CsessionPtr sessions[MAX_SESSIONS+1];
 	int sessionMaxPerUser;
+	int statMaxSessions; //maximum sessions ever used, for statistics
 	
 };
 }

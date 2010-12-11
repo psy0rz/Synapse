@@ -35,7 +35,9 @@ namespace synapse
 
 CcallMan::CcallMan()
 {
-	statsTotal=0;
+	statCallsTotal=0;
+	statCallsQueuedMax=0;
+	statCallsQueued=0;
 }
 
 
@@ -52,7 +54,10 @@ CcallMan::~CcallMan()
 void CcallMan::addCall(const CmsgPtr & msg, const CsessionPtr & dst, FsoHandler soHandler)
 {
 	callList.push_back(Ccall(msg,dst,soHandler));
-	statsTotal++;
+	statCallsTotal++;
+	statCallsQueued++;
+	if (statCallsQueued>statCallsQueuedMax)
+		statCallsQueuedMax=statCallsQueued;
 //	DEB( "(" << callList.size() << ")" << " " << msg->event << " FROM " << msg->src << " TO " << msg->dst << " CALLDST " << dst->id);
 }
 
@@ -74,6 +79,7 @@ CcallList::iterator CcallMan::startCall(const CthreadPtr & threadPtr)
 		{
 			callI->threadPtr=threadPtr;
 			callI->started=1;
+			statCallsQueued--;
 //			DEB( callI->msg->event << " FROM " << callI->msg->src << " TO " << callI->msg->dst << " CALLDST " << callI->dst->id);
 		
 			return callI;
@@ -92,40 +98,26 @@ void CcallMan::endCall(CcallList::iterator callI)
 }
 
 
-/*!
-    \fn CcallMan::print()
- */
-string CcallMan::getStatusStr(bool queue, bool verbose)
+void CcallMan::getStatus(Cvar & var)
 {
-	stringstream status;
-	int running=0;
 
 	for (CcallList::iterator callI=callList.begin(); callI!=callList.end(); callI++)
 	{
-		if (queue)
-		{
-			status << " |";
-			if (callI->started)
-				status << "RUNNING";
-			else if (!verbose)
-				continue;
-			else
-				status << "QUEUED ";
-	
-			status << " " << callI->msg->event << 
-					" FROM " << callI->msg->src << 
-					" TO " << callI->dst->id << ":" << callI->dst->user->getName() << 
-					"@" << callI->dst->module->name << callI->msg->getPrint("  |") <<
-					"\n";
-		}
-
-		if (callI->started)
-			running++;
+		Cvar c;
+		c["running"]=callI->started;
+		c["event"]=callI->msg->event;
+		c["src"]=callI->msg->src;
+		c["dst"]=callI->dst->id;
+		c["dstUserName"]=callI->dst->user->getName();
+		c["dstModule"]=callI->dst->module->name;
+		c["data"]=*callI->msg;
+		var["queue"].list().push_back(c);
 	}
 
-	status << statsTotal << " calls processed, " << running << "/" << callList.size() << " calls running.\n";
+	var["statCallsQueued"]=statCallsQueued;
+	var["statCallsQueuedMax"]=statCallsQueuedMax;
+	var["statCallsTotal"]=statCallsTotal;
 
-	return (status.str());
 }
 
 bool CcallMan::interruptCall(string event, int src, int dst)
@@ -149,6 +141,7 @@ bool CcallMan::interruptCall(string event, int src, int dst)
 					{
 						DEB("Cancelling call: " << event << " FROM " << src << " TO " << dst);
 						callList.erase(callI);
+						statCallsQueued--;
 						return (true);
 
 					}
