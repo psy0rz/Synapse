@@ -21,7 +21,7 @@ SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 #add definitions, compiler switches, etc.
 #ADD_DEFINITIONS(-Wall -O2 -pthread -pg -Werror)
-ADD_DEFINITIONS(-Wall -O2 -pthread -Werror)
+ADD_DEFINITIONS(-Wall -O3 -pthread -Werror -fno-strict-aliasing)
 
 #list all source files here
 file(GLOB sources *.cpp)
