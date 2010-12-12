@@ -296,29 +296,23 @@ void CnetMan<Tnet>::setMaxConnections(unsigned int maxConnections)
 }
 
 template <class Tnet>
-string CnetMan<Tnet>::getStatusStr()
+void CnetMan<Tnet>::getStatus(Cvar & var)
 {
 	{
 		lock_guard<mutex> lock(threadMutex);
-		stringstream s;
 
 		for (CacceptorMap::iterator acceptorI=acceptors.begin(); acceptorI!=acceptors.end(); acceptorI++)
 		{
-			s << "Listening on: " << acceptorI->first << "/tcp\n";
+			var["ports"].list().push_back(acceptorI->first);
 		}
 
-		s << "Open connections: \n";
 		for (typename CnetMap::iterator netI=nets.begin(); netI!=nets.end(); netI++)
 		{
-			string status;
-			status=netI->second->getStatusStr();
-			if (status!="")
-			{	
-				s << status << "\n";
-			}
+			Cvar c;
+			netI->second->getStatus(c);
+			if (c.isSet("id"))
+				var["connections"].list().push_back(c);
 		}
-
-		return (s.str());
 	}
 
 };

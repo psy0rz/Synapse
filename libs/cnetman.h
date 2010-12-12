@@ -33,7 +33,7 @@
 			on succesfull resolving and connecting:
 				-> calls back connected(id)
 				-> calls back connected_client(id);
-				-> calls back read(id,...) for all incoming data until disconnected
+				-> calls back received(id,...) for all incoming data until disconnected
 			-> calls back disconnected(id,error); 
 			if reconnectTime>0 and doDisconnect was not called: sleeps and starts over again..
 			-> returns true;
@@ -110,7 +110,7 @@ namespace synapse
 		void setMaxConnections(unsigned int maxConnections);
 
 		//debugging/admin
-		string getStatusStr();
+		void getStatus(Cvar & var);
 
 		typedef shared_ptr<Tnet> CnetPtr;
 		typedef map<int, CnetPtr > CnetMap;

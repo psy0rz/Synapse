@@ -390,20 +390,16 @@ void Cnet::received(int id, asio::streambuf &readBuffer, std::size_t bytesTransf
 }
 
 
-//should return one line without enters
-string Cnet::getStatusStr()
+void Cnet::getStatus(Cvar & var)
 {
-	stringstream s;
-
-
 	if (tcpSocket.is_open())
 	{
-		s << "netId " << id << ": ";
-		s << tcpSocket.local_endpoint().address().to_string() << ":" << tcpSocket.local_endpoint().port() << " <-> ";
-		s << tcpSocket.remote_endpoint().address().to_string() << ":" << tcpSocket.remote_endpoint().port();
+		var["id"]=id;
+		var["localAddr"]=tcpSocket.local_endpoint().address().to_string();
+		var["localPort"]=tcpSocket.local_endpoint().port();
+		var["remoteAddr"]=tcpSocket.remote_endpoint().address().to_string();
+		var["remotePort"]=tcpSocket.remote_endpoint().port();
 	}
-
-	return (s.str());
 }
 
 }

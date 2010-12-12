@@ -21,6 +21,7 @@
 #define CHTTPSESSION_H
 
 #include <string>
+#include "cvar.h"
 
 typedef long int ThttpCookie;
 
@@ -41,7 +42,7 @@ class ChttpSession
 	ChttpSession();
 
 	//admin/debugging
-	string getStatusStr();	
+	void getStatus(Cvar & var);
 
 };
 

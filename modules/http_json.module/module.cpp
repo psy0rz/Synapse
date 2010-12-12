@@ -616,23 +616,21 @@ class CnetHttp : public synapse::Cnet
 	}
 
 	//for admin/debugging
-	string getStatusStr()
+	void getStatus(Cvar & var)
 	{
-		stringstream status;
-		status << Cnet::getStatusStr();
-		if (status.str()!="")
+		Cnet::getStatus(var);
+		if (tcpSocket.is_open())
 		{
-			status << " HTTP status: ";
 			if (state==REQUEST)
-				status << "WAIT FOR REQUEST ";
+				var["httpStatus"]="idle";
 			else if (state==CONTENT)
-				status << "RECEIVE CONTENT  ";
+				var["httpStatus"]="receiving";
 			else if (state==WAIT_LONGPOLL)
-				status << "WAIT FOR LONGPOLL";
-			status << " authCookie=" << authCookie;
+				var["httpStatus"]="longpoll";
+
+			var["authCookie"]=authCookie;
 		}
 
-		return (status.str());
 	}
 
 };
@@ -847,8 +845,8 @@ SYNAPSE_REGISTER(http_json_GetStatus)
 	Cmsg out;
 	out.dst=msg.src;
 	out.event="http_json_Status";
-	out["net"]=net.getStatusStr();
-	out["httpSessionMan"]=httpSessionMan.getStatusStr();
+	net.getStatus(out);
+	httpSessionMan.getStatus(out);
 	out.send();
 }
 

@@ -11,31 +11,6 @@
 	<script type="text/javascript">
 
 		/// SYNAPSE EVENT HANDLERS
-
-		synapse_register("error",function(errortxt)
-		{
-			$('#error').html(errortxt);
-		});	
-				
-		synapse_register("Xdefault",function(msg_src, msg_dst, msg_event, msg)
-		{
-			var msgStr="(undefined)";
-			if (typeof msg != "undefined")
-			{
-				msgStr=JSON.stringify(msg);
-			}
-
-			$('#broadcastLog').append(
-				"<pre>From: "+msg_src+
-				" To:"+msg_dst+
-				" Event:"+msg_event+
-				"\n"+msgStr+"</pre>");
-
-			var objDiv = document.getElementById("broadcastLog");
-			objDiv.scrollTop = objDiv.scrollHeight;
-
-		});
-
 		function getupdate()
 		{
  			window.setTimeout(function(){
@@ -65,7 +40,7 @@
 				cpsMax=cps;
 			statCallsTotal=msg["statCallsTotal"];
 			$('#callsBar').progressbar("option", "value", cps/cpsMax*100);
-			$('#callsValue').html("Calls: "+ cps + "/" + cpsMax);
+			$('#callsValue').html("Calls/s: "+ cps + "/" + cpsMax);
 
 			//sends per second
 			var sps=Math.round(((msg["statSends"]-statSends)*1000)/(currentTime-lastTime));
@@ -73,7 +48,7 @@
 				spsMax=sps;
 			statSends=msg["statSends"];
 			$('#sendsBar').progressbar("option", "value", sps/spsMax*100);
-			$('#sendsValue').html("Sends: "+ sps + "/" + spsMax);
+			$('#sendsValue').html("Sends/s: "+ sps + "/" + spsMax);
 			
 
 			lastTime=currentTime;
@@ -95,33 +70,39 @@
 			);
 
  			$('#sessions').empty();
+ 			$('#sessions').append("<tr><th>id<th>User<th>Module<th>Description<th>Sends<th>Receives</tr>");
 			for (var session in msg["sessions"])
 			{
-				var html="<div>";
-				html+=msg["sessions"][session]["id"]+": ";
-				html+=msg["sessions"][session]["user"]+"@"+msg["sessions"][session]["module"];
-				html+=" <i>"+msg["sessions"][session]["desc"]+"</i>";
-				html+="<br>Sends: "+msg["sessions"][session]["statSends"]+" Recvs:"+msg["sessions"][session]["statCalls"];
-				html+="</div>";
-				$('#sessions').append(html);
+				var s=msg["sessions"][session];
+				$('#sessions').append(
+						"<tr><td>"+s["id"]+
+						"<td>"+s["user"]+
+						"<td>"+s["module"]+
+						"<td>"+s["desc"]+
+						"<td>"+s["statSends"]+
+						"<td>"+s["statCalls"]+
+						"</tr>"
+				);
 			}
 
  			$('#queue').empty();
+ 			$('#queue').append("<tr><th>Run?<th>Event<th>Src<th>Dst<th>Data</tr>");
 			for (var call in msg["queue"])
 			{
 				var html;
 				var m=msg["queue"][call];
-				if (m["running"]==1)
-					html="<div class='running'>Running ";
-				else
-					html="<div class='queued'>Queued ";
+				var on="";
+				if (m["running"]==0)
+					on="on";
 
-				html+="<i>"+m["event"]+"</i> ";
-				html+="from <i>"+m["src"]+"</i> ";
-				html+="to <i>"+m["dst"]+":"+m["dstUserName"]+"@"+m["dstModule"]+"</i> ";
-				html+="<pre>"+JSON.stringify(m["data"],null," ")+"</pre>";
-				html+="</div>";
-				$('#queue').append(html);
+				$('#queue').append(
+					"<tr><td>"+m["running"]+
+					"<td>"+m["event"]+
+					"<td>"+m["src"]+
+					"<td>"+m["dst"]+":"+m["dstUserName"]+"@"+m["dstModule"]+
+					"<td>"+"<pre>"+JSON.stringify(m["data"],null," ")+"</pre>"+
+					"</tr>"
+				);
 			}
 			
 			
@@ -129,10 +110,45 @@
 
  		synapse_register("http_json_Status",function(msg_src, msg_dst, msg_event, msg)
  		{
- 			$('#http_json_Status').html(
-				"Network status:\n"+msg["net"] + "\nHTTP sessions:\n"+msg["httpSessionMan"]
+ 			$('#httpConnections').empty();
+ 			$('#httpConnections').append("<tr><th>Net id<th>Local<th>Remote<th>Status<th>Authcookie</tr>");
+			for (var i in msg["connections"])
+			{
+				var c=msg["connections"][i];
+				var on="";
+				if (c["httpStatus"]!="idle")
+					on="on";
+	 			$('#httpConnections').append(
+	 		 		"<tr class='"+on+"'><td>"+c["id"]+
+	 		 		"<td>"+c["localAddr"]+":"+c["localPort"]+
+	 		 		"<td>"+c["remoteAddr"]+":"+c["remotePort"]+
+	 		 		"<td>"+c["httpStatus"]+
+	 		 		"<td>"+c["authCookie"]+
+					"</tr>"
+	 		 		
+	 		 	);
+			}
 
-			);
+			$('#httpSessions').empty();
+ 			$('#httpSessions').append("<tr><th>Session id<th>Authcookie<th>idle time<th>Bytes queued<th>Possible net id<th>Expired?</tr>");
+			for (var i in msg["httpSessions"])
+			{
+				var s=msg["httpSessions"][i];
+				var on="";
+				if (s["lastTime"]<2)
+					on="on";
+	 			$('#httpSessions').append(
+	 		 		"<tr class='"+on+"'><td>"+s["id"]+
+	 		 		"<td>"+s["authCookie"]+
+	 		 		"<td>"+s["lastTime"]+
+	 		 		"<td>"+s["queueLength"]+
+	 		 		"<td>"+s["netId"]+
+	 		 		"<td>"+s["expired"]+
+					"</tr>"
+	 		 		
+	 		 	);
+			}
+ 			
  		});
 
 
@@ -142,68 +158,44 @@
 			
  			$('#authCookie').html(msg["authCookie"]);
  			$('#dst').html(msg_dst);
-			//synapse_login();
-			send(0,"core_Login", { 
-				"username": "admin",
-				"password": "bla"
-			});				
- 			
+			synapse_login();
  		});
 
- 		synapse_register("module_Error",function(msg_src, msg_dst, msg_event, msg)
- 		{
- 			$('#module_Error').html(msg["description"]);
- 		});
 
  		
  		synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
  		{
- 			$('#module_Login').html("Logged in as " + msg["username"]);
-
 			getupdate();
-			
  		});
 
 
-		/// JAVA SCRIPT EVENT HANDLERS
-		$(document).ready(function(){
-			
-
-		});
 
 
 	</script>
 
 <style>
-.bar {
-	width:50%;
-	display: inline-block;
-}
-.value {
-	width:30%;
-	display: inline-block;
-}
-
-#sessions div 
-{
-	background-color: #eeffee;
-	margin: 1px;
-}
-
-#queue .running 
-{
-	background-color: #eeffee;
-	margin: 1px;
-}
-
-#queue .queued
-{
-	background-color: #ffeeee;
-	margin: 1px;
-}
-
-
-
+	.bar {
+		width:50%;
+		display: inline-block;
+	}
+	
+	.value {
+		width:30%;
+		display: inline-block;
+	}
+	
+	
+	
+	tr 
+	{
+		background-color: #eeffee;
+	}
+	
+	.on
+	{
+		background-color: #ffeeee;
+	
+	}
 </style>
 
 </head>
@@ -224,7 +216,7 @@
 			overflow:auto; 
 	'>
 		<div class='ui-widget-header'>Sessions:</div>
-		<div id='sessions'></div>
+		<table id='sessions'></table>
 	</div> 
 
 	<div 
@@ -238,9 +230,13 @@
 		overflow:auto;
 	'>
 		<div class='ui-widget-header'>HTTP server status:</div>
-		<pre>
-		<div id='http_json_Status'	></div>
-		</pre>
+
+		<table id='httpConnections'>
+		</table>
+
+		<table id='httpSessions'>
+		</table>
+
 	</div> 
 
 	<div 
@@ -255,7 +251,7 @@
 		overflow:auto;
 	'>
 		<div class='ui-widget-header'>Call queue:</div>
-		<div id='queue'></div>
+		<table id='queue'></table>
 	</div> 
 
 	<div 
@@ -268,7 +264,7 @@
 		height:50%;
 		overflow:auto;
 	'>
-		<div class='ui-widget-header'>Statistics:</div>
+		<div class='ui-widget-header'>Current/Max values:</div>
 
 		<div class='value' id='sendsValue'></div><div class='bar' id='sendsBar'></div>
 

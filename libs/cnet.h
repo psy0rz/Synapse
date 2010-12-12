@@ -37,6 +37,8 @@
 #include <boost/asio.hpp>
 #include <string>
 #include <boost/shared_ptr.hpp>
+#include "cvar.h"
+
 #define CONNECT_TIMEOUT 60
 
 namespace synapse
@@ -66,7 +68,7 @@ namespace synapse
 		void run();
 
 		//admin/debugging
-		virtual string getStatusStr();
+		virtual void getStatus(Cvar & var);
 
 		//this needs to be public, in case someone overrides startAsyncRead():
 		void readHandler(

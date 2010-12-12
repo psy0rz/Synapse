@@ -57,7 +57,7 @@ public:
 	unsigned int maxSessionQueue;
 
 	//admin/debug stuff
-	string getStatusStr();
+	void getStatus(Cvar & var);
 
 	//Called from http-client-side:
 	void getJsonQueue(int netId, ThttpCookie & authCookie, string & jsonStr, ThttpCookie authCookieClone);
