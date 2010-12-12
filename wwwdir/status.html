@@ -86,17 +86,14 @@
 			}
 
  			$('#queue').empty();
- 			$('#queue').append("<tr><th>Run?<th>Event<th>Src<th>Dst<th>Data</tr>");
+ 			$('#queue').append("<tr><th>Event<th>Src<th>Dst<th>Data</tr>");
 			for (var call in msg["queue"])
 			{
 				var html;
 				var m=msg["queue"][call];
-				var on="";
-				if (m["running"]==0)
-					on="on";
 
 				$('#queue').append(
-					"<tr><td>"+m["running"]+
+					"<tr>"+
 					"<td>"+m["event"]+
 					"<td>"+m["src"]+
 					"<td>"+m["dst"]+":"+m["dstUserName"]+"@"+m["dstModule"]+
