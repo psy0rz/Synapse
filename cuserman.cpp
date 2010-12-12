@@ -179,8 +179,6 @@ int CuserMan::addSession( CsessionPtr session)
 			}
 		}
 	}
-	if (activeSessions>statMaxSessions)
-		statMaxSessions=activeSessions;
 
 	//find free session ID. Start at the counter position, to prevent that we use the same numbers 
 	//all the time. (which will be confusing)
@@ -197,6 +195,12 @@ int CuserMan::addSession( CsessionPtr session)
 			sessions[sessionCounter]=session;
 			session->id=sessionCounter;
 			DEB("added session " << sessionCounter << " with user " << session->user->getName());
+
+			//keep stats
+			activeSessions++;
+			if (activeSessions>statMaxSessions)
+				statMaxSessions=activeSessions;
+
 			return (sessionCounter);
 		}
 	}
@@ -273,16 +277,20 @@ list<int> CuserMan::delCookieSessions(int cookie, CmodulePtr module)
 void CuserMan::getStatus(Cvar & var)
 {
 	int activeSessions=0;
-	for (int sessionId=0; sessionId<MAX_SESSIONS; sessionId++)
+	for (int sessionId=1; sessionId<MAX_SESSIONS; sessionId++)
 	{
-		if (sessions[sessionId])
+		CsessionPtr chkSession;
+		chkSession=getSession(sessionId);
+		if (chkSession)
 		{
 			activeSessions++;
 			Cvar s;
 			s["id"]=sessionId;
-			s["user"]=sessions[sessionId]->user->getName();
-			s["module"]=sessions[sessionId]->module->name;
-			s["desc"]=sessions[sessionId]->description;
+			s["user"]=chkSession->user->getName();
+			s["module"]=chkSession->module->name;
+			s["desc"]=chkSession->description;
+			s["statSends"]=chkSession->statSends;
+			s["statCalls"]=chkSession->statCalls;
 			var["sessions"].list().push_back(s);
 		}
 	}

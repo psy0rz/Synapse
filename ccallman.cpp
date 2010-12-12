@@ -104,13 +104,13 @@ void CcallMan::getStatus(Cvar & var)
 	for (CcallList::iterator callI=callList.begin(); callI!=callList.end(); callI++)
 	{
 		Cvar c;
+		c["data"]=*callI->msg;
 		c["running"]=callI->started;
 		c["event"]=callI->msg->event;
 		c["src"]=callI->msg->src;
 		c["dst"]=callI->dst->id;
 		c["dstUserName"]=callI->dst->user->getName();
 		c["dstModule"]=callI->dst->module->name;
-		c["data"]=*callI->msg;
 		var["queue"].list().push_back(c);
 	}
 

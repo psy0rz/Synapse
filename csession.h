@@ -75,6 +75,8 @@ public:
 	int cookie; //arbitrary value, set by module for internal use
 	int maxThreads;
 	int currentThreads;
+	int statCalls;
+	int statSends;
 	string description;
 
 

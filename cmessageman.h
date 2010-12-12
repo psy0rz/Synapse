@@ -139,11 +139,11 @@ private:
 	void activeThread();
 
 	
-
 	CgroupPtr defaultRecvGroup;
 	CgroupPtr defaultSendGroup;
 	CgroupPtr defaultModifyGroup;
 
+	int statSends;
 };
 
 }

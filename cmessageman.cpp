@@ -64,6 +64,8 @@ CmessageMan::CmessageMan()
 	defaultModifyGroup=userMan.getGroup("modules");
 	defaultRecvGroup=userMan.getGroup("everyone");
 
+	statSends=0;
+
 	statMaxThreads=0;
 	activeThreads=0;
 	currentThreads=0;
@@ -148,6 +150,8 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		throw(runtime_error(s.str().c_str()));
 	}
 
+	src->statSends++;
+	statSends++;
 
 	stringstream msgStr;
 	if (logSends)
@@ -712,6 +716,7 @@ void CmessageMan::getStatus(Cvar & var)
 	var["activeThreads"]=activeThreads;
 	var["currentThreads"]=currentThreads;
 	var["statMaxThreads"]=statMaxThreads;
+	var["statSends"]=statSends;
 
 }
 

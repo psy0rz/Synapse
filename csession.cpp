@@ -43,7 +43,8 @@ Csession::Csession(const CuserPtr &user, const CmodulePtr &module, int cookie)
 	id=SESSION_DISABLED;
 	maxThreads=1;
 	currentThreads=0;
-
+	statCalls=0;
+	statSends=0;
 }
 
 
@@ -75,6 +76,7 @@ bool Csession::startThread()
 		if (module->startThread())
 		{
 			currentThreads++;
+			statCalls++;
 			return true;
 		}
 	}

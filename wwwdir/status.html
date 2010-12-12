@@ -17,7 +17,7 @@
 			$('#error').html(errortxt);
 		});	
 				
-		synapse_register("default",function(msg_src, msg_dst, msg_event, msg)
+		synapse_register("Xdefault",function(msg_src, msg_dst, msg_event, msg)
 		{
 			var msgStr="(undefined)";
 			if (typeof msg != "undefined")
@@ -36,15 +36,53 @@
 
 		});
 
+		function getupdate()
+		{
+ 			window.setTimeout(function(){
+				send(1,"core_GetStatus", { 
+					"queue": 1,
+					"verbose": 0
+				});				
+	
+				send(0,"http_json_GetStatus", { 
+				});
+ 			},1000);			
+		}
+
+		var statCallsTotal=0;
+		var cpsMax=0;
+		var statSends=0;
+		var spsMax=0;
+		var lastTime=0;
  		synapse_register("core_Status",function(msg_src, msg_dst, msg_event, msg)
  		{
- 			
+			getupdate();
+			var currentTime=new Date().getTime();
+
+			//calls per second
+			var cps=Math.round(((msg["statCallsTotal"]-statCallsTotal)*1000)/(currentTime-lastTime));
+			if (cps>cpsMax)
+				cpsMax=cps;
+			statCallsTotal=msg["statCallsTotal"];
+			$('#callsBar').progressbar("option", "value", cps/cpsMax*100);
+			$('#callsValue').html("Calls: "+ cps + "/" + cpsMax);
+
+			//sends per second
+			var sps=Math.round(((msg["statSends"]-statSends)*1000)/(currentTime-lastTime));
+			if (sps>spsMax)
+				spsMax=sps;
+			statSends=msg["statSends"];
+			$('#sendsBar').progressbar("option", "value", sps/spsMax*100);
+			$('#sendsValue').html("Sends: "+ sps + "/" + spsMax);
+			
+
+			lastTime=currentTime;
+			
+		
 			$('#queueBar').progressbar("option", "value", msg["statCallsQueued"]/msg["statCallsQueuedMax"]*100);
 			$('#queueValue').html(
 				"Queued: "+ msg["statCallsQueued"]+
-				"/"+msg["statCallsQueuedMax"]+
-				"<br>("+msg["statCallsTotal"]+
-				" calls)");
+				"/"+msg["statCallsQueuedMax"]);
 
 			$('#threadValue').html("Threads: "+msg["activeThreads"]+"/"+msg["statMaxThreads"]);
 			$('#threadBar').progressbar("option", "value", msg["activeThreads"]/msg["statMaxThreads"]*100);
@@ -55,6 +93,38 @@
  			$('#core_Status').html(
 				"Call queue:\n"+msg["callMan"]+"\nThreads:\n"+msg["threads"]+"\nSessions:\n"+msg["userMan"]
 			);
+
+ 			$('#sessions').empty();
+			for (var session in msg["sessions"])
+			{
+				var html="<div>";
+				html+=msg["sessions"][session]["id"]+": ";
+				html+=msg["sessions"][session]["user"]+"@"+msg["sessions"][session]["module"];
+				html+=" <i>"+msg["sessions"][session]["desc"]+"</i>";
+				html+="<br>Sends: "+msg["sessions"][session]["statSends"]+" Recvs:"+msg["sessions"][session]["statCalls"];
+				html+="</div>";
+				$('#sessions').append(html);
+			}
+
+ 			$('#queue').empty();
+			for (var call in msg["queue"])
+			{
+				var html;
+				var m=msg["queue"][call];
+				if (m["running"]==1)
+					html="<div class='running'>Running ";
+				else
+					html="<div class='queued'>Queued ";
+
+				html+="<i>"+m["event"]+"</i> ";
+				html+="from <i>"+m["src"]+"</i> ";
+				html+="to <i>"+m["dst"]+":"+m["dstUserName"]+"@"+m["dstModule"]+"</i> ";
+				html+="<pre>"+JSON.stringify(m["data"],null," ")+"</pre>";
+				html+="</div>";
+				$('#queue').append(html);
+			}
+			
+			
  		});
 
  		synapse_register("http_json_Status",function(msg_src, msg_dst, msg_event, msg)
@@ -85,20 +155,13 @@
  			$('#module_Error').html(msg["description"]);
  		});
 
+ 		
  		synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
  		{
  			$('#module_Login').html("Logged in as " + msg["username"]);
 
- 			window.setInterval(function() { 
-				send(1,"core_GetStatus", { 
-					"queue": 1,
-					"verbose": 0
-				});				
-
-				send(0,"http_json_GetStatus", { 
-				});				
-
-			}, 1000);
+			getupdate();
+			
  		});
 
 
@@ -121,6 +184,26 @@
 	display: inline-block;
 }
 
+#sessions div 
+{
+	background-color: #eeffee;
+	margin: 1px;
+}
+
+#queue .running 
+{
+	background-color: #eeffee;
+	margin: 1px;
+}
+
+#queue .queued
+{
+	background-color: #ffeeee;
+	margin: 1px;
+}
+
+
+
 </style>
 
 </head>
@@ -140,10 +223,8 @@
 			height:50%;
 			overflow:auto; 
 	'>
-		<div class='ui-widget-header'>Core status:</div>
-		<pre  >
-		<div id='core_Status'	></div>
-		</pre>
+		<div class='ui-widget-header'>Sessions:</div>
+		<div id='sessions'></div>
 	</div> 
 
 	<div 
@@ -173,7 +254,8 @@
 		height:50%;
 		overflow:auto;
 	'>
-		<div class='ui-widget-header'>Broadcast messages:</div>
+		<div class='ui-widget-header'>Call queue:</div>
+		<div id='queue'></div>
 	</div> 
 
 	<div 
@@ -186,7 +268,11 @@
 		height:50%;
 		overflow:auto;
 	'>
-		<div class='ui-widget-header'>Statistieken:</div>
+		<div class='ui-widget-header'>Statistics:</div>
+
+		<div class='value' id='sendsValue'></div><div class='bar' id='sendsBar'></div>
+
+		<div class='value' id='callsValue'></div><div class='bar' id='callsBar'></div>
 
 		<div class='value' id='queueValue'></div><div class='bar' id='queueBar'></div>
 
