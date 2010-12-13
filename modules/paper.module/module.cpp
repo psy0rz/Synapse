@@ -152,85 +152,82 @@ namespace paper
 
 		void save(string path)
 		{
-			drawing.save(path);
-
-			//export to svg
-			ofstream svgStream;
-			svgStream.exceptions ( ofstream::eofbit | ofstream::failbit | ofstream::badbit );
-			stringstream svgFilename;
-			svgFilename << "wwwdir/p/" << id << ".svg";
-			svgStream.open(svgFilename.str());
-
-			//svg header
-			svgStream << "<?xml version=\"1.0\" standalone=\"no\"?>\n";
-			svgStream << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n\n";
-
-			svgStream << "<svg width=\"100%\" height=\"100%\" version=\"1.1\"";
-
-			//default settings
-			svgStream << " viewBox=\"0 0 10000 10000\"";
-			svgStream << " stroke-linecap=\"round\"";
-			svgStream << " stroke-linejoin=\"round\"";
-			svgStream << " preserveAspectRatio=\"none\"\n";
-			svgStream << " xmlns=\"http://www.w3.org/2000/svg\">\n\n";
-
-			svgStream << "<title>internetpapier.nl tekening #" << id << "</title>\n";
-
-			//export all elements
-			for(Cvar::iterator elementI=drawing["data"].begin(); elementI!=drawing["data"].end(); elementI++)
-			{
-				//start element
-				svgStream << "<" << elementI->second["element"].str();
-
-				//add id
-				svgStream << " id=\"" << elementI->first << "\"";
-
-				//fill in all element attributes
-				for(Cvar::iterator I=elementI->second.begin(); I!=elementI->second.end(); I++)
+			if (drawing.isChanged())
 				{
-					if (I->first!="element")
-						svgStream << " " << I->first << "=\"" << I->second.str() << "\"";
+				drawing.save(path);
+
+				//export to svg
+				ofstream svgStream;
+				svgStream.exceptions ( ofstream::eofbit | ofstream::failbit | ofstream::badbit );
+				stringstream svgFilename;
+				svgFilename << "wwwdir/p/" << id << ".svg";
+				svgStream.open(svgFilename.str());
+
+				//svg header
+				svgStream << "<?xml version=\"1.0\" standalone=\"no\"?>\n";
+				svgStream << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n\n";
+
+				svgStream << "<svg width=\"100%\" height=\"100%\" version=\"1.1\"";
+
+				//default settings
+				svgStream << " viewBox=\"0 0 10000 10000\"";
+				svgStream << " stroke-linecap=\"round\"";
+				svgStream << " stroke-linejoin=\"round\"";
+				svgStream << " preserveAspectRatio=\"none\"\n";
+				svgStream << " xmlns=\"http://www.w3.org/2000/svg\">\n\n";
+
+				svgStream << "<title>internetpapier.nl tekening #" << id << "</title>\n";
+
+				//export all elements
+				for(Cvar::iterator elementI=drawing["data"].begin(); elementI!=drawing["data"].end(); elementI++)
+				{
+					//start element
+					svgStream << "<" << elementI->second["element"].str();
+
+					//add id
+					svgStream << " id=\"" << elementI->first << "\"";
+
+					//fill in all element attributes
+					for(Cvar::iterator I=elementI->second.begin(); I!=elementI->second.end(); I++)
+					{
+						if (I->first!="element")
+							svgStream << " " << I->first << "=\"" << I->second.str() << "\"";
+					}
+
+					//end element
+					svgStream << "/>\n";
 				}
 
-				//end element
-				svgStream << "/>\n";
+
+				//svg footer
+				svgStream << "\n</svg>\n";
+
+				svgStream.close();
+
+
+				//now let imagemagic convert it to some nice pngs :)
+				stringstream pngFilename;
+				Cmsg out;
+
+				pngFilename.flush();
+				pngFilename << "wwwdir/p/" << id;
+				out.event="exec_Start";
+				out["cmd"]="nice convert -density 10 " + svgFilename.str() + " " + pngFilename.str() + ".large.png";
+				out.send();
+
+				out.event="exec_Start";
+				out["cmd"]="nice convert -density 2 " + svgFilename.str() + " " + pngFilename.str() + ".medium.png";
+				out.send();
+
+				out.event="exec_Start";
+				out["cmd"]="nice convert -density 1 " + svgFilename.str() + " " + pngFilename.str() + ".small.png";
+				out.send();
 			}
-
-
-			//svg footer
-			svgStream << "\n</svg>\n";
-
-			svgStream.close();
-
-
-			//now let imagemagic convert it to some nice pngs :)
-			stringstream pngFilename;
-			Cmsg out;
-
-			pngFilename.flush();
-			pngFilename << "wwwdir/p/" << id;
-			out.event="exec_Start";
-			out["cmd"]="nice convert -density 10 " + svgFilename.str() + " " + pngFilename.str() + ".large.png";
-			out.send();
-
-			out.event="exec_Start";
-			out["cmd"]="nice convert -density 2 " + svgFilename.str() + " " + pngFilename.str() + ".medium.png";
-			out.send();
-
-			out.event="exec_Start";
-			out["cmd"]="nice convert -density 1 " + svgFilename.str() + " " + pngFilename.str() + ".small.png";
-			out.send();
-
-
-			saved=true;
-
-
 		}
 
 		void load(string path)
 		{
 			drawing.load(path);
-			saved=true;
 		}
 
 
@@ -373,7 +370,7 @@ namespace paper
 					elementI->second[I->first]=I->second.str();
 				}
 
-				saved=false;
+				drawing.changed();
 			}
 			//send refresh?
 			else if (msg["cmd"].str()=="refresh")
@@ -402,7 +399,7 @@ namespace paper
 				//delete it
 				Cvar::iterator elementI=getElement(msg["id"]);
 				drawing["data"].map().erase(elementI);
-				saved=false;
+				drawing.changed();
 
 				getClient(msg.src).lastElementId=0;
 			}

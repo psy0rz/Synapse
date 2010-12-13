@@ -39,9 +39,10 @@ namespace synapse
 		typedef map<int,TsharedObject > CobjectMap ;
 		CobjectMap objectMap;
 
-		Cconfig config;
 		string storagePath;
 
+		protected:
+		Cconfig config;
 
 		public:
 
@@ -59,7 +60,6 @@ namespace synapse
 
 
 		// Get a reference to an object, load it from disk if neccesary, or throw exception
-		//FIXME: unload objects automatically
 		TsharedObject & getObject(int objectId)
 		{
 			if (objectMap.find(objectId)== objectMap.end())
@@ -82,7 +82,7 @@ namespace synapse
 		}
 
 		// Get a reference to an object by client id.
-		//TODO: OPTIMIZE: will get slow with a lot of objects
+		//TODO: OPTIMIZE: will get slow with a lot of objects? howeever not all objects are loaded all the time
 		TsharedObject & getObjectByClient(int clientId)
 		{
 
@@ -102,6 +102,7 @@ namespace synapse
 		{
 
 			config["lastId"]=config["lastId"]+1;
+			config.changed();
 
 			objectMap[config["lastId"]].create(config["lastId"]);
 			return (config["lastId"]);
@@ -127,10 +128,8 @@ namespace synapse
 		//save the object to disk
 		void save(int objectId)
 		{
-			DEB("Saving object " << objectId << " to " << getStoragePath(objectId));
+			//DEB("Saving object " << objectId << " to " << getStoragePath(objectId));
 			getObject(objectId).save(getStoragePath(objectId));
-			//now the lastId needs to be remembered as well:
-			config.save(storagePath+"/config");
 		}
 
 		//deletes object from memory.
@@ -179,24 +178,36 @@ namespace synapse
 
 		void saveAll()
 		{
+			//main config:
+			config.save(storagePath+"/config");
+
+			list<int> unloads;
+
+			//per object config:
 			for (typename CobjectMap::iterator I=objectMap.begin(); I!=objectMap.end(); I++)
 			{
-				if (!I->second.isSaved())
+				try
 				{
-					try
-					{
-						save(I->first);
+					//NOTE: save is smart and only saves if data has changed().
+					save(I->first);
 
-						//is the object ready to be unloaded?
-						if (I->second.isIdle())
-							unload(I->first);
-					}
-					catch(...)
-					{
-						ERROR("Error while saving object " << I->first);
-					}
+					if (I->second.isIdle())
+						unloads.push_back(I->first);
+
 				}
+				catch(...)
+				{
+					ERROR("Error while saving object " << I->first);
+				}
+
 			}
+
+			//now unload (this invalidates iterators, so we do it in a seperate step
+			for (list<int>::iterator I=unloads.begin(); I!=unloads.end(); I++)
+			{
+				unload(*I);
+			}
+
 
 		}
 

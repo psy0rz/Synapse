@@ -38,7 +38,15 @@ namespace synapse
 
 	class Cconfig : public Cvar
 	{
+		private:
+		bool saved;
+		path savedConfigPath;
+
 		public:
+		Cconfig();
+
+		void changed();
+		bool isChanged();
 		void save(path configPath);
 		void load(path configPath, bool merge=false);
 

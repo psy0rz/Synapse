@@ -36,14 +36,8 @@ namespace synapse
 		int id;
 		typedef map<int,Tclient> CclientMap;
 		CclientMap clientMap;
-		bool saved;
 
 		public:
-
-		bool isSaved()
-		{
-			return(saved);
-		}
 
 		//send a message to all clients of the object
 		void send(Cmsg & msg)
@@ -72,7 +66,6 @@ namespace synapse
 		void create(int id)
 		{
 			this->id=id;
-			this->saved=true;
 		}
 
 		virtual void getInfo(Cmsg & msg)
@@ -203,7 +196,7 @@ namespace synapse
 
 		bool isIdle()
 		{
-			return(clientMap.empty() && lastLeave-time(NULL)>60);
+			return(clientMap.empty() && time(NULL)-lastLeave>60);
 		}
 
 

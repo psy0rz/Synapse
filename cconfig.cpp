@@ -35,20 +35,39 @@ namespace synapse
 	using boost::filesystem::ofstream;
 	using boost::filesystem::ifstream;
 
+	Cconfig::Cconfig()
+	{
+		saved=false;
+	}
 
 	void Cconfig::save(path configPath)
 	{
 		//errors are handled with exceptions
+		if (!saved || configPath!=savedConfigPath)
+		{
+			INFO("Saving config file "<< configPath);
+			string s;
+			toJsonFormatted(s);
 
-		string s;
-		toJsonFormatted(s);
+			ofstream configStream;
+			configStream.exceptions ( ofstream::eofbit | ofstream::failbit | ofstream::badbit );
+			configStream.open(configPath);
+			configStream << s;
+			configStream.close();
+			saved=true;
+			savedConfigPath=configPath;
+		}
 
-		ofstream configStream;
-		configStream.exceptions ( ofstream::eofbit | ofstream::failbit | ofstream::badbit );
-		configStream.open(configPath);
-		configStream << s;
-		configStream.close();
+	}
 
+	bool Cconfig::isChanged()
+	{
+		return(!saved);
+	}
+
+	void Cconfig::changed()
+	{
+		saved=false;
 	}
 
 	void Cconfig::load(path configPath, bool merge)
@@ -67,6 +86,11 @@ namespace synapse
 		string s((istreambuf_iterator<char>(configStream)), std::istreambuf_iterator<char>());
 		configStream.close();
 		fromJson(s);
+
+		if (!merge)
+			saved=true;
+
+		savedConfigPath=configPath;
 	}
 
 
