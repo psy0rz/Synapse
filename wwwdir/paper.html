@@ -236,7 +236,7 @@
 			}			
 
 			//update cursor?
-			if (msg["cursor"]!=null && msg["src"]!=ourId)
+			if (msg["cursor"]!=null)// && msg["src"]!=ourId)
 			{
 				var cursor=document.getElementById('cursor'+msg["src"]);
 				if (cursor==null)
@@ -262,7 +262,22 @@
 					e.setAttribute('y1', '-200');
 					e.setAttribute('y2', '+200');
 					cursor.appendChild(e);					
-			
+
+					//create text element
+					var e = document.createElementNS(svgns, 'text');
+					e.setAttribute('id', 'clientName'+msg["src"]);
+					e.setAttribute('x', '0');
+					e.setAttribute('y', '300');
+					e.setAttribute('font-size','200');
+					e.setAttribute('font-weight','bold');
+					e.setAttribute('stroke','#000000');
+					e.setAttribute('fill','#000000');
+					cursor.appendChild(e);					
+
+					//add the actual text
+					var textNode = document.createTextNode("(unknown)", true);
+					e.appendChild(textNode);
+					
 				}
 
 				//update cursor position?
@@ -274,27 +289,8 @@
 				//update cursor clientname?
 				if (msg["cursor"]["clientName"]!=null)
 				{
-					//we need to re-add this node on every update..
-					var oldE=document.getElementById('clientName'+msg["src"]);
-
-					if (oldE!=null)
-						cursor.removeChild(oldE);
-					
-					//create text element
-					var e = document.createElementNS(svgns, 'text');
-					e.setAttribute('id', 'clientName'+msg["src"]);
-					e.setAttribute('x', '0');
-					e.setAttribute('y', '300');
-					e.setAttribute('font-size','200');
-					e.setAttribute('font-weight','bold');
-					e.setAttribute('stroke','#000000');
-					e.setAttribute('fill','#ffffff');
-					cursor.appendChild(e);					
-
-					//add the actual text
-					var textNode = document.createTextNode(msg["cursor"]["clientName"], true);
-					e.appendChild(textNode);
-				
+					var e=document.getElementById('clientName'+msg["src"]);
+					e.childNodes[0].data=msg["cursor"]["clientName"];
 				}
 
 			}
