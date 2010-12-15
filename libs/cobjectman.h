@@ -178,8 +178,6 @@ namespace synapse
 
 		void saveAll()
 		{
-			//main config:
-			config.save(storagePath+"/config");
 
 			list<int> unloads;
 
@@ -202,7 +200,10 @@ namespace synapse
 
 			}
 
-			//now unload (this invalidates iterators, so we do it in a seperate step
+			//main config:
+			config.save(storagePath+"/config");
+
+			//now unload (this invalidates iterators, so we do it in a seperate step)
 			for (list<int>::iterator I=unloads.begin(); I!=unloads.end(); I++)
 			{
 				unload(*I);
