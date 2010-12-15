@@ -190,12 +190,21 @@ namespace paper
 					//fill in all element attributes
 					for(Cvar::iterator I=elementI->second.begin(); I!=elementI->second.end(); I++)
 					{
-						if (I->first!="element")
+						if (I->first!="element" && I->first!="text")
 							svgStream << " " << I->first << "=\"" << I->second.str() << "\"";
 					}
 
-					//end element
-					svgStream << "/>\n";
+					//text content?
+					if (elementI->second.isSet("text"))
+					{
+						//add text content and closing tag
+						svgStream << ">" << elementI->second["text"].str() << "</" << elementI->second["element"].str() << ">\n";
+					}
+					else
+					{
+						//end element
+						svgStream << "/>\n";
+					}
 				}
 
 

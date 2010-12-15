@@ -181,11 +181,20 @@
 						if (msg["beforeId"]!=null)
 							beforeElement=document.getElementById(msg["beforeId"]);
 	
+						//text element? append a special textnode to hold the actual text
+						if (msg["element"]=="text")
+						{
+							var textNode = document.createTextNode("", true);
+							element.appendChild(textNode);
+						}
+						
 						//NOTE: svgweb is buggy and doesnt support insertbefore with a null element
 						if (beforeElement==null)
 							drawing.insertBefore(element, drawingInsert);							
 						else
-							drawing.insertBefore(element, beforeElement);							
+							drawing.insertBefore(element, beforeElement);
+
+						
 					}
 					
 					//we need to add/set attributes?
@@ -193,7 +202,17 @@
 					{
 						for (var attrName in msg["set"])
 						{
-							element.setAttribute(attrName, msg["set"][attrName]);
+							//special text hack 'attribute'?
+							if (attrName=='text')
+							{
+								element.childNodes[0].data=msg["set"][attrName];
+
+							}
+							//normal attribute
+							else
+							{
+								element.setAttribute(attrName, msg["set"][attrName]);
+							}
 						}							
 	
 						for (var attrName in msg["add"])
@@ -236,7 +255,7 @@
 			}			
 
 			//update cursor?
-			if (msg["cursor"]!=null)// && msg["src"]!=ourId)
+			if (msg["cursor"]!=null && msg["src"]!=ourId)
 			{
 				var cursor=document.getElementById('cursor'+msg["src"]);
 				if (cursor==null)
@@ -424,6 +443,14 @@
 						'ry': ry
 					}
 				}
+				else if (mouseMode=="text")
+				{
+					msg['cmd']='update';
+					msg['set']={
+						'x': c.x,
+						'y': c.y
+					}
+				}
 				else if (mouseMode=="delete")
 				{ 
 					//only allow numeric id's to be deleted. otherwise you could delete cursors and stuff as well :P
@@ -473,7 +500,6 @@
 			//do the action:
 			if (mouseMode=="line")
 			{
-				
 				sendDraw({
 					'cmd'		:'update',
 					'id'		:'new',
@@ -519,6 +545,27 @@
 						'stroke-dasharray'	: $('#styles .selected').attr("value"),
 						'cx'				: c.x, 
 						'cy'				: c.y
+					}
+				});
+			}
+			else if (mouseMode=="text")
+			{
+				var c=toServer(mousePoint.x,mousePoint.y);
+
+				sendDraw({
+					'cmd'		:'update',
+					'id'		:'new',
+					'element'	:'text',
+					'set'		: {
+						'fill'				: fill,
+						'stroke'			: $('#colors .selected').attr("value"),
+						'stroke-width'		: $('#widths .selected').attr("value"),
+						'x'					: c.x, 
+						'y'					: c.y,
+						'text'				: "blaat",
+//						'font-family'		: "serif",
+						'font-size'			: 200,
+						'font-weight'		: 'bold'
 					}
 				});
 			}
@@ -938,6 +985,7 @@
 			<br></br>
 			<div class='tool' value='rect' highlight=0>vierk</div>
 			<div class='tool' value='rect' fill=1 highlight=0>VIERK</div>
+			<div class='tool' value='text' highlight=0>text</div>
 			<br></br>
 			<div class='tool' value='circle' highlight=0>cirkel</div>
 			<div class='tool' value='circle' fill=1 highlight=0>CIRKEL</div>
