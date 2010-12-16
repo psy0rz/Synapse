@@ -54,8 +54,8 @@
 
 		var drawing;
 		var drawingInsert;
-		var drawingHtml;
 		
+		var aspectRatio=1.7777;
 
 		
 		//filter dangerous stuff from user input.
@@ -71,7 +71,7 @@
 			
 			//return ( { "x":x, "y":y } );
 			return ({
-				"x":Math.round((x * 10000) / $("#drawing").width()),
+				"x":Math.round((x * 10000 * aspectRatio) / $("#drawing").width()),
 				"y":Math.round((y * 10000) / $("#drawing").height())
 			});
 		}
@@ -402,11 +402,19 @@
 				//cursor
 				msg['cursor']=c;
 				
-				if (mouseMode=="line")
+				if (mouseMode=="polyline")
 				{
 					msg['cmd']='update';
 					msg['add']={
 						'points': ' '+c.x+','+c.y
+					}
+				}
+				else if (mouseMode=="line")
+				{
+					msg['cmd']='update';
+					msg['set']={
+						'x2': c.x,
+						'y2': c.y,
 					}
 				}
 				else if (mouseMode=="rect")
@@ -492,13 +500,19 @@
 			mousePointStart.x=mousePoint.x;
 			mousePointStart.y=mousePoint.y;
 
-			//enable filling?
+			//determine attributes
 			var fill='none';
-			if ($('#modes .selected').attr("fill")==1)
+			var strokeWidth=$('#width').slider("option","value")*25;
+			if ($('#modes .selected').attr("fill")!=null)
+			{
 				fill=$('#colors .selected').attr("value");
-	
+				strokeWidth=1;
+			}
+			var stroke=$('#colors .selected').attr("value"); 
+			var strokeDashArray=$('#styles .selected').attr("value");
+			
 			//do the action:
-			if (mouseMode=="line")
+			if (mouseMode=="polyline")
 			{
 				sendDraw({
 					'cmd'		:'update',
@@ -506,9 +520,8 @@
 					'element'	:'polyline',
 					'set'		: {
 						'fill'				: fill,
-						'stroke'			: $('#colors .selected').attr("value"),
-						'stroke-width'		: $('#widths .selected').attr("value"),
-						'stroke-dasharray'	: $('#styles .selected').attr("value")
+						'stroke'			: stroke,
+						'stroke-width'		: strokeWidth,
 					}
 				});
 			}
@@ -522,11 +535,27 @@
 					'element'	:'rect',
 					'set'		: {
 						'fill'				: fill,
-						'stroke'			: $('#colors .selected').attr("value"),
-						'stroke-width'		: $('#widths .selected').attr("value"),
-						'stroke-dasharray'	: $('#styles .selected').attr("value"),
+						'stroke'			: stroke,
+						'stroke-width'		: strokeWidth,
 						'x'					: c.x, 
 						'y'					: c.y
+					}
+				});
+			}
+			else if (mouseMode=="line")
+			{
+				var c=toServer(mousePoint.x,mousePoint.y);
+
+				sendDraw({
+					'cmd'		:'update',
+					'id'		:'new',
+					'element'	:'line',
+					'set'		: {
+						'fill'				: fill,
+						'stroke'			: stroke,
+						'stroke-width'		: strokeWidth,
+						'x1'				: c.x, 
+						'y1'				: c.y
 					}
 				});
 			}
@@ -540,9 +569,8 @@
 					'element'	:'ellipse',
 					'set'		: {
 						'fill'				: fill,
-						'stroke'			: $('#colors .selected').attr("value"),
-						'stroke-width'		: $('#widths .selected').attr("value"),
-						'stroke-dasharray'	: $('#styles .selected').attr("value"),
+						'stroke'			: stroke,
+						'stroke-width'		: strokeWidth,
 						'cx'				: c.x, 
 						'cy'				: c.y
 					}
@@ -558,8 +586,8 @@
 					'element'	:'text',
 					'set'		: {
 						'fill'				: fill,
-						'stroke'			: $('#colors .selected').attr("value"),
-						'stroke-width'		: $('#widths .selected').attr("value"),
+						'stroke'			: stroke,
+						'stroke-width'		: strokeWidth,
 						'x'					: c.x, 
 						'y'					: c.y,
 						'text'				: "blaat",
@@ -589,7 +617,9 @@
 			unhighlight(mouseTargetHigh);
 			mouseTargetHigh="";
 		}
-	    
+
+		
+		    
 	    synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
  		{
 			ourId=msg_dst;
@@ -618,6 +648,23 @@
 
 			
 			/// JAVA SCRIPT EVENT HANDLERS
+			
+			//window resize
+			$(window).resize(function()
+			{
+				if ($('#drawingSize').height()*aspectRatio <= $('#drawingSize').width())
+				{
+					$('#drawing').height($('#drawingSize').height());
+					$('#drawing').width($('#drawingSize').height()*aspectRatio);
+				}
+				else
+				{
+					$('#drawing').width($('#drawingSize').width());
+					$('#drawing').height($('#drawingSize').width()/aspectRatio);
+				}
+			});
+			$(window).resize();
+			
 
 			//user changes name
 			$("#clientName").keyup(function(m)
@@ -684,7 +731,7 @@
 				//set some basic attributes
 				drawing.setAttribute("version", "1.2");
 				drawing.setAttribute("baseProfile", "tiny");
-				drawing.setAttribute("viewBox", "0 0 10000 10000");
+				drawing.setAttribute("viewBox", "0 0 "+(10000*aspectRatio)+" 10000");
 				drawing.setAttribute("id","bg");
 				drawing.setAttribute("preserveAspectRatio", "none");
 
@@ -766,7 +813,7 @@
 				});
 				
 				//add drawing rootobject to html container
-				drawingHtml = document.getElementById("drawing");
+				var drawingHtml = document.getElementById("drawing");
 				svgweb.appendChild(drawing, drawingHtml);
 		     }, false);
 
@@ -956,17 +1003,19 @@
 		'></div>
 
 		<div id='modes'>
-			<div class='tool defaultTool' value='line' highlight=0>lijn</div>
-			<div class='tool' value='line' fill=1 highlight=0>LIJN</div>
-			<div class='tool' value='delete' highlight='1'>[gum]</div>
-			<div class='tool' value='move' highlight='1'>[move]</div>
+			<div class='tool' value='move' highlight='1'>move</div>
+			<div class='tool' value='line' highlight='0'>line</div>
+			<div class='tool defaultTool' value='polyline' highlight=0>potl</div>
+			<div class='tool' value='polyline' fill highlight=0>POTL</div>
 			<br></br>
-			<div class='tool' value='rect' highlight=0>vierk</div>
-			<div class='tool' value='rect' fill=1 highlight=0>VIERK</div>
+			<div class='tool' value='rect' highlight=0>vier</div>
+			<div class='tool' value='rect' fill highlight=0>VIER</div>
+			<div class='tool' value='circle' highlight=0>cirk</div>
+			<div class='tool' value='circle' fill highlight=0>CIRK</div>
+			<br></br>
 			<div class='tool' value='text' highlight=0>text</div>
-			<br></br>
-			<div class='tool' value='circle' highlight=0>cirkel</div>
-			<div class='tool' value='circle' fill=1 highlight=0>CIRKEL</div>
+			<div class='tool' value='delete' highlight='1'>[gum]</div>
+			<div class='tool' value='image' highlight='0'>img</div>
 		</div>
 
 		<div class='toolHeader' style='background-image:url("img/paper.png");'>
@@ -1017,15 +1066,31 @@
 	</div>
 
 
+	<div id='drawingSize' style='
+	position:absolute; 
+	left:11em;
+	top: 6em;
+	right:0;
+	bottom:0;
+	margin: 0;
+	padding: 0;
+	background-color:#eeeeee;
+	'></div>
+
 	<div id='drawing' style='
 	position:absolute; 
-	left:16em;
-	top: 0;
-	right: 0;
+	left:11em;
+	top: 6em;
+	right:0;
 	bottom:0;
 	cursor:crosshair;
 	margin: 0;
-	padding: 0;'>
+	padding: 0;
+	border-width:1px;
+	border-color:#dddddd;
+	border-style:solid;
+	background-color:#ffffff;
+	'>
 	</div>		
 
 
