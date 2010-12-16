@@ -604,7 +604,17 @@
 			
 			//set the name input field
 			$("#clientName").val(clientName);
-			
+
+			//width slider
+			$("#width").slider(
+			{ 
+				min:1, 
+				value:3,
+				max:5,
+				slide: function(event, ui) {
+					$("#widthText").html(ui.value);
+				}
+			});
 
 			
 			/// JAVA SCRIPT EVENT HANDLERS
@@ -681,6 +691,7 @@
 				//default settings
 				drawing.setAttribute("stroke-linecap","round");
 				drawing.setAttribute("stroke-linejoin","round");
+//				drawing.setAttribute("pointer-events","all");
 
 //				drawing.setAttribute("color-rendering","optimizeSpeed");
 //				drawing.setAttribute("shape-rendering","optimizeSpeed");
@@ -819,12 +830,6 @@
 	</script>
 
 	<style>
-		body 
-		{
-			margin:0;
-			padding:0;
-			height:100%;
-		} 
 
 		.client
 		{
@@ -834,65 +839,24 @@
 			border-bottom-color:#aaaaaa;
 		}
 
-		#objectManager
-		{
-			position:absolute; 
-			left:0;
-			top: 0;
-			width: 16em;
-			bottom:0;
-			border-style:none;
-		}
-
-		#drawing
-		{
-			position:absolute; 
-			left:16em;
-			top: 0;
-			right: 0;
-			bottom:0;
-			cursor:crosshair;
-			margin: 0;
-			padding: 0;
-		}
-
-		
-		
-		
-		#loading
-		{
-			position:absolute;
-			left:0;
-			right:0;
-			top:0;
-			bottom:0;
-			background-fill:none;
-			text-align:center;
-			color: red;
-			font-size: 1000%;
-		}
-		
-		#colors
-		{
-			
-		}
 		
 		.tool
 		{
 			width:2em;
-			max-width:2em;
 			height:2em;
-			max-height:2em;
-			border-width:2px;
+			border-width:1px;
 			border-style:solid;
 			cursor:pointer;
 			display:inline-block;
-			border-color:#ffffff;
+			border-color:#dddddd;
+			margin:2px;
 		}
 		
 		.selected
 		{
-			border-color:#aaaaaa;
+			border-color:#421F59;
+			border-width:2px;
+			margin:1px;
 		}
 		
 		img
@@ -903,17 +867,7 @@
 			display:inline;
 		}
 		
-		#chatList
-		{
-			max-height:8em;
-			overflow-y:scroll;
-		}
 		
-		#clientList
-		{
-			max-height:8em;
-			overflow-y:auto;		
-		}
 		
 		.paperLink
 		{
@@ -921,17 +875,68 @@
 			text-decoration: none;
 			display:block;
 		}
+
+		.toolHeader
+		{
+			border-color:#dddddd;
+			border-top-style:solid;
+			border-width:1px;
+			padding:.5em;
+			padding-left:2em;
+			background-position:5px top;
+			background-repeat:no-repeat;
+			margin-top:1em;
+			margin-bottom:1em;
+			font-weight:bold;
+		}
+		
+
 	</style>
 
 </head>
 
 
-<body class='ui-widget'>
-	<div class='ui-widget-content' id='objectManager'>
+<body style='
+	font-family:arial;
+	margin:0;
+	padding:0;
+	height:100%;
+	overflow:hidden;'>
 
-		<div class='ui-widget-header'>Delen met anderen:</div>
+	<div id='topbar' style='
+	position:absolute; 
+	left:0;
+	top: 0;
+	width: 100%;
+	height:4em;
+	border-style:none;'>
+	</div>
+			
 
-		Papier nummer: <span id='objectId'></span><br>
+	<div id='menubar' style='
+	position:absolute; 
+	left:0;
+	top: 4em;
+	width: 100%;
+	height:2em;
+	background-color:#421F59;
+	border-style:none;'>
+	</div>
+
+	<div id='toolbox' class='ui-widget-content' style='
+	position:absolute; 
+	left:0;
+	top: 6em;
+	width: 11em;
+	bottom:0;
+	border-style:none;
+	border-color:#dddddd;
+	border-right-style:solid'>
+
+		<div class='toolHeader' style='border-top-style:none; background-image:url("img/paper.png");'>
+			Papier <span id='objectId'></span>	
+		</div>
+
 		<a id='svgURL' target='_blank'>SVG link</a>
 		<br>
 		PNG: 
@@ -939,43 +944,16 @@
 		<a id='pngURLmedium' target='_blank'>medium</a>
 		<a id='pngURLlarge' target='_blank'>large</a>
 
-		<br>
-		
-		<br>
-
 		<input type='submit' value='Nieuw' id='clear'>
 
-		<div class='ui-widget-header'>Gereedschap:</div>
-
-
-		<div id='colors'>
-			<div class='tool color defaultTool' style='background-color:#000000' value='#000000'>&nbsp;</div>
-			<div class='tool color ' style='background-color:#0000ff' value='#0000ff'>&nbsp;</div>
-			<div class='tool color ' style='background-color:#00ff00' value='#00ff00'>&nbsp;</div>
-			<div class='tool color ' style='background-color:#00ffff' value='#00ffff'>&nbsp;</div>
-			<div class='tool color ' style='background-color:#FF8040' value='#FF8040'>&nbsp;</div>
-			<div class='tool color ' style='background-color:#ffffff' value='#ffffff'>&nbsp;</div>
-			<br>
-			<div class='tool color' style='background-color:#ff0000' value='#ff0000'>&nbsp;</div>
-			<div class='tool color' style='background-color:#ff00ff' value='#ff00ff'>&nbsp;</div>
-			<div class='tool color' style='background-color:#ffff00' value='#ffff00'>&nbsp;</div>
-			<div class='tool color' style='background-color:#999999' value='#999999'>&nbsp;</div>
-			<div class='tool color' style='background-color:#804000' value='#804000'>&nbsp;</div>
-			<div class='tool color' style='background-color:#F87217' value='#F87217'>&nbsp;</div>
-			<br>
-		</div>		
-
-		<div id='widths'>
-			<div class='tool' value='10'><img src='img/pen1.png' style='width:1em' ></div>
-			<div class='tool' value='20'><img src='img/pen1.png' style='width:1.2em'></div>
-			<div class='tool' value='30'><img src='img/pen1.png' style='width:1.3em'></div>
-			<div class='tool defaultTool' value='40'><img src='img/pen1.png' style='width:1.4em' ></div>
-			<br>
-			<div class='tool' value='100'><img src='img/pen2.png' style='width:1em' ></div>
-			<div class='tool' value='200'><img src='img/pen2.png' style='width:1.2em' ></div>
-			<div class='tool' value='300'><img src='img/pen2.png' style='width:1.3em' ></div>
-			<div class='tool' value='400'><img src='img/pen2.png' style='width:1.4em' ></div>		
+		<div class='toolHeader' style='background-image:url("img/paper.png");'>
+			Gereedschappen	
 		</div>
+
+		Grootte (<span id='widthText'>3</span>)
+		<div id='width' style='
+			margin:1em;			
+		'></div>
 
 		<div id='modes'>
 			<div class='tool defaultTool' value='line' highlight=0>lijn</div>
@@ -991,31 +969,64 @@
 			<div class='tool' value='circle' fill=1 highlight=0>CIRKEL</div>
 		</div>
 
+		<div class='toolHeader' style='background-image:url("img/paper.png");'>
+			Kleuren	
+		</div>
+
+		<div id='colors'>
+			<div class='tool color defaultTool' style='background-color:#000000' value='#000000'>&nbsp;</div>
+			<div class='tool color ' style='background-color:#0000ff' value='#0000ff'>&nbsp;</div>
+			<div class='tool color ' style='background-color:#00ff00' value='#00ff00'>&nbsp;</div>
+			<div class='tool color ' style='background-color:#00ffff' value='#00ffff'>&nbsp;</div>
+			<br>
+			<div class='tool color ' style='background-color:#FF8040' value='#FF8040'>&nbsp;</div>
+			<div class='tool color ' style='background-color:#ffffff' value='#ffffff'>&nbsp;</div>
+			<div class='tool color' style='background-color:#ff0000' value='#ff0000'>&nbsp;</div>
+			<div class='tool color' style='background-color:#ff00ff' value='#ff00ff'>&nbsp;</div>
+			<br>
+			<div class='tool color' style='background-color:#ffff00' value='#ffff00'>&nbsp;</div>
+			<div class='tool color' style='background-color:#999999' value='#999999'>&nbsp;</div>
+			<div class='tool color' style='background-color:#804000' value='#804000'>&nbsp;</div>
+			<div class='tool color' style='background-color:#F87217' value='#F87217'>&nbsp;</div>
+		</div>		
+
+
+		<!-- 
 		<div id='styles'>
 			<div class='tool defaultTool' value='none'>norm</div>
 			<div class='tool' value='20,200'>stip</div>
 			<div class='tool' value='200,200'>streep</div>
 		</div>
+ -->
 
-
- 		<div class='ui-widget-header'>Chat:</div>
-		Naam: <input id='clientName' type='text' value='' size=10>
-		<div id='chatList'></div>
-		<input id='chatInput' type='text' value='' >
-<!-- 
-
-
-		<div class='ui-widget-header'>Andere mensen:</div>
-		<div id='clientList'></div>
--->
 
 	</div>
 
 
-	<div id='loading' >Loading...</div>
+	<div id='loading' style='
+	position:absolute;
+	left:0;
+	right:0;
+	top:0;
+	bottom:0;
+	background-fill:none;
+	text-align:center;
+	color: red;
+	font-size: 1000%;'>
+		Loading...
+	</div>
 
 
-	<div id='drawing'></div>		
+	<div id='drawing' style='
+	position:absolute; 
+	left:16em;
+	top: 0;
+	right: 0;
+	bottom:0;
+	cursor:crosshair;
+	margin: 0;
+	padding: 0;'>
+	</div>		
 
 
 	
