@@ -57,12 +57,24 @@
 		
 		var aspectRatio=1.7777;
 
+		var loading=true;
+
+		//chat stuff
+		var chatLastClientName="";
+		var chatTypeHere="Type hier je bericht...";
 		
 		//filter dangerous stuff from user input.
 		//NOTE: do this when you receive the data back from the server, not when sending to it!
-		function filterInput(s)
+		function filterInput(s,max)
 		{
-			return(s.replace(/</g,"&lt;").replace(/>/g,"&gt;"));
+			if (s==null)
+				return;
+			ret=s.replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+			if (max!=null && ret.length>max)
+				ret=ret.substr(0,max);
+
+			return(ret);
 		}
 
 		//calculate browser coordinates to server coordinates
@@ -83,14 +95,6 @@
 			return ("<a class='paperLink' href='paper.html?id="+id+"'>"+text+"</a>");
 		}
 
-		function addChat(html)
-		{
-			$('#chatList').append(html);
-
-			//scroll to end
-			var objDiv = document.getElementById("chatList");
-			objDiv.scrollTop = objDiv.scrollHeight;
-		}
 
 
 		//highlight an object
@@ -114,6 +118,17 @@
 				element.removeAttribute('stroke-opacity');
 				element.removeAttribute('fill-opacity');
 			}
+		}
+
+		function chatPrintOnline()
+		{
+			var online=$('.chatClient').length-1;
+			if (online==0)
+				$("#chatBar").html("<div class='chatOnline'>Nodig vrienden uit!</div>");
+			else if (online==1)
+				$("#chatBar").html("<div class='chatOnline'>1 vriend online</div>");
+			else
+				$("#chatBar").html("<div class='chatOnline'>"+online+" vrienden online</div>");
 		}
 		
 		/*** Drawing protocol
@@ -150,10 +165,12 @@
 		normally only set when requesting a refresh.
 
 		#### Cursor indication
-		cursor:     Cursor and name information: x,y,clientName
+		cursor:     Cursor and name information: x,y,clientName. 
+					The server keeps a list of cursors and sends them when a client joins.
 
 		### Chat
-		chat:		Chat text: text, clientName
+		chat:		Chat text: text, clientName. 
+					The server keeps the history and sends it if a client joins.
 				
 		'
 		 */
@@ -252,9 +269,10 @@
 			{
 				//NOTE: this also works around a weird chromuim refresh bug.
 				$("#loading").hide();
+				loading=false;
 			}			
 
-			//update cursor?
+			//update cursor/client name?
 			if (msg["cursor"]!=null && msg["src"]!=ourId)
 			{
 				var cursor=document.getElementById('cursor'+msg["src"]);
@@ -308,18 +326,63 @@
 				//update cursor clientname?
 				if (msg["cursor"]["clientName"]!=null)
 				{
+					//update cursor text:
 					var e=document.getElementById('clientName'+msg["src"]);
-					e.childNodes[0].data=msg["cursor"]["clientName"];
+					e.childNodes[0].data=filterInput(msg["cursor"]["clientName"],15);
 				}
-
 			}
 
-			//update chat?
+
+			//update chat client list
+			if (msg["cursor"]!=null && msg["cursor"]["clientName"]!=null)
+			{
+				var clientName=filterInput(msg["cursor"]["clientName"],15);
+				
+				var e=document.getElementById('chatClient'+msg["src"]);
+				if (e==null)
+				{
+					$("#chatClients").append("<div id='chatClient"+msg["src"]+"' class='chatClient'>"+clientName+"</div>");
+					chatPrintOnline();
+				}
+				else
+					e.childNodes[0].data=clientName;
+	
+			}	
+
+			//received chat text?
 			if (msg["chat"] != null)
 			{
-				addChat(
-					"<b>"+filterInput(msg["chat"]["clientName"])+"</b> "+filterInput(msg["chat"]["text"])+"<br>"
-				);
+				var clientName=filterInput(msg["chat"]["clientName"],15);
+				var text=filterInput(msg["chat"]["text"]);
+								
+				if (clientName!=chatLastClientName)
+				{
+					//add client name:
+					$('#chatList').append("<div class='chatName'>"+clientName+":</div>");
+					chatLastClientName=clientName;					
+				}
+
+				$('#chatList').append("<div class='chatText'>"+text+"</div>");
+
+				//hidden?
+				if ($("#chatBox").css("display")=="none")
+				{
+					if (!loading)
+					{
+						var html="<b>"+clientName+"</b>: "+text;
+						if (html.length>30)
+							html=html.substr(0,30)+"...";
+						$("#chatBar").html(html);
+						$("#chatBar").effect("highlight","{}",1000);
+					}
+				}
+				else
+				{
+					//scroll to end
+					var objDiv = document.getElementById("chatList");
+					objDiv.scrollTop = objDiv.scrollHeight;
+				}
+						
 			}
 
 			drawing.unsuspendRedraw(suspendID);
@@ -333,6 +396,9 @@
 			{
 				drawing.removeChild(cursor);
 			}
+
+			$('#chatClient'+msg["clientId"]).remove();
+			chatPrintOnline();
 		
 		});
 
@@ -633,7 +699,7 @@
 			}
 			
 			//set the name input field
-			$("#clientName").val(clientName);
+			$("#chatClientName").val(clientName);
 
 			//width slider
 			$("#width").slider(
@@ -667,32 +733,77 @@
 			
 
 			//user changes name
-			$("#clientName").keyup(function(m)
+			$("#chatClientName").keyup(function(m)
 			{
-				$.setCookie('clientName', $("#clientName").val(), { duration:365, path:"/" });
+				$.setCookie('clientName', $("#chatClientName").val(), { duration:365, path:"/" });
 				sendDraw({
 					'cursor':{
-						'clientName':$("#clientName").val()
+						'clientName':$("#chatClientName").val()
 					}
 				});
 					
 			});
 
-			//user presses enter in chatbox:
+			//user presses enter in chatInput:
 			$("#chatInput").keydown(function(m)
 			{
 				if (m.keyCode==13)
 				{
 					sendDraw( {
 						'chat':{
-							'clientName'	:$("#clientName").val(),
+							'clientName'	:$("#chatClientName").val(),
 							'text'			:$("#chatInput").val()
 						}
 					});
-					$("#chatInput").val("");						
 				}					
 	 		});
 
+			$("#chatInput").keyup(function(m)
+			{
+				if (m.keyCode==13)
+					$("#chatInput").val("");						
+			});
+
+			$("#chatInput").focusin(function(m)
+			{
+				$("#chatInput").removeClass("chatTypeHere");
+				if ($("#chatInput").val()==chatTypeHere)
+					$("#chatInput").val("");
+			});
+					
+			$("#chatInput").focusout(function(m)
+			{
+				if ($("#chatInput").val()=="")
+				{
+					$("#chatInput").addClass("chatTypeHere");
+					$("#chatInput").val(chatTypeHere);
+				}
+			});
+
+			
+			//hide/show chatbox
+			$("#chatBar").click(function()
+			{
+				if ($("#chatBox").css("display")=="none")
+				{
+					$("#chatBox").show();
+
+					//scroll to end
+					var objDiv = document.getElementById("chatList");
+					objDiv.scrollTop = objDiv.scrollHeight;
+
+					$("#chatInput").focus();
+					$("#drawingSize").css("right",$("#chatBox").width());
+					$(window).resize();
+					chatPrintOnline();
+				}
+				else
+				{
+					$("#chatBox").hide();
+					$("#drawingSize").css("right","0");
+					$(window).resize();
+				}
+			});
 			
 			//a tool is clicked
 			$(".tool").click(function(m)
@@ -858,32 +969,25 @@
 			//tell people who we are and set random mouse position
 			sendDraw({
 				'cursor':{
-					'clientName':$("#clientName").val(),
+					'clientName':$("#chatClientName").val(),
 					'x':Math.round(9000*Math.random())+1000,
 					'y':Math.round(9000*Math.random())+1000
 				}
 			});
 		});
  		
- 				
-
- 		
-
-	
-
-
 
 
 	</script>
 
 	<style>
 
-		.client
+		.chatClient
 		{
 			margin-top:2px;
-			padding:5px;
-			border-bottom-style:dashed;
-			border-bottom-color:#aaaaaa;
+			border-bottom-style:solid;
+			border-bottom-color:#dddddd;
+			border-bottom-width:1px;
 		}
 
 		
@@ -905,7 +1009,28 @@
 			border-width:2px;
 			margin:1px;
 		}
+
+		.chatTypeHere
+		{
+			color:#aaaaaa;
+		}
 		
+		.chatOnline
+		{
+			font-weight: bold;
+		
+		}
+		
+		.chatName
+		{
+			font-weight: bold;
+		}
+
+		.chatText
+		{
+		
+		}
+
 		img
 		{
 			border:0;
@@ -938,6 +1063,7 @@
 		}
 		
 
+
 	</style>
 
 </head>
@@ -956,7 +1082,10 @@
 	top: 0;
 	width: 100%;
 	height:4em;
-	border-style:none;'>
+	border-style:none;
+	font-style:italic;
+	color:#aaaaaa'>
+	Internet papier - nog volop in ontwikkeling
 	</div>
 			
 
@@ -969,6 +1098,8 @@
 	background-color:#421F59;
 	border-style:none;'>
 	</div>
+
+
 
 	<div id='toolbox' class='ui-widget-content' style='
 	position:absolute; 
@@ -1052,18 +1183,6 @@
 	</div>
 
 
-	<div id='loading' style='
-	position:absolute;
-	left:0;
-	right:0;
-	top:0;
-	bottom:0;
-	background-fill:none;
-	text-align:center;
-	color: red;
-	font-size: 1000%;'>
-		Loading...
-	</div>
 
 
 	<div id='drawingSize' style='
@@ -1094,6 +1213,103 @@
 	</div>		
 
 
+	<div  style='
+	position:absolute; 
+	top: 1em;
+	width: 12em;
+	right:1em;
+	border-style:none;
+	color: #ffffff;
+	border-width:1px;
+	border-color:#dddddd;
+	border-style:solid;
+	padding-left:3em;'>
+	<input id='chatClientName' style='border:none;padding:0;margin:0;' type='text' size=10></input> 
+	</div>
+
+	<div id='chatBar' style='
+	position:absolute; 
+	cursor:pointer;
+	top: 4em;
+	width: 15em;
+	right:0;
+	height:1.5em;
+	border-style:none;
+	color: #ffffff;
+	padding-top:.5em;
+	background-color:#FF8400;
+	padding-left:1em;'>
+	</div>
+
+	<div id='chatBox' style='
+	position:absolute; 	
+	top: 6em;
+	width: 16em;
+	right:0;
+	bottom:0;
+	background-color:#ffffff;
+	border-style:solid;
+	border-color:#FF8400;
+	border-width:1px;
+	display:none;
+	'>
+		<div id='chatClients' style='
+		position:absolute; 	
+		top: 0em;
+		left: 0em;
+		right: 0em;
+		background-color:#FFF0E9;
+		border-style:none;
+		max-height:5em;
+		overflow: auto;
+		padding:1em;
+		'>
+		</div>
+
+		<div id='chatList' style='
+		position:absolute; 	
+		top: 7em;
+		left: 0em;
+		right: 0em;
+		bottom: 5em;
+		padding:1em;
+		background-color:#ffffff;
+		border-style:none;
+		overflow: auto;
+		'>
+			<div>Edwin</div>
+			<div>Edwin</div>
+			<div>Edwin</div>
+			<div>Edwin</div>
+			<div>Edwin</div>
+		</div>
+
+		<textarea id='chatInput' rows=3 cols=30 style='
+		position:absolute; 	
+		bottom: 1em;
+		left: 1em;
+		height: 4em;
+		background-color:#ffffff;
+		border-style:solid;
+		border-color:#FF8400;
+		border-width:1px;
+		'>
+		</textarea>
+	</div>
+
+
+	<div id='loading' style='
+	position:absolute;
+	left:0;
+	right:0;
+	top:0;
+	bottom:0;
+	background-fill:none;
+	text-align:center;
+	color: red;
+	font-size: 1000%;'>
+		Loading...
+	</div>
 	
 </body>
 </html>
