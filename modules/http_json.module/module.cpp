@@ -136,6 +136,7 @@ class CnetHttp : public synapse::Cnet
 	string requestType;
 	string requestUrl;
 	string requestQuery;
+	string requestVersion;
 	Cvar headers;
 
 
@@ -225,6 +226,10 @@ class CnetHttp : public synapse::Cnet
 		responseStr+="HTTP/1.1 ";
 		responseStr+=statusStr.str()+="\r\n";
 		responseStr+="Server: synapse_http_json\r\n";
+
+		//just echo the keep-alive header. response() will disconnect if neccesary
+		if (headers.isSet("connection"))
+			responseStr+="Connection: "+headers["connection"].str()+"\r\n";
 
 // 		for (Cvar::iterator varI=cookies.begin(); varI!=cookies.end(); varI++)
 // 		{
@@ -422,16 +427,35 @@ class CnetHttp : public synapse::Cnet
     */
 	bool respond(bool abort=false)
 	{
+		bool sended;
+
 		//someone requested the special longpoll url:
 		if (requestUrl=="/synapse/longpoll")
 		{
-			return(respondJsonQueue(abort));
+			sended=(respondJsonQueue(abort));
 		}
 		//just respond with a normal file
 		else
 		{
-			return(respondFile(requestUrl));
+			sended=(respondFile(requestUrl));
 		}
+
+		//what to do after the response?
+		if (sended)
+		{
+			if (headers.isSet("connection"))
+			{
+				if (headers["connection"].str()=="close")
+					doDisconnect();
+			}
+			else if (requestVersion=="1.0")
+			{
+				//http 1.0 should always disconnect if Connection: Keep-Alive is not specified.
+				doDisconnect();
+			}
+		}
+
+		return (sended);
 	}
 
 	// Received new data:
@@ -460,7 +484,7 @@ class CnetHttp : public synapse::Cnet
  			if (!regex_search(
  				dataStr,
  				what,
- 				boost::regex("^(GET|POST) ([^? ]*)([^ ]*) HTTP/1..$")
+ 				boost::regex("^(GET|POST) ([^? ]*)([^ ]*) HTTP/(1..)$")
  			))
  			{
 				error="Cant parse request.";
@@ -470,6 +494,7 @@ class CnetHttp : public synapse::Cnet
 				requestType=what[1];
 				requestUrl=what[2];
 				requestQuery=what[3];
+				requestVersion=what[4];
 				DEB("REQUEST query: " << requestQuery);
 
 				//create a regex iterator for http headers
