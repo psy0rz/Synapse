@@ -130,6 +130,7 @@
 			else
 				$("#chatBar").html("<div class='chatOnline'>"+online+" vrienden online</div>");
 		}
+
 		
 		/*** Drawing protocol
 		
@@ -646,19 +647,20 @@
 			{
 				var c=toServer(mousePoint.x,mousePoint.y);
 
+				
+
 				sendDraw({
 					'cmd'		:'update',
 					'id'		:'new',
 					'element'	:'text',
 					'set'		: {
 						'fill'				: fill,
-						'stroke'			: stroke,
-						'stroke-width'		: strokeWidth,
 						'x'					: c.x, 
 						'y'					: c.y,
+						'stroke'			: stroke,
 						'text'				: "blaat",
 //						'font-family'		: "serif",
-						'font-size'			: 200,
+						'font-size'			: $('#width').slider("option","value")*200,
 						'font-weight'		: 'bold'
 					}
 				});
@@ -706,7 +708,7 @@
 			{ 
 				min:1, 
 				value:3,
-				max:5,
+				max:10,
 				slide: function(event, ui) {
 					$("#widthText").html(ui.value);
 				}
@@ -766,6 +768,7 @@
 
 			$("#chatInput").focusin(function(m)
 			{
+
 				$("#chatInput").removeClass("chatTypeHere");
 				if ($("#chatInput").val()==chatTypeHere)
 					$("#chatInput").val("");
@@ -780,6 +783,22 @@
 				}
 			});
 
+
+			//once a autofocus field gets focus, it will be rememberd, 
+			//so that other functions can just call $(".focus").focus() to reset the focus to it.
+			$(".autoFocus").focusin(function(m)
+			{
+				$(".focus").removeClass("focus");
+				$(this).addClass("focus");
+			});
+
+			$(".autoFocus").focusout(function(m)
+			{
+				setTimeout(function(){
+					$(".focus").focus();
+				},100);
+			});
+			
 			
 			//hide/show chatbox
 			$("#chatBar").click(function()
@@ -793,6 +812,7 @@
 					objDiv.scrollTop = objDiv.scrollHeight;
 
 					$("#chatInput").focus();
+					
 					$("#drawingSize").css("right",$("#chatBox").width());
 					$(window).resize();
 					chatPrintOnline();
@@ -814,14 +834,23 @@
 				$(this).addClass('selected');
 
 				//switch highlite mode on?
-				if ($(this).attr('highlight')=='1')
+				if ($(this).attr('changeHigh')=='1')
 					mouseHighlight=1;
 
 				//switch highlite mode off?
-				if ($(this).attr('highlight')=='0')
+				if ($(this).attr('changeHigh')=='0')
 					mouseHighlight=0;
-				
-				$("#chatInput").focus();
+
+				//show/hide tool specific settings
+				if ($(this).attr('changeShow')!=null)
+				{
+					$(".setting").hide();
+					$($(this).attr('changeShow')).show();
+				}
+					
+				//change focus?
+				if ($(this).attr('changeFocus')!=null)
+					$($(this).attr('changeFocus')).focus();
 			});
 
 			//clear button
@@ -936,7 +965,6 @@
 			$('#clientList').empty();
 			$('#chatList').empty();
 			$("#chatInput").val("");
-			$("#chatInput").focus();
 			
 			
 			//select default tools
@@ -1062,7 +1090,11 @@
 			font-weight:bold;
 		}
 		
-
+		.setting
+		{
+			display:none;
+			
+		}
 
 	</style>
 
@@ -1128,26 +1160,36 @@
 			Gereedschappen	
 		</div>
 
-		Grootte (<span id='widthText'>3</span>)
-		<div id='width' style='
-			margin:1em;			
-		'></div>
 
 		<div id='modes'>
-			<div class='tool' value='move' highlight='1'>move</div>
-			<div class='tool' value='line' highlight='0'>line</div>
-			<div class='tool defaultTool' value='polyline' highlight=0>potl</div>
-			<div class='tool' value='polyline' fill highlight=0>POTL</div>
+			<div class='tool' value='move' changeHigh='1' changeShow='' changeFocus='#chatInput'>move</div>
+			<div class='tool' value='line' changeHigh='0' changeShow='.settingWidth'  changeFocus='#chatInput'>line</div>
+			<div class='tool defaultTool' value='polyline' changeHigh=0 changeShow='.settingWidth'  changeFocus='#chatInput'>potl</div>
+			<div class='tool' value='polyline' fill changeHigh=0 changeShow='' changeFocus='#chatInput'>POTL</div>
 			<br></br>
-			<div class='tool' value='rect' highlight=0>vier</div>
-			<div class='tool' value='rect' fill highlight=0>VIER</div>
-			<div class='tool' value='circle' highlight=0>cirk</div>
-			<div class='tool' value='circle' fill highlight=0>CIRK</div>
+			<div class='tool' value='rect' changeHigh=0 changeShow='.settingWidth'  changeFocus='#chatInput'>vier</div>
+			<div class='tool' value='rect' fill changeHigh=0  changeShow='' changeFocus='#chatInput'>VIER</div>
+			<div class='tool' value='circle' changeHigh=0 changeShow='.settingWidth'  changeFocus='#chatInput'>cirk</div>
+			<div class='tool' value='circle' fill changeHigh=0 changeShow='' changeFocus='#chatInput'>CIRK</div>
 			<br></br>
-			<div class='tool' value='text' highlight=0>text</div>
-			<div class='tool' value='delete' highlight='1'>[gum]</div>
-			<div class='tool' value='image' highlight='0'>img</div>
+			<div class='tool' value='text' fill changeHigh=0 changeShow='.settingText' changeFocus='#textInput'>text</div>
+			<div class='tool' value='delete' changeHigh='1' changeShow='' changeFocus='#chatInput'>[gum]</div>
+			<div class='tool' value='image' changeHigh='0' changeShow='.settingImage'  changeFocus='#chatInput'>img</div>
 		</div>
+
+		<!-- add extra per-tool settings here, will be automaticly shown if show=... is specified in a tool -->
+		<div class='setting settingWidth'>
+			Grootte (<span id='widthText'>3</span>)
+			<div id='width' style='
+				margin:1em;			
+			'></div>
+		</div>
+
+		<div class='setting settingText'>
+			Text: 
+			<textarea id='textInput' class='autoFocus' cols=30 row=3></textarea>
+		</div>
+
 
 		<div class='toolHeader' style='background-image:url("img/paper.png");'>
 			Kleuren	
@@ -1155,12 +1197,12 @@
 
 		<div id='colors'>
 			<div class='tool color defaultTool' style='background-color:#000000' value='#000000'>&nbsp;</div>
-			<div class='tool color ' style='background-color:#0000ff' value='#0000ff'>&nbsp;</div>
-			<div class='tool color ' style='background-color:#00ff00' value='#00ff00'>&nbsp;</div>
-			<div class='tool color ' style='background-color:#00ffff' value='#00ffff'>&nbsp;</div>
+			<div class='tool color' style='background-color:#0000ff' value='#0000ff'>&nbsp;</div>
+			<div class='tool color' style='background-color:#00ff00' value='#00ff00'>&nbsp;</div>
+			<div class='tool color' style='background-color:#00ffff' value='#00ffff'>&nbsp;</div>
 			<br>
-			<div class='tool color ' style='background-color:#FF8040' value='#FF8040'>&nbsp;</div>
-			<div class='tool color ' style='background-color:#ffffff' value='#ffffff'>&nbsp;</div>
+			<div class='tool color' style='background-color:#FF8040' value='#FF8040'>&nbsp;</div>
+			<div class='tool color' style='background-color:#ffffff' value='#ffffff'>&nbsp;</div>
 			<div class='tool color' style='background-color:#ff0000' value='#ff0000'>&nbsp;</div>
 			<div class='tool color' style='background-color:#ff00ff' value='#ff00ff'>&nbsp;</div>
 			<br>
@@ -1224,7 +1266,7 @@
 	border-color:#dddddd;
 	border-style:solid;
 	padding-left:3em;'>
-	<input id='chatClientName' style='border:none;padding:0;margin:0;' type='text' size=10></input> 
+	<input id='chatClientName' class='autoFocus' style='border:none;padding:0;margin:0;' type='text' size=10></input> 
 	</div>
 
 	<div id='chatBar' style='
@@ -1277,14 +1319,9 @@
 		border-style:none;
 		overflow: auto;
 		'>
-			<div>Edwin</div>
-			<div>Edwin</div>
-			<div>Edwin</div>
-			<div>Edwin</div>
-			<div>Edwin</div>
 		</div>
 
-		<textarea id='chatInput' rows=3 cols=30 style='
+		<textarea id='chatInput' class='autoFocus' rows=3 cols=30 style='
 		position:absolute; 	
 		bottom: 1em;
 		left: 1em;
@@ -1293,8 +1330,7 @@
 		border-style:solid;
 		border-color:#FF8400;
 		border-width:1px;
-		'>
-		</textarea>
+		'></textarea>
 	</div>
 
 
