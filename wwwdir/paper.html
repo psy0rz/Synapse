@@ -1017,6 +1017,38 @@
 	</script>
 
 	<style>
+		@media print
+		{
+			body * { visibility: hidden; }
+		
+			#drawing * { visibility: visible; }
+		
+			#drawing { 
+				position: absolute; 
+				left: 0px; 
+				right:0px;
+				top:0px;
+				bottom: 0px; 
+			}
+		}
+		
+		@media screen 
+		{
+			#drawing {
+				position:absolute; 
+				left:11em;
+				top: 6em;
+				right:0;
+				bottom:0;
+				cursor:crosshair;
+				margin: 0;
+				padding: 0;
+				border-width:1px;
+				border-color:#dddddd;
+				border-style:solid;
+				background-color:#ffffff;
+			}
+		}
 
 		.chatClient
 		{
@@ -1159,6 +1191,9 @@
 		<br>
 		<a id='pngURLlarge' target='_blank'>PNG</a>
 
+		
+
+
 		<input type='submit' value='Nieuw' id='clear'>
 
 		<div class='toolHeader' style='background-image:url("img/paper.png");'>
@@ -1243,20 +1278,7 @@
 	background-color:#eeeeee;
 	'></div>
 
-	<div id='drawing' style='
-	position:absolute; 
-	left:11em;
-	top: 6em;
-	right:0;
-	bottom:0;
-	cursor:crosshair;
-	margin: 0;
-	padding: 0;
-	border-width:1px;
-	border-color:#dddddd;
-	border-style:solid;
-	background-color:#ffffff;
-	'>
+	<div id='drawing'>
 	</div>		
 
 
