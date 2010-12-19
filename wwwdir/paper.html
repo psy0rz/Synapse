@@ -276,6 +276,7 @@
 				//NOTE: this also works around a weird chromuim refresh bug.
 				$("#loading").hide();
 				loading=false;
+				
 			}			
 
 			//update cursor/client name?
@@ -489,7 +490,7 @@
 						'y2': c.y,
 					}
 				}
-				else if (mouseMode=="rect")
+				else if (mouseMode=="rect" || mouseMode=="image")
 				{
 					var cStart=toServer(mousePointStart.x,mousePointStart.y);
 					var w=c.x-cStart.x;
@@ -667,6 +668,29 @@
 							'font-family'		: "arial",
 							'font-size'			: 200,
 							'font-weight'		: 'bold'
+						}
+					});
+				}
+				else
+				{
+					mouseMode="";
+				}
+			}
+			else if (mouseMode=="image")
+			{
+				if ($("#imageInput").val()!="")
+				{
+					var c=toServer(mousePoint.x,mousePoint.y);
+					sendDraw({
+						'cmd'		:'update',
+						'id'		:'new',
+						'fill'				: fill,
+						'stroke'			: stroke,
+						'element'	:'image',
+						'set'		: {
+							'x'			: c.x, 
+							'y'			: c.y,
+							'xlink:href'		: "/img/paper.png"
 						}
 					});
 				}
@@ -877,22 +901,9 @@
 				drawing = document.createElementNS(svgns, "svg");
 
 				//set some basic attributes
-				drawing.setAttribute("version", "1.2");
-				drawing.setAttribute("baseProfile", "tiny");
+				drawing.setAttribute("id","1000r");
+				//HACK: this viewbox hack is only needed for a SVGWEB flash renderer bug. The server sends us this as well.
 				drawing.setAttribute("viewBox", "0 0 "+(10000*aspectRatio)+" 10000");
-				drawing.setAttribute("id","bg");
-				//drawing.setAttribute("preserveAspectRatio", "none");
-
-				//default settings
-				drawing.setAttribute("stroke-linecap","round");
-				drawing.setAttribute("stroke-linejoin","round");
-//				drawing.setAttribute("pointer-events","all");
-
-//				drawing.setAttribute("color-rendering","optimizeSpeed");
-//				drawing.setAttribute("shape-rendering","optimizeSpeed");
-//				drawing.setAttribute("text-rendering","optimizeSpeed");
-//				drawing.setAttribute("image-rendering","optimizeSpeed");
-				
 
 				//wait until rootobject is created
 				drawing.addEventListener('SVGLoad', function(evt) 
@@ -1214,7 +1225,7 @@
 			<br></br>
 			<div class='tool' value='text' fill changeHigh=0 changeShow='.settingText' changeFocus='#textInput'>text</div>
 			<div class='tool' value='delete' changeHigh='1' changeShow='' changeFocus='#chatInput'>[gum]</div>
-			<div class='tool' value='image' changeHigh='0' changeShow='.settingImage'  changeFocus='#chatInput'>img</div>
+			<div class='tool' value='image' changeHigh='0' changeShow='.settingImage'  changeFocus='#imageInput'>img</div>
 		</div>
 
 		<!-- add extra per-tool settings here, will be automaticly shown if show=... is specified in a tool -->
@@ -1230,6 +1241,10 @@
 			<textarea id='textInput' class='autoFocus' cols=20 rows=3></textarea>
 		</div>
 
+		<div class='setting settingImage'>
+			Image url: 
+			<textarea id='imageInput' class='autoFocus' cols=20 rows=3></textarea>
+		</div>
 
 		<div class='toolHeader' style='background-image:url("img/paper.png");'>
 			Kleuren	

@@ -144,11 +144,6 @@ namespace paper
 		public:
 		synapse::Cconfig drawing;
 
-		CpaperObject()
-		{
-			//we start at 1000 so the order stays correct in the stl map. once we get to 10000 the order gets screwed up, but that probably never happens ;)
-			drawing["lastElementId"]=1000;
-		}
 
 		void save(string path)
 		{
@@ -167,16 +162,15 @@ namespace paper
 				svgStream << "<?xml version=\"1.0\" standalone=\"no\"?>\n";
 				svgStream << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n\n";
 
-				svgStream << "<svg width=\"100%\" height=\"100%\" version=\"1.1\"";
+//				svgStream << "<svg width=\"100%\" height=\"100%\" version=\"1.1\"";
+//
+//				//default settings
+//				svgStream << " viewBox=\"0 0 17777 10000\"";
+//				svgStream << " stroke-linecap=\"round\"";
+//				svgStream << " stroke-linejoin=\"round\"";
+////				svgStream << " preserveAspectRatio=\"none\"\n";
+//				svgStream << " xmlns=\"http://www.w3.org/2000/svg\">\n\n";
 
-				//default settings
-				svgStream << " viewBox=\"0 0 17777 10000\"";
-				svgStream << " stroke-linecap=\"round\"";
-				svgStream << " stroke-linejoin=\"round\"";
-//				svgStream << " preserveAspectRatio=\"none\"\n";
-				svgStream << " xmlns=\"http://www.w3.org/2000/svg\">\n\n";
-
-				svgStream << "<title>internetpapier.nl tekening #" << id << "</title>\n";
 
 				//export all elements
 				for(Cvar::iterator elementI=drawing["data"].begin(); elementI!=drawing["data"].end(); elementI++)
@@ -200,6 +194,12 @@ namespace paper
 						//add text content and closing tag
 						svgStream << ">" << elementI->second["text"].str() << "</" << elementI->second["element"].str() << ">\n";
 					}
+					//root svg element?
+					else if (elementI->second["element"].str()=="svg")
+					{
+						//close, but dont end element
+						svgStream << ">\n";
+					}
 					else
 					{
 						//end element
@@ -207,8 +207,9 @@ namespace paper
 					}
 				}
 
+				svgStream << "<title>internetpapier.nl tekening #" << id << "</title>\n";
 
-				//svg footer
+				//close svg element
 				svgStream << "\n</svg>\n";
 
 				svgStream.close();
@@ -267,6 +268,9 @@ namespace paper
 
 
 		}
+
+
+
 
 		//get an iterator to specified element id.
 		//throws error if not found.
@@ -434,6 +438,37 @@ namespace paper
 //			}
 //		}
 
+
+
+		CpaperObject()
+		{
+			//1000r will be the root svg element with its settings
+			//NOTE: svgweb doesnt support a numeric svg-root, hence the added r
+			//NOTE: This is a STL ordered MAP, we need to keep the correct order, so hence the 1000.
+			drawing["data"]["1000r"]["element"]="svg";
+			drawing["data"]["1000r"]["version"]="1.1";
+			drawing["data"]["1000r"]["baseProfile"]="tiny";
+			drawing["data"]["1000r"]["viewBox"]="0 0 17777 10000";
+			drawing["data"]["1000r"]["width"]="100%";
+			drawing["data"]["1000r"]["height"]="100%";
+
+			drawing["data"]["1000r"]["xmlns"]="http://www.w3.org/2000/svg";
+
+			drawing["data"]["1000r"]["stroke-linecap"]="round";
+			drawing["data"]["1000r"]["stroke-linejoin"]="round";
+
+
+			//drawing.setAttribute("preserveAspectRatio", "none");
+//				drawing.setAttribute("pointer-events","all");
+//				drawing.setAttribute("color-rendering","optimizeSpeed");
+//				drawing.setAttribute("shape-rendering","optimizeSpeed");
+//				drawing.setAttribute("text-rendering","optimizeSpeed");
+//				drawing.setAttribute("image-rendering","optimizeSpeed");
+
+			//we start at 1001 so the order stays correct in the stl map. once we get to 10000 the order gets screwed up, but that probably never happens ;)
+			drawing["lastElementId"]=1000;
+
+		}
 
 		//send redrawing instructions to dst
 		void redraw(int dst)
