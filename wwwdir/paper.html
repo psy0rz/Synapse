@@ -193,7 +193,7 @@
 						//create new element
 						var element = document.createElementNS(svgns, msg["element"]);
 						element.setAttribute('id', msg["id"]);
-	
+
 						//insert before existing or just append?
 						var beforeElement=null;
 						if (msg["beforeId"]!=null)
@@ -212,6 +212,11 @@
 						else
 							drawing.insertBefore(element, beforeElement);
 
+						//temporary object? highlight it
+						if (msg["id"] != parseInt(msg["id"]))
+						{
+							highlight(msg["id"]);
+						}
 						
 					}
 					
@@ -223,7 +228,7 @@
 							//special text hack 'attribute'?
 							if (attrName=='text')
 							{
-								element.childNodes[0].data=msg["set"][attrName];
+								element.childNodes[0].data=filterInput(msg["set"][attrName],100);
 
 							}
 							//normal attribute
@@ -489,10 +494,10 @@
 					var cStart=toServer(mousePointStart.x,mousePointStart.y);
 					var w=c.x-cStart.x;
 					var h=c.y-cStart.y;
-					if (w<10)
-						w=10;
-					if (h<10)
-						h=10;
+					if (w<100)
+						w=100;
+					if (h<100)
+						h=100;
 					
 					msg['cmd']='update';
 					msg['set']={
@@ -508,9 +513,9 @@
 					//var r=Math.sqrt(Math.pow(xoffset,2)+Math.pow(yoffset,2));
 					
 					if (rx<100)
-						rx=10;
+						rx=100;
 					if (ry<100)
-						ry=10;
+						ry=100;
 					
 					msg['cmd']='update';
 					msg['set']={
@@ -520,10 +525,11 @@
 				}
 				else if (mouseMode=="text")
 				{
+					var cStart=toServer(mousePointStart.x,mousePointStart.y);
+					var r=Math.round(200+Math.sqrt(Math.pow(c.x-cStart.x,2)+Math.pow(c.y-cStart.y,2))/5);
 					msg['cmd']='update';
 					msg['set']={
-						'x': c.x,
-						'y': c.y
+						'font-size': r
 					}
 				}
 				else if (mouseMode=="delete")
@@ -645,25 +651,29 @@
 			}
 			else if (mouseMode=="text")
 			{
-				var c=toServer(mousePoint.x,mousePoint.y);
-
-				
-
-				sendDraw({
-					'cmd'		:'update',
-					'id'		:'new',
-					'element'	:'text',
-					'set'		: {
-						'fill'				: fill,
-						'x'					: c.x, 
-						'y'					: c.y,
-						'stroke'			: stroke,
-						'text'				: "blaat",
-//						'font-family'		: "serif",
-						'font-size'			: $('#width').slider("option","value")*200,
-						'font-weight'		: 'bold'
-					}
-				});
+				if ($("#textInput").val()!="")
+				{
+					var c=toServer(mousePoint.x,mousePoint.y);
+					sendDraw({
+						'cmd'		:'update',
+						'id'		:'new',
+						'element'	:'text',
+						'set'		: {
+							'fill'				: fill,
+							'x'					: c.x, 
+							'y'					: c.y,
+							'stroke'			: stroke,
+							'text'				: $("#textInput").val(),
+	//						'font-family'		: "serif",
+							'font-size'			: 200,
+							'font-weight'		: 'bold'
+						}
+					});
+				}
+				else
+				{
+					mouseMode="";
+				}
 			}
 
 			//force a mouse move
@@ -784,20 +794,18 @@
 			});
 
 
-			//once a autofocus field gets focus, it will be rememberd, 
-			//so that other functions can just call $(".focus").focus() to reset the focus to it.
+			//once a autofocus field gets focus, it will be rememberd, and focus will be switched back automaticly
 			$(".autoFocus").focusin(function(m)
 			{
 				$(".focus").removeClass("focus");
 				$(this).addClass("focus");
 			});
 
-			$(".autoFocus").focusout(function(m)
+			$(window).click(function(m)
 			{
-				setTimeout(function(){
-					$(".focus").focus();
-				},100);
+				$(".focus").focus();
 			});
+			
 			
 			
 			//hide/show chatbox
@@ -1147,12 +1155,9 @@
 			Papier <span id='objectId'></span>	
 		</div>
 
-		<a id='svgURL' target='_blank'>SVG link</a>
+		<a id='svgURL' target='_blank'>SVG</a>
 		<br>
-		PNG: 
-		<a id='pngURLsmall' target='_blank'>small</a>
-		<a id='pngURLmedium' target='_blank'>medium</a>
-		<a id='pngURLlarge' target='_blank'>large</a>
+		<a id='pngURLlarge' target='_blank'>PNG</a>
 
 		<input type='submit' value='Nieuw' id='clear'>
 
@@ -1187,7 +1192,7 @@
 
 		<div class='setting settingText'>
 			Text: 
-			<textarea id='textInput' class='autoFocus' cols=30 row=3></textarea>
+			<textarea id='textInput' class='autoFocus' cols=20 rows=3></textarea>
 		</div>
 
 

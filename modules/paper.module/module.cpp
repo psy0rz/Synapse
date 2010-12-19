@@ -170,10 +170,10 @@ namespace paper
 				svgStream << "<svg width=\"100%\" height=\"100%\" version=\"1.1\"";
 
 				//default settings
-				svgStream << " viewBox=\"0 0 10000 10000\"";
+				svgStream << " viewBox=\"0 0 17777 10000\"";
 				svgStream << " stroke-linecap=\"round\"";
 				svgStream << " stroke-linejoin=\"round\"";
-				svgStream << " preserveAspectRatio=\"none\"\n";
+//				svgStream << " preserveAspectRatio=\"none\"\n";
 				svgStream << " xmlns=\"http://www.w3.org/2000/svg\">\n\n";
 
 				svgStream << "<title>internetpapier.nl tekening #" << id << "</title>\n";
