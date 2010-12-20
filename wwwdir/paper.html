@@ -219,9 +219,6 @@
 						{
 							highlight(msg["id"]);
 						}
-
-										
-						
 					}
 					
 					//we need to add/set attributes?
@@ -1021,9 +1018,9 @@
 			$("#objectId").html(msg["objectId"]);
 			//TODO:dynamic svg-path
 			$("#svgURL").attr("href","p/"+msg["objectId"]+".svg");
-			$("#pngURLsmall").attr("href","p/"+msg["objectId"]+".small.png");
-			$("#pngURLmedium").attr("href","p/"+msg["objectId"]+".medium.png");
-			$("#pngURLlarge").attr("href","p/"+msg["objectId"]+".large.png");
+//			$("#pngURLsmall").attr("href","p/"+msg["objectId"]+".small.png");
+//			$("#pngURLmedium").attr("href","p/"+msg["objectId"]+".medium.png");
+			$("#pngURLlarge").attr("href","p/"+msg["objectId"]+".png");
 			
 			//reset stuff
 			reset();
@@ -1238,7 +1235,7 @@
 			<div class='tool' value='circle' changeHigh=0 changeShow='.settingWidth'  changeFocus='#chatInput'>cirk</div>
 			<div class='tool' value='circle' fill changeHigh=0 changeShow='' changeFocus='#chatInput'>CIRK</div>
 			<br></br>
-			<div class='tool' value='text' fill changeHigh=0 changeShow='.settingText' changeFocus='#textInput'>text</div>
+			<div class='tool' value='text' fill changeHigh=0 changeShow='.settingText' changeFocus='#textInput'>text</div>	
 			<div class='tool' value='delete' changeHigh='1' changeShow='' changeFocus='#chatInput'>[gum]</div>
 			<div class='tool' value='image' changeHigh='0' changeShow='.settingImage' fill changeFocus='#imageInput'>img</div>
 		</div>

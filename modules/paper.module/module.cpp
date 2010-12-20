@@ -96,7 +96,8 @@ namespace paper
 		out["event"]=	"paper_CheckNotFound";	out.send(); //object not found
 		out["event"]=	"paper_CheckOk";	out.send(); //object found and accesible
 
-		out["event"]=	"paper_Status";			out.send();
+		out["event"]=	"paper_Saved";			out.send(); //paper is saved
+
 		out["event"]=	"paper_ServerDraw";		out.send(); //draw something
 
 		out.clear();
@@ -155,22 +156,12 @@ namespace paper
 				ofstream svgStream;
 				svgStream.exceptions ( ofstream::eofbit | ofstream::failbit | ofstream::badbit );
 				stringstream svgFilename;
-				svgFilename << "wwwdir/p/" << id << ".svg";
-				svgStream.open(svgFilename.str());
+				svgFilename << "p/" << id << ".svg";
+				svgStream.open("wwwdir/"+svgFilename.str());
 
 				//svg header
 				svgStream << "<?xml version=\"1.0\" standalone=\"no\"?>\n";
 				svgStream << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n\n";
-
-//				svgStream << "<svg width=\"100%\" height=\"100%\" version=\"1.1\"";
-//
-//				//default settings
-//				svgStream << " viewBox=\"0 0 17777 10000\"";
-//				svgStream << " stroke-linecap=\"round\"";
-//				svgStream << " stroke-linejoin=\"round\"";
-////				svgStream << " preserveAspectRatio=\"none\"\n";
-//				svgStream << " xmlns=\"http://www.w3.org/2000/svg\">\n\n";
-
 
 				//export all elements
 				for(Cvar::iterator elementI=drawing["data"].begin(); elementI!=drawing["data"].end(); elementI++)
@@ -215,24 +206,45 @@ namespace paper
 				svgStream.close();
 
 
+				//inform clients of SVG saving
+				Cmsg out;
+				out.event="paper_Saved";
+				out["type"]="svg";
+				out["path"]=svgFilename.str();
+				send(out);
+
+
 				//now let imagemagic convert it to some nice pngs :)
 				stringstream pngFilename;
-				Cmsg out;
+				pngFilename << "p/" << id;
 
-				pngFilename.flush();
-				pngFilename << "wwwdir/p/" << id;
+				out.clear();
+				out.src=0;
+				out.dst=0;
 				out.event="exec_Start";
-				out["cmd"]="nice convert -density 10 " + svgFilename.str() + " " + pngFilename.str() + ".large.png";
+				out["id"]["paperId"]=id;
+				out["id"]["path"]=pngFilename.str()+".png";
+				out["id"]["type"]="png";
+				out["queue"]=1;
+				out["cmd"]="nice convert -density 4 MSVG:wwwdir/" + svgFilename.str() + " wwwdir/" + pngFilename.str() + ".png";
 				out.send();
 
-//				out.event="exec_Start";
-//				out["cmd"]="nice convert -density 2 " + svgFilename.str() + " " + pngFilename.str() + ".medium.png";
-//				out.send();
-
-//				out.event="exec_Start";
-//				out["cmd"]="nice convert -density 1 " + svgFilename.str() + " " + pngFilename.str() + ".small.png";
-//				out.send();
+				out.clear();
+				out.src=0;
+				out.dst=0;
+				out.event="exec_Start";
+				out["queue"]=1;
+				out["cmd"]="nice convert -density 1 MSVG:wwwdir/" + svgFilename.str() + " wwwdir/" + pngFilename.str() + ".thumb.png";
+				out.send();
 			}
+		}
+
+		void execEnded(Cvar & var)
+		{
+			Cmsg out;
+			out.event="paper_Saved";
+			out.map()=var.map();
+			send(out);
 		}
 
 		void load(string path)
@@ -449,8 +461,8 @@ namespace paper
 			drawing["data"]["1000r"]["version"]="1.2";
 			drawing["data"]["1000r"]["baseProfile"]="tiny";
 			drawing["data"]["1000r"]["viewBox"]="0 0 17777 10000";
-			drawing["data"]["1000r"]["width"]="100%";
-			drawing["data"]["1000r"]["height"]="100%";
+//			drawing["data"]["1000r"]["width"]="100%";
+//			drawing["data"]["1000r"]["height"]="100%";
 
 			drawing["data"]["1000r"]["xmlns"]="http://www.w3.org/2000/svg";
 			drawing["data"]["1000r"]["xmlns:xlink"]="http://www.w3.org/1999/xlink";
@@ -679,8 +691,13 @@ namespace paper
 		}
 	}
 
-
-
+	SYNAPSE_REGISTER(exec_Ended)
+	{
+		if (msg.isSet("id"))
+		{
+			objectMan.getObject(msg["id"]["paperId"]).execEnded(msg["id"]);
+		}
+	}
 
 
 }

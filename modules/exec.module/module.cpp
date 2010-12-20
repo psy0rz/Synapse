@@ -39,11 +39,14 @@ namespace exec
 
 
 	bool shutdown;
+	int queueId=-1;
+	int defaultId=-1;
 
 	SYNAPSE_REGISTER(module_Init)
 	{
 		Cmsg out;
 		shutdown=false;
+		defaultId=msg.dst;
 
 		//load config file
 		synapse::Cconfig config;
@@ -59,17 +62,35 @@ namespace exec
 		out["maxThreads"]=config["maxProcesses"];
 		out.send();
 
-		//tell the rest of the world we are ready for duty
-		//(the core will send a timer_Ready)
 		out.clear();
-		out.event="core_Ready";
+		out.event="core_NewSession";
+		out["maxThreads"]=1;
+		out["description"]="Serial execution queue";
 		out.send();
+
 	}
+
+	SYNAPSE_REGISTER(module_SessionStart)
+	{
+		if (msg.dst!=defaultId)
+		{
+			queueId=msg.dst;
+
+			//tell the rest of the world we are ready for duty
+			Cmsg out;
+			out.clear();
+			out.event="core_Ready";
+			out.send();
+		}
+	}
+
+
 
 	//TODO: make this bi-directional, so you also can send data to processes. not needed for now, so we keep it simple
 	/** Starts a process
 		\param cmd The command(s) to execute. This will be passed to a shell (probably bash)
 		\param id An user supplid id that is send back with every event, so you can differntiate between different processes.
+		\param queue Set to put the command in the serial execution queue. (e.g. dont execute parallel with other processes in the queue)
 
 	\par Replies exec_Started:
 		To indicate the process is started.
@@ -77,6 +98,7 @@ namespace exec
 
 	\par Replies exec_Data:
 		To indicate data is received. This is line based, so every line generates an event.
+		NOTE: Only stdout is send, so use redirections if neccesary, otherwise you'll see the output on the console.
 		\param id	The user supplied id.
 		\param data The data (string)
 
@@ -95,6 +117,28 @@ namespace exec
 	*/
 	SYNAPSE_REGISTER(exec_Start)
 	{
+		//user wants to queue it?
+		if (msg.dst!=queueId && msg.isSet("queue"))
+		{
+			//forward to our single threaded session
+			msg["originalSrc"]=msg.src;
+			msg.dst=queueId;
+			msg.src=defaultId;
+			msg.send();
+			return;
+		}
+
+		//src is set?
+		if (msg.isSet("originalSrc"))
+		{
+			//SECURITY: only WE may set the source
+			if (msg.src!=defaultId)
+			{
+				throw(runtime_error("You are not allowed to set the src-session."));
+			}
+			msg.src=msg["originalSrc"];
+		}
+
 		char buffer[4049];
 		Cmsg out;
 		if (msg.isSet("id"))

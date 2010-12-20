@@ -537,6 +537,7 @@ SYNAPSE_REGISTER(core_Login)
 	\param password (optional) If specified will create a session with a different user instead of the \c src user.
 	\param maxThreads (optional) Max threads of new session.
 	\param synapse_cookie (optional) Cookie, can be used internally by module. This value is passed every time a handler for the session is called. It is passed as \c cookie parameter to the handler-function.
+	\param description (optional) description of the session
 
 \post A new session is created.
 
