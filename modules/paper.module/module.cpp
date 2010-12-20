@@ -225,13 +225,13 @@ namespace paper
 				out["cmd"]="nice convert -density 10 " + svgFilename.str() + " " + pngFilename.str() + ".large.png";
 				out.send();
 
-				out.event="exec_Start";
-				out["cmd"]="nice convert -density 2 " + svgFilename.str() + " " + pngFilename.str() + ".medium.png";
-				out.send();
+//				out.event="exec_Start";
+//				out["cmd"]="nice convert -density 2 " + svgFilename.str() + " " + pngFilename.str() + ".medium.png";
+//				out.send();
 
-				out.event="exec_Start";
-				out["cmd"]="nice convert -density 1 " + svgFilename.str() + " " + pngFilename.str() + ".small.png";
-				out.send();
+//				out.event="exec_Start";
+//				out["cmd"]="nice convert -density 1 " + svgFilename.str() + " " + pngFilename.str() + ".small.png";
+//				out.send();
 			}
 		}
 
@@ -446,13 +446,16 @@ namespace paper
 			//NOTE: svgweb doesnt support a numeric svg-root, hence the added r
 			//NOTE: This is a STL ordered MAP, we need to keep the correct order, so hence the 1000.
 			drawing["data"]["1000r"]["element"]="svg";
-			drawing["data"]["1000r"]["version"]="1.1";
+			drawing["data"]["1000r"]["version"]="1.2";
 			drawing["data"]["1000r"]["baseProfile"]="tiny";
 			drawing["data"]["1000r"]["viewBox"]="0 0 17777 10000";
 			drawing["data"]["1000r"]["width"]="100%";
 			drawing["data"]["1000r"]["height"]="100%";
 
 			drawing["data"]["1000r"]["xmlns"]="http://www.w3.org/2000/svg";
+			drawing["data"]["1000r"]["xmlns:xlink"]="http://www.w3.org/1999/xlink";
+			//we dont use this YET:
+			//drawing["data"]["1000r"]["xmlns:ev"]="http://www.w3.org/2001/xml-events";
 
 			drawing["data"]["1000r"]["stroke-linecap"]="round";
 			drawing["data"]["1000r"]["stroke-linejoin"]="round";

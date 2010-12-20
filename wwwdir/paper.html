@@ -104,8 +104,9 @@
 			var element=document.getElementById(id);
 			if (element!=null)
 			{
-				element.setAttribute('stroke-opacity','0.5');
-				element.setAttribute('fill-opacity','0.5');
+				element.setAttribute('opacity','0.75');
+				element.setAttribute('stroke-opacity','0.75');
+				element.setAttribute('fill-opacity','0.75');
 			}
 		}
 
@@ -115,6 +116,7 @@
 			var element=document.getElementById(id);
 			if (element!=null)
 			{
+				element.removeAttribute('opacity');
 				element.removeAttribute('stroke-opacity');
 				element.removeAttribute('fill-opacity');
 			}
@@ -217,6 +219,8 @@
 						{
 							highlight(msg["id"]);
 						}
+
+										
 						
 					}
 					
@@ -224,13 +228,22 @@
 					if (msg["add"] || msg["set"])
 					{
 						for (var attrName in msg["set"])
-						{
+						{	
 							//special text hack 'attribute'?
 							if (attrName=='text')
 							{
 								element.childNodes[0].data=filterInput(msg["set"][attrName],100);
-
 							}
+							//xlink namespace attribute
+							else if (attrName.substr(0,5)=="xlink")
+							{
+								element.setAttributeNS(xlinkns, attrName, msg["set"][attrName]);
+							}							
+							//somehow it seems we need to ignore these (svgweb or in general?)
+							else if (attrName.substr(0,5)=="xmlns")
+							{
+								continue;
+							}	
 							//normal attribute
 							else
 							{
@@ -684,13 +697,13 @@
 					sendDraw({
 						'cmd'		:'update',
 						'id'		:'new',
-						'fill'				: fill,
-						'stroke'			: stroke,
 						'element'	:'image',
 						'set'		: {
-							'x'			: c.x, 
-							'y'			: c.y,
-							'xlink:href'		: "/img/paper.png"
+							'preserveAspectRatio'	: 'none',
+							'x'						: c.x, 
+							'y'						: c.y,
+							'xlink:href'			: $("#imageInput").val(),
+							'xlink:title'			: $("#imageInput").val()
 						}
 					});
 				}
@@ -958,7 +971,9 @@
 					//set mouse leave event
 					//(doesnt work with addeventlistener!)
 					$("#drawing").mouseleave(mouseEnd);
-						
+
+					
+					
 					/// start mouse update engine
 					window.setInterval(function() { mouseMove(false) }, mouseInterval);
 
@@ -1225,7 +1240,7 @@
 			<br></br>
 			<div class='tool' value='text' fill changeHigh=0 changeShow='.settingText' changeFocus='#textInput'>text</div>
 			<div class='tool' value='delete' changeHigh='1' changeShow='' changeFocus='#chatInput'>[gum]</div>
-			<div class='tool' value='image' changeHigh='0' changeShow='.settingImage'  changeFocus='#imageInput'>img</div>
+			<div class='tool' value='image' changeHigh='0' changeShow='.settingImage' fill changeFocus='#imageInput'>img</div>
 		</div>
 
 		<!-- add extra per-tool settings here, will be automaticly shown if show=... is specified in a tool -->
