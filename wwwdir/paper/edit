@@ -6,8 +6,8 @@
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
 	<title>internetpapier.nl - BETA</title>
 
-	<script src="svg.js"></script>
-	<script type="text/javascript" src="synapse.js"></script>
+	<script type="text/javascript" src="svg.js"></script>
+	<script type="text/javascript" src="/synapse/synapse.js"></script>
 	<script type="text/javascript" src="jquery.url.js"></script>
 	<script type="text/javascript">
 
@@ -131,6 +131,11 @@
 				$("#chatBar").html("<div class='chatOnline'>1 vriend online</div>");
 			else
 				$("#chatBar").html("<div class='chatOnline'>"+online+" vrienden online</div>");
+		}
+
+		function getUrlId()
+		{
+			return(jQuery.url.attr("query").match("^.[0-9]*")[0]);
 		}
 
 		
@@ -974,10 +979,9 @@
 					/// start mouse update engine
 					window.setInterval(function() { mouseMove(false) }, mouseInterval);
 
-
 					//join the specified paper
 					send(0,"paper_Join", {
-						"objectId":jQuery.url.param("id")
+						"objectId":getUrlId()
 					});
 							
 
@@ -1008,9 +1012,9 @@
 		//we've joined a object
  		synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
 		{
-			//doesnt the url match?
-			if (jQuery.url.param("id")!=msg["objectId"])
-				document.location="paper.html?id="+msg["objectId"];
+			//doesnt the url id match?
+			if (getUrlId()!=msg["objectId"])
+				document.location="edit?"+msg["objectId"];
  			
 			//we've joined a object, from now on draw on it.
 			currentObjectId=msg["objectId"];
@@ -1206,7 +1210,7 @@
 	border-color:#dddddd;
 	border-right-style:solid'>
 
-		<div class='toolHeader' style='border-top-style:none; background-image:url("img/paper.png");'>
+		<div class='toolHeader' style='border-top-style:none; background-image:url("paper.png");'>
 			Papier <span id='objectId'></span>	
 		</div>
 
@@ -1219,7 +1223,7 @@
 
 		<input type='submit' value='Nieuw' id='clear'>
 
-		<div class='toolHeader' style='background-image:url("img/paper.png");'>
+		<div class='toolHeader' style='background-image:url("paper.png");'>
 			Gereedschappen	
 		</div>
 
@@ -1258,7 +1262,7 @@
 			<textarea id='imageInput' class='autoFocus' cols=20 rows=3></textarea>
 		</div>
 
-		<div class='toolHeader' style='background-image:url("img/paper.png");'>
+		<div class='toolHeader' style='background-image:url("paper.png");'>
 			Kleuren	
 		</div>
 

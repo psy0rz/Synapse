@@ -4,10 +4,9 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-	<link href="css/redmond/jquery-ui.css" rel="stylesheet" type="text/css"/>
 	<title>Internet Papier</title>
 
-	<script type="text/javascript" src="synapse.js"></script>
+	<script type="text/javascript" src="/synapse/synapse.js"></script>
 
 	<script>
 
@@ -53,14 +52,14 @@
 		//we probably created a new object, so go to the editor
 		synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
 		{
-			document.location="paper.html?id="+msg["objectId"];			
+			document.location="edit?"+msg["objectId"];			
 		});
 
 		//the requested paper exists and is accesible, so go to the editor		
 		synapse_register("paper_CheckOk",function(msg_src, msg_dst, msg_event, msg)
 		{
 			$("#message").html("Pagina word ingeladen...");
-			document.location="paper.html?id="+msg["objectId"];			
+			document.location="edit?"+msg["objectId"];			
 		});
 
 		synapse_register("paper_CheckNotFound",function(msg_src, msg_dst, msg_event, msg)
@@ -183,7 +182,7 @@
 		</div>
 
 		<div class='button' id='addButton'>
-			<img src='img/note_add.png'/>	
+			<img src='note_add.png'/>	
 			Nieuw...
 		</div>
 	</div>
@@ -193,7 +192,7 @@
 					Bekijk dit papier nummer: <input size='5' id='objectId'>
 			</div>	
 			<div class='button' id='editButton'>
-				<img src='img/note_edit.png'/>
+				<img src='note_edit.png'/>
 				Bekijk...
 			</div>
 			<br>
