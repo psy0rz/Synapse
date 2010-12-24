@@ -230,15 +230,8 @@ namespace paper
 				out["id"]["path"]=pngFilename.str()+".png";
 				out["id"]["type"]="png";
 				out["queue"]=1;
-				out["cmd"]="nice convert -density 4 MSVG:wwwdir/" + svgFilename.str() + " wwwdir/" + pngFilename.str() + ".png";
-				out.send();
-
-				out.clear();
-				out.src=0;
-				out.dst=0;
-				out.event="exec_Start";
-				out["queue"]=1;
-				out["cmd"]="nice convert -density 1 MSVG:wwwdir/" + svgFilename.str() + " wwwdir/" + pngFilename.str() + ".thumb.png";
+				out["cmd"]="nice convert -density 4 MSVG:wwwdir/" + svgFilename.str() + " wwwdir/" + pngFilename.str() + ".png "+
+						"&& nice convert -scale 150  wwwdir/" + pngFilename.str() + ".png wwwdir/" + pngFilename.str() + ".thumb.png";
 				out.send();
 			}
 		}
