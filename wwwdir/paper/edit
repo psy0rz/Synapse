@@ -907,7 +907,29 @@
 				send(0,"paper_Create", { "moveClients":1 } );
 			});
 
+			var save="";
+			$("#savePNG").click(function(m)
+			{
+				save="png";
+				send(0,"paper_Save");
+				$(this).attr("src","spinner.gif");
+			});
 
+			$("#saveSVG").click(function(m)
+			{
+				save="svg";
+				send(0,"paper_Save");
+				$(this).attr("src","spinner.gif");
+			});
+
+			synapse_register("paper_Saved",function(msg_src, msg_dst, msg_event, msg)
+			{
+				if (save==msg["type"])
+				{
+					document.location="/"+msg["path"]+"?"+Math.round((new Date().getTime())/1000);
+				}
+			});
+					
 
 			//wait until svgloading is complete
 		    window.addEventListener('SVGLoad', function() {
@@ -1214,10 +1236,9 @@
 			Papier <span id='objectId'></span>	
 		</div>
 
-		<a id='svgURL' target='_blank'>SVG</a>
-		<br>
-		<a id='pngURLlarge' target='_blank'>PNG</a>
-
+		<img src='svg.png' class='save' id='saveSVG' style='cursor:pointer;'></img>
+		<img src='png.png' class='save' id='savePNG' style='cursor:pointer;'></img>
+		
 		
 
 
@@ -1396,7 +1417,7 @@
 	position:absolute;
 	left:0;
 	right:0;
-	top:0;
+	top:1em;
 	bottom:0;
 	background-fill:none;
 	text-align:center;

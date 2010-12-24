@@ -81,6 +81,8 @@ namespace paper
 		out["event"]=	"paper_ClientDraw";		out.send(); //draw something
 		out["event"]=	"paper_Redraw";		out.send(); //ask the server to send an entire redraw
 
+		out["event"]=	"paper_Save";			out.send(); //save and export a object
+
 		//client receive-only events:
 		out.clear();
 		out.event="core_ChangeEvent";
@@ -96,9 +98,10 @@ namespace paper
 		out["event"]=	"paper_CheckNotFound";	out.send(); //object not found
 		out["event"]=	"paper_CheckOk";	out.send(); //object found and accesible
 
+		out["event"]=	"paper_ServerDraw";		out.send(); //draw something
+
 		out["event"]=	"paper_Saved";			out.send(); //paper is saved
 
-		out["event"]=	"paper_ServerDraw";		out.send(); //draw something
 
 		out.clear();
 		out.event="core_LoadModule";
@@ -142,6 +145,7 @@ namespace paper
 	//a server side piece of paper
 	class CpaperObject : public synapse::CsharedObject<CpaperClient>
 	{
+
 		public:
 		synapse::Cconfig drawing;
 
@@ -149,7 +153,7 @@ namespace paper
 		void save(string path)
 		{
 			if (drawing.isChanged())
-				{
+			{
 				drawing.save(path);
 
 				//export to svg
@@ -690,6 +694,17 @@ namespace paper
 			; //ignore exceptions, due to race conditions in deletes etc.
 		}
 	}
+
+	/*** Request paper to be saved and exported immeadiatly
+	 *
+	 */
+	SYNAPSE_REGISTER(paper_Save)
+	{
+		//force save
+		objectMan.getObjectByClient(msg.src).drawing.changed();
+		objectMan.save(objectMan.getObjectByClient(msg.src).getId());
+	}
+
 
 	SYNAPSE_REGISTER(exec_Ended)
 	{
