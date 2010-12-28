@@ -1027,7 +1027,7 @@
 			//select default tools
 			$(".tool").removeClass('selected');
 			$(".defaultTool").addClass('selected');
-
+			$(".defaultSetting").show();
 		}
 
 	    
@@ -1085,16 +1085,13 @@
 		{
 			#drawing {
 				position:absolute; 
-				left:11em;
-				top: 6em;
+				left:200px;
+				top: 88px;
 				right:0;
 				bottom:0;
 				cursor:crosshair;
 				margin: 0;
 				padding: 0;
-				border-width:1px;
-				border-color:#dddddd;
-				border-style:solid;
 				background-color:#ffffff;
 			}
 		}
@@ -1110,8 +1107,8 @@
 		
 		.tool
 		{
-			width:2em;
-			height:2em;
+			width:34px;
+			height:34px;
 			border-width:1px;
 			border-style:solid;
 			cursor:pointer;
@@ -1195,14 +1192,16 @@
 	margin:0;
 	padding:0;
 	height:100%;
-	overflow:hidden;'>
+	overflow:hidden;
+	font-size:12px; 
+	'>
 
 	<div id='topbar' style='
 	position:absolute; 
 	left:0;
 	top: 0;
-	width: 100%;
-	height:4em;
+	right:0;
+	height:54px;
 	border-style:none;
 	font-style:italic;
 	color:#aaaaaa'>
@@ -1210,25 +1209,25 @@
 	</div>
 			
 
-	<div id='menubar' style='
+	<div id='menuBar' style='
 	position:absolute; 
 	left:0;
-	top: 4em;
-	width: 100%;
-	height:2em;
-	background-color:#421F59;
-	border-style:none;'>
+	top: 54px;
+	right:0;
+	height:34px;
+	background-color:#421F59;'>
 	</div>
 
 
 
-	<div id='toolbox' class='ui-widget-content' style='
+	<div id='toolbox' style='
 	position:absolute; 
 	left:0;
-	top: 6em;
-	width: 11em;
+	padding-left:19px;
+	top: 88px;
+	width: 180px;
 	bottom:0;
-	border-style:none;
+	border-width: 1px;
 	border-color:#dddddd;
 	border-right-style:solid'>
 
@@ -1250,23 +1249,118 @@
 
 
 		<div id='modes'>
-			<div class='tool' value='move' changeHigh='1' changeShow='' changeFocus='#chatInput'>move</div>
-			<div class='tool' value='line' changeHigh='0' changeShow='.settingWidth'  changeFocus='#chatInput'>line</div>
-			<div class='tool defaultTool' value='polyline' changeHigh=0 changeShow='.settingWidth'  changeFocus='#chatInput'>potl</div>
-			<div class='tool' value='polyline' fill changeHigh=0 changeShow='' changeFocus='#chatInput'>POTL</div>
+			<div 
+				class='tool' 
+				value='move' 
+				changeHigh='1' 
+				changeShow='' 
+				changeFocus='#chatInput' 
+				style='background-image:url("icon-pijl.jpg")'>
+			</div>
+			
+			<div 
+				class='tool' 
+				value='line' 
+				changeHigh='0' 
+				changeShow='.settingWidth'  
+				changeFocus='#chatInput'
+				style='background-image:url("icon-lijn.jpg")'>
+			</div>
+			
+			<div 
+				class='tool defaultTool' 
+				value='polyline' 
+				changeHigh=0 
+				changeShow='.settingWidth'
+				changeFocus='#chatInput'
+				style='background-image:url("icon-potlood.jpg")'>
+			</div>
+			
+			<div 
+				class='tool' 
+				value='polyline' 
+				fill 
+				changeHigh=0 
+				changeShow='' 
+				changeFocus='#chatInput'
+				style='background-image:url("icon-potlood-rondje.jpg")'>
+			</div>
+
 			<br></br>
-			<div class='tool' value='rect' changeHigh=0 changeShow='.settingWidth'  changeFocus='#chatInput'>vier</div>
-			<div class='tool' value='rect' fill changeHigh=0  changeShow='' changeFocus='#chatInput'>VIER</div>
-			<div class='tool' value='circle' changeHigh=0 changeShow='.settingWidth'  changeFocus='#chatInput'>cirk</div>
-			<div class='tool' value='circle' fill changeHigh=0 changeShow='' changeFocus='#chatInput'>CIRK</div>
+
+			<div 
+				class='tool' 
+				value='rect' 
+				changeHigh=0 
+				changeShow='.settingWidth'
+				changeFocus='#chatInput'
+				style='background-image:url("icon-vierkant-open.jpg")'>
+			</div>
+			
+			<div 
+				class='tool'
+				value='rect'
+				fill
+				changeHigh=0
+				changeShow=''
+				changeFocus='#chatInput'
+				style='background-image:url("icon-vierkant-dicht.jpg")'>
+			</div>
+			
+			<div 
+				class='tool' 
+				value='circle' 
+				changeHigh=0 
+				changeShow='.settingWidth'  
+				changeFocus='#chatInput'
+				style='background-image:url("icon-rondje-open.jpg")'>
+			</div>
+			
+			<div 
+				class='tool' 
+				value='circle' 
+				fill 
+				changeHigh=0 
+				changeShow='' 
+				changeFocus='#chatInput'
+				style='background-image:url("icon-rondje-dicht.jpg")'>
+			</div>
+			
 			<br></br>
-			<div class='tool' value='text' fill changeHigh=0 changeShow='.settingText' changeFocus='#textInput'>text</div>	
-			<div class='tool' value='delete' changeHigh='1' changeShow='' changeFocus='#chatInput'>[gum]</div>
-			<div class='tool' value='image' changeHigh='0' changeShow='.settingImage' fill changeFocus='#imageInput'>img</div>
+			
+			<div 
+				class='tool' 
+				value='text' 
+				fill 
+				changeHigh=0 
+				changeShow='.settingText' 
+				changeFocus='#textInput'
+				style='background-image:url("icon-tekst.jpg")'>
+			</div>	
+			
+			<div 
+				class='tool' 
+				value='delete' 
+				changeHigh='1' 
+				changeShow='' 
+				changeFocus='#chatInput'
+				style='background-image:url("icon-gum.jpg")'>
+			</div>
+			
+			<div
+				class='tool'
+				value='image'
+				changeHigh='0'
+				changeShow='.settingImage'
+				fill
+				changeFocus='#imageInput'
+				style='background-image:url("icon-afbeelding.jpg")'>
+			</div>
+
 		</div>
 
 		<!-- add extra per-tool settings here, will be automaticly shown if show=... is specified in a tool -->
-		<div class='setting settingWidth'>
+		<div class='setting settingWidth defaultSetting'>
 			Grootte (<span id='widthText'>3</span>)
 			<div id='width' style='
 				margin:1em;			
@@ -1321,8 +1415,8 @@
 
 	<div id='drawingSize' style='
 	position:absolute; 
-	left:11em;
-	top: 6em;
+	left:200px;
+	top: 88px;
 	right:0;
 	bottom:0;
 	margin: 0;
@@ -1334,44 +1428,67 @@
 	</div>		
 
 
+	<div id='fileBar' style='
+	position:absolute; 
+	cursor:pointer;
+	top: 54px;
+	left:199px;
+	width:110px;
+	height:34px;
+	border-width:1px;
+	border-color:#A28FAB;
+	border-right-style:solid;
+	border-left-style:solid;
+	line-height:34px;
+	color: #ffffff;
+	padding-left:38px;'>
+	Bestand
+	</div>
+
+
 	<div  style='
 	position:absolute; 
-	top: 1em;
-	width: 12em;
-	right:1em;
+	top: 14px;
+	width: 195px;
+	right:16px;
+	height:27px;
 	border-style:none;
 	color: #ffffff;
 	border-width:1px;
 	border-color:#dddddd;
 	border-style:solid;
-	padding-left:3em;'>
+	padding-left:38px;'>
 	<input id='chatClientName' class='autoFocus' style='border:none;padding:0;margin:0;' type='text' size=10></input> 
 	</div>
 
 	<div id='chatBar' style='
 	position:absolute; 
 	cursor:pointer;
-	top: 4em;
-	width: 15em;
-	right:0;
-	height:1.5em;
+	top: 54px;
+	width: 212px;
+	right: 0px;
+	hiehgt: 34px;
 	border-style:none;
 	color: #ffffff;
-	padding-top:.5em;
+	line-height:34px;
 	background-color:#FF8400;
-	padding-left:1em;'>
+	padding-left:38px;'>
+	Tekening word ingeladen...
 	</div>
+
+
 
 	<div id='chatBox' style='
 	position:absolute; 	
-	top: 6em;
-	width: 16em;
+	top: 88px;
+	width: 248px;
 	right:0;
 	bottom:0;
 	background-color:#ffffff;
 	border-style:solid;
 	border-color:#FF8400;
 	border-width:1px;
+	border-top-width:0px;
 	display:none;
 	'>
 		<div id='chatClients' style='
@@ -1423,7 +1540,6 @@
 	text-align:center;
 	color: red;
 	font-size: 1000%;'>
-		Loading...
 	</div>
 	
 </body>

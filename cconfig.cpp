@@ -29,6 +29,7 @@
 #include "clog.h"
 #include <errno.h>
 
+
 namespace synapse
 {
 	using namespace std;
@@ -37,7 +38,7 @@ namespace synapse
 
 	Cconfig::Cconfig()
 	{
-		saved=false;
+		changed();
 	}
 
 	void Cconfig::save(path configPath)
@@ -68,6 +69,12 @@ namespace synapse
 	void Cconfig::changed()
 	{
 		saved=false;
+		changeTime=time(NULL);
+	}
+
+	time_t Cconfig::getChangeTime()
+	{
+		return(changeTime);
 	}
 
 	void Cconfig::load(path configPath, bool merge)

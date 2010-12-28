@@ -29,6 +29,7 @@
 #include "cvar.h"
 #include <string>
 #include "boost/filesystem/operations.hpp"
+#include <time.h>
 
 namespace synapse
 {
@@ -39,6 +40,7 @@ namespace synapse
 	class Cconfig : public Cvar
 	{
 		private:
+		time_t changeTime;
 		bool saved;
 		path savedConfigPath;
 
@@ -47,6 +49,7 @@ namespace synapse
 
 		void changed();
 		bool isChanged();
+		time_t getChangeTime();
 		void save(path configPath);
 		void load(path configPath, bool merge=false);
 

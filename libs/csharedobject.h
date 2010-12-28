@@ -37,6 +37,8 @@ namespace synapse
 		typedef map<int,Tclient> CclientMap;
 		CclientMap clientMap;
 
+
+
 		public:
 
 		//send a message to all clients of the object
