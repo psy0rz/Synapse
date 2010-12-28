@@ -871,6 +871,14 @@
 					$(window).resize();
 				}
 			});
+
+			//hide/show a menu
+			$(".menuBar").click(function()
+			{
+				$(this).children(".menu").toggle();
+			});
+
+					
 			
 			//a tool is clicked
 			$(".tool").click(function(m)
@@ -912,21 +920,24 @@
 			{
 				save="png";
 				send(0,"paper_Save");
-				$(this).attr("src","spinner.gif");
+				$("#fileBar").addClass("loading");
 			});
 
 			$("#saveSVG").click(function(m)
 			{
 				save="svg";
 				send(0,"paper_Save");
-				$(this).attr("src","spinner.gif");
+				$("#fileBar").addClass("loading");
 			});
 
 			synapse_register("paper_Saved",function(msg_src, msg_dst, msg_event, msg)
 			{
 				if (save==msg["type"])
 				{
-					document.location="/"+msg["path"]+"?"+Math.round((new Date().getTime())/1000);
+					save="";
+					$("#fileBar").removeClass("loading");
+//					document.location="/"+msg["path"]+"?"+Math.round((new Date().getTime())/1000);
+					window.open("/"+msg["path"]+"?"+Math.round((new Date().getTime())/1000));
 				}
 			});
 					
@@ -1042,11 +1053,6 @@
 			currentObjectId=msg["objectId"];
 			paperModId=msg_src;
 			$("#objectId").html(msg["objectId"]);
-			//TODO:dynamic svg-path
-			$("#svgURL").attr("href","p/"+msg["objectId"]+".svg");
-//			$("#pngURLsmall").attr("href","p/"+msg["objectId"]+".small.png");
-//			$("#pngURLmedium").attr("href","p/"+msg["objectId"]+".medium.png");
-			$("#pngURLlarge").attr("href","p/"+msg["objectId"]+".png");
 			
 			//reset stuff
 			reset();
@@ -1117,6 +1123,11 @@
 			margin:2px;
 		}
 		
+		.toolList
+		{
+			margin-left:18px;
+		}
+		
 		.selected
 		{
 			border-color:#421F59;
@@ -1173,12 +1184,88 @@
 			background-repeat:no-repeat;
 			margin-top:1em;
 			margin-bottom:1em;
-			font-weight:bold;
+			padding-left:40px;
+			font-size:18px;
 		}
 		
 		.setting
 		{
 			display:none;
+			
+		}
+		
+		.chatBar
+		{
+			cursor:pointer;
+			border-style:none;
+			color: #ffffff;
+			line-height:34px;
+			background-color:#FF8400;
+			padding-left:38px;
+		}
+		
+		.chatBar:hover
+		{
+			background-color: #FF982A;			
+		}
+		
+		
+		.menuBar
+		{
+			cursor:pointer;
+			border-width:1px;
+			border-color:#A28FAB;
+			border-right-style:solid;
+			border-left-style:solid;
+			line-height:34px;
+			color: #ffffff;
+			padding-left:38px;
+			padding-right:18px;
+		}
+
+		.menuBar:hover
+		{
+			background-color: #633680;			
+		}
+		
+		.menuBar.loading
+		{
+			background-image: url("spinner.gif");
+			background-repeat:no-repeat;
+			background-position: center center;
+			background-color: #ffffff;
+		}
+		
+		.menu
+		{
+			cursor:pointer;
+			background-color:#efefef;
+			color:#000000;
+			border-width:1px;
+			border-color:#CED5DB;
+			border-style:solid;
+			display:none;
+			min-width: 150px;
+		}
+		
+		.menuItem
+		{
+			padding-left:1em;
+		}
+		
+		.menuSeperator
+		{
+			border-top-style:solid;
+			border-top-color:#CED5DB;
+			border-width:1px;
+			border-bottom-style:solid;
+			border-bottom-color:#ffffff;
+			width:100%;
+		}
+		
+		.menuItem:hover
+		{
+			background-color: #CED5DB;
 			
 		}
 
@@ -1209,7 +1296,7 @@
 	</div>
 			
 
-	<div id='menuBar' style='
+	<div id='menuBgBar' style='
 	position:absolute; 
 	left:0;
 	top: 54px;
@@ -1223,9 +1310,8 @@
 	<div id='toolbox' style='
 	position:absolute; 
 	left:0;
-	padding-left:19px;
 	top: 88px;
-	width: 180px;
+	width: 199px;
 	bottom:0;
 	border-width: 1px;
 	border-color:#dddddd;
@@ -1235,20 +1321,12 @@
 			Papier <span id='objectId'></span>	
 		</div>
 
-		<img src='svg.png' class='save' id='saveSVG' style='cursor:pointer;'></img>
-		<img src='png.png' class='save' id='savePNG' style='cursor:pointer;'></img>
-		
-		
-
-
-		<input type='submit' value='Nieuw' id='clear'>
-
 		<div class='toolHeader' style='background-image:url("paper.png");'>
 			Gereedschappen	
 		</div>
 
 
-		<div id='modes'>
+		<div id='modes' class='toolList'>
 			<div 
 				class='tool' 
 				value='move' 
@@ -1357,31 +1435,32 @@
 				style='background-image:url("icon-afbeelding.jpg")'>
 			</div>
 
+			<!-- add extra per-tool settings here, will be automaticly shown if show=... is specified in a tool -->
+			<div class='setting settingWidth defaultSetting'>
+				Grootte (<span id='widthText'>3</span>)
+				<div id='width' style='
+					margin:1em;			
+				'></div>
+			</div>
+	
+			<div class='setting settingText'>
+				Text: 
+				<textarea id='textInput' class='autoFocus' cols=20 rows=3></textarea>
+			</div>
+	
+			<div class='setting settingImage'>
+				Image url: 
+				<textarea id='imageInput' class='autoFocus' cols=20 rows=3></textarea>
+			</div>
+
 		</div>
 
-		<!-- add extra per-tool settings here, will be automaticly shown if show=... is specified in a tool -->
-		<div class='setting settingWidth defaultSetting'>
-			Grootte (<span id='widthText'>3</span>)
-			<div id='width' style='
-				margin:1em;			
-			'></div>
-		</div>
-
-		<div class='setting settingText'>
-			Text: 
-			<textarea id='textInput' class='autoFocus' cols=20 rows=3></textarea>
-		</div>
-
-		<div class='setting settingImage'>
-			Image url: 
-			<textarea id='imageInput' class='autoFocus' cols=20 rows=3></textarea>
-		</div>
 
 		<div class='toolHeader' style='background-image:url("paper.png");'>
 			Kleuren	
 		</div>
 
-		<div id='colors'>
+		<div id='colors'  class='toolList'>
 			<div class='tool color defaultTool' style='background-color:#000000' value='#000000'>&nbsp;</div>
 			<div class='tool color' style='background-color:#0000ff' value='#0000ff'>&nbsp;</div>
 			<div class='tool color' style='background-color:#00ff00' value='#00ff00'>&nbsp;</div>
@@ -1428,22 +1507,23 @@
 	</div>		
 
 
-	<div id='fileBar' style='
+	<div id='fileBar' class='menuBar' style='
 	position:absolute; 
-	cursor:pointer;
 	top: 54px;
 	left:199px;
-	width:110px;
-	height:34px;
-	border-width:1px;
-	border-color:#A28FAB;
-	border-right-style:solid;
-	border-left-style:solid;
-	line-height:34px;
-	color: #ffffff;
-	padding-left:38px;'>
-	Bestand
+	height:34px;'>
+		Bestand
+		<div id='fileMenu' class='menu' style='
+		position:absolute; 
+		top: 34px;
+		left:0px;'>
+			<div id='clear' class='menuItem'>Nieuw papier</div>
+			<div class='menuSeperator'></div>
+			<div id='savePNG' class='save menuItem'>Bekijk als PNG</div>
+			<div id='saveSVG' class='save menuItem'>Bekijk als SVG</div>
+		</div>
 	</div>
+
 
 
 	<div  style='
@@ -1461,18 +1541,12 @@
 	<input id='chatClientName' class='autoFocus' style='border:none;padding:0;margin:0;' type='text' size=10></input> 
 	</div>
 
-	<div id='chatBar' style='
+	<div id='chatBar' class='chatBar' style='
 	position:absolute; 
-	cursor:pointer;
 	top: 54px;
 	width: 212px;
 	right: 0px;
-	hiehgt: 34px;
-	border-style:none;
-	color: #ffffff;
-	line-height:34px;
-	background-color:#FF8400;
-	padding-left:38px;'>
+	height: 34px;'>
 	Tekening word ingeladen...
 	</div>
 
