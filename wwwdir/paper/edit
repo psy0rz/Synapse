@@ -9,6 +9,7 @@
 	<script type="text/javascript" src="svg.js"></script>
 	<script type="text/javascript" src="/synapse/synapse.js"></script>
 	<script type="text/javascript" src="jquery.url.js"></script>
+	<script type="text/javascript" src="addthis_widget.js#username=psy0rz&async=1"></script>
 	<script type="text/javascript">
 
 		function Cpoint(x,y)
@@ -62,6 +63,8 @@
 		//chat stuff
 		var chatLastClientName="";
 		var chatTypeHere="Type hier je bericht...";
+
+				
 		
 		//filter dangerous stuff from user input.
 		//NOTE: do this when you receive the data back from the server, not when sending to it!
@@ -291,6 +294,19 @@
 				//NOTE: this also works around a weird chromuim refresh bug.
 				$("#loading").hide();
 				loading=false;
+
+				//load addthis stuff
+				addthis_config = {
+						"data_track_clickback":true,
+						ui_language:"nl",
+						ui_use_css:false
+							
+					};
+				//$.getScript("",function()
+				//{
+					addthis.init();
+					//addthis.button('.sharing-button');
+				//});			
 				
 			}			
 
@@ -764,6 +780,7 @@
 			});
 
 			
+			
 			/// JAVA SCRIPT EVENT HANDLERS
 			
 			//window resize
@@ -1030,9 +1047,13 @@
 				svgweb.appendChild(drawing, drawingHtml);
 		     }, false);
 
-		
+
+			
  		});
 
+ 		
+
+	    	
 		function reset()
 		{
 			$('#clientList').empty();
@@ -1075,6 +1096,7 @@
 
 
 	</script>
+
 
 	<style>
 		@media print
@@ -1340,6 +1362,21 @@
 
 		<div class='toolHeader' style='border-top-style:none; background-image:url("paper.png");'>
 			Papier <span id='objectId'></span>	
+			
+<!-- AddThis Button BEGIN -->
+<a class="sharing-button"></a>
+<div class="addthis_toolbox addthis_default_style addthis_16x16_style">
+<a class="addthis_button_preferred_1"></a>
+<a class="addthis_button_preferred_2"></a>
+<a class="addthis_button_preferred_3"></a>
+<a class="addthis_button_preferred_4"></a>
+<a class="addthis_button_preferred_5"></a>
+<a class="addthis_button_preferred_6"></a>
+<a class="addthis_button_compact"></a>
+</div>
+	
+<!-- AddThis Button END -->
+			
 		</div>
 
 		<div class='toolHeader' style='background-image:url("paper.png");'>
