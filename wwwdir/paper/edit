@@ -126,7 +126,7 @@
 		{
 			var online=$('.chatClient').length-1;
 			if (online==0)
-				$("#chatBar").html("<div class='chatOnline'>Nodig vrienden uit!</div>");
+				$("#chatBar").html("<div class='chatOnline'> Chatbox</div>");
 			else if (online==1)
 				$("#chatBar").html("<div class='chatOnline'>1 vriend online</div>");
 			else
@@ -850,8 +850,10 @@
 			//hide/show chatbox
 			$("#chatBar").click(function()
 			{
+				//show
 				if ($("#chatBox").css("display")=="none")
 				{
+					$(this).addClass("chatBarOpen");
 					$("#chatBox").show();
 
 					//scroll to end
@@ -864,8 +866,10 @@
 					$(window).resize();
 					chatPrintOnline();
 				}
+				//hide
 				else
 				{
+					$(this).removeClass("chatBarOpen");
 					$("#chatBox").hide();
 					$("#drawingSize").css("right","0");
 					$(window).resize();
@@ -876,6 +880,7 @@
 			$(".menuBar").click(function()
 			{
 				$(this).children(".menu").toggle();
+				$(this).toggleClass("menuBarOpen");
 			});
 
 					
@@ -1193,6 +1198,7 @@
 			display:none;
 			
 		}
+
 		
 		.chatBar
 		{
@@ -1201,14 +1207,21 @@
 			color: #ffffff;
 			line-height:34px;
 			background-color:#FF8400;
-			padding-left:38px;
+			padding-left:28px;
+			background-position: 8px 12px;
+			background-repeat:no-repeat;
+			background-image: url("pijl-rechts.png");
 		}
 		
 		.chatBar:hover
 		{
 			background-color: #FF982A;			
 		}
-		
+
+		.chatBarOpen
+		{
+			background-image: url("pijl-beneden.png");
+		}
 		
 		.menuBar
 		{
@@ -1219,13 +1232,21 @@
 			border-left-style:solid;
 			line-height:34px;
 			color: #ffffff;
-			padding-left:38px;
+			padding-left:28px;
 			padding-right:18px;
+			background-image: url("pijl-rechts.png");
+			background-position: 8px 12px;
+			background-repeat:no-repeat;
 		}
 
 		.menuBar:hover
 		{
 			background-color: #633680;			
+		}
+		
+		.menuBarOpen
+		{
+			background-image: url("pijl-beneden.png");
 		}
 		
 		.menuBar.loading
@@ -1544,7 +1565,7 @@
 	<div id='chatBar' class='chatBar' style='
 	position:absolute; 
 	top: 54px;
-	width: 212px;
+	width: 222px;
 	right: 0px;
 	height: 34px;'>
 	Tekening word ingeladen...
