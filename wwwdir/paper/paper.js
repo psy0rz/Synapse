@@ -124,9 +124,14 @@ function chatPrintOnline()
 		$("#chatBar").html("<div class='chatOnline'>"+online+" vrienden online</div>");
 }
 
+//the id is determined by filename if filename is a number. otherwise its the first number in the query string.
 function getUrlId()
 {
-	return(jQuery.url.attr("query").match("^.[0-9]*")[0]);
+	var file=jQuery.url.segment(1);
+	if (file==parseInt(file))
+		return(file);
+	else
+		return(jQuery.url.attr("query").match("^.[0-9]*")[0]);
 }
 
 
@@ -947,8 +952,8 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 		{
 			save="";
 			$("#fileBar").removeClass("loading");
-//					document.location="/"+msg["path"]+"?"+Math.round((new Date().getTime())/1000);
-			window.open("/"+msg["path"]+"?"+Math.round((new Date().getTime())/1000));
+			document.location=msg["path"]+"?"+Math.round((new Date().getTime())/1000);
+//			window.open("/"+msg["path"]+"?"+Math.round((new Date().getTime())/1000));
 		}
 	});
 			
@@ -1062,7 +1067,7 @@ synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
 {
 	//doesnt the url id match?
 	if (getUrlId()!=msg["objectId"])
-		document.location="edit?"+msg["objectId"];
+		document.location="/p/"+msg["objectId"];
 	
 	//we've joined a object, from now on draw on it.
 	currentObjectId=msg["objectId"];

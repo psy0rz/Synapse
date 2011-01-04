@@ -29,6 +29,7 @@ Internet paper.
 #include "cconfig.h"
 #include "boost/filesystem/operations.hpp"
 #include "boost/filesystem/fstream.hpp"
+#include <boost/regex.hpp>
 
 //we use the generic shared object management classes.
 #include "cclient.h"
@@ -122,6 +123,50 @@ namespace paper
 
 	}
 
+	//TODO: move this to a generic lib
+	//replace a bunch of regular expressions in a file.
+	//the regex Cvar is a hasharray:
+	// regex => replacement
+	void regexReplaceFile(const string & inFilename, const string & outFilename,  synapse::CvarMap & regex)
+	{
+		//read input
+		stringbuf inBuf;
+		ifstream inStream;
+		inStream.exceptions (  ifstream::failbit| ifstream::badbit );
+		inStream.open(inFilename);
+		inStream.get(inBuf,'\0');
+		inStream.close();
+
+		//build regex and formatter
+		string regexStr;
+		stringstream formatStr;
+		int count=1;
+		for(synapse::CvarMap::iterator I=regex.begin(); I!=regex.end(); I++)
+		{
+			if (count>1)
+				regexStr+="|";
+
+			regexStr+="("+ I->first +")";
+			formatStr << "(?{" << count << "}" << I->second.str() << ")";
+			count++;
+		}
+
+		//apply regexs
+		string outBuf;
+		outBuf=regex_replace(
+				inBuf.str(),
+				boost::regex(regexStr),
+				formatStr.str(),
+				boost::match_default | boost::format_all
+		);
+
+		//write output
+		ofstream outStream;
+		outStream.exceptions ( ofstream::eofbit | ofstream::failbit | ofstream::badbit );
+		outStream.open(outFilename);
+		outStream << outBuf;
+		outStream.close();
+	}
 
 
 
@@ -149,6 +194,64 @@ namespace paper
 		public:
 		synapse::Cconfig drawing;
 
+		//get filenames, relative to wwwdir, or relative to synapse main dir.
+		//these probably are going to give different results when papers are made private.
+		string getSvgFilename(bool www=false)
+		{
+			stringstream filename;
+			if (!www)
+				filename << "wwwdir";
+			filename << "/p/" << id << ".svg";
+			return (filename.str());
+		}
+
+		string getPngFilename(bool www=false)
+		{
+			stringstream filename;
+			if (!www)
+				filename << "wwwdir";
+			filename << "/p/" << id << ".png";
+			return (filename.str());
+		}
+
+		string getThumbFilename(bool www=false)
+		{
+			stringstream filename;
+			if (!www)
+				filename << "wwwdir";
+			filename << "/p/" << id << ".thumb.svg";
+			return (filename.str());
+		}
+
+		string getHtmlFilename(bool www=false)
+		{
+			stringstream filename;
+			if (!www)
+				filename << "wwwdir";
+			filename << "/p/" << id << "";
+			return (filename.str());
+		}
+
+		void createHtml()
+		{
+			//Since we need to add all kinds of metadata to the paper-html file, we need to parse the html file and fill in some marcros
+			//The result is stored in the output directory: wwwdir/p/<id>
+			synapse::CvarMap regex;
+			regex["%id%"]=id;
+			regex["%png%"]=getPngFilename(true);
+			regex["%thumb%"]=getThumbFilename(true);
+			regex["%svg%"]=getSvgFilename(true);
+
+			regexReplaceFile("wwwdir/paper/edit.html", getHtmlFilename(), regex);
+
+		}
+
+		//the paper is created for the first time.
+		void create()
+		{
+			createHtml();
+		}
+
 
 		void save(string path)
 		{
@@ -159,9 +262,7 @@ namespace paper
 				//export to svg
 				ofstream svgStream;
 				svgStream.exceptions ( ofstream::eofbit | ofstream::failbit | ofstream::badbit );
-				stringstream svgFilename;
-				svgFilename << "p/" << id << ".svg";
-				svgStream.open("wwwdir/"+svgFilename.str());
+				svgStream.open(getSvgFilename());
 
 				//svg header
 				svgStream << "<?xml version=\"1.0\" standalone=\"no\"?>\n";
@@ -214,24 +315,21 @@ namespace paper
 				Cmsg out;
 				out.event="paper_Saved";
 				out["type"]="svg";
-				out["path"]=svgFilename.str();
+				out["path"]=getSvgFilename(true);
 				send(out);
 
 
 				//now let imagemagic convert it to some nice pngs :)
-				stringstream pngFilename;
-				pngFilename << "p/" << id;
-
 				out.clear();
 				out.src=0;
 				out.dst=0;
 				out.event="exec_Start";
 				out["id"]["paperId"]=id;
-				out["id"]["path"]=pngFilename.str()+".png";
+				out["id"]["path"]=getPngFilename(true);
 				out["id"]["type"]="png";
 				out["queue"]=1;
-				out["cmd"]="nice convert -density 4 MSVG:wwwdir/" + svgFilename.str() + " wwwdir/" + pngFilename.str() + ".png "+
-						"&& nice convert -scale 150  wwwdir/" + pngFilename.str() + ".png wwwdir/" + pngFilename.str() + ".thumb.png";
+				out["cmd"]="nice convert -density 4 MSVG:" + getSvgFilename() + " " + getPngFilename() + " "+
+						"&& nice convert -scale 150 " + getPngFilename() + " " + getThumbFilename();
 				out.send();
 			}
 		}
@@ -551,18 +649,6 @@ namespace paper
 			int oldObjectId=objectMan.getObjectByClient(msg.src).getId();
 			int newObjectId=objectMan.add();
 
-//			//store reference to next object in the old one..
-//			CvarList commands;
-//			commands.push_back(string("N"));
-//			commands.push_back(newObjectId);
-//			//objectMan.getObject(oldObjectId).serverDraw(commands);
-//
-//			//store reference to previous object in the new one..
-//			commands.clear();
-//			commands.push_back(string("P"));
-//			commands.push_back(oldObjectId);
-//			//objectMan.getObject(newObjectId).serverDraw(commands);
-
 			//now actually move the clients
 			objectMan.moveClients(oldObjectId, newObjectId);
 		}
@@ -571,6 +657,7 @@ namespace paper
 			int objectId=objectMan.add();
 			objectMan.getObject(objectId).addClient(msg.src);
 		}
+
 	}
 
 	/** Clients wants to delete a paper
@@ -605,7 +692,8 @@ namespace paper
 
 		try
 		{
-			objectMan.getObject(msg["objectId"]);
+			//besides checking, we also recreate the html (for now)
+			objectMan.getObject(msg["objectId"]).createHtml();
 			out.event="paper_CheckOk";
 		}
 		catch(...)

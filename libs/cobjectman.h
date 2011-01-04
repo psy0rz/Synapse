@@ -68,7 +68,7 @@ namespace synapse
 				{
 					DEB("Loading data for object " << objectId << " from " << getStoragePath(objectId));
 					TsharedObject object;
-					object.create(objectId);
+					object.init(objectId);
 					object.load(getStoragePath(objectId));
 					objectMap[objectId]=object;
 				}
@@ -104,7 +104,8 @@ namespace synapse
 			config["lastId"]=config["lastId"]+1;
 			config.changed();
 
-			objectMap[config["lastId"]].create(config["lastId"]);
+			objectMap[config["lastId"]].init(config["lastId"]);
+			objectMap[config["lastId"]].create();
 			return (config["lastId"]);
 
 //			//send the object to the requester

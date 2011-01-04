@@ -65,9 +65,17 @@ namespace synapse
 
 		}
 
-		void create(int id)
+		//initialize the object in memory.
+		void init(int id)
 		{
 			this->id=id;
+		}
+
+		//the object is created for the very first time.
+		//subclass this to do stuff on initial creation.
+		virtual void create()
+		{
+			//dummy.
 		}
 
 		virtual void getInfo(Cmsg & msg)

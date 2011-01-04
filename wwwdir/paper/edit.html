@@ -4,8 +4,12 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-	<title>internetpapier.nl #%id%</title>
-
+	<meta name="title" content="Internet papier #%id%" />
+	<meta name="description" content="Tekening nummer %id%, gemaakt op internetpapier.nl." />
+	<link rel="image_src" href="%png%" />
+	
+	<title>Internet papier #%id%</title>
+	
 	<script type="text/javascript" src="/synapse/synapse.js"></script>
 	<script type="text/javascript" src="/paper/svg.js"></script>
 	<script type="text/javascript" src="/paper/jquery.url.js"></script>
@@ -146,7 +150,7 @@
 			padding-left:28px;
 			background-position: 8px 12px;
 			background-repeat:no-repeat;
-			background-image: url("pijl-rechts.png");
+			background-image: url("/paper/pijl-rechts.png");
 		}
 		
 		.chatBar:hover
@@ -156,7 +160,7 @@
 
 		.chatBarOpen
 		{
-			background-image: url("pijl-beneden.png");
+			background-image: url("/paper/pijl-beneden.png");
 		}
 		
 		.menuBar
@@ -170,7 +174,7 @@
 			color: #ffffff;
 			padding-left:28px;
 			padding-right:18px;
-			background-image: url("pijl-rechts.png");
+			background-image: url("/paper/pijl-rechts.png");
 			background-position: 8px 12px;
 			background-repeat:no-repeat;
 		}
@@ -182,12 +186,12 @@
 		
 		.menuBarOpen
 		{
-			background-image: url("pijl-beneden.png");
+			background-image: url("/paper/pijl-beneden.png");
 		}
 		
 		.menuBar.loading
 		{
-			background-image: url("spinner.gif");
+			background-image: url("/paper/spinner.gif");
 			background-repeat:no-repeat;
 			background-position: center center;
 			background-color: #ffffff;
@@ -274,7 +278,7 @@
 	border-color:#dddddd;
 	border-right-style:solid'>
 
-		<div class='toolHeader' style='border-top-style:none; background-image:url("paper.png");'>
+		<div class='toolHeader' style='border-top-style:none; background-image:url("/paper/paper.png");'>
 			Papier <span id='objectId'></span>	
 			
 <!-- AddThis Button BEGIN -->
@@ -293,7 +297,7 @@
 			
 		</div>
 
-		<div class='toolHeader' style='background-image:url("paper.png");'>
+		<div class='toolHeader' style='background-image:url("/paper/paper.png");'>
 			Gereedschappen	
 		</div>
 
@@ -305,7 +309,7 @@
 				changeHigh='1' 
 				changeShow='' 
 				changeFocus='#chatInput' 
-				style='background-image:url("icon-pijl.jpg")'>
+				style='background-image:url("/paper/icon-pijl.jpg")'>
 			</div>
 			
 			<div 
@@ -314,7 +318,7 @@
 				changeHigh='0' 
 				changeShow='.settingWidth'  
 				changeFocus='#chatInput'
-				style='background-image:url("icon-lijn.jpg")'>
+				style='background-image:url("/paper/icon-lijn.jpg")'>
 			</div>
 			
 			<div 
@@ -323,7 +327,7 @@
 				changeHigh=0 
 				changeShow='.settingWidth'
 				changeFocus='#chatInput'
-				style='background-image:url("icon-potlood.jpg")'>
+				style='background-image:url("/paper/icon-potlood.jpg")'>
 			</div>
 			
 			<div 
@@ -333,7 +337,7 @@
 				changeHigh=0 
 				changeShow='' 
 				changeFocus='#chatInput'
-				style='background-image:url("icon-potlood-rondje.jpg")'>
+				style='background-image:url("/paper/icon-potlood-rondje.jpg")'>
 			</div>
 
 			<br></br>
@@ -344,7 +348,7 @@
 				changeHigh=0 
 				changeShow='.settingWidth'
 				changeFocus='#chatInput'
-				style='background-image:url("icon-vierkant-open.jpg")'>
+				style='background-image:url("/paper/icon-vierkant-open.jpg")'>
 			</div>
 			
 			<div 
@@ -354,7 +358,7 @@
 				changeHigh=0
 				changeShow=''
 				changeFocus='#chatInput'
-				style='background-image:url("icon-vierkant-dicht.jpg")'>
+				style='background-image:url("/paper/icon-vierkant-dicht.jpg")'>
 			</div>
 			
 			<div 
@@ -363,7 +367,7 @@
 				changeHigh=0 
 				changeShow='.settingWidth'  
 				changeFocus='#chatInput'
-				style='background-image:url("icon-rondje-open.jpg")'>
+				style='background-image:url("/paper/icon-rondje-open.jpg")'>
 			</div>
 			
 			<div 
@@ -373,7 +377,7 @@
 				changeHigh=0 
 				changeShow='' 
 				changeFocus='#chatInput'
-				style='background-image:url("icon-rondje-dicht.jpg")'>
+				style='background-image:url("/paper/icon-rondje-dicht.jpg")'>
 			</div>
 			
 			<br></br>
@@ -385,7 +389,7 @@
 				changeHigh=0 
 				changeShow='.settingText' 
 				changeFocus='#textInput'
-				style='background-image:url("icon-tekst.jpg")'>
+				style='background-image:url("/paper/icon-tekst.jpg")'>
 			</div>	
 			
 			<div 
@@ -394,7 +398,7 @@
 				changeHigh='1' 
 				changeShow='' 
 				changeFocus='#chatInput'
-				style='background-image:url("icon-gum.jpg")'>
+				style='background-image:url("/paper/icon-gum.jpg")'>
 			</div>
 			
 			<div
@@ -404,7 +408,7 @@
 				changeShow='.settingImage'
 				fill
 				changeFocus='#imageInput'
-				style='background-image:url("icon-afbeelding.jpg")'>
+				style='background-image:url("/paper/icon-afbeelding.jpg")'>
 			</div>
 
 			<!-- add extra per-tool settings here, will be automaticly shown if show=... is specified in a tool -->
