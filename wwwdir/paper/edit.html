@@ -13,7 +13,6 @@
 	<script type="text/javascript" src="/synapse/synapse.js"></script>
 	<script type="text/javascript" src="/paper/svg.js"></script>
 	<script type="text/javascript" src="/paper/jquery.url.js"></script>
-	<script type="text/javascript" src="/paper/addthis_widget.js#username=psy0rz&async=1"></script>
 	<script type="text/javascript" src="/paper/paper.js"></script>
 
 	<style>
@@ -80,6 +79,26 @@
 			margin:1px;
 		}
 
+		.toolHeader
+		{
+			border-color:#dddddd;
+			border-top-style:solid;
+			border-width:1px;
+			padding:.5em;
+			padding-left:2em;
+			background-position:5px top;
+			background-repeat:no-repeat;
+			margin-top:1em;
+			margin-bottom:1em;
+			padding-left:40px;
+			font-size:18px;
+		}
+		
+		.setting
+		{
+			display:none;
+		}
+
 		.chatTypeHere
 		{
 			color:#aaaaaa;
@@ -101,45 +120,6 @@
 		
 		}
 
-		img
-		{
-			border:0;
-			margin:0;
-			padding:0;
-			display:inline;
-		}
-		
-		
-		
-		.paperLink
-		{
-			background-color: yellow;
-			text-decoration: none;
-			display:block;
-		}
-
-		.toolHeader
-		{
-			border-color:#dddddd;
-			border-top-style:solid;
-			border-width:1px;
-			padding:.5em;
-			padding-left:2em;
-			background-position:5px top;
-			background-repeat:no-repeat;
-			margin-top:1em;
-			margin-bottom:1em;
-			padding-left:40px;
-			font-size:18px;
-		}
-		
-		.setting
-		{
-			display:none;
-			
-		}
-
-		
 		.chatBar
 		{
 			cursor:pointer;
@@ -230,6 +210,63 @@
 			
 		}
 
+		img
+		{
+			border:0;
+			margin:0;
+			padding:0;
+			display:inline;
+		}
+
+		.share
+		{
+			width:16px;
+			height:16px;
+			cursor:pointer;
+			display:inline-block;
+			margin:2px;
+		}
+		
+		.share.loading
+		{
+			background-image: url("/paper/spinner.gif");
+		}
+		
+		.facebook
+		{
+			 background-image:url("/paper/facebook.png");
+		}
+
+		.twitter
+		{
+			 background-image:url("/paper/twitter.png");
+		}
+
+		.hyves
+		{
+			 background-image:url("/paper/hyves.png");
+		}
+		
+		.print
+		{
+			 background-image:url("/paper/print.png");
+		}
+
+		.email
+		{
+			 background-image:url("/paper/email.png");
+		}
+
+		.linkedin
+		{
+			 background-image:url("/paper/linkedin.png");
+		}
+		
+		.addthis
+		{
+			 background-image:url("/paper/addthis.png");
+		}
+		
 	</style>
 
 </head>
@@ -280,21 +317,15 @@
 
 		<div class='toolHeader' style='border-top-style:none; background-image:url("/paper/paper.png");'>
 			Papier <span id='objectId'></span>	
-			
-<!-- AddThis Button BEGIN -->
-<a class="sharing-button"></a>
-<div class="addthis_toolbox addthis_default_style addthis_16x16_style">
-<a class="addthis_button_preferred_1"></a>
-<a class="addthis_button_preferred_2"></a>
-<a class="addthis_button_preferred_3"></a>
-<a class="addthis_button_preferred_4"></a>
-<a class="addthis_button_preferred_5"></a>
-<a class="addthis_button_preferred_6"></a>
-<a class="addthis_button_compact"></a>
-</div>
-	
-<!-- AddThis Button END -->
-			
+			<br>
+			<div shareType='facebook' class='share facebook' title='Delen op facebook'></div>
+			<div shareType='twitter' class='share twitter' title='Tweet dit'></div>
+			<div shareType='linkedin' class='share linkedin' title='Delen op LinkedIn'></div>
+			<div shareType='hyves' class='share hyves' title='Delen op hyves'></div>
+			<div shareType='addthis' class='share addthis' title='Delen via andere netwerken...'></div>
+			<br>
+			<div shareType='email' class='share email' title='Stuur via email'></div>
+			<div shareType='print' class='share print' title='Printen'></div>
 		</div>
 
 		<div class='toolHeader' style='background-image:url("/paper/paper.png");'>

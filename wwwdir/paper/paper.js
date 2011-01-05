@@ -286,22 +286,7 @@ function draw(msg)
 	{
 		//NOTE: this also works around a weird chromuim refresh bug.
 		$("#loading").hide();
-		loading=false;
-
-		//load addthis stuff
-		addthis_config = {
-				"data_track_clickback":true,
-				ui_language:"nl",
-				ui_use_css:false
-					
-			};
-
-		//$.getScript("",function()
-		//{
-			addthis.init();
-			//addthis.button('.sharing-button');
-		//});			
-		
+		loading=false;		
 	}			
 
 	//update cursor/client name?
@@ -931,7 +916,7 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 		send(0,"paper_Create", { "moveClients":1 } );
 	});
 
-	var save="";
+	var saving="";
 	$("#savePNG").click(function(m)
 	{
 		save="png";
@@ -946,14 +931,45 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 		$("#fileBar").addClass("loading");
 	});
 
+	var shareType="";
+	$(".share").click(function(m)
+	{
+		save="png";
+		shareType=$(this).attr("shareType");
+		send(0,"paper_Save");
+		$(this).addClass("loading");
+	});
+
+	//we also receive this if somebody else requested the save!
 	synapse_register("paper_Saved",function(msg_src, msg_dst, msg_event, msg)
 	{
+		//is it saved to wanted type?
 		if (save==msg["type"])
 		{
+			var imagePath=msg["path"]+"?"+Math.round((new Date().getTime())/1000);
 			save="";
-			$("#fileBar").removeClass("loading");
-			document.location=msg["path"]+"?"+Math.round((new Date().getTime())/1000);
-//			window.open("/"+msg["path"]+"?"+Math.round((new Date().getTime())/1000));
+			$(".loading").removeClass("loading");
+			//addthis or redirect to image?
+			if (shareType!="")
+			{
+				//addthis base url:
+				var addThis="http://api.addthis.com/oexchange/0.8/";
+				
+				if (shareType=="addthis")
+					addThis+="offer?";
+				else
+					addThis+="forward/"+shareType+"/offer?";
+				
+				addThis+="url="+escape(document.location)+"&";
+				addThis+="title="+escape("Internet papier #"+getUrlId())+"&";
+				addThis+="username=psy0rz&";
+				window.open(addThis);
+			}
+			else
+			{
+				//document.location=msg["path"]+"?"+Math.round((new Date().getTime())/1000);
+				window.open(imagePath);
+			}
 		}
 	});
 			
