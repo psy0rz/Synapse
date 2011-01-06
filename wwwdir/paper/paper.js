@@ -909,6 +909,12 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 			$($(this).attr('changeFocus')).focus();
 	});
 
+	$(".print").click(function(m)
+	{
+		print();
+	});
+
+	
 	//clear button
 	$("#clear").click(function(m)
 	{
