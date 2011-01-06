@@ -942,7 +942,6 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 	{
 		save="png";
 		shareType=$(this).attr("shareType");
-		console.log(shareType);
 		send(0,"paper_Save");
 		$(this).addClass("loading");
 	});
@@ -970,7 +969,6 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 				addThis+="url="+escape(document.location)+"&";
 				addThis+="title="+escape("Internet papier #"+getUrlId())+"&";
 				addThis+="username=psy0rz&";
-				console.log(addThis);
 				window.open(addThis);
 				shareType="";
 			}
