@@ -70,10 +70,7 @@ int netIdCounter=0;
 ChttpSessionMan httpSessionMan;
 
 //global, read from config file
-int configMaxContent=0;
-int configMaxConnections=0;
-map<string,string> configContentTypes;
-
+synapse::Cconfig config;
 
 
 void getHttpDate(string & s)
@@ -278,6 +275,13 @@ class CnetHttp : public synapse::Cnet
 			respondError(403, "Path contains illegal characters");
 			return(true);
 		}
+
+		//default path?
+		if (path=="/")
+		{
+			path=config["indexFile"].str();
+		}
+
 		string localPath;
 		localPath="wwwdir/"+path;
 
@@ -311,10 +315,10 @@ class CnetHttp : public synapse::Cnet
 		))
 		{
 			string extention=what[1];
-			if (configContentTypes.find(extention)!=configContentTypes.end())
+			if (config["contentTypes"].isSet(extention))
 			{
-				extraHeaders["content-type"]=configContentTypes[extention];
-				DEB("Content type of ." << extention << " is " << configContentTypes[extention]);
+				extraHeaders["content-type"]=config["contentTypes"][extention];
+				DEB("Content type of ." << extention << " is " << config["contentTypes"][extention]);
 			}
 			else
 			{
@@ -540,7 +544,7 @@ class CnetHttp : public synapse::Cnet
 				//a POST with content:
 				else
 				{
-					if ( (int)headers["content-length"]<0  || (int)headers["content-length"] > configMaxContent )
+					if ( (int)headers["content-length"]<0  || (int)headers["content-length"] > config["maxContent"] )
 					{
 						error="Invalid Content-Length";
 					}
@@ -671,23 +675,22 @@ SYNAPSE_REGISTER(module_Init)
 	Cmsg out;
 
 	//load config file
-	synapse::Cconfig config;
 	config.load("etc/synapse/http_json.conf");
-	configMaxContent=config["maxContent"];
-	configMaxConnections=config["maxConnections"];
-	net.setMaxConnections(configMaxConnections);
+//	configMaxContent=config["maxContent"];
+//	configMaxConnections=config["maxConnections"];
+	net.setMaxConnections(config["maxConnections"]);
 
 	//set content types
-	for (Cvar::iterator I=config["contentTypes"].begin(); I!=config["contentTypes"].end(); I++)
-	{
-		configContentTypes[I->first]=I->second.str();
-	}
+//	for (Cvar::iterator I=config["contentTypes"].begin(); I!=config["contentTypes"].end(); I++)
+//	{
+//		configContentTypes[I->first]=I->second.str();
+//	}
 
 	//change module settings.
 	//especially broadcastMulti is important for our "all"-handler
 	out.clear();
 	out.event="core_ChangeModule";
-	out["maxThreads"]=configMaxConnections+10;
+	out["maxThreads"]=config["maxConnections"]+10;
 	//TODO: modify this module to use the more efficient broadcastCookie method?
 	out["broadcastMulti"]=1;
 	out.send();
@@ -696,7 +699,7 @@ SYNAPSE_REGISTER(module_Init)
 	//(this is done with moduleThreads and sending core_ChangeModule events)
 	out.clear();
 	out.event="core_ChangeSession";
-	out["maxThreads"]=configMaxConnections+10;
+	out["maxThreads"]=config["maxConnections"]+10;
 	out.send();
 
 	//register a special handler without specified event
