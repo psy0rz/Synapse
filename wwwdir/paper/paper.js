@@ -922,7 +922,7 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 		send(0,"paper_Create", { "moveClients":1 } );
 	});
 
-	var saving="";
+	var save="";
 	$("#savePNG").click(function(m)
 	{
 		save="png";
@@ -942,6 +942,7 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 	{
 		save="png";
 		shareType=$(this).attr("shareType");
+		console.log(shareType);
 		send(0,"paper_Save");
 		$(this).addClass("loading");
 	});
@@ -950,7 +951,7 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 	synapse_register("paper_Saved",function(msg_src, msg_dst, msg_event, msg)
 	{
 		//is it saved to wanted type?
-		if (save==msg["type"])
+		if (save!="" && save==msg["type"])
 		{
 			var imagePath=msg["path"]+"?"+Math.round((new Date().getTime())/1000);
 			save="";
@@ -969,7 +970,9 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 				addThis+="url="+escape(document.location)+"&";
 				addThis+="title="+escape("Internet papier #"+getUrlId())+"&";
 				addThis+="username=psy0rz&";
+				console.log(addThis);
 				window.open(addThis);
+				shareType="";
 			}
 			else
 			{
