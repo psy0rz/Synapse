@@ -69,6 +69,7 @@ namespace synapse
 		~Cvar();
 		void clear();
 		bool isEmpty();
+		void castError(const char *txt);
 
 		//CVAR_STRING stuff
 		Cvar(const string & value);

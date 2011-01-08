@@ -148,37 +148,42 @@ void Cvar::operator=(const string & value)
 }
 
 
+void Cvar::castError(const char * txt)
+{
+	string s(txt);
+	s+=": "+getPrint();
+	throw(runtime_error(s.c_str()));
+}
+
 Cvar::operator string & ()
 {
-	try
+	if (value.which()==CVAR_LONG_DOUBLE)
 	{
-		if (value.which()==CVAR_LONG_DOUBLE)
+		try
 		{
 			//DEB("Cvar " << this << ": converting CVAR_LONG_DOUBLE to CVAR_STRING");
 			//convert value to a permanent string
 			value=lexical_cast<string>(get<long double>(value));
 			return (get<string&>(value));
 		}
-		else if (value.which()==CVAR_STRING)
+		catch(...)
 		{
-			//native type, dont need to do anything
-		}
-		else if (value.which()==CVAR_EMPTY)
-		{
-			//change it from really empty, to an empty string
-			//DEB("Cvar " << this << ": converting CVAR_EMPTY to CVAR_STRING"); 
-			value="";
-		}
-		else
-		{
-			WARNING("Cvar " << this << ": Cant convert from data-type " << value.which() << " to CVAR_STRING, replacing data with ''");
-			value="";
+			castError("casting error while converting to CVAR_STRING");
 		}
 	}
-	catch(...)
+	else if (value.which()==CVAR_STRING)
 	{
-		WARNING("Cvar " << this << ": Casting error while converting CVAR_LONG_DOUBLE to CVAR_STRING, replacing data with ''");
+		//native type, dont need to do anything
+	}
+	else if (value.which()==CVAR_EMPTY)
+	{
+		//change it from really empty, to an empty string
+		//DEB("Cvar " << this << ": converting CVAR_EMPTY to CVAR_STRING");
 		value="";
+	}
+	else
+	{
+		castError("cannot convert this to CVAR_STRING");
 	}
 
 	return (get<string&>(value));
@@ -204,34 +209,32 @@ void Cvar::operator=(const long double & value)
 
 Cvar::operator long double()
 {
-	try
+	if (value.which()==CVAR_LONG_DOUBLE)
 	{
-		if (value.which()==CVAR_LONG_DOUBLE)
-		{
-			//native type, dont change anything
-		}
-		else if (value.which()==CVAR_STRING)
+		//native type, dont change anything
+	}
+	else if (value.which()==CVAR_STRING)
+	{
+		try
 		{
 			//convert string to long double
 			//DEB("Cvar " << this << ": converting CVAR_STRING to CVAR_LONG_DOUBLE"); 
 			return (lexical_cast<long double>(get<string>(value)));
 		}
-		else if (value.which()==CVAR_EMPTY)
+		catch(...)
 		{
-			//change it from empty to 0
-			//DEB("Cvar " << this << ": converting CVAR_EMPTY to CVAR_LONG_DOUBLE"); 
-			value=0;
-		}
-		else
-		{
-			WARNING("Cvar " << this << ": Cant convert from data-type " << value.which() << " to CVAR_LONG_DOUBLE, changing it to 0");
-			value=0;
+			castError("casting error while converting to CVAR_LONG_DOUBLE");
 		}
 	}
-	catch(...)
+	else if (value.which()==CVAR_EMPTY)
 	{
-		WARNING("Cvar " << this << ": Casting error while converting CVAR_STRING to CVAR_LONG_DOUBLE, replacing it with 0");
+		//change it from empty to 0
+		//DEB("Cvar " << this << ": converting CVAR_EMPTY to CVAR_LONG_DOUBLE");
 		value=0;
+	}
+	else
+	{
+		castError("cannot convert this to CVAR_LONG_DOUBLE");
 	}
 	return (get<long double>(value));
 }
@@ -261,8 +264,7 @@ Cvar::operator CvarMap & ()
 	}
 	else if (value.which()!=CVAR_MAP)
 	{
-		WARNING("Cvar " << this << ": Cant convert from data-type " << value.which() << " to CVAR_MAP, creating empty map");
-		value=CvarMap();
+		castError("cannot convert this to CVAR_MAP");
 	}
 	return (get<CvarMap&>(value));
 }
@@ -320,8 +322,7 @@ CvarList & Cvar::list()
 	}
 	else if (value.which()!=CVAR_LIST)
 	{
-		WARNING("Cvar " << this << ": Cant convert from data-type " << value.which() << " to CVAR_LIST, creating empty list");
-		value=CvarList();
+		castError("cannot convert this to CVAR_LIST");
 	}
 	return (get<CvarList&>(value));
 
@@ -384,7 +385,7 @@ bool Cvar::operator==( Cvar & other)
 			return (true);
 			break;
 		default:
-			WARNING("Cvar: Trying to compare unknown types");
+			castError("trying to compare unknown types?");
 			return (false);
 			break;
 	}
@@ -438,7 +439,7 @@ void Cvar::fromJsonSpirit(Value &spiritValue)
 			}
 			break;
 		default:
-			WARNING("Cant convert json spirit variable type " << spiritValue.type() << " to Cvar");
+			castError("Cant convert this json spirit data to Cvar?");
 			break;
 	}
 }
@@ -499,7 +500,7 @@ void Cvar::toJsonSpirit(Value &spiritValue)
 			}
 			break;
 		default:
-			WARNING("Cant convert Cvar type " << value.which() << " to json spirit.");
+			castError("Cant convert this Cvar type to json spirit?");
 			break;
 	}
 }
