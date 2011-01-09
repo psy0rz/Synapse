@@ -40,7 +40,7 @@ namespace synapse
 	class Cconfig : public Cvar
 	{
 		private:
-		time_t changeTime;
+//		time_t changeTime;
 		bool saved;
 		path savedConfigPath;
 
@@ -49,7 +49,7 @@ namespace synapse
 
 		void changed();
 		bool isChanged();
-		time_t getChangeTime();
+//		time_t getChangeTime();
 		void save(path configPath);
 		void save();
 		void load(path configPath, bool merge=false);

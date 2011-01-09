@@ -926,58 +926,61 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 	$("#savePNG").click(function(m)
 	{
 		save="png";
-		send(0,"paper_Save");
+		send(0,"paper_Export");
 		$("#fileBar").addClass("loading");
 	});
 
 	$("#saveSVG").click(function(m)
 	{
 		save="svg";
-		send(0,"paper_Save");
+		send(0,"paper_Export");
 		$("#fileBar").addClass("loading");
 	});
 
 	var shareType="";
 	$(".share").click(function(m)
 	{
-		save="png";
 		shareType=$(this).attr("shareType");
-		send(0,"paper_Save");
+		send(0,"paper_Export");
 		$(this).addClass("loading");
 	});
 
 	//we also receive this if somebody else requested the save!
-	synapse_register("paper_Saved",function(msg_src, msg_dst, msg_event, msg)
+	synapse_register("paper_Exported",function(msg_src, msg_dst, msg_event, msg)
 	{
-		//is it saved to wanted type?
-		if (save!="" && save==msg["type"])
+	
+		
+		if (shareType!="")
 		{
-			var imagePath=msg["path"]+"?"+Math.round((new Date().getTime())/1000);
-			save="";
 			$(".loading").removeClass("loading");
-			//addthis or redirect to image?
-			if (shareType!="")
-			{
-				//addthis base url:
-				var addThis="http://api.addthis.com/oexchange/0.8/";
-				
-				if (shareType=="addthis")
-					addThis+="offer?";
-				else
-					addThis+="forward/"+shareType+"/offer?";
-				
-				addThis+="url="+escape(document.location)+"&";
-				addThis+="title="+escape("Internet papier #"+getUrlId())+"&";
-				addThis+="username=psy0rz&";
-				window.open(addThis);
-				shareType="";
-			}
+
+			//addthis base url:
+			var addThis="http://api.addthis.com/oexchange/0.8/";
+			
+			if (shareType=="addthis")
+				addThis+="offer?";
 			else
-			{
-				//document.location=msg["path"]+"?"+Math.round((new Date().getTime())/1000);
-				window.open(imagePath);
-			}
+				addThis+="forward/"+shareType+"/offer?";
+			
+			addThis+="url="+escape(document.location)+"&";
+			addThis+="title="+escape("Internet papier #"+getUrlId())+"&";
+			addThis+="username=psy0rz&";
+			window.open(addThis);
+			shareType="";
 		}
+		
+		if (save!="")
+		{
+			$(".loading").removeClass("loading");
+
+			if (save=="png")
+				window.open(msg["pngPath"]);
+			if (save=="svg")
+				window.open(msg["svgPath"]);
+			
+			save="";
+		}
+
 	});
 			
 

@@ -74,13 +74,13 @@ namespace synapse
 	void Cconfig::changed()
 	{
 		saved=false;
-		changeTime=time(NULL);
+//		changeTime=time(NULL);
 	}
 
-	time_t Cconfig::getChangeTime()
-	{
-		return(changeTime);
-	}
+//	time_t Cconfig::getChangeTime()
+//	{
+//		return(changeTime);
+//	}
 
 	void Cconfig::load(path configPath, bool merge)
 	{

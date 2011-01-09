@@ -19,8 +19,6 @@
 /** \file
 Internet paper.
 
-
-
 */
 #include "synapse.h"
 #include <time.h>
@@ -87,7 +85,7 @@ namespace paper
 		out["event"]=	"paper_ClientDraw";		out.send(); //draw something
 		out["event"]=	"paper_Redraw";		out.send(); //ask the server to send an entire redraw
 
-		out["event"]=	"paper_Save";			out.send(); //save and export a object
+		out["event"]=	"paper_Export";			out.send(); //export the paper to svg/png
 
 		//client receive-only events:
 		out.clear();
@@ -102,11 +100,11 @@ namespace paper
 		out["event"]=	"object_Left";			out.send(); //somebody has left the object
 
 		out["event"]=	"paper_CheckNotFound";	out.send(); //object not found
-		out["event"]=	"paper_CheckOk";	out.send(); //object found and accesible
+		out["event"]=	"paper_CheckOk";		out.send(); //object found and accesible
 
 		out["event"]=	"paper_ServerDraw";		out.send(); //draw something
 
-		out["event"]=	"paper_Saved";			out.send(); //paper is saved
+		out["event"]=	"paper_Exported";		out.send(); //paper is exported. (send for each exported type)
 
 
 		out.clear();
@@ -207,10 +205,54 @@ namespace paper
 	//a server side piece of paper
 	class CpaperObject : public synapse::CsharedObject<CpaperClient>
 	{
+		private:
+		bool exporting;
+
+		//called when the drawing is modified.
+		void changed()
+		{
+			drawing["changeTime"]=time(NULL);
+			drawing["exported"]=false;
+			drawing.changed();
+		}
+
 
 		public:
 		synapse::Cconfig drawing;
 
+
+		CpaperObject()
+		{
+			exporting=false;
+
+			//1000r will be the root svg element with its settings
+			//NOTE: svgweb doesnt support a numeric svg-root, hence the added r
+			//NOTE: This is a STL ordered MAP, we need to keep the correct order, so hence the 1000.
+			drawing["data"]["1000r"]["element"]="svg";
+			drawing["data"]["1000r"]["version"]="1.2";
+			drawing["data"]["1000r"]["baseProfile"]="tiny";
+			drawing["data"]["1000r"]["viewBox"]="0 0 17777 10000";
+
+			drawing["data"]["1000r"]["xmlns"]="http://www.w3.org/2000/svg";
+			drawing["data"]["1000r"]["xmlns:xlink"]="http://www.w3.org/1999/xlink";
+			//we dont use this YET:
+			//drawing["data"]["1000r"]["xmlns:ev"]="http://www.w3.org/2001/xml-events";
+
+			drawing["data"]["1000r"]["stroke-linecap"]="round";
+			drawing["data"]["1000r"]["stroke-linejoin"]="round";
+
+
+			//drawing.setAttribute("preserveAspectRatio", "none");
+//				drawing.setAttribute("pointer-events","all");
+//				drawing.setAttribute("color-rendering","optimizeSpeed");
+//				drawing.setAttribute("shape-rendering","optimizeSpeed");
+//				drawing.setAttribute("text-rendering","optimizeSpeed");
+//				drawing.setAttribute("image-rendering","optimizeSpeed");
+
+			//we start at 1001 so the order stays correct in the stl map. once we get to 10000 the order gets screwed up, but that probably never happens ;)
+			drawing["lastElementId"]=1000;
+
+		}
 
 		//get filenames, relative to wwwdir, or relative to synapse main dir.
 		//these probably are going to give different results when papers are made private.
@@ -272,21 +314,58 @@ namespace paper
 			createHtml();
 		}
 
+
 		//called by the object manager to get interesting metadata about this object
 		void getInfo(Cvar & var)
 		{
 			synapse::CsharedObject<CpaperClient>::getInfo(var);
-			var["changeTime"]=drawing.getChangeTime();
+			var["changeTime"]=drawing["changeTime"];
 			var["clients"]=clientMap.size();
 			var["path"]=getHtmlFilename(true);
 		}
 
 		void save(string path)
 		{
-			if (drawing.isChanged())
-			{
+			drawing.save(path);
+		}
 
-				drawing.save(path);
+		//called when exporting is done
+		void exported()
+		{
+			exporting=false;
+			if (!drawing["exported"])
+			{
+				drawing["exported"]=true;
+				drawing.changed();
+			}
+
+			//inform clients the export is ready
+			Cmsg out;
+			out.event="paper_Exported";
+			out["svgPath"]=getSvgFilename(true);
+			out["pngPath"]=getPngFilename(true);
+			out["thumbPath"]=getThumbFilename(true);
+			send(out);
+
+		}
+
+		//export the drawing to svg and png files.
+		//sends various a paper_Exported event when done.
+		void saveExport()
+		{
+			//already exporting, dont start it again
+			if (exporting)
+				return;
+
+			//its already exported, dont do anything but send out the event.
+			if (drawing["exported"])
+			{
+				exported();
+			}
+			else
+			//export the drawing
+			{
+				exporting=true;
 
 				//export to svg
 				ofstream svgStream;
@@ -300,7 +379,7 @@ namespace paper
 				//export all elements
 				for(Cvar::iterator elementI=drawing["data"].begin(); elementI!=drawing["data"].end(); elementI++)
 				{
-					//start element
+					//starsavet element
 					svgStream << "<" << elementI->second["element"].str();
 
 					//add id
@@ -340,16 +419,8 @@ namespace paper
 				svgStream.close();
 
 
-				//inform clients of SVG saving
-				Cmsg out;
-				out.event="paper_Saved";
-				out["type"]="svg";
-				out["path"]=getSvgFilename(true);
-				send(out);
-
-
 				//now let imagemagic convert it to some nice pngs :)
-				out.clear();
+				Cmsg out;
 				out.src=0;
 				out.dst=0;
 				out.event="exec_Start";
@@ -365,10 +436,14 @@ namespace paper
 
 		void execEnded(Cvar & var)
 		{
-			Cmsg out;
-			out.event="paper_Saved";
-			out.map()=var.map();
-			send(out);
+			//for now executing is only for exporting (to be changed)
+			exported();
+		}
+
+
+		void execError(Cvar & var)
+		{
+			execEnded(var);
 		}
 
 		void load(string path)
@@ -519,7 +594,7 @@ namespace paper
 					elementI->second[I->first]=I->second.str();
 				}
 
-				drawing.changed();
+				changed();
 			}
 			//send refresh?
 			else if (msg["cmd"].str()=="refresh")
@@ -548,7 +623,7 @@ namespace paper
 				//delete it
 				Cvar::iterator elementI=getElement(msg["id"]);
 				drawing["data"].map().erase(elementI);
-				drawing.changed();
+				changed();
 
 				getClient(msg.src).lastElementId=0;
 			}
@@ -559,53 +634,7 @@ namespace paper
 				serverDraw(msg,msg.src);
 		}
 
-//		virtual void delClient(int id)
-//		{
-//			if (clientMap.find(id)!= clientMap.end())
-//			{
-//				//do a Del command on behalf of the client
-//				CvarList commands;
-//				commands.push_back(string("D"));
-//				//serverDraw(commands,id);
-//				//lastClient=0;
-////				if (getClient(id).didDraw)
-//	//				lastStoreClient=0;
-//				synapse::CsharedObject<CpaperClient>::delClient(id);
-//			}
-//		}
 
-
-
-		CpaperObject()
-		{
-			//1000r will be the root svg element with its settings
-			//NOTE: svgweb doesnt support a numeric svg-root, hence the added r
-			//NOTE: This is a STL ordered MAP, we need to keep the correct order, so hence the 1000.
-			drawing["data"]["1000r"]["element"]="svg";
-			drawing["data"]["1000r"]["version"]="1.2";
-			drawing["data"]["1000r"]["baseProfile"]="tiny";
-			drawing["data"]["1000r"]["viewBox"]="0 0 17777 10000";
-
-			drawing["data"]["1000r"]["xmlns"]="http://www.w3.org/2000/svg";
-			drawing["data"]["1000r"]["xmlns:xlink"]="http://www.w3.org/1999/xlink";
-			//we dont use this YET:
-			//drawing["data"]["1000r"]["xmlns:ev"]="http://www.w3.org/2001/xml-events";
-
-			drawing["data"]["1000r"]["stroke-linecap"]="round";
-			drawing["data"]["1000r"]["stroke-linejoin"]="round";
-
-
-			//drawing.setAttribute("preserveAspectRatio", "none");
-//				drawing.setAttribute("pointer-events","all");
-//				drawing.setAttribute("color-rendering","optimizeSpeed");
-//				drawing.setAttribute("shape-rendering","optimizeSpeed");
-//				drawing.setAttribute("text-rendering","optimizeSpeed");
-//				drawing.setAttribute("image-rendering","optimizeSpeed");
-
-			//we start at 1001 so the order stays correct in the stl map. once we get to 10000 the order gets screwed up, but that probably never happens ;)
-			drawing["lastElementId"]=1000;
-
-		}
 
 		//send redrawing instructions to dst
 		void redraw(int dst)
@@ -807,11 +836,9 @@ namespace paper
 	/*** Request paper to be saved and exported immeadiatly
 	 *
 	 */
-	SYNAPSE_REGISTER(paper_Save)
+	SYNAPSE_REGISTER(paper_Export)
 	{
-		//force save
-		objectMan.getObjectByClient(msg.src).drawing.changed();
-		objectMan.save(objectMan.getObjectByClient(msg.src).getId());
+		objectMan.getObjectByClient(msg.src).saveExport();
 	}
 
 
@@ -823,5 +850,13 @@ namespace paper
 		}
 	}
 
+
+	SYNAPSE_REGISTER(exec_Error)
+	{
+		if (msg.isSet("id"))
+		{
+			objectMan.getObject(msg["id"]["paperId"]).execError(msg["id"]);
+		}
+	}
 
 }
