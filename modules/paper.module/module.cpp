@@ -29,7 +29,9 @@ Internet paper.
 #include "cconfig.h"
 #include "boost/filesystem/operations.hpp"
 #include "boost/filesystem/fstream.hpp"
+#include "boost/filesystem.hpp"
 #include <boost/regex.hpp>
+#include <stdlib.h>
 
 //we use the generic shared object management classes.
 #include "cclient.h"
@@ -46,6 +48,8 @@ namespace paper
 	using boost::filesystem::ofstream;
 	using boost::filesystem::ifstream;
 
+
+ 	struct drand48_data randomBuffer;
 	bool shutdown;
 
 	SYNAPSE_REGISTER(module_Init)
@@ -53,6 +57,7 @@ namespace paper
 		Cmsg out;
 
 		shutdown=false;
+		srand48_r(time(NULL), &randomBuffer);
 
 		//this module is single threaded
 		out.clear();
@@ -168,7 +173,19 @@ namespace paper
 		outStream.close();
 	}
 
-
+	//return a random readable string, for use as key or uniq id
+	string randomStr(int length)
+	{
+		long int r;
+		string chars("abcdefghijklmnopqrstuvwxyz0123456789");
+		string s;
+		for (int i=0; i<length; i++)
+		{
+			mrand48_r(&randomBuffer, &r);
+			s=s+chars[abs(r) % chars.length()];
+		}
+		return(s);
+	}
 
 	//a client of a paper object
 	class CpaperClient : public synapse::Cclient
@@ -194,6 +211,7 @@ namespace paper
 		public:
 		synapse::Cconfig drawing;
 
+
 		//get filenames, relative to wwwdir, or relative to synapse main dir.
 		//these probably are going to give different results when papers are made private.
 		string getSvgFilename(bool www=false)
@@ -201,7 +219,7 @@ namespace paper
 			stringstream filename;
 			if (!www)
 				filename << "wwwdir";
-			filename << "/p/" << id << ".svg";
+			filename << drawing["path"].str() << "paper.svg";
 			return (filename.str());
 		}
 
@@ -210,7 +228,7 @@ namespace paper
 			stringstream filename;
 			if (!www)
 				filename << "wwwdir";
-			filename << "/p/" << id << ".png";
+			filename << drawing["path"].str()  << "paper.png";
 			return (filename.str());
 		}
 
@@ -219,7 +237,7 @@ namespace paper
 			stringstream filename;
 			if (!www)
 				filename << "wwwdir";
-			filename << "/p/" << id << ".thumb.svg";
+			filename << drawing["path"].str() << "thumb.png";
 			return (filename.str());
 		}
 
@@ -228,14 +246,14 @@ namespace paper
 			stringstream filename;
 			if (!www)
 				filename << "wwwdir";
-			filename << "/p/" << id << "";
+			filename << drawing["path"].str() << "edit.html";
 			return (filename.str());
 		}
 
 		void createHtml()
 		{
 			//Since we need to add all kinds of metadata to the paper-html file, we need to parse the html file and fill in some marcros
-			//The result is stored in the output directory: wwwdir/p/<id>
+			//The result is stored in the wwwdirectory
 			synapse::CvarMap regex;
 			regex["%id%"]=id;
 			regex["%png%"]=getPngFilename(true);
@@ -249,14 +267,25 @@ namespace paper
 		//the paper is created for the first time.
 		void create()
 		{
+			drawing["path"]="/p/"+randomStr(8)+"/";
+			filesystem::create_directory("wwwdir" + drawing["path"].str());
 			createHtml();
 		}
 
+		//called by the object manager to get interesting metadata about this object
+		void getInfo(Cvar & var)
+		{
+			synapse::CsharedObject<CpaperClient>::getInfo(var);
+			var["changeTime"]=drawing.getChangeTime();
+			var["clients"]=clientMap.size();
+			var["path"]=getHtmlFilename(true);
+		}
 
 		void save(string path)
 		{
 			if (drawing.isChanged())
 			{
+
 				drawing.save(path);
 
 				//export to svg
@@ -556,8 +585,6 @@ namespace paper
 			drawing["data"]["1000r"]["version"]="1.2";
 			drawing["data"]["1000r"]["baseProfile"]="tiny";
 			drawing["data"]["1000r"]["viewBox"]="0 0 17777 10000";
-//			drawing["data"]["1000r"]["width"]="100%";
-//			drawing["data"]["1000r"]["height"]="100%";
 
 			drawing["data"]["1000r"]["xmlns"]="http://www.w3.org/2000/svg";
 			drawing["data"]["1000r"]["xmlns:xlink"]="http://www.w3.org/1999/xlink";
@@ -694,6 +721,7 @@ namespace paper
 		{
 			//besides checking, we also recreate the html (for now)
 			objectMan.getObject(msg["objectId"]).createHtml();
+			objectMan.getObject(msg["objectId"]).getInfo(out);
 			out.event="paper_CheckOk";
 		}
 		catch(...)

@@ -78,9 +78,10 @@ namespace synapse
 			//dummy.
 		}
 
-		virtual void getInfo(Cmsg & msg)
+		//get information about the object (should return anything that is interesting for your kind of application)
+		virtual void getInfo(Cvar & var)
 		{
-			msg["objectId"]=id;
+			var["objectId"]=id;
 		}
 
 		virtual void save(string path)

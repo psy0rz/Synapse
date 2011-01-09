@@ -51,6 +51,7 @@ namespace synapse
 		bool isChanged();
 		time_t getChangeTime();
 		void save(path configPath);
+		void save();
 		void load(path configPath, bool merge=false);
 
 	};

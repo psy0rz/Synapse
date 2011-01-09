@@ -124,14 +124,14 @@ function chatPrintOnline()
 		$("#chatBar").html("<div class='chatOnline'>"+online+" vrienden online</div>");
 }
 
-//the id is determined by filename if filename is a number. otherwise its the first number in the query string.
+//determine the id of the paper the user wants to edit
 function getUrlId()
 {
 	var file=jQuery.url.segment(1);
 	if (file==parseInt(file))
 		return(file);
 	else
-		return(jQuery.url.attr("query").match("^.[0-9]*")[0]);
+		return($("head").attr("paperId"));
 }
 
 
@@ -1090,7 +1090,7 @@ synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
 {
 	//doesnt the url id match?
 	if (getUrlId()!=msg["objectId"])
-		document.location="/p/"+msg["objectId"];
+		document.location=msg["path"];
 	
 	//we've joined a object, from now on draw on it.
 	currentObjectId=msg["objectId"];

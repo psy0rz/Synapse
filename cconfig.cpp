@@ -41,6 +41,11 @@ namespace synapse
 		changed();
 	}
 
+	void Cconfig::save()
+	{
+		save(savedConfigPath);
+	}
+
 	void Cconfig::save(path configPath)
 	{
 		//errors are handled with exceptions

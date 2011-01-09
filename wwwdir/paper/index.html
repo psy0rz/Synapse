@@ -52,14 +52,14 @@
 		//we probably created a new object, so go to the editor
 		synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
 		{
-			document.location="/p/"+msg["objectId"];			
+			document.location=msg["path"];			
 		});
 
 		//the requested paper exists and is accesible, so go to the editor		
 		synapse_register("paper_CheckOk",function(msg_src, msg_dst, msg_event, msg)
 		{
 			$("#message").html("Pagina word ingeladen...");
-			document.location="/p/"+msg["objectId"];			
+			document.location=msg["path"];			
 		});
 
 		synapse_register("paper_CheckNotFound",function(msg_src, msg_dst, msg_event, msg)
