@@ -47,19 +47,62 @@
 			
 			$("#objectId").focus();
 			
+			send(0,"paper_GetList");
 		});
 
+
+		//list of papers
+		synapse_register("paper_List",function(msg_src, msg_dst, msg_event, msg)
+		{
+			//update list
+			$("#paperList").empty();
+			for (msgI in msg["list"])
+			{
+				var paper=msg["list"][msgI];
+				var delta=msg["time"]-paper["changeTime"];
+				var html="";
+
+				html+="<a href='"+paper["htmlPath"]+"'>";
+				html+="<div class='paper'>";
+				html+="<img src='"+paper["thumbPath"]+"'>";
+
+				if (delta<30)
+					html+="sinds enkelle seconden";
+				else if (delta<120)
+					html+="sinds een minuut";
+				else if (delta<3600)
+					html+="sinds "+Math.round(delta/60)+" minuten";
+				else if (delta<80000)
+					html+="sinds "+Math.round(delta/3600)+" uren";
+				else 
+					html+="sinds "+Math.round(delta/3600/24)+" dagen";
+				
+				
+				html+="</div>";
+				html+="</a>";
+				
+				$("#paperList").append(html);				
+			}
+
+			//ask again after some time
+			setTimeout(function() 
+			{
+				 send(0,"paper_GetList");
+			},10000);
+		});
+
+				
 		//we probably created a new object, so go to the editor
 		synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
 		{
-			document.location=msg["path"];			
+			document.location=msg["htmlPath"];			
 		});
 
 		//the requested paper exists and is accesible, so go to the editor		
 		synapse_register("paper_CheckOk",function(msg_src, msg_dst, msg_event, msg)
 		{
 			$("#message").html("Pagina word ingeladen...");
-			document.location=msg["path"];			
+			document.location=msg["htmlPath"];			
 		});
 
 		synapse_register("paper_CheckNotFound",function(msg_src, msg_dst, msg_event, msg)
@@ -84,6 +127,7 @@
 		{
 			border:none;
 			text-decoration:none;
+			color: inherit;
 		}
 		
 		img
@@ -163,6 +207,26 @@
 			border-top:1px;
 			border-color:#777777;
 			border-top-style:solid;
+			background-color: #ffffff;
+		}
+		
+		.paper
+		{
+			padding: 3px;
+			color: #aaaaaa;
+		}		
+		
+		.paper:hover
+		{
+			background-color:#eeeeee;
+		}
+		
+		.paper img 
+		{
+			display: block;
+			border-style: solid;
+			border-width: 1px 3px 3px 1px;
+			border-color: #000000;
 		}
 		
 	</style>
@@ -175,6 +239,13 @@
 	</div>
 
 	<div style='color:red;'>Disclaimer: Internet papier is nog volop in ontwikkeling. Voel u vrij om alvast te testen.</div>
+
+	<div id='paperList' style='
+			position: absolute;
+			right:0px;
+			width:200px;
+	'>
+	</div>	
 
 	<div id='addBox'>
 		<div class='description'>
@@ -199,6 +270,8 @@
 			<div class='ui-state-highlight' id='message'>
 			</div>
 	</div>
+
+	
 	<div id='footer'>
 	(C)2010 DatuX - Powered by SYN-3 - <a href='http://www.syn-3.eu'>http://www.syn-3.eu</a> - info@datux.nl
 	</div>

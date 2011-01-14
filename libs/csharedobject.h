@@ -205,7 +205,7 @@ namespace synapse
 			return (clientMap[id]);
 		}
 
-		bool isIdle()
+		virtual bool isIdle()
 		{
 			return(clientMap.empty() && time(NULL)-lastLeave>60);
 		}

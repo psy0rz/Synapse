@@ -1043,7 +1043,7 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 			});
 
 			//set mouse up event
-			drawing.addEventListener('mouseup', mouseEnd)
+			drawing.addEventListener('mouseup', mouseEnd);
 					
 			//set mouse leave event
 			//(doesnt work with addeventlistener!)
@@ -1093,7 +1093,7 @@ synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
 {
 	//doesnt the url id match?
 	if (getUrlId()!=msg["objectId"])
-		document.location=msg["path"];
+		document.location=msg["htmlPath"];
 	
 	//we've joined a object, from now on draw on it.
 	currentObjectId=msg["objectId"];

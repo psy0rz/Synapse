@@ -47,15 +47,18 @@ namespace paper
 	using boost::filesystem::ifstream;
 
 
- 	struct drand48_data randomBuffer;
-	bool shutdown;
+ 	struct drand48_data gRandomBuffer;
+	bool gShutdown;
+	//most recent changed paper list
+	synapse::Cconfig gPaperIndex;
 
 	SYNAPSE_REGISTER(module_Init)
 	{
 		Cmsg out;
 
-		shutdown=false;
-		srand48_r(time(NULL), &randomBuffer);
+		gShutdown=false;
+		srand48_r(time(NULL), &gRandomBuffer);
+		gPaperIndex.load("var/paper/index");
 
 		//this module is single threaded
 		out.clear();
@@ -87,6 +90,8 @@ namespace paper
 
 		out["event"]=	"paper_Export";			out.send(); //export the paper to svg/png
 
+		out["event"]=	"paper_GetList";			out.send(); //get a list of papers
+
 		//client receive-only events:
 		out.clear();
 		out.event="core_ChangeEvent";
@@ -106,6 +111,7 @@ namespace paper
 
 		out["event"]=	"paper_Exported";		out.send(); //paper is exported. (send for each exported type)
 
+		out["event"]=	"paper_List";		out.send(); //list of papers
 
 		out.clear();
 		out.event="core_LoadModule";
@@ -179,11 +185,14 @@ namespace paper
 		string s;
 		for (int i=0; i<length; i++)
 		{
-			mrand48_r(&randomBuffer, &r);
+			mrand48_r(&gRandomBuffer, &r);
 			s=s+chars[abs(r) % chars.length()];
 		}
 		return(s);
 	}
+
+
+
 
 	//a client of a paper object
 	class CpaperClient : public synapse::Cclient
@@ -192,12 +201,12 @@ namespace paper
 		private:
 
 		public:
-		Cvar cursor;
-		int lastElementId;
+		Cvar mCursor;
+		int mLastElementId;
 
 		CpaperClient()
 		{
-			lastElementId=0;
+			mLastElementId=0;
 		}
 	};
 
@@ -206,40 +215,41 @@ namespace paper
 	class CpaperObject : public synapse::CsharedObject<CpaperClient>
 	{
 		private:
-		bool exporting;
+		bool mExporting;
 
 		//called when the drawing is modified.
 		void changed()
 		{
-			drawing["changeTime"]=time(NULL);
-			drawing["exported"]=false;
-			drawing.changed();
+			mDrawing["changeTime"]=time(NULL);
+			mDrawing["exported"]=false;
+			mDrawing["version"]=mDrawing["version"]+1;
+			mDrawing.changed();
 		}
 
 
 		public:
-		synapse::Cconfig drawing;
+		synapse::Cconfig mDrawing;
 
 
 		CpaperObject()
 		{
-			exporting=false;
+			mExporting=false;
 
 			//1000r will be the root svg element with its settings
 			//NOTE: svgweb doesnt support a numeric svg-root, hence the added r
 			//NOTE: This is a STL ordered MAP, we need to keep the correct order, so hence the 1000.
-			drawing["data"]["1000r"]["element"]="svg";
-			drawing["data"]["1000r"]["version"]="1.2";
-			drawing["data"]["1000r"]["baseProfile"]="tiny";
-			drawing["data"]["1000r"]["viewBox"]="0 0 17777 10000";
+			mDrawing["data"]["1000r"]["element"]="svg";
+			mDrawing["data"]["1000r"]["version"]="1.2";
+			mDrawing["data"]["1000r"]["baseProfile"]="tiny";
+			mDrawing["data"]["1000r"]["viewBox"]="0 0 17777 10000";
 
-			drawing["data"]["1000r"]["xmlns"]="http://www.w3.org/2000/svg";
-			drawing["data"]["1000r"]["xmlns:xlink"]="http://www.w3.org/1999/xlink";
+			mDrawing["data"]["1000r"]["xmlns"]="http://www.w3.org/2000/svg";
+			mDrawing["data"]["1000r"]["xmlns:xlink"]="http://www.w3.org/1999/xlink";
 			//we dont use this YET:
 			//drawing["data"]["1000r"]["xmlns:ev"]="http://www.w3.org/2001/xml-events";
 
-			drawing["data"]["1000r"]["stroke-linecap"]="round";
-			drawing["data"]["1000r"]["stroke-linejoin"]="round";
+			mDrawing["data"]["1000r"]["stroke-linecap"]="round";
+			mDrawing["data"]["1000r"]["stroke-linejoin"]="round";
 
 
 			//drawing.setAttribute("preserveAspectRatio", "none");
@@ -250,7 +260,7 @@ namespace paper
 //				drawing.setAttribute("image-rendering","optimizeSpeed");
 
 			//we start at 1001 so the order stays correct in the stl map. once we get to 10000 the order gets screwed up, but that probably never happens ;)
-			drawing["lastElementId"]=1000;
+			mDrawing["lastElementId"]=1000;
 
 		}
 
@@ -261,7 +271,11 @@ namespace paper
 			stringstream filename;
 			if (!www)
 				filename << "wwwdir";
-			filename << drawing["path"].str() << "paper.svg";
+			filename << mDrawing["path"].str() << "paper.svg";
+			//cache breaker
+			if (www)
+				filename << "?" << mDrawing["version"];
+
 			return (filename.str());
 		}
 
@@ -270,7 +284,11 @@ namespace paper
 			stringstream filename;
 			if (!www)
 				filename << "wwwdir";
-			filename << drawing["path"].str()  << "paper.png";
+			filename << mDrawing["path"].str()  << "paper.png";
+			//cache breaker
+			if (www)
+				filename << "?" << mDrawing["version"];
+
 			return (filename.str());
 		}
 
@@ -279,7 +297,11 @@ namespace paper
 			stringstream filename;
 			if (!www)
 				filename << "wwwdir";
-			filename << drawing["path"].str() << "thumb.png";
+			filename << mDrawing["path"].str() << "thumb.png";
+			//cache breaker
+			if (www)
+				filename << "?" << mDrawing["version"];
+
 			return (filename.str());
 		}
 
@@ -288,7 +310,8 @@ namespace paper
 			stringstream filename;
 			if (!www)
 				filename << "wwwdir";
-			filename << drawing["path"].str() << "edit.html";
+			filename << mDrawing["path"].str() << "edit.html";
+
 			return (filename.str());
 		}
 
@@ -309,8 +332,8 @@ namespace paper
 		//the paper is created for the first time.
 		void create()
 		{
-			drawing["path"]="/p/"+randomStr(8)+"/";
-			filesystem::create_directory("wwwdir" + drawing["path"].str());
+			mDrawing["path"]="/p/"+randomStr(8)+"/";
+			filesystem::create_directory("wwwdir" + mDrawing["path"].str());
 			createHtml();
 		}
 
@@ -319,24 +342,48 @@ namespace paper
 		void getInfo(Cvar & var)
 		{
 			synapse::CsharedObject<CpaperClient>::getInfo(var);
-			var["changeTime"]=drawing["changeTime"];
+			var["changeTime"]=mDrawing["changeTime"];
 			var["clients"]=clientMap.size();
-			var["path"]=getHtmlFilename(true);
+			var["htmlPath"]=getHtmlFilename(true);
+			var["thumbPath"]=getThumbFilename(true);
 		}
 
-		void save(string path)
-		{
-			drawing.save(path);
-		}
 
 		//called when exporting is done
 		void exported()
 		{
-			exporting=false;
-			if (!drawing["exported"])
+			mExporting=false;
+			if (!mDrawing["exported"])
 			{
-				drawing["exported"]=true;
-				drawing.changed();
+				mDrawing["exported"]=true;
+				mDrawing["hasThumb"]=true;
+				mDrawing.changed();
+
+				//update the recent-changed list?
+				if (mDrawing["version"]>0)
+				{
+					//delete ourself from the list first
+					for (synapse::CvarList::iterator paperI=gPaperIndex["list"].list().begin(); paperI!=gPaperIndex["list"].list().end(); paperI++)
+					{
+						if ((*paperI)["objectId"]==id)
+						{
+							gPaperIndex["list"].list().erase(paperI);
+							break;
+						}
+					}
+
+					//now re-add the updated version of ourself in the front position
+					Cvar paperInfo;
+					getInfo(paperInfo);
+					gPaperIndex["list"].list().push_front(paperInfo);
+
+					//never more then this amount in the index
+					if (gPaperIndex["list"].list().size()>100)
+						gPaperIndex["list"].list().pop_back();
+
+					gPaperIndex.changed();
+				}
+
 			}
 
 			//inform clients the export is ready
@@ -354,18 +401,18 @@ namespace paper
 		void saveExport()
 		{
 			//already exporting, dont start it again
-			if (exporting)
+			if (mExporting)
 				return;
 
 			//its already exported, dont do anything but send out the event.
-			if (drawing["exported"])
+			if (mDrawing["exported"])
 			{
 				exported();
 			}
 			else
 			//export the drawing
 			{
-				exporting=true;
+				mExporting=true;
 
 				//export to svg
 				ofstream svgStream;
@@ -377,7 +424,7 @@ namespace paper
 				svgStream << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n\n";
 
 				//export all elements
-				for(Cvar::iterator elementI=drawing["data"].begin(); elementI!=drawing["data"].end(); elementI++)
+				for(Cvar::iterator elementI=mDrawing["data"].begin(); elementI!=mDrawing["data"].end(); elementI++)
 				{
 					//starsavet element
 					svgStream << "<" << elementI->second["element"].str();
@@ -425,8 +472,8 @@ namespace paper
 				out.dst=0;
 				out.event="exec_Start";
 				out["id"]["paperId"]=id;
-				out["id"]["path"]=getPngFilename(true);
-				out["id"]["type"]="png";
+//				out["id"]["path"]=getPngFilename(true);
+//				out["id"]["type"]="png";
 				out["queue"]=1;
 				out["cmd"]="nice convert -density 4 MSVG:" + getSvgFilename() + " " + getPngFilename() + " "+
 						"&& nice convert -scale 150 " + getPngFilename() + " " + getThumbFilename();
@@ -446,9 +493,15 @@ namespace paper
 			execEnded(var);
 		}
 
+		void save(string path)
+		{
+			mDrawing.save(path);
+			saveExport();
+		}
+
 		void load(string path)
 		{
-			drawing.load(path);
+			mDrawing.load(path);
 		}
 
 
@@ -488,8 +541,8 @@ namespace paper
 		Cvar::iterator getElement(const string & id)
 		{
 			Cvar::iterator elementI;
-			elementI=drawing["data"].map().find(id);
-			if (elementI==drawing["data"].map().end())
+			elementI=mDrawing["data"].map().find(id);
+			if (elementI==mDrawing["data"].map().end())
 				throw(runtime_error("Specified element id not found."));
 			return (elementI);
 		}
@@ -519,7 +572,7 @@ namespace paper
 
 			//is there an item after this?
 			elementI++;
-			if (elementI!=drawing["data"].end())
+			if (elementI!=mDrawing["data"].end())
 			{
 				//yes, so fill in beforeId,  so the objects stay in the correct order
 				msg["beforeId"]=elementI->first;
@@ -535,7 +588,7 @@ namespace paper
 			if (msg.isSet("cursor"))
 			{
 				//store the new fields in the clients cursor object:
-				Cvar & cursor=getClient(msg.src).cursor;
+				Cvar & cursor=getClient(msg.src).mCursor;
 				for(Cvar::iterator I=msg["cursor"].begin(); I!=msg["cursor"].end(); I++)
 				{
 					cursor[I->first]=I->second.str();
@@ -546,7 +599,7 @@ namespace paper
 			if (msg.isSet("chat"))
 			{
 				//store in chat log for this object
-				drawing["chat"].list().push_back(msg["chat"]);
+				mDrawing["chat"].list().push_back(msg["chat"]);
 			}
 
 			//received drawing commands?
@@ -559,23 +612,23 @@ namespace paper
 					if (msg["id"].str()=="new")
 					{
 						//figure out a fresh new id
-						drawing["lastElementId"]=drawing["lastElementId"]+1;
+						mDrawing["lastElementId"]=mDrawing["lastElementId"]+1;
 
 						//store the new id in the message
-						msg["id"]=drawing["lastElementId"];
+						msg["id"]=mDrawing["lastElementId"];
 
 						//create new element
-						drawing["data"][msg["id"]]["element"]=msg["element"].str();
+						mDrawing["data"][msg["id"]]["element"]=msg["element"].str();
 
 					}
 
 					//store the last id for this client
-					getClient(msg.src).lastElementId=msg["id"];
+					getClient(msg.src).mLastElementId=msg["id"];
 				}
 				//id not specified, automaticly add the last used id from this client
 				else
 				{
-					msg["id"]=getClient(msg.src).lastElementId;
+					msg["id"]=getClient(msg.src).mLastElementId;
 				}
 
 
@@ -602,8 +655,8 @@ namespace paper
 				//id not set? the use the last one that was used by this client
 				if (!msg.isSet("id"))
 				{
-					if (getClient(msg.src).lastElementId)
-						msg["id"]=getClient(msg.src).lastElementId;
+					if (getClient(msg.src).mLastElementId)
+						msg["id"]=getClient(msg.src).mLastElementId;
 				}
 
 				//reply with a serverdraw to this client only
@@ -622,10 +675,10 @@ namespace paper
 			{
 				//delete it
 				Cvar::iterator elementI=getElement(msg["id"]);
-				drawing["data"].map().erase(elementI);
+				mDrawing["data"].map().erase(elementI);
 				changed();
 
-				getClient(msg.src).lastElementId=0;
+				getClient(msg.src).mLastElementId=0;
 			}
 
 
@@ -644,7 +697,7 @@ namespace paper
 			out.dst=dst;
 
 			//send all elements
-			for(Cvar::iterator elementI=drawing["data"].begin(); elementI!=drawing["data"].end(); elementI++)
+			for(Cvar::iterator elementI=mDrawing["data"].begin(); elementI!=mDrawing["data"].end(); elementI++)
 			{
 				out.clear();
 				out["cmd"]="update";
@@ -656,13 +709,13 @@ namespace paper
 			for(CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
 			{
 				out.clear();
-				out["cursor"].map()=I->second.cursor;
+				out["cursor"].map()=I->second.mCursor;
 				out["src"]=I->first;
 				out.send();
 			}
 
 			//send chat log
-			for(CvarList::iterator I=drawing["chat"].list().begin(); I!=drawing["chat"].list().end(); I++)
+			for(CvarList::iterator I=mDrawing["chat"].list().begin(); I!=mDrawing["chat"].list().end(); I++)
 			{
 				out.clear();
 				out["chat"]=*I;
@@ -684,12 +737,17 @@ namespace paper
 
 		}
 
+		virtual bool isIdle()
+		{
+			return (!mExporting && synapse::CsharedObject<CpaperClient>::isIdle());
+
+		}
 
 	};
 
 
 
-	synapse::CobjectMan<CpaperObject> objectMan("var/paper");
+	synapse::CobjectMan<CpaperObject> gObjectMan("var/paper");
 
 
 	/** Client wants new paper
@@ -702,16 +760,16 @@ namespace paper
 		{
 
 			//get oldObjectId and create new object
-			int oldObjectId=objectMan.getObjectByClient(msg.src).getId();
-			int newObjectId=objectMan.add();
+			int oldObjectId=gObjectMan.getObjectByClient(msg.src).getId();
+			int newObjectId=gObjectMan.add();
 
 			//now actually move the clients
-			objectMan.moveClients(oldObjectId, newObjectId);
+			gObjectMan.moveClients(oldObjectId, newObjectId);
 		}
 		else
 		{
-			int objectId=objectMan.add();
-			objectMan.getObject(objectId).addClient(msg.src);
+			int objectId=gObjectMan.add();
+			gObjectMan.getObject(objectId).addClient(msg.src);
 		}
 
 	}
@@ -730,8 +788,8 @@ namespace paper
 	 */
 	SYNAPSE_REGISTER(paper_Join)
 	{
-		objectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
-		objectMan.getObject(msg["objectId"]).addClient(msg.src);
+		gObjectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
+		gObjectMan.getObject(msg["objectId"]).addClient(msg.src);
 
 	}
 
@@ -749,8 +807,8 @@ namespace paper
 		try
 		{
 			//besides checking, we also recreate the html (for now)
-			objectMan.getObject(msg["objectId"]).createHtml();
-			objectMan.getObject(msg["objectId"]).getInfo(out);
+			gObjectMan.getObject(msg["objectId"]).createHtml();
+			gObjectMan.getObject(msg["objectId"]).getInfo(out);
 			out.event="paper_CheckOk";
 		}
 		catch(...)
@@ -765,7 +823,7 @@ namespace paper
 	 */
 	SYNAPSE_REGISTER(paper_Leave)
 	{
-		objectMan.getObject(msg["objectId"]).delClient(msg.src);
+		gObjectMan.getObject(msg["objectId"]).delClient(msg.src);
 	}
 
 	/** Client wants to receive a list of papers (those that are currently in memory!)
@@ -773,7 +831,7 @@ namespace paper
 	 */
 	SYNAPSE_REGISTER(paper_GetPapers)
 	{
-		objectMan.sendObjectList(msg.src);
+		gObjectMan.sendObjectList(msg.src);
 	}
 
 	/** Client wants to receive a fresh list of clients
@@ -786,13 +844,13 @@ namespace paper
 
 	SYNAPSE_REGISTER(module_SessionEnded)
 	{
-		objectMan.leaveAll(msg["session"]);
+		gObjectMan.leaveAll(msg["session"]);
 	}
 
 	SYNAPSE_REGISTER(module_Shutdown)
 	{
-		objectMan.saveAll();
-		shutdown=true;
+		gObjectMan.saveAll();
+		gShutdown=true;
 	}
 
 
@@ -814,7 +872,8 @@ namespace paper
 	 */
 	SYNAPSE_REGISTER(paper_Timer)
 	{
-		objectMan.saveAll();
+		gObjectMan.saveAll();
+		gPaperIndex.save("var/paper/index");
 	}
 
 
@@ -825,7 +884,7 @@ namespace paper
 	{
 		try
 		{
-			objectMan.getObjectByClient(msg.src).clientDraw(msg);
+			gObjectMan.getObjectByClient(msg.src).clientDraw(msg);
 		}
 		catch(...)
 		{
@@ -838,7 +897,7 @@ namespace paper
 	 */
 	SYNAPSE_REGISTER(paper_Export)
 	{
-		objectMan.getObjectByClient(msg.src).saveExport();
+		gObjectMan.getObjectByClient(msg.src).saveExport();
 	}
 
 
@@ -846,7 +905,7 @@ namespace paper
 	{
 		if (msg.isSet("id"))
 		{
-			objectMan.getObject(msg["id"]["paperId"]).execEnded(msg["id"]);
+			gObjectMan.getObject(msg["id"]["paperId"]).execEnded(msg["id"]);
 		}
 	}
 
@@ -855,8 +914,18 @@ namespace paper
 	{
 		if (msg.isSet("id"))
 		{
-			objectMan.getObject(msg["id"]["paperId"]).execError(msg["id"]);
+			gObjectMan.getObject(msg["id"]["paperId"]).execError(msg["id"]);
 		}
+	}
+
+	SYNAPSE_REGISTER(paper_GetList)
+	{
+		Cmsg out;
+		out.dst=msg.src;
+		out.event="paper_List";
+		out["list"]=gPaperIndex["list"];
+		out["time"]=time(NULL);
+		out.send();
 	}
 
 }
