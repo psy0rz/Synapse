@@ -139,7 +139,9 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
 	CnetPtr netPtr;
 	bool ok=true;
 
-	try
+//DONT? isnt it better to let the general handler catch this? or at least the caller of runaccept
+//(otherwise we wont see nicely formatted exception messages, which is hard with debugging)
+//	try
 	{
 		{
 			unique_lock<mutex> lock(threadMutex);
@@ -179,11 +181,11 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
 		netPtr->run();
 		DEB("ioservice finished successful for port " << port << " into " << id);
 	}
-	catch(...)
-	{
-		ERROR("Exception while running acceptor on port " << port << " for id " << id);
-		ok=false;
-	}
+//	catch(...)
+//	{
+//		ERROR("Exception while running acceptor on port " << port << " for id " << id);
+//		ok=false;
+//	}
 
 
 	{

@@ -178,7 +178,7 @@ class CnetHttp : public synapse::Cnet
 				if (bytesToTransfer<0)
 					bytesToTransfer=0;
 
-				DEB(id << " starting async read for CONTENT, still need to receive " << bytesToTransfer << " of " << (int)headers["content-length"] << " bytes.");
+				DEB(id << " starting async read for CONTENT, still need to receive " << bytesToTransfer << " of " << headers["content-length"].str() << " bytes.");
 
 				asio::async_read(
 					tcpSocket,
@@ -564,7 +564,7 @@ class CnetHttp : public synapse::Cnet
 			if (readBuffer.size() < headers["content-length"])
 			{
 				error="Didn't receive enough content-bytes!";
-				DEB(id <<  " ERROR: Expected " << (int)headers["content-length"] << " bytes, but only got: " << bytesTransferred);
+				DEB(id <<  " ERROR: Expected " << headers["content-length"].str() << " bytes, but only got: " << bytesTransferred);
 			}
 			else
 			{
