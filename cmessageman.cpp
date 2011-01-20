@@ -44,6 +44,7 @@
 #include <set>
 #include <boost/thread/condition.hpp>
 
+#include "libs/exception/cexception.h"
 
 
 namespace synapse
@@ -393,6 +394,29 @@ void CmessageMan::operator()()
 			(*error)["description"]="I/O error: " + string(strerror(errno));
 			(*error)["parameters"]=(*callI->msg);
 			//prevent exception loops
+			try
+			{
+				sendMessage(callI->dst->module, error);
+			}
+			catch(...){};
+		}
+	  	catch (const synapse::sruntime_error& e)
+  		{
+			//return std::exceptions as error events
+			lock_guard<mutex> lock(threadMutex);
+
+			INFO("JANNNNNNNNN");
+			ERROR("synapse exception while handling " << callI->msg->event << ": " << e.what());
+			DEB("Backtrace:");
+			DEB(e.getTrace());
+
+			CmsgPtr error(new Cmsg);
+			(*error).event="module_Error";
+			(*error).dst=callI->msg->src;
+			(*error).src=callI->dst->id;
+			(*error)["event"]=callI->msg->event;
+			(*error)["description"]="Exception: " + string(e.what());
+			(*error)["parameters"]=(*callI->msg);
 			try
 			{
 				sendMessage(callI->dst->module, error);

@@ -1,1 +1,1 @@
-SUBDIRS(libs/json_spirit)
+SUBDIRS(libs/json_spirit libs/exception)

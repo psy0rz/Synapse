@@ -54,6 +54,9 @@ namespace paper
 
 	SYNAPSE_REGISTER(module_Init)
 	{
+
+		throw(synapse::runtime_error("test"));
+
 		Cmsg out;
 
 		gShutdown=false;

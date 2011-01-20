@@ -38,7 +38,7 @@ find_package( Boost 1.40.0 REQUIRED thread regex system )
 
 #need to link to some other libraries ? add the to the modules CMakeList.txt, not here!
 #TARGET_LINK_LIBRARIES(synapse boost_thread-mt dl boost_regex-mt boost_system-mt -pg json_spirit)
-TARGET_LINK_LIBRARIES(synapse ${Boost_LIBRARIES} json_spirit dl)
+TARGET_LINK_LIBRARIES(synapse ${Boost_LIBRARIES} json_spirit dl exception)
 
 INCLUDE_DIRECTORIES(libs libs/json_spirit ${Boost_INCLUDE_DIRS})
 
