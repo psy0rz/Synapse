@@ -42,4 +42,4 @@ TARGET_LINK_LIBRARIES(synapse ${Boost_LIBRARIES} json_spirit dl)
 
 INCLUDE_DIRECTORIES(libs libs/json_spirit ${Boost_INCLUDE_DIRS})
 
-SUBDIRS(libs modules libs/json_spirit)
+SUBDIRS(libs modules)
