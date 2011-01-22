@@ -318,7 +318,7 @@ class CnetHttp : public synapse::Cnet
 			if (config["contentTypes"].isSet(extention))
 			{
 				extraHeaders["content-type"]=config["contentTypes"][extention];
-				DEB("Content type of ." << extention << " is " << config["contentTypes"][extention]);
+				DEB("Content type of ." << extention << " is " << config["contentTypes"][extention].str());
 			}
 			else
 			{
@@ -383,9 +383,16 @@ class CnetHttp : public synapse::Cnet
 		{
 			if (longpoll)
 			{
+				ThttpCookie authCookieClone=0;
+				try
+				{
+					authCookieClone=headers["x-synapse-authcookie-clone"];
+				}
+				catch(...){ };
+
 				//check if there are messages in the queue, based on the authcookie from the current request:
 				//This function will change authCookie if neccesary and fill jsonStr!
-				httpSessionMan.getJsonQueue(id, authCookie, jsonStr, headers["x-synapse-authcookie-clone"]);
+				httpSessionMan.getJsonQueue(id, authCookie, jsonStr, authCookieClone);
 
 				//authcookie was probably expired, respond with error
 				if (!authCookie)
@@ -524,7 +531,14 @@ class CnetHttp : public synapse::Cnet
 
 				//this header MUST be set on longpoll requests:
 				//if the client doesnt has one yet, httpSessionMan will assign a new one.
-				authCookie=headers["x-synapse-authcookie"];
+				try
+				{
+					authCookie=headers["x-synapse-authcookie"];
+				}
+				catch(...)
+				{
+					authCookie=0;
+				}
 
 				//proceed based on requestType:
 				//a GET or empty POST:
