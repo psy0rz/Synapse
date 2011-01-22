@@ -400,15 +400,13 @@ void CmessageMan::operator()()
 			}
 			catch(...){};
 		}
-	  	catch (const synapse::sruntime_error& e)
+	  	catch (const synapse::runtime_error& e)
   		{
 			//return std::exceptions as error events
 			lock_guard<mutex> lock(threadMutex);
 
-			INFO("JANNNNNNNNN");
 			ERROR("synapse exception while handling " << callI->msg->event << ": " << e.what());
-			DEB("Backtrace:");
-			DEB(e.getTrace());
+			DEB("Backtrace:\n" << e.getTrace());
 
 			CmsgPtr error(new Cmsg);
 			(*error).event="module_Error";

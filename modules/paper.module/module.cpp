@@ -36,6 +36,7 @@ Internet paper.
 #include "csharedobject.h"
 #include "cobjectman.h"
 
+#include "exception/cexception.h"
 
 namespace paper
 {
@@ -54,8 +55,6 @@ namespace paper
 
 	SYNAPSE_REGISTER(module_Init)
 	{
-
-		throw(synapse::runtime_error("test"));
 
 		Cmsg out;
 
@@ -546,7 +545,7 @@ namespace paper
 			Cvar::iterator elementI;
 			elementI=mDrawing["data"].map().find(id);
 			if (elementI==mDrawing["data"].map().end())
-				throw(runtime_error("Specified element id not found."));
+				throw(synapse::runtime_error("Specified element id not found."));
 			return (elementI);
 		}
 
