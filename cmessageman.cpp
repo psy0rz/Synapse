@@ -585,7 +585,7 @@ int CmessageMan::run(string coreName, string moduleName)
 
 	//FIXME: are all threads really ended? its possible they still exist for a very short time, after they decreased the currentThread-counter.
 	sleep(1);
-	INFO("all threads ended, cleaning up...");
+	INFO("all threads ended, exiting.");
 	return(exit);
 }
 
