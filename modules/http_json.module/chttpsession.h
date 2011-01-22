@@ -32,7 +32,7 @@ using namespace std;
 class ChttpSession
 {
 	public:
-	ThttpCookie authCookie;
+	ThttpCookie mAuthCookie;
 	string jsonQueue;
 	int netId;
 	bool netInformed;

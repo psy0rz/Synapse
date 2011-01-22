@@ -33,7 +33,7 @@ void ChttpSession::getStatus(Cvar & var)
 {	
 	var["expired"]=expired;
 	var["lastTime"]=time(NULL)-lastTime;
-	var["authCookie"]=authCookie;
+	var["authCookie"]=mAuthCookie;
 	var["queueLength"]=jsonQueue.length();
 	var["netId"]=netId;
 }

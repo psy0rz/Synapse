@@ -128,20 +128,20 @@ class CnetHttp : public synapse::Cnet
 		WAIT_LONGPOLL,
 	};
 
-	ThttpCookie authCookie;
-	Tstates state;
-	string requestType;
-	string requestUrl;
-	string requestQuery;
-	string requestVersion;
-	Cvar headers;
+	ThttpCookie mAuthCookie;
+	Tstates mState;
+	string mRequestType;
+	string mRequestUrl;
+	string mRequestQuery;
+	string mRequestVersion;
+	Cvar mHeaders;
 
 
 	void init_server(int id, CacceptorPtr acceptorPtr)
 	{
-		state=REQUEST;
+		mState=REQUEST;
 		delimiter="\r\n\r\n";
-		authCookie=0;
+		mAuthCookie=0;
 	}
 
 	/** Server connection 'id' is established.
@@ -159,11 +159,11 @@ class CnetHttp : public synapse::Cnet
 
 	void startAsyncRead()
 	{
-		if (state==REQUEST || state==WAIT_LONGPOLL)
+		if (mState==REQUEST || mState==WAIT_LONGPOLL)
 		{
 				DEB(id << " starting async read for REQUEST headers");
 				//The request-block ends with a empty newline, so read until a double new-line:
-				headers.clear();
+				mHeaders.clear();
 				asio::async_read_until(
 					tcpSocket,
 					readBuffer,
@@ -171,14 +171,14 @@ class CnetHttp : public synapse::Cnet
 					bind(&Cnet::readHandler, this, _1, _2));
 		}
 		else
-		if (state==CONTENT)
+		if (mState==CONTENT)
 		{
 				//the buffer might already contain the data, so calculate how much more bytes we need:
-				int bytesToTransfer=((int)headers["content-length"]-readBuffer.size());
+				int bytesToTransfer=((int)mHeaders["content-length"]-readBuffer.size());
 				if (bytesToTransfer<0)
 					bytesToTransfer=0;
 
-				DEB(id << " starting async read for CONTENT, still need to receive " << bytesToTransfer << " of " << headers["content-length"].str() << " bytes.");
+				DEB(id << " starting async read for CONTENT, still need to receive " << bytesToTransfer << " of " << mHeaders["content-length"].str() << " bytes.");
 
 				asio::async_read(
 					tcpSocket,
@@ -225,8 +225,8 @@ class CnetHttp : public synapse::Cnet
 		responseStr+="Server: synapse_http_json\r\n";
 
 		//just echo the keep-alive header. response() will disconnect if neccesary
-		if (headers.isSet("connection"))
-			responseStr+="Connection: "+headers["connection"].str()+"\r\n";
+		if (mHeaders.isSet("connection"))
+			responseStr+="Connection: "+mHeaders["connection"].str()+"\r\n";
 
 // 		for (Cvar::iterator varI=cookies.begin(); varI!=cookies.end(); varI++)
 // 		{
@@ -377,7 +377,7 @@ class CnetHttp : public synapse::Cnet
 			//to abort we need to reply with an empty json array:
 			DEB(id << " cancelling longpoll");
 			jsonStr="[]";
-			httpSessionMan.endGet(id, authCookie);
+			httpSessionMan.endGet(id, mAuthCookie);
 		}
 		else
 		{
@@ -386,16 +386,16 @@ class CnetHttp : public synapse::Cnet
 				ThttpCookie authCookieClone=0;
 				try
 				{
-					authCookieClone=headers["x-synapse-authcookie-clone"];
+					authCookieClone=mHeaders["x-synapse-authcookie-clone"];
 				}
 				catch(...){ };
 
 				//check if there are messages in the queue, based on the authcookie from the current request:
 				//This function will change authCookie if neccesary and fill jsonStr!
-				httpSessionMan.getJsonQueue(id, authCookie, jsonStr, authCookieClone);
+				httpSessionMan.getJsonQueue(id, mAuthCookie, jsonStr, authCookieClone);
 
 				//authcookie was probably expired, respond with error
-				if (!authCookie)
+				if (!mAuthCookie)
 				{
 					respondError(400, "Session is expired, or session limit reached.");
 					return(true);
@@ -404,7 +404,7 @@ class CnetHttp : public synapse::Cnet
 			else
 			{
 				//we DO want to respond with something if its there, but we dont want to do long polling
-				httpSessionMan.getJsonQueue(authCookie, jsonStr);
+				httpSessionMan.getJsonQueue(mAuthCookie, jsonStr);
 				if (jsonStr=="")
 					jsonStr="[]";
 			}
@@ -422,7 +422,7 @@ class CnetHttp : public synapse::Cnet
 			extraHeaders["Content-Length"]=jsonStr.length();
 			extraHeaders["Cache-Control"]="no-cache";
 			extraHeaders["Content-Type"]="application/json";
-			extraHeaders["X-Synapse-Authcookie"]=authCookie;
+			extraHeaders["X-Synapse-Authcookie"]=mAuthCookie;
 			sendHeaders(200, extraHeaders);
 
 			//write the json queue
@@ -441,25 +441,25 @@ class CnetHttp : public synapse::Cnet
 		bool sended;
 
 		//someone requested the special longpoll url:
-		if (requestUrl=="/synapse/longpoll")
+		if (mRequestUrl=="/synapse/longpoll")
 		{
 			sended=(respondJsonQueue(abort));
 		}
 		//just respond with a normal file
 		else
 		{
-			sended=(respondFile(requestUrl));
+			sended=(respondFile(mRequestUrl));
 		}
 
 		//what to do after the response?
 		if (sended)
 		{
-			if (headers.isSet("connection"))
+			if (mHeaders.isSet("connection"))
 			{
-				if (headers["connection"].str()=="close")
+				if (mHeaders["connection"].str()=="close")
 					doDisconnect();
 			}
-			else if (requestVersion=="1.0")
+			else if (mRequestVersion=="1.0")
 			{
 				//http 1.0 should always disconnect if Connection: Keep-Alive is not specified.
 				doDisconnect();
@@ -476,10 +476,10 @@ class CnetHttp : public synapse::Cnet
 		string error;
 
 		//we're expecting a new request:
-		if (state==REQUEST || state==WAIT_LONGPOLL)
+		if (mState==REQUEST || mState==WAIT_LONGPOLL)
 		{
 			//if there is still an outstanding longpoll, cancel it:
-			if (state==WAIT_LONGPOLL)
+			if (mState==WAIT_LONGPOLL)
 			{
 				respond(true);
 			}
@@ -502,14 +502,14 @@ class CnetHttp : public synapse::Cnet
  			}
 			else
 			{
-				requestType=what[1];
-				requestUrl=what[2];
-				requestQuery=what[3];
-				requestVersion=what[4];
-				DEB("REQUEST query: " << requestQuery);
+				mRequestType=what[1];
+				mRequestUrl=what[2];
+				mRequestQuery=what[3];
+				mRequestVersion=what[4];
+				DEB("REQUEST query: " << mRequestQuery);
 
 				//create a regex iterator for http headers
-				headers.clear();
+				mHeaders.clear();
 				boost::sregex_iterator headerI(
 					dataStr.begin(),
 					dataStr.end(),
@@ -525,7 +525,7 @@ class CnetHttp : public synapse::Cnet
 					//headers handling is lowercase in synapse!
 					transform(header.begin(), header.end(), header.begin(), ::tolower);
 
-					headers[header]=value;
+					mHeaders[header]=value;
 					headerI++;
 				}
 
@@ -533,39 +533,39 @@ class CnetHttp : public synapse::Cnet
 				//if the client doesnt has one yet, httpSessionMan will assign a new one.
 				try
 				{
-					authCookie=headers["x-synapse-authcookie"];
+					mAuthCookie=mHeaders["x-synapse-authcookie"];
 				}
 				catch(...)
 				{
-					authCookie=0;
+					mAuthCookie=0;
 				}
 
 				//proceed based on requestType:
 				//a GET or empty POST:
-				if (requestType=="GET" || (int)headers["content-length"]==0)
+				if (mRequestType=="GET" || (int)mHeaders["content-length"]==0)
 				{
 					if (respond())
 					{
-						state=REQUEST;
+						mState=REQUEST;
 					}
 					else
 					{
 						DEB(id << " is now waiting for longpoll results");
-						state=WAIT_LONGPOLL;
+						mState=WAIT_LONGPOLL;
 					}
 					return;
 				}
 				//a POST with content:
 				else
 				{
-					if ( (int)headers["content-length"]<0  || (int)headers["content-length"] > config["maxContent"] )
+					if ( (int)mHeaders["content-length"]<0  || (int)mHeaders["content-length"] > config["maxContent"] )
 					{
 						error="Invalid Content-Length";
 					}
 					else
 					{
 						//change state to read the contents of the POST:
-						state=CONTENT;
+						mState=CONTENT;
 						return;
 					}
 				}
@@ -573,23 +573,23 @@ class CnetHttp : public synapse::Cnet
 		}
 		else
 		//we're expecting the contents of a POST request.
-		if (state==CONTENT)
+		if (mState==CONTENT)
 		{
-			if (readBuffer.size() < headers["content-length"])
+			if (readBuffer.size() < mHeaders["content-length"])
 			{
 				error="Didn't receive enough content-bytes!";
-				DEB(id <<  " ERROR: Expected " << headers["content-length"].str() << " bytes, but only got: " << bytesTransferred);
+				DEB(id <<  " ERROR: Expected " << mHeaders["content-length"].str() << " bytes, but only got: " << bytesTransferred);
 			}
 			else
 			{
-				dataStr.resize(headers["content-length"]);
-				readBuffer.consume(headers["content-length"]);
+				dataStr.resize(mHeaders["content-length"]);
+				readBuffer.consume(mHeaders["content-length"]);
 				DEB(id << " got http CONTENT with length=" << dataStr.size() << ": \n" << dataStr);
 
 				//POST to the special send url?
-				if (requestUrl=="/synapse/send")
+				if (mRequestUrl=="/synapse/send")
 				{
-					error=httpSessionMan.sendMessage(authCookie, dataStr);
+					error=httpSessionMan.sendMessage(mAuthCookie, dataStr);
 					if (error=="")
 					{
 						//DONT:respond with jsondata if we have something in the queue anyways
@@ -600,7 +600,7 @@ class CnetHttp : public synapse::Cnet
 					else
 						respondError(400, error);
 
-					state=REQUEST;
+					mState=REQUEST;
 					return;
 				}
 				else
@@ -608,9 +608,9 @@ class CnetHttp : public synapse::Cnet
 					//ignore whatever is posted, and just respond normally:
 					DEB(id << " ignored POST content");
 					if (respond())
-						state=REQUEST;
+						mState=REQUEST;
 					else
-						state=WAIT_LONGPOLL;
+						mState=WAIT_LONGPOLL;
 					return;
 				}
 			}
@@ -630,7 +630,7 @@ class CnetHttp : public synapse::Cnet
 	*/
  	void disconnected(int id, const boost::system::error_code& ec)
 	{
-		httpSessionMan.endGet(id, authCookie);
+		httpSessionMan.endGet(id, mAuthCookie);
 	}
 
 
@@ -647,13 +647,13 @@ class CnetHttp : public synapse::Cnet
 	void queueChanged()
 	{
 		//are we really waiting for something?
-		if (state==WAIT_LONGPOLL)
+		if (mState==WAIT_LONGPOLL)
 		{
 			//try to respond (this will call the httpSessionMan to see if there really is a message for our authCookie)
 			if (respondJsonQueue())
 			{
 				//we responded, change our state back to REQUEST
-				state=REQUEST;
+				mState=REQUEST;
 			}
 		}
 	}
@@ -664,14 +664,14 @@ class CnetHttp : public synapse::Cnet
 		Cnet::getStatus(var);
 		if (tcpSocket.is_open())
 		{
-			if (state==REQUEST)
+			if (mState==REQUEST)
 				var["httpStatus"]="idle";
-			else if (state==CONTENT)
+			else if (mState==CONTENT)
 				var["httpStatus"]="receiving";
-			else if (state==WAIT_LONGPOLL)
+			else if (mState==WAIT_LONGPOLL)
 				var["httpStatus"]="longpoll";
 
-			var["authCookie"]=authCookie;
+			var["authCookie"]=mAuthCookie;
 		}
 
 	}

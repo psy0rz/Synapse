@@ -46,7 +46,7 @@ ChttpSessionMan::ChttpSessionMap::iterator ChttpSessionMan::findSessionByCookie(
 	while (httpSessionI!=httpSessionMap.end())
 	{
 		//found it!
-		if (httpSessionI->second.authCookie==authCookie)
+		if (httpSessionI->second.mAuthCookie==authCookie)
 		{
 			//remember the session is still used
 			httpSessionI->second.lastTime=time(NULL);
@@ -205,17 +205,17 @@ void ChttpSessionMan::endGet(int netId,ThttpCookie & authCookie)
 	
 		if (httpSessionI==httpSessionMap.end())
 		{
-			DEB("Network id " << netId << " with UNKNOWN httpsession " << authCookie << " isnt interested in messages anymore. ignoring."); 
+			DEB("Network id " << netId << " with UNKNOWN httpsession " << authCookie << " isnt interested in messages anymore. ignoring.");
 			return;
 		}
 	
 		if (httpSessionI->second.netId!=netId)
 		{
-			DEB("UNKNOWN network id " << netId << " with httpsession " << authCookie << " isnt interested in messages anymore. ignoring."); 
+			DEB("UNKNOWN network id " << netId << " with httpsession " << authCookie << " isnt interested in messages anymore. ignoring.");
 			return;
 		}
 	
-		DEB("Network id " << netId << " with httpsession " << authCookie << " isnt interested in messages anymore. Session timeout timing is now enable."); 
+		DEB("Network id " << netId << " with httpsession " << authCookie << " isnt interested in messages anymore. Session timeout timing is now enable.");
 		httpSessionI->second.netId=0;
 	}	
 }
@@ -306,7 +306,7 @@ void ChttpSessionMan::sessionStart(Cmsg & msg)
 		return;
 	}
 
-	httpSessionMap[msg.dst].authCookie=msg["authCookie"];
+	httpSessionMap[msg.dst].mAuthCookie=msg["authCookie"];
 	httpSessionMap[msg.dst].netId=msg["netId"];
 
 	DEB("Created new httpSession " << msg.dst << ", with authCookie " << msg["authCookie"].str());
@@ -400,7 +400,7 @@ void ChttpSessionMan::expireCheck(ChttpSessionMap::iterator httpSessionI)
 	//session timeout?
 	if ((time(NULL)-(httpSessionI->second.lastTime)) > maxSessionIdle)
 	{
-		DEB("Ending old session: " << httpSessionI->first << " with authCookie " << httpSessionI->second.authCookie << ".");
+		DEB("Ending old session: " << httpSessionI->first << " with authCookie " << httpSessionI->second.mAuthCookie << ".");
 
 		httpSessionI->second.expired=true;
 	}
@@ -408,7 +408,7 @@ void ChttpSessionMan::expireCheck(ChttpSessionMap::iterator httpSessionI)
 	//queue too big?
 	if (httpSessionI->second.jsonQueue.length() > maxSessionQueue)
 	{
-		WARNING("While trying to send to session " << httpSessionI->first << " with authCookie " << httpSessionI->second.authCookie << " queue overflowed, ending session.");
+		WARNING("While trying to send to session " << httpSessionI->first << " with authCookie " << httpSessionI->second.mAuthCookie << " queue overflowed, ending session.");
 		httpSessionI->second.expired=true;
 	}
 
