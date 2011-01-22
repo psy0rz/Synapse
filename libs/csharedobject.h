@@ -20,6 +20,7 @@
 #ifndef CSHAREDOBJECT_H_
 #define CSHAREDOBJECT_H_
 
+#include "exception/cexception.h"
 
 namespace synapse
 {
@@ -86,12 +87,12 @@ namespace synapse
 
 		virtual void save(string path)
 		{
-			throw(runtime_error("Programming error: This object doesnt support saving to disk (yet?)"));
+			throw(synapse::runtime_error("Programming error: This object doesnt support saving to disk (yet?)"));
 		}
 
 		virtual void load(string path)
 		{
-			throw(runtime_error("Programming error: This object doesnt support loading from disk (yet?)"));
+			throw(synapse::runtime_error("Programming error: This object doesnt support loading from disk (yet?)"));
 		}
 
 		//sends a client list to specified destination
@@ -153,7 +154,7 @@ namespace synapse
 			}
 			else
 			{
-				throw(runtime_error("You're already joined?"));
+				throw(synapse::runtime_error("You're already joined?"));
 			}
 		}
 
@@ -200,7 +201,7 @@ namespace synapse
 		Tclient & getClient(int id)
 		{
 			if (clientMap.find(id)== clientMap.end())
-				throw(runtime_error("You are not joined to this object."));
+				throw(synapse::runtime_error("You are not joined to this object."));
 
 			return (clientMap[id]);
 		}

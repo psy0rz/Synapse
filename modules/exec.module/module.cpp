@@ -32,6 +32,7 @@ This module allows you to execute command, while retreiving back output data and
 #include <string.h>
 #include <errno.h>
 
+#include "exception/cexception.h"
 
 namespace exec
 {
@@ -134,7 +135,7 @@ namespace exec
 			//SECURITY: only WE may set the source
 			if (msg.src!=defaultId)
 			{
-				throw(runtime_error("You are not allowed to set the src-session."));
+				throw(synapse::runtime_error("You are not allowed to set the src-session."));
 			}
 			msg.src=msg["originalSrc"];
 		}

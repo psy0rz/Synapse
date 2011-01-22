@@ -33,6 +33,9 @@
 #include "clog.h"
 #include <sstream>
 
+#include "exception/cexception.h"
+
+
 namespace synapse
 {
 
@@ -152,7 +155,7 @@ void Cvar::castError(const char * txt)
 {
 	string s(txt);
 	s+=": "+getPrint();
-	throw(runtime_error(s.c_str()));
+	throw(synapse::runtime_error(s.c_str()));
 }
 
 Cvar::operator string & ()
@@ -533,7 +536,7 @@ void Cvar::readJsonSpirit(const string & jsonStr, Value & spiritValue)
 			//reformat the exception to something generic:
 			stringstream s;
 			s << "JSON parse error at line " << e.line_<< ", column " << e.column_ << ": " << e.reason_;
-			throw(runtime_error(s.str()));
+			throw(synapse::runtime_error(s.str()));
 		}
 	}
 

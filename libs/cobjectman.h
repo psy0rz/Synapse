@@ -26,6 +26,7 @@
 
 #include <map>
 #include "cconfig.h"
+#include "exception/cexception.h"
 
 namespace synapse
 {
@@ -74,7 +75,7 @@ namespace synapse
 				}
 				else
 				{
-					throw(runtime_error("Object not found!"));
+					throw(synapse::runtime_error("Object not found!"));
 				}
 			}
 
@@ -94,7 +95,7 @@ namespace synapse
 				}
 			}
 
-			throw(runtime_error("You are not joined to an object!"));
+			throw(synapse::runtime_error("You are not joined to an object!"));
 		}
 
 

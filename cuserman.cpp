@@ -35,6 +35,8 @@
 #include "clog.h"
 #include "cconfig.h"
 
+#include "exception/cexception.h"
+
 namespace synapse
 {
 
@@ -94,7 +96,7 @@ CuserPtr CuserMan::getUser(const string & userName)
 			return(*userI);
 		}
 	}
-	throw(runtime_error("User not found"));
+	throw(synapse::runtime_error("User not found"));
 	return (CuserPtr());
 }
 
@@ -143,7 +145,7 @@ CgroupPtr CuserMan::getGroup(const string &groupName)
 			return(*groupI);
 		}
 	}
-	throw(runtime_error("Group not found"));
+	throw(synapse::runtime_error("Group not found"));
 }
 
 

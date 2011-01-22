@@ -107,7 +107,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		{
 			stringstream s;
 			s << "send: module " << module->name << " want to send " << msg->event << " from its default session, but is doesnt have one.";
-			throw(runtime_error(s.str().c_str()));
+			throw(synapse::runtime_error(s.str().c_str()));
 		}
 	}
 
@@ -121,7 +121,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		//not found. we cant send an error back yet, so just return false
 		stringstream s;
 		s << "send: module " << module->name << " want to send " << msg->event << " from non-existing session " << msg->src;
-		throw(runtime_error(s.str().c_str()));
+		throw(synapse::runtime_error(s.str().c_str()));
 	}
 
 	//source session belongs to this module?
@@ -130,7 +130,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		//module is not the session owner. we cant send an error back yet, so just return false
 		stringstream s;
 		s << "send: module " << module->name << " wants to send " << msg->event << " from session " << msg->src << ", but isnt the owner of this session.";
-		throw(runtime_error(s.str().c_str()));
+		throw(synapse::runtime_error(s.str().c_str()));
 	}
 
 	//this cookie matches with src session cookie?
@@ -139,7 +139,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 	{
 		stringstream s;
 		s << "send: module " << module->name << " tries to send from session " << msg->src << ", but cookie " << cookie << " doesnt match session cookie " << src->cookie;
-		throw(runtime_error(s.str().c_str()));
+		throw(synapse::runtime_error(s.str().c_str()));
 	}
 
 	//resolve or create the event and check send-permissions:
@@ -148,7 +148,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 	{
 		stringstream s;
 		s << "send: session " << msg->src << " with user " << src->user->getName() << " is not allowed to send event " << msg->event;
-		throw(runtime_error(s.str().c_str()));
+		throw(synapse::runtime_error(s.str().c_str()));
 	}
 
 	src->statSends++;
@@ -177,7 +177,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		{
 			stringstream s;
 			s << "send: destination session " << msg->dst << " not found";
-			throw(runtime_error(s.str().c_str()));
+			throw(synapse::runtime_error(s.str().c_str()));
 		}
 
 		//get the handler, and does it exist?
@@ -193,7 +193,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		{
 			stringstream s;
 			s <<  "send: session " << msg->dst << " with user " << dst->user->getName() << " is not allowed to receive event " << msg->event;
-			throw(runtime_error(s.str().c_str()));
+			throw(synapse::runtime_error(s.str().c_str()));
 		}
 
 		if (logSends)
