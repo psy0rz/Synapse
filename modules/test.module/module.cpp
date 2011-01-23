@@ -175,6 +175,7 @@ SYNAPSE_REGISTER(play_vlc_Ready)
 	out.dst=msg["session"];
 	out.event="play_Open";
 	out["url"]="http://listen.di.fm/public3/chilloutdreams.pls";
+	out["url"]="/home/psy/mp3/01. Experience (1992)f/";
 	//out["url"]="http://88.191.102.29:6334/";
 //	out["url"]="/home/psy/09-orbital-style-rns.mp3";
 //	out["url"]="/home/psy/hackers_in_prison.mp3";

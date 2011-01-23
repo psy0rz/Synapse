@@ -93,87 +93,6 @@ class CPlayer
 	}
 
 
-	static void vlcEventMediaListPlayerNextItemSet(const libvlc_event_t * event, void *player)
-	{
-
-	//	vlcPlayer=NULL;
-//		INFO("Adding meta handler");
-//		libvlc_event_manager_t *em;
-//		em=libvlc_media_event_manager(event->u.media_list_player_next_item_set.item);
-//		if (em)
-//		{
-//			libvlc_event_attach(em, libvlc_MediaMetaChanged, vlcEventMediaMetaChanged, sessionId);
-//			libvlc_event_attach(em, libvlc_MediaSubItemAdded, vlcEventGeneric, sessionId);
-//			libvlc_event_attach(em, libvlc_MediaStateChanged, vlcEventMediaStateChanged, sessionId);
-//		}
-
-	}
-
-	//void vlcEventMediaPlayerPositionChanged(const libvlc_event_t * event, void *sessionId)
-	//{
-	//	Cmsg out;
-	//	out.src=(long int)sessionId;
-	//	out.event="play_Time";
-	//	out["position"]=event->u.media_player_position_changed.new_position;
-	//	out.send();
-	//}
-	//void vlcEventMediaPlayerOpening(const libvlc_event_t * event, void *sessionId)
-	//{
-	//	Cmsg out;
-	//	out.src=(long int)sessionId;
-	//	out.event="play_StateOpening";
-	//	out.send();
-	//
-	//}
-	//
-	//void vlcEventMediaPlayerBuffering(const libvlc_event_t * event, void *sessionId)
-	//{
-	//	Cmsg out;
-	//	out.src=(long int)sessionId;
-	//	out.event="play_StateBuffering";
-	//	out.send();
-	//}
-	//
-	//void vlcEventMediaPlayerPlaying(const libvlc_event_t * event, void *sessionId)
-	//{
-	//	Cmsg out;
-	//	out.src=(long int)sessionId;
-	//	out.event="play_StatePlaying";
-	//	out.send();
-	//}
-	//
-	//void vlcEventMediaPlayerPaused(const libvlc_event_t * event, void *sessionId)
-	//{
-	//	Cmsg out;
-	//	out.src=(long int)sessionId;
-	//	out.event="play_StatePaused";
-	//	out.send();
-	//}
-	//
-	//void vlcEventMediaPlayerStopped(const libvlc_event_t * event, void *sessionId)
-	//{
-	//	Cmsg out;
-	//	out.src=(long int)sessionId;
-	//	out.event="play_StateStopped";
-	//	out.send();
-	//}
-	//
-	//void vlcEventMediaPlayerEndReached(const libvlc_event_t * event, void *sessionId)
-	//{
-	//	Cmsg out;
-	//	out.src=(long int)sessionId;
-	//	out.event="play_StateEnded";
-	//	out.send();
-	//}
-	//
-	//void vlcEventMediaPlayerEncounteredError(const libvlc_event_t * event, void *sessionId)
-	//{
-	//	Cmsg out;
-	//	out.src=(long int)sessionId;
-	//	out.event="play_StateError";
-	//	out.send();
-	//}
-
 	static void vlcEventGeneric(const libvlc_event_t * event, void *player)
 	{
 		Cmsg out;
@@ -199,16 +118,6 @@ class CPlayer
 		out["length"]=(libvlc_media_player_get_length((libvlc_media_player_t*)event->p_obj))/1000;
 		out.send();
 	}
-
-//	static void vlcEventMediaPlayerTitleChanged(const libvlc_event_t * event, void *player)
-//	{
-//		Cmsg out;
-//		out.src=((CPlayer *)player)->id;
-//		out.event="play_EventTitle";
-//		out["title"]=libvlc_media_player_get_title((libvlc_media_player_t*)event->p_obj);
-//		out.send();
-//	}
-
 
 	//converts metadata from a mediaobject into a var
 	static void vlcMeta2Var(libvlc_media_t * m, Cvar & var)
@@ -333,9 +242,6 @@ class CPlayer
 	}
 
 
-
-
-
 	//create all the objects and attach all the event handlers
 	CPlayer()
 	{
@@ -369,14 +275,6 @@ class CPlayer
 		if (!mListPlayerEm)
 			throwError("Problem getting event manager of list player");
 
-//		libvlc_event_attach(vlcListPlayerEm, libvlc_MediaListPlayerStopped, &vlcEventGeneric, this);
-//		libvlc_event_attach(vlcListPlayerEm, libvlc_MediaListPlayerPlayed, &vlcEventGeneric, this);
-
-
-		libvlc_event_attach(
-				mListPlayerEm, libvlc_MediaListPlayerNextItemSet,
-				vlcEventMediaListPlayerNextItemSet,
-				this);
 
 
 		//create a player
@@ -390,20 +288,7 @@ class CPlayer
 		if (!mPlayerEm)
 			throwError("Problem getting event manager of player");
 
-		//attach player event handlers
-//			libvlc_event_attach(em, libvlc_MediaPlayerOpening, vlcEventMediaPlayerOpening, (void*)msg.dst);
-//			libvlc_event_attach(vlcPlayerEm, libvlc_MediaPlayerBuffering, vlcEventGeneric, this);
-//			libvlc_event_attach(em, libvlc_MediaPlayerPlaying, vlcEventMediaPlayerPlaying, (void*)msg.dst);
-//			libvlc_event_attach(em, libvlc_MediaPlayerPaused, vlcEventMediaPlayerPaused, (void*)msg.dst);
-//			libvlc_event_attach(em, libvlc_MediaPlayerStopped, vlcEventMediaPlayerStopped, (void*)msg.dst);
-//			libvlc_event_attach(em, libvlc_MediaPlayerEndReached, vlcEventMediaPlayerEndReached, (void*)msg.dst);
-//			libvlc_event_attach(em, libvlc_MediaPlayerEncounteredError,	vlcEventMediaPlayerEncounteredError, (void*)msg.dst);
-
-			libvlc_event_attach(mPlayerEm, libvlc_MediaPlayerTimeChanged, vlcEventMediaPlayerTimeChanged, this);
-//			libvlc_event_attach(em, libvlc_MediaPlayerPositionChanged, vlcEventMediaPlayerPositionChanged, (void*)msg.dst);
-
-//jittert			libvlc_event_attach(em, libvlc_MediaPlayerLengthChanged, vlcEventGeneric, (void*)msg.dst);
-////		libvlc_event_attach(vlcPlayerEm, libvlc_MediaPlayerTitleChanged, vlcEventMediaPlayerTitleChanged, (void*)msg.dst);
+		libvlc_event_attach(mPlayerEm, libvlc_MediaPlayerTimeChanged, vlcEventMediaPlayerTimeChanged, this);
 
 
 		//create a list
@@ -417,7 +302,6 @@ class CPlayer
 		if (!mListEm)
 			throwError("Problem getting event manager of list");
 
-//		libvlc_event_attach(vlcListEm, libvlc_MediaListItemDeleted, vlcEventGeneric, this);
 		libvlc_event_attach(mListEm, libvlc_MediaListItemAdded, vlcEventMediaSubItemAdded, this);
 
 
@@ -514,23 +398,10 @@ SYNAPSE_REGISTER(module_Init)
 	Cmsg out;
 
 	//this module is single threaded, since libvlc manages its own threads
-//	out.clear();
-//	out.event="core_ChangeModule";
-//	out["maxThreads"]=1;
-//	out.send();
-//
-//	out.clear();
-//	out.event="core_ChangeSession";
-//	out["maxThreads"]=1;
-//	out.send();
 
 	// Load the VLC engine
 	DEB("Loading vlc engine");
 
-//	char p[200];
-//	const char *pp=p;
-//	strcpy(p,"-vvvv");
-//	vlcInst=libvlc_new (1, &pp);
 	vlcInst=libvlc_new (0,NULL);
 
 	if (vlcInst)
@@ -567,7 +438,6 @@ SYNAPSE_REGISTER(module_SessionEnd)
 }
 
 /** Open the specified url
- *  TODO: implement functions to manage a play-queue. (basics have been setup for this)
  *
  */
 SYNAPSE_REGISTER(play_Open)
@@ -580,7 +450,6 @@ SYNAPSE_REGISTER(play_Open)
 }
 
 
-
 SYNAPSE_REGISTER(play_Stop)
 {
 	players[msg.dst].stop();
@@ -589,4 +458,5 @@ SYNAPSE_REGISTER(play_Stop)
 
 
 
+//end namespace
 }
