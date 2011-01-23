@@ -77,11 +77,11 @@ SYNAPSE_REGISTER(module_Init)
 //	out["path"]="modules/http_json.module/libhttp_json.so";
 //	out.send();
 
-//	out["path"]="modules/play_vlc.module/libplay_vlc.so";
-//	out.send();
+	out["path"]="modules/play_vlc.module/libplay_vlc.so";
+	out.send();
 
-		out["path"]="modules/exec.module/libexec.so";
-		out.send();
+//		out["path"]="modules/exec.module/libexec.so";
+//		out.send();
 
 	// Counter that ever counterSleep seconds emits a message.
 	// Speed can be changed with appropriate messages
@@ -175,11 +175,21 @@ SYNAPSE_REGISTER(play_Ready)
 	out.dst=msg["session"];
 	out.event="play_Open";
 	out["url"]="http://listen.di.fm/public3/chilloutdreams.pls";
+//	out["url"]="http://88.191.102.29:6334/";
 //	out["url"]="/home/psy/09-orbital-style-rns.mp3";
 //	out["url"]="/home/psy/hackers_in_prison.mp3";
 	out.send();
+
+	sleep(5);
+
+//	out.event="play_Stop";
+//	out.send();
 }
 
+SYNAPSE_REGISTER(play_InfoMeta)
+{
+
+}
 
 SYNAPSE_REGISTER(test_Counter)
 {
