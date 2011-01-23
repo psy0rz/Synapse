@@ -169,21 +169,21 @@ SYNAPSE_REGISTER(exec_Ended)
 }
 
 
-SYNAPSE_REGISTER(play_Ready)
+SYNAPSE_REGISTER(play_vlc_Ready)
 {
 	Cmsg out;
 	out.dst=msg["session"];
 	out.event="play_Open";
 	out["url"]="http://listen.di.fm/public3/chilloutdreams.pls";
-//	out["url"]="http://88.191.102.29:6334/";
+	//out["url"]="http://88.191.102.29:6334/";
 //	out["url"]="/home/psy/09-orbital-style-rns.mp3";
 //	out["url"]="/home/psy/hackers_in_prison.mp3";
 	out.send();
 
 	sleep(5);
 
-//	out.event="play_Stop";
-//	out.send();
+	out.event="play_Stop";
+	out.send();
 }
 
 SYNAPSE_REGISTER(play_InfoMeta)
