@@ -33,18 +33,21 @@ namespace play_vlc
 
 using namespace std;
 
-libvlc_instance_t * vlcInst=NULL;
 
 //A player instance
 //Consists of a libvlc player, list-player and and media-list (play queue)
-//NOTE: the static vlc* functions are used for libvlc call backs. These might be called from another parallel thread!
+//NOTE: the static vlc* functions are used for libvlc call backs. These are called from a seperate vlc thread!
 class CPlayer
 {
 	private:
 	int mId;
-	bool mHaveRef;
 
 	//pointers to vlc objects and event managers
+	libvlc_instance_t * mVlc;
+
+	libvlc_log_t * mLog;
+	libvlc_log_iterator_t * mLogIterator;
+
 	libvlc_media_list_t* mList;
 	libvlc_event_manager_t *mListEm;
 
@@ -74,10 +77,6 @@ class CPlayer
 		throw(synapse::runtime_error(msg));
 	}
 
-	bool ok()
-	{
-		return (mPlayer!=NULL && mList!=NULL && mListPlayer!=NULL);
-	}
 
 	//throw an error if the player-object is not ready to use
 	void throwIfBad()
@@ -227,6 +226,37 @@ class CPlayer
 
 		out.send();
 
+
+		//check the logs as well
+		libvlc_log_message_t logMessage;
+		out.clear();
+		out.event="play_Log";
+
+		//free the old iterator, and get a fresh one
+		libvlc_log_iterator_free(((CPlayer *)player)->mLogIterator);
+		((CPlayer *)player)->mLogIterator=libvlc_log_get_iterator(((CPlayer *)player)->mLog);
+		while (libvlc_log_iterator_has_next(((CPlayer *)player)->mLogIterator))
+		{
+
+			libvlc_log_iterator_next(((CPlayer *)player)->mLogIterator, &logMessage);
+			if (logMessage.i_severity==0)
+				out["severity"]="info";
+			else if (logMessage.i_severity==1)
+				out["severity"]="error";
+			else if (logMessage.i_severity==2)
+				out["severity"]="warning";
+			else if (logMessage.i_severity==3)
+				out["severity"]="debug";
+
+			out["type"]=logMessage.psz_type;
+			out["name"]=logMessage.psz_name;
+			out["message"]=logMessage.psz_message;
+			if (logMessage.psz_header)
+				out["header"]=logMessage.psz_header;
+			out.send();
+		}
+		//clear logs
+		libvlc_log_clear(((CPlayer *)player)->mLog);
 	}
 
 	static void vlcEventMediaSubItemAdded(const libvlc_event_t * event, void *player)
@@ -246,7 +276,7 @@ class CPlayer
 	//create all the objects and attach all the event handlers
 	CPlayer()
 	{
-		mHaveRef=false;
+		mVlc=NULL;
 		mList=NULL;
 		mPlayer=NULL;
 		mListPlayer=NULL;
@@ -257,17 +287,26 @@ class CPlayer
 	{
 		this->mId=id;
 
-		if (!vlcInst)
-			throwError("No vlc instance found");
 
-		//increase vlc reference count
-		DEB("Increasing reference count");
-		libvlc_retain(vlcInst);
-		mHaveRef=true;
+		// Create vlc instance
+		DEB("Creating vlc instance");
+		mVlc=libvlc_new (0,NULL);
+		if (!mVlc)
+			throwError("Problem creating new vlc instance");
+
+
+		//open logger
+		mLog=libvlc_log_open(mVlc);
+		if (!mVlc)
+			throwError("Problem opening vlc logger");
+
+		mLogIterator=libvlc_log_get_iterator(mLog);
+		if (!mLogIterator)
+			throwError("Problem getting log iterator");
 
 		//create list player
 		DEB("Creating list player");
-		mListPlayer = libvlc_media_list_player_new(vlcInst);
+		mListPlayer = libvlc_media_list_player_new(mVlc);
 		if (!mListPlayer)
 			throwError("Problem creating new list player");
 
@@ -280,7 +319,7 @@ class CPlayer
 
 		//create a player
 		DEB("Creating player");
-		mPlayer=libvlc_media_player_new(vlcInst);
+		mPlayer=libvlc_media_player_new(mVlc);
 		if (!mPlayer)
 			throwError("Problem creating new player");
 
@@ -294,7 +333,7 @@ class CPlayer
 
 		//create a list
 		DEB("Creating list");
-		mList=libvlc_media_list_new(vlcInst);
+		mList=libvlc_media_list_new(mVlc);
 		if (!mList)
 			throwError("Problem creating new list");
 
@@ -314,6 +353,37 @@ class CPlayer
 
 	}
 
+	bool ok()
+	{
+		return (mLogIterator!=NULL && mLog!=NULL && mVlc!=NULL && mPlayer!=NULL && mList!=NULL && mListPlayer!=NULL);
+	}
+
+	void destroy()
+	{
+		if (mPlayer)
+		{
+
+			stop();
+			libvlc_media_player_release(mPlayer);
+		}
+
+		if (mList)
+			libvlc_media_list_release(mList);
+
+		if (mListPlayer)
+			libvlc_media_list_player_release(mListPlayer);
+
+		if (mLogIterator)
+			libvlc_log_iterator_free(mLogIterator);
+
+		if (mLog)
+			libvlc_log_close(mLog);
+
+		if (mVlc)
+			libvlc_release(mVlc);
+
+	}
+
 	void open(string url)
 	{
 		throwIfBad();
@@ -324,7 +394,7 @@ class CPlayer
 
 		 // Create a new media item
 		libvlc_media_t * m;
-		m = libvlc_media_new_location(vlcInst, url.c_str());
+		m = libvlc_media_new_location(mVlc, url.c_str());
 
 		if (!m)
 			throwError("Cant creating location object");
@@ -367,26 +437,6 @@ class CPlayer
 		}
 	}
 
-	void destroy()
-	{
-		if (mPlayer)
-		{
-
-			stop();
-			libvlc_media_player_release(mPlayer);
-		}
-
-		if (mList)
-			libvlc_media_list_release(mList);
-
-		if (mListPlayer)
-			libvlc_media_list_player_release(mListPlayer);
-
-		if (mHaveRef && vlcInst)
-			libvlc_release(vlcInst);
-
-		mHaveRef=false;
-	}
 };
 
 typedef map<int, CPlayer> CPlayerMap;
@@ -403,31 +453,15 @@ SYNAPSE_REGISTER(module_Init)
 
 	//this module is single threaded, since libvlc manages its own threads
 
-	// Load the VLC engine
-	DEB("Loading vlc engine");
 
-	vlcInst=libvlc_new (0,NULL);
+	out.clear();
+	out.event="core_Ready";
+	out.send();
 
-	if (vlcInst)
-	{
-		out.clear();
-		out.event="core_Ready";
-		out.send();
-	}
-	else
-	{
-		throw(synapse::runtime_error("VLC initalisation failed"));
-	}
 }
 
 SYNAPSE_REGISTER(module_Shutdown)
 {
-	//the shutdown comes before all the sessionends, but this is no problem because of vlc's reference counting.
-	//decrease vlc reference count
-	if (vlcInst)
-	{
-		libvlc_release(vlcInst);
-	}
 }
 
 SYNAPSE_REGISTER(module_SessionStart)

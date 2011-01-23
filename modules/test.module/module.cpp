@@ -172,7 +172,7 @@ SYNAPSE_REGISTER(exec_Ended)
 std::string playUrl;
 SYNAPSE_REGISTER(play_vlc_Ready)
 {
-	playUrl="http://listen.di.fm/public3/chilloutdreams.pls";
+	playUrl="http://listen.diXXX.fm/public3/chilloutdreams.pls";
 	Cmsg out;
 	out.dst=msg["session"];
 	out.event="play_NewPlayer";
@@ -189,9 +189,16 @@ SYNAPSE_REGISTER(play_Player)
 	out["url"]=playUrl;
 	out.send();
 
+
 	playUrl="/home/psy/mp3/01. Experience (1992)/";
 
 }
+
+SYNAPSE_REGISTER(play_Log)
+{
+
+}
+
 
 SYNAPSE_REGISTER(play_InfoMeta)
 {
