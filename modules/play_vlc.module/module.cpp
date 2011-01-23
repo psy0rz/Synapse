@@ -60,6 +60,7 @@ class CPlayer
 	string mVlcUrl;
 
 	public:
+	string description;
 
 	void throwError(string msg)
 	{
@@ -388,14 +389,17 @@ class CPlayer
 	}
 };
 
-map<int, CPlayer> players;
-
+typedef map<int, CPlayer> CPlayerMap;
+CPlayerMap players;
+int defaultSession;
 
 
 
 SYNAPSE_REGISTER(module_Init)
 {
 	Cmsg out;
+
+	defaultSession=dst;
 
 	//this module is single threaded, since libvlc manages its own threads
 
@@ -429,6 +433,14 @@ SYNAPSE_REGISTER(module_Shutdown)
 SYNAPSE_REGISTER(module_SessionStart)
 {
 	players[dst].init(dst);
+
+	//inform everyone there's a new player in town ;)
+	Cmsg out;
+	out=msg;
+	out.event="play_Player";
+	out.src=dst;
+	out.dst=0;
+	out.send();
 }
 
 SYNAPSE_REGISTER(module_SessionEnd)
@@ -437,13 +449,57 @@ SYNAPSE_REGISTER(module_SessionEnd)
 	players.erase(msg.dst);
 }
 
+/** Get a list of players
+ * Returns a play_Players event with a list of available player ids
+ *
+ */
+SYNAPSE_REGISTER(play_GetPlayers)
+{
+	Cmsg out;
+	out.event="play_Players";
+	out.dst=msg.src;
+
+	for(CPlayerMap::iterator I=players.begin(); I!=players.end(); I++)
+	{
+		stringstream s;
+		s << I->first;
+		out["players"][s.str()]=I->second.description;
+	}
+	out.send();
+}
+
+/** Delete the player instance. (You cant delete the default player)
+ *
+ */
+SYNAPSE_REGISTER(play_DelPlayer)
+{
+	if (dst==defaultSession)
+		throw(synapse::runtime_error("Cant delete default player"));
+
+	Cmsg out;
+	out.src=dst;
+	out.event="core_DelSession";
+	out.send();
+}
+
+/** Delete the player instance. (You cant delete the default player)
+ *
+ */
+SYNAPSE_REGISTER(play_NewPlayer)
+{
+	Cmsg out;
+	out.event="core_NewSession";
+	out["description"]=msg["description"];
+	out["src"]=msg.src;
+	out.send();
+}
+
 /** Open the specified url
  *
  */
 SYNAPSE_REGISTER(play_Open)
 {
 	INFO("vlc opening " << msg["url"].str());
-
 
 	players[dst].open(msg["url"]);
 

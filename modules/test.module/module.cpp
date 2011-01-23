@@ -169,22 +169,28 @@ SYNAPSE_REGISTER(exec_Ended)
 }
 
 
+std::string playUrl;
 SYNAPSE_REGISTER(play_vlc_Ready)
 {
+	playUrl="http://listen.di.fm/public3/chilloutdreams.pls";
 	Cmsg out;
 	out.dst=msg["session"];
+	out.event="play_NewPlayer";
+	out["description"]="second player instance";
+	out.send();
+}
+
+//a new player has emerged
+SYNAPSE_REGISTER(play_Player)
+{
+	Cmsg out;
+	out.dst=msg.src;
 	out.event="play_Open";
-	out["url"]="http://listen.di.fm/public3/chilloutdreams.pls";
-	out["url"]="/home/psy/mp3/01. Experience (1992)f/";
-	//out["url"]="http://88.191.102.29:6334/";
-//	out["url"]="/home/psy/09-orbital-style-rns.mp3";
-//	out["url"]="/home/psy/hackers_in_prison.mp3";
+	out["url"]=playUrl;
 	out.send();
 
-	sleep(5);
+	playUrl="/home/psy/mp3/01. Experience (1992)/";
 
-	out.event="play_Stop";
-	out.send();
 }
 
 SYNAPSE_REGISTER(play_InfoMeta)
