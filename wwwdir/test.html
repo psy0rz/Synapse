@@ -21,8 +21,6 @@
 			
 	synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
 	{
-		if (msg["username"]=="anonymous")
-			synapse_login();
 	});
 
 	synapse_register("default",function(msg_src, msg_dst, msg_event, msg)
@@ -36,6 +34,7 @@
 	/// JAVA SCRIPT EVENT HANDLERS
 	$(document).ready(function(){
 		var messages=[
+  			'[0,"core_Login",{"username":"admin", "password":"as"}]',
 			'[0,"pl_Current"]',
 			'[0,"pl_Next"]'
 		]
@@ -43,7 +42,7 @@
 		for (var messageI in messages)
 		{
 			$("#sends").append(
-				"<span><textarea class='message'>"+
+				"<span><textarea rows=5 class='message'>"+
 				messages[messageI]+
 				"</textarea><input type='submit' value='Send' class='send'></span>"
 			);
