@@ -190,7 +190,7 @@ SYNAPSE_REGISTER(play_Player)
 	out.send();
 
 
-	playUrl="/home/psy/mp3/01. Experience (1992)/";
+	playUrl="/home/psy/mp3/01. Experience (1992)/sadfds";
 
 }
 

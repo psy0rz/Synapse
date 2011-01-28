@@ -66,11 +66,11 @@ SYNAPSE_REGISTER(module_Init)
 	out["path"]="modules/http_json.module/libhttp_json.so";
 	out.send();
 
-// 	out.clear();
-// 	out.event="core_ChangeLogging";
-// 	out["logSends"]=0; 
-// 	out["logReceives"]=0;
-// 	out.send();
+ 	out.clear();
+ 	out.event="core_ChangeLogging";
+ 	out["logSends"]=0;
+ 	out["logReceives"]=0;
+ 	out.send();
 
 }
 

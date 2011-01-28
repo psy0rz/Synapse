@@ -1,0 +1,79 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<title>playlist test</title>
+
+	<script type="text/javascript" src="/synapse/synapse.js"></script>
+
+	<script type="text/javascript">
+
+	/// SYNAPSE EVENT HANDLERS
+
+
+	synapse_register("error",function(errortxt)
+	{
+		$('#error').html(errortxt);
+	});	
+
+			
+	synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
+	{
+		if (msg["username"]=="anonymous")
+			synapse_login();
+	});
+
+	synapse_register("default",function(msg_src, msg_dst, msg_event, msg)
+	{
+		$("#messages").prepend(
+			"From "+msg_src+ " to " + msg_dst + " event: " + msg_event +"<br>" + JSON.stringify(msg) +"<hr>"
+			);
+	});
+
+
+	/// JAVA SCRIPT EVENT HANDLERS
+	$(document).ready(function(){
+		var messages=[
+			'[0,"pl_Current"]',
+			'[0,"pl_Next"]'
+		]
+			      		
+		for (var messageI in messages)
+		{
+			$("#sends").append(
+				"<span><textarea class='message'>"+
+				messages[messageI]+
+				"</textarea><input type='submit' value='Send' class='send'></span>"
+			);
+		}
+		
+		$(".send").click(function()
+		{
+			var msg=JSON.parse($(this).parent().children(".message").val());
+			send(msg[0],msg[1],msg[2]);
+			
+		});
+		
+		
+	});
+
+
+	</script>
+
+	<style>
+
+
+ 	</style>
+</head>
+
+
+<body>	
+	<h1>Send stuff</h1>
+	<div id='sends'></div>
+	<h1>Received messages</h1>
+	<div id='messages'></div>
+</body>
+</html>
+
