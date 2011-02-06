@@ -1,7 +1,7 @@
 #!/bin/bash
 # Use this if you get tired of restarting the program after every change/rebuild cycle :)
 
-ARGS="./modules/paper.module/libpaper.so"
+ARGS=$@
 while true; do
 	STAT=`stat synapse modules/*.module/*.so`
 	#echo $STAT

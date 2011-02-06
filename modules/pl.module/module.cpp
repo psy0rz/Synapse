@@ -31,15 +31,18 @@ This module can dynamicly generate playlists from directory's. It also can cache
 #include <string.h>
 #include <errno.h>
 #include <map>
+#include <boost/shared_ptr.hpp>
 
 #include "exception/cexception.h"
 
 #include "boost/filesystem.hpp"
 
+
 namespace pl
 {
 	using namespace std;
 	using namespace boost::filesystem;
+	using namespace boost;
 
 	bool shutdown;
 	int defaultId=-1;
@@ -82,28 +85,143 @@ namespace pl
 	}
 
 
+	typedef shared_ptr<directory_iterator> directory_iterator_ptr;
+	typedef shared_ptr<recursive_directory_iterator> recursive_directory_iterator_ptr;
+
+
 	class Citer
 	{
+		private:
+		path mBasePath;
+		path mCurrentPath;
+		directory_iterator_ptr mIterDir;
+		recursive_directory_iterator_ptr mIterFile;
+
+
+		string mId;
+
+		//reset iterators to currentpath.
+		void reset()
+		{
+			mIterDir=directory_iterator_ptr(new directory_iterator(mCurrentPath));
+			mIterFile=recursive_directory_iterator_ptr(new recursive_directory_iterator(mCurrentPath));
+			next();
+		}
+
+		public:
+
+		//next file
+		void next()
+		{
+			 recursive_directory_iterator end_itr;
+			 if ((*mIterFile)!=end_itr)
+				 (*mIterFile)++;
+
+			 //skip stuff until we got what we want
+			 while ((*mIterFile)!=end_itr && is_directory(mIterFile->status()))
+			 {
+				 (*mIterFile)++;
+			 }
+		}
+
+		void create(string id, string basePath)
+		{
+			mId=id;
+			mBasePath=basePath;
+			mCurrentPath=basePath;
+			reset();
+		}
+
+
+		void send(int dst)
+		{
+			Cmsg out;
+			out.event="pl_Entry";
+			out.dst=dst;
+			out["id"]=mId;
+			out["basePath"]=mBasePath.directory_string();
+			out["currentPath"]=mCurrentPath.directory_string();
+
+			if (*mIterDir!= directory_iterator())
+				out["selectedDir"]=(*mIterDir)->path().directory_string();
+
+			if (*mIterFile!= recursive_directory_iterator())
+				out["selectedFile"]=(*mIterFile)->path().file_string();
+
+			out.send();
+		}
+
+		void destroy()
+		{
+
+		}
 
 	};
 
-	typedef map<string,Citer> CiterMap;
-	CiterMap iterMap;
+	class CiterMan
+	{
+		private:
+		typedef map<string,Citer> CiterMap;
+		CiterMap mIterMap;
+
+		public:
+
+		Citer & get(string id)
+		{
+			if (mIterMap.find(id)==mIterMap.end())
+				throw(synapse::runtime_error("Playlist not found"));
+			return(mIterMap[id]);
+		}
+
+		void create(string id, string basePath)
+		{
+			if (mIterMap.find(id)!=mIterMap.end())
+				throw(synapse::runtime_error("Playlist already exists"));
+
+			mIterMap[id].create(id, basePath);
+		}
+
+		void destroy(string id)
+		{
+			get(id).destroy();
+			mIterMap.erase(id);
+		}
 
 
-	/** Get current directory and file
+	};
+
+	CiterMan iterMan;
+
+
+	/** Create a new iterator
 		\param id Traverser id
+		\path path Base path. Iterator can never 'escape' this directory.
+
+		SECURITY WARNING: Its possible to traverse the whole filesystem for users that have permission to send pl_Create!
 
 	\par Replies pl_Entry:
 		\param id Traverser id
 		\param path Current path
 		\param file Current file, selected according to search criteria
+
 	*/
-	SYNAPSE_REGISTER(pl_Current)
+	SYNAPSE_REGISTER(pl_Create)
 	{
+		iterMan.create(msg["id"], msg["path"]);
+		iterMan.get(msg["id"]).send(msg.src);
 	}
 
-	/** Change selection/search criteria for files
+
+	/** Delete specified iterator
+		\param id Traverser id
+	*/
+	SYNAPSE_REGISTER(pl_Destroy)
+	{
+		iterMan.destroy(msg["id"]);
+	}
+
+
+	/** Change selection/search criteria for files. Initalise a new iterator
 		\param id Traverser id
 		\param recurse Recurse level (-1 is infinite depth)
 		\param fileOrder Order in which to traverse files (date, random, name)
@@ -115,6 +233,16 @@ namespace pl
 	SYNAPSE_REGISTER(pl_Mode)
 	{
 
+	}
+
+	/** Get current directory and file
+		\param id Traverser id
+
+	\par Replies pl_Entry.
+	*/
+	SYNAPSE_REGISTER(pl_Current)
+	{
+		iterMan.get(msg["id"]).send(msg.src);
 	}
 
 	/** Select next directory entry in list
@@ -165,6 +293,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_Next)
 	{
+		iterMan.get(msg["id"]).next();
+		iterMan.get(msg["id"]).send(msg.src);
 
 	}
 
