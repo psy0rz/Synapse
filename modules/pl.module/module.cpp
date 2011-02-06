@@ -85,8 +85,97 @@ namespace pl
 	}
 
 
-	typedef shared_ptr<directory_iterator> directory_iterator_ptr;
-	typedef shared_ptr<recursive_directory_iterator> recursive_directory_iterator_ptr;
+
+
+	class Cpath
+	{
+		private:
+		time_t mWriteDate;
+
+		public:
+		path mPath;
+
+		Cpath()
+		{
+			mWriteDate=0;
+		}
+
+		//get/cache modification date
+		int getDate()
+		{
+			if (!mWriteDate)
+				mWriteDate=last_write_time(mPath);
+
+			return (mWriteDate);
+		}
+
+		//get sort filename string
+		string getSortName()
+		{
+			return(mPath.filename());
+		}
+
+		//get/cache metadata field (from the path database)
+		string getMeta(string key)
+		{
+			throw(synapse::runtime_error("not implemented yet!"));
+			return("error");
+		}
+
+		void setMeta(string key, string value)
+		{
+			throw(synapse::runtime_error("not implemented yet!"));
+
+		}
+	};
+
+	class CsortedDir
+	{
+		private:
+		path mBasePath;
+		string mSortField;
+
+		public:
+		list<Cpath> mPaths;
+
+		static bool compareFilename (Cpath first, Cpath second)
+		{
+			return (first.getSortName()<second.getSortName());
+		}
+
+		static bool compareDate (Cpath first, Cpath second)
+		{
+			return (first.getDate()<second.getDate());
+		}
+
+
+		CsortedDir(path basePath, string sortField)
+		{
+			mBasePath=basePath;
+			mSortField=sortField;
+
+			DEB("Reading directory " << basePath);
+			directory_iterator end_itr;
+			for ( directory_iterator itr( basePath );
+				itr != end_itr;
+				++itr )
+			{
+				Cpath p;
+				p.mPath=*itr;
+				mPaths.push_back(p);
+			}
+
+			if (sortField=="filename")
+				mPaths.sort(compareFilename);
+			else if (sortField=="date")
+				mPaths.sort(compareDate);
+			else
+				throw(synapse::runtime_error("not implemented yet!"));
+
+
+			mPaths.sort(compareFilename);
+		}
+	};
 
 
 	class Citer
@@ -94,18 +183,24 @@ namespace pl
 		private:
 		path mBasePath;
 		path mCurrentPath;
-		directory_iterator_ptr mIterDir;
-		recursive_directory_iterator_ptr mIterFile;
+		path mCurrentFile;
 
 
 		string mId;
 
-		//reset iterators to currentpath.
-		void reset()
+
+		private:
+
+		//to make stuff more readable and less error prone
+		enum Edirection { NEXT, PREVIOUS };
+		enum Erecursion { RECURSE, DONT_RECURSE };
+		enum Efiletype { DIRECTORY, FILE };
+
+
+		//traverses directories/files
+		path movePath(path currentPath, Edirection direction, Erecursion recursion, Efiletype filetype)
 		{
-			mIterDir=directory_iterator_ptr(new directory_iterator(mCurrentPath));
-			mIterFile=recursive_directory_iterator_ptr(new recursive_directory_iterator(mCurrentPath));
-			next();
+			//determine directory to get first listing from
 		}
 
 		public:
@@ -113,15 +208,12 @@ namespace pl
 		//next file
 		void next()
 		{
-			 recursive_directory_iterator end_itr;
-			 if ((*mIterFile)!=end_itr)
-				 (*mIterFile)++;
+			mCurrentFile=movePath(mCurrentFile,NEXT,RECURSE,FILE);
+		}
 
-			 //skip stuff until we got what we want
-			 while ((*mIterFile)!=end_itr && is_directory(mIterFile->status()))
-			 {
-				 (*mIterFile)++;
-			 }
+		//prev file
+		void prev()
+		{
 		}
 
 		void create(string id, string basePath)
@@ -129,7 +221,9 @@ namespace pl
 			mId=id;
 			mBasePath=basePath;
 			mCurrentPath=basePath;
-			reset();
+			mCurrentFile=basePath;
+			next();
+//			reset();
 		}
 
 
