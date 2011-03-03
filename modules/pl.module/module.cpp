@@ -201,6 +201,8 @@ namespace pl
 		path movePath(path currentPath, Edirection direction, Erecursion recursion, Efiletype filetype)
 		{
 			//determine directory to get first listing from
+			path p;
+			return (p);
 		}
 
 		public:
@@ -236,11 +238,11 @@ namespace pl
 			out["basePath"]=mBasePath.directory_string();
 			out["currentPath"]=mCurrentPath.directory_string();
 
-			if (*mIterDir!= directory_iterator())
-				out["selectedDir"]=(*mIterDir)->path().directory_string();
-
-			if (*mIterFile!= recursive_directory_iterator())
-				out["selectedFile"]=(*mIterFile)->path().file_string();
+//			if (*mIterDir!= directory_iterator())
+//				out["selectedDir"]=(*mIterDir)->path().directory_string();
+//
+//			if (*mIterFile!= recursive_directory_iterator())
+//				out["selectedFile"]=(*mIterFile)->path().file_string();
 
 			out.send();
 		}

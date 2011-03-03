@@ -1,4 +1,5 @@
 // (C)edwin@datux.nl - released under GPL 
+// part of Synapse
 
 function Cpoint(x,y)
 {
@@ -34,7 +35,6 @@ var tempCount=0;
 var currentObjectId=0;
 var paperModId=0;
 
-var drawMode="l";
 	
 //incremental draw stuff
 var clientId=0;

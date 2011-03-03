@@ -43,7 +43,7 @@ namespace synapse
 		public:
 
 		//send a message to all clients of the object
-		void send(Cmsg & msg)
+		void sendAll(Cmsg & msg)
 		{
 			typename CclientMap::iterator I;
 			for (I=clientMap.begin(); I!=clientMap.end(); I++)
@@ -100,7 +100,7 @@ namespace synapse
 		{
 			Cmsg out;
 			out.event="object_Client";
-			getInfo(out);
+			//niet: getInfo(out);
 			out["first"]=1;
 			out.dst=dst;
 
@@ -124,8 +124,8 @@ namespace synapse
 			Cmsg out;
 			out.event="object_Client";
 			clientMap[id].getInfo(out);
-			getInfo(out);
-			send(out); //inform all members of the new client
+			//niet: getInfo(out);
+			sendAll(out); //inform all members of the new client
 		}
 
 		void addClients(set<int> & ids)
@@ -174,7 +174,7 @@ namespace synapse
 				clientMap[id].getInfo(out);
 
 				clientMap.erase(id);
-				send(out); //inform all members of the left client
+				sendAll(out); //inform all members of the left client
 
 				lastLeave=time(NULL);
 			}
@@ -218,7 +218,7 @@ namespace synapse
 			Cmsg out;
 			out.event="object_Deleted";
 			getInfo(out);
-			send(out); //inform all members
+			sendAll(out); //inform all members
 
 			delAllClients();
 		}

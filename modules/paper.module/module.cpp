@@ -206,9 +206,39 @@ namespace paper
 		Cvar mCursor;
 		int mLastElementId;
 
+
+		//current rights the client has on this drawing
+		bool mAuthCursor;
+		bool mAuthChat;
+		bool mAuthView;
+		bool mAuthChange;
+		bool mAuthOwner;
+
+
 		CpaperClient()
 		{
 			mLastElementId=0;
+			mAuthView=false;
+			mAuthChange=false;
+			mAuthOwner=false;
+			mAuthCursor=false;
+			mAuthChat=false;
+
+			mAuthView=true;
+			mAuthChange=true;
+			mAuthOwner=true;
+			mAuthCursor=true;
+			mAuthChat=true;
+		}
+
+
+		//sends a message to the client, only if the client has view-rights
+		//otherwise the message is ignored.
+		void sendFiltered(Cmsg & msg)
+		{
+			if (mAuthView)
+				msg.send();
+
 		}
 	};
 
@@ -266,6 +296,25 @@ namespace paper
 
 		}
 
+
+		//send message to all clients that are joined, using filtering.
+		void sendAllFiltered(Cmsg & msg)
+		{
+			CclientMap::iterator I;
+			for (I=clientMap.begin(); I!=clientMap.end(); I++)
+			{
+				msg.dst=I->first;
+				try
+				{
+					I->second.sendFiltered(msg);
+				}
+				catch(...)
+				{
+					; //expected raceconditions do occur during session ending, so ignore send errors
+				}
+			}
+		}
+
 		//get filenames, relative to wwwdir, or relative to synapse main dir.
 		//these probably are going to give different results when papers are made private.
 		string getSvgFilename(bool www=false)
@@ -320,7 +369,6 @@ namespace paper
 		void createHtml()
 		{
 			//Since we need to add all kinds of metadata to the paper-html file, we need to parse the html file and fill in some marcros
-			//The result is stored in the wwwdirectory
 			synapse::CvarMap regex;
 			regex["%id%"]=id;
 			regex["%png%"]=getPngFilename(true);
@@ -394,13 +442,13 @@ namespace paper
 			out["svgPath"]=getSvgFilename(true);
 			out["pngPath"]=getPngFilename(true);
 			out["thumbPath"]=getThumbFilename(true);
-			send(out);
+			sendAllFiltered(out);
 
 		}
 
 		//export the drawing to svg and png files.
 		//sends various a paper_Exported event when done.
-		void saveExport()
+		void saveExport(bool send=true)
 		{
 			//already exporting, dont start it again
 			if (mExporting)
@@ -409,7 +457,8 @@ namespace paper
 			//its already exported, dont do anything but send out the event.
 			if (mDrawing["exported"])
 			{
-				exported();
+				if (send)
+					exported();
 			}
 			else
 			//export the drawing
@@ -428,7 +477,7 @@ namespace paper
 				//export all elements
 				for(Cvar::iterator elementI=mDrawing["data"].begin(); elementI!=mDrawing["data"].end(); elementI++)
 				{
-					//starsavet element
+					//start element
 					svgStream << "<" << elementI->second["element"].str();
 
 					//add id
@@ -498,7 +547,7 @@ namespace paper
 		void save(string path)
 		{
 			mDrawing.save(path);
-			saveExport();
+			saveExport(false);
 		}
 
 		void load(string path)
@@ -507,8 +556,8 @@ namespace paper
 		}
 
 
-		//send the commands to the clients and store permanently if neccesary.
-		//on behalf of clientId (use clientId 0 for global commands)
+		//send the drawing commands to all clients, except clientId
+		//(use clientId 0 if your want the message send to all clients)
 		void serverDraw(Cmsg out, int clientId=0 )
 		{
 			out.event="paper_ServerDraw";
@@ -522,7 +571,7 @@ namespace paper
 					out.dst=I->first;
 					try
 					{
-						out.send();
+						I->second.sendFiltered(out);
 					}
 					catch(...)
 					{
@@ -531,11 +580,7 @@ namespace paper
 					}
 				}
 			}
-
-
 		}
-
-
 
 
 		//get an iterator to specified element id.
@@ -582,6 +627,7 @@ namespace paper
 		}
 
 		//process drawing data received from a client store it, and relay it to other clients via serverDraw
+		//if a client is not authorized to do certain stuff, an exception is thrown
 		void clientDraw(Cmsg & msg)
 		{
 			msg["src"]=msg.src;
@@ -589,6 +635,9 @@ namespace paper
 			//received cursor information?
 			if (msg.isSet("cursor"))
 			{
+				if (!getClient(msg.src).mAuthCursor)
+					throw(synapse::runtime_error("You're not allowed to send cursor updates"));
+
 				//store the new fields in the clients cursor object:
 				Cvar & cursor=getClient(msg.src).mCursor;
 				for(Cvar::iterator I=msg["cursor"].begin(); I!=msg["cursor"].end(); I++)
@@ -600,6 +649,9 @@ namespace paper
 			//received chat?
 			if (msg.isSet("chat"))
 			{
+				if (!getClient(msg.src).mAuthChat)
+					throw(synapse::runtime_error("You're not allowed to chat"));
+
 				//store in chat log for this object
 				mDrawing["chat"].list().push_back(msg["chat"]);
 			}
@@ -607,6 +659,10 @@ namespace paper
 			//received drawing commands?
 			if (msg["cmd"].str()=="update")
 			{
+
+				if (!getClient(msg.src).mAuthChange)
+					throw(synapse::runtime_error("You're not authorized to change this drawing."));
+
 				//id specified?
 				if (msg.isSet("id"))
 				{
@@ -670,11 +726,14 @@ namespace paper
 				out["cmd"]="update";
 				if (msg.isSet("id"))
 					element2msg(msg["id"].str(), out);
-				out.send();
+				getClient(msg.src).sendFiltered(out);
 			}
 			//delete object?
 			else if (msg["cmd"].str()=="delete")
 			{
+				if (!getClient(msg.src).mAuthChange)
+					throw(synapse::runtime_error("You're not authorized to change this drawing."));
+
 				//delete it
 				Cvar::iterator elementI=getElement(msg["id"]);
 				mDrawing["data"].map().erase(elementI);
@@ -694,6 +753,9 @@ namespace paper
 		//send redrawing instructions to dst
 		void redraw(int dst)
 		{
+			if (!getClient(dst).mAuthView)
+				throw(synapse::runtime_error("You're not authorized to view this drawing."));
+
 			Cmsg out;
 			out.event="paper_ServerDraw";
 			out.dst=dst;
@@ -735,7 +797,8 @@ namespace paper
 			//let the base class do its work:
 			synapse::CsharedObject<CpaperClient>::addClient(id);
 			//make sure redraw commands are send BEFORE any other draw commands
-			redraw(id);
+			if (getClient(id).mAuthView)
+				redraw(id);
 
 		}
 
@@ -884,14 +947,16 @@ namespace paper
 	 */
 	SYNAPSE_REGISTER(paper_ClientDraw)
 	{
-		try
-		{
+
+		//NIET? anders zie je auth excetions niet..
+//		try
+//		{
 			gObjectMan.getObjectByClient(msg.src).clientDraw(msg);
-		}
-		catch(...)
-		{
-			; //ignore exceptions, due to race conditions in deletes etc.
-		}
+//		}
+//		catch(...)
+//		{
+//			; //ignore exceptions, due to race conditions in deletes etc.
+//		}
 	}
 
 	/*** Request paper to be saved and exported immeadiatly
