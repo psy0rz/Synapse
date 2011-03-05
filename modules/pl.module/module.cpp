@@ -86,16 +86,15 @@ namespace pl
 
 
 
-
-	class Cpath
+	class Cpath : public path
 	{
 		private:
 		time_t mWriteDate;
 
 		public:
-		path mPath;
 
 		Cpath()
+		:path()
 		{
 			mWriteDate=0;
 		}
@@ -104,25 +103,25 @@ namespace pl
 		int getDate()
 		{
 			if (!mWriteDate)
-				mWriteDate=last_write_time(mPath);
+				mWriteDate=last_write_time(*this);
 
 			return (mWriteDate);
 		}
 
 		//get sort filename string
-		string getSortName()
+		std::string getSortName()
 		{
-			return(mPath.filename());
+			return(filename());
 		}
 
 		//get/cache metadata field (from the path database)
-		string getMeta(string key)
+		std::string getMeta(std::string key)
 		{
 			throw(synapse::runtime_error("not implemented yet!"));
 			return("error");
 		}
 
-		void setMeta(string key, string value)
+		void setMeta(std::string key, std::string value)
 		{
 			throw(synapse::runtime_error("not implemented yet!"));
 
@@ -140,12 +139,12 @@ namespace pl
 
 		static bool compareFilename (Cpath first, Cpath second)
 		{
-			return (first.getSortName()<second.getSortName());
+			return (first.getSortName() < second.getSortName());
 		}
 
 		static bool compareDate (Cpath first, Cpath second)
 		{
-			return (first.getDate()<second.getDate());
+			return (first.getDate() < second.getDate());
 		}
 
 
@@ -161,7 +160,7 @@ namespace pl
 				++itr )
 			{
 				Cpath p;
-				p.mPath=*itr;
+				p=*itr;
 				mPaths.push_back(p);
 			}
 
@@ -170,7 +169,7 @@ namespace pl
 			else if (sortField=="date")
 				mPaths.sort(compareDate);
 			else
-				throw(synapse::runtime_error("not implemented yet!"));
+				throw(synapse::runtime_error("sort mode not implemented yet!"));
 
 
 			mPaths.sort(compareFilename);
@@ -198,11 +197,14 @@ namespace pl
 
 
 		//traverses directories/files
-		path movePath(path currentPath, Edirection direction, Erecursion recursion, Efiletype filetype)
+		path movePath(path currentPath, string sortField, Edirection direction, Erecursion recursion, Efiletype filetype)
 		{
-			//determine directory to get first listing from
+			//get directory listing of the path
+			CsortedDir sortedDir(currentPath,sortField);
+
+			//find the path
 			path p;
-			return (p);
+			return p;
 		}
 
 		public:
@@ -210,7 +212,7 @@ namespace pl
 		//next file
 		void next()
 		{
-			mCurrentFile=movePath(mCurrentFile,NEXT,RECURSE,FILE);
+			mCurrentFile=movePath(mCurrentFile,"filename",NEXT,RECURSE,FILE);
 		}
 
 		//prev file
