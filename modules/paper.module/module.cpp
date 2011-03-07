@@ -224,11 +224,11 @@ namespace paper
 			mAuthCursor=false;
 			mAuthChat=false;
 
-			mAuthView=true;
-			mAuthChange=true;
-			mAuthOwner=true;
-			mAuthCursor=true;
-			mAuthChat=true;
+//			mAuthView=true;
+//			mAuthChange=true;
+//			mAuthOwner=true;
+//			mAuthCursor=true;
+//			mAuthChat=true;
 		}
 
 
@@ -835,6 +835,12 @@ namespace paper
 		{
 			int objectId=gObjectMan.add();
 			gObjectMan.getObject(objectId).addClient(msg.src);
+		}
+
+		//give the creator owner rights
+		if (msg["clientId"]!="")
+		{
+
 		}
 
 	}

@@ -7,6 +7,7 @@
 	<title>Internet Papier</title>
 
 	<script type="text/javascript" src="/synapse/synapse.js"></script>
+	<script type="text/javascript" src="/synapse/common.js"></script>
 
 	<script>
 
@@ -41,7 +42,9 @@
 			{
 				$("#message").show();
 				$("#message").html("Pagina word aangemaakt...");
-				send(0,"paper_Create");
+				send(0,"paper_Create",{
+					clientId:getClientId() 
+				});
 			});
 
 			
@@ -95,7 +98,7 @@
 		//we probably created a new object, so go to the editor
 		synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
 		{
-			document.location=msg["htmlPath"];			
+			//document.location=msg["htmlPath"];			
 		});
 
 		//the requested paper exists and is accesible, so go to the editor		

@@ -1,6 +1,8 @@
 // (C)edwin@datux.nl - released under GPL 
 // part of Synapse
 
+//Paper core drawing functionality. Requires a bunch of dom object to function (see edit.html)
+
 function Cpoint(x,y)
 {
 	this.x=x;

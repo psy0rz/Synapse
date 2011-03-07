@@ -1,3 +1,6 @@
+//Synapse userinterface stuff. 
+//Creates nice popups when autentication is required or message exceptions and errors occur.
+
 //call this to show a login-dialog and handle everything to let the user login.
 function synapse_login()
 {

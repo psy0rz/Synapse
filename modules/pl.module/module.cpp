@@ -160,7 +160,7 @@ namespace pl
 				++itr )
 			{
 				Cpath p;
-				p=*itr;
+				//p=*itr;
 				mPaths.push_back(p);
 			}
 

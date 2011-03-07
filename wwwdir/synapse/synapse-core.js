@@ -1,26 +1,4 @@
-//work around missing/different console objects
-//TODO:replace this with custom logging later perhaps.
-if (typeof console == 'undefined')
-{
-	function Cconsole(){
-	};
-
-	console=new Cconsole();
-}
-
-if (typeof console.info == 'undefined')
-	console.info=function() { };
-
-//IE8 (and perhaps other?) has no debug, but DOES have an info, so we do it this way:
-if (typeof console.debug == 'undefined')
-	console.debug=console.info;
-
-if (typeof console.log == 'undefined')
-	console.log=console.info;
-
-if (typeof console.error == 'undefined')
-	console.error=console.info;
-
+//Synapse javascript core functions (dont include directly)
 
 
 //user defined message handlers go in here:
@@ -68,21 +46,6 @@ function synapse_receive()
 	});
 }
 
-function escapeId(myid) { 
-	//escape stuff to make it jquery compatible. 
-	if (typeof myid != 'undefined')
-		return '#' + myid.replace(/([,@\/.])/g,'\\$1');
-	else
-		return '#undefined';
-}
-
-function escapeClass(myclass) { 
-	//escape stuff to make it jquery compatible. 
-	if (typeof myclass != 'undefined')
-		return '.' + myclass.replace(/([,@\/.])/g,'\\$1');
-	else
-		return '.undefined';
-}
 
 function synapse_register(event, handler)
 {
@@ -263,6 +226,7 @@ function send(msg_dst, msg_event, msg)
 }
 
 $(document).ready(function(){
+	
 	//need to start ansyncroniously, otherwise some browsers (android) keep loading:
 	//(hmm this not always prevents the problem, we will figure out a better way later)
 	setTimeout("synapse_receive()",100);
