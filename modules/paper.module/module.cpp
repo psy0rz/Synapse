@@ -115,6 +115,9 @@ namespace paper
 
 		out["event"]=	"paper_List";		out.send(); //list of papers
 
+		out["event"]=	"paper_AuthWrongKey";		out.send(); //client tried to authenticate with wrong key
+		out["event"]=	"paper_Authorized";		out.send(); //client is authorized new rights
+
 		out.clear();
 		out.event="core_LoadModule";
 		out["path"]="modules/timer.module/libtimer.so";
@@ -207,12 +210,13 @@ namespace paper
 		int mLastElementId;
 
 
-		//current rights the client has on this drawing
+		//authorized functions
 		bool mAuthCursor;
 		bool mAuthChat;
 		bool mAuthView;
 		bool mAuthChange;
 		bool mAuthOwner;
+
 
 
 		CpaperClient()
@@ -240,6 +244,24 @@ namespace paper
 				msg.send();
 
 		}
+
+		//authorizes the client withclient with key and rights
+		void authorize(Cvar & rights)
+		{
+			mAuthView=rights["view"];
+			mAuthChange=rights["change"];
+			mAuthOwner=rights["owner"];
+			mAuthCursor=rights["cursor"];
+			mAuthChat=rights["chat"];
+
+			//inform the client of its new rights
+			Cmsg out;
+			out.event="paper_Authorized";
+			out.dst=id;
+			out.map()=rights;
+			out.send();
+
+		}
 	};
 
 
@@ -248,8 +270,10 @@ namespace paper
 	{
 		private:
 		bool mExporting;
+		synapse::Cconfig mDrawing;
 
-		//called when the drawing is modified.
+		//called when the drawing-data of the drawing is modified. (e.g. new export is needed)
+
 		void changed()
 		{
 			mDrawing["changeTime"]=time(NULL);
@@ -260,40 +284,9 @@ namespace paper
 
 
 		public:
-		synapse::Cconfig mDrawing;
-
-
 		CpaperObject()
 		{
 			mExporting=false;
-
-			//1000r will be the root svg element with its settings
-			//NOTE: svgweb doesnt support a numeric svg-root, hence the added r
-			//NOTE: This is a STL ordered MAP, we need to keep the correct order, so hence the 1000.
-			mDrawing["data"]["1000r"]["element"]="svg";
-			mDrawing["data"]["1000r"]["version"]="1.2";
-			mDrawing["data"]["1000r"]["baseProfile"]="tiny";
-			mDrawing["data"]["1000r"]["viewBox"]="0 0 17777 10000";
-
-			mDrawing["data"]["1000r"]["xmlns"]="http://www.w3.org/2000/svg";
-			mDrawing["data"]["1000r"]["xmlns:xlink"]="http://www.w3.org/1999/xlink";
-			//we dont use this YET:
-			//drawing["data"]["1000r"]["xmlns:ev"]="http://www.w3.org/2001/xml-events";
-
-			mDrawing["data"]["1000r"]["stroke-linecap"]="round";
-			mDrawing["data"]["1000r"]["stroke-linejoin"]="round";
-
-
-			//drawing.setAttribute("preserveAspectRatio", "none");
-//				drawing.setAttribute("pointer-events","all");
-//				drawing.setAttribute("color-rendering","optimizeSpeed");
-//				drawing.setAttribute("shape-rendering","optimizeSpeed");
-//				drawing.setAttribute("text-rendering","optimizeSpeed");
-//				drawing.setAttribute("image-rendering","optimizeSpeed");
-
-			//we start at 1001 so the order stays correct in the stl map. once we get to 10000 the order gets screwed up, but that probably never happens ;)
-			mDrawing["lastElementId"]=1000;
-
 		}
 
 
@@ -382,9 +375,38 @@ namespace paper
 		//the paper is created for the first time.
 		void create()
 		{
+			//1000r will be the root svg element with its settings
+			//NOTE: svgweb doesnt support a numeric svg-root, hence the added r
+			//NOTE: This is a STL ordered MAP, we need to keep the correct order, so hence the 1000.
+			mDrawing["data"]["1000r"]["element"]="svg";
+			mDrawing["data"]["1000r"]["version"]="1.2";
+			mDrawing["data"]["1000r"]["baseProfile"]="tiny";
+			mDrawing["data"]["1000r"]["viewBox"]="0 0 17777 10000";
+
+			mDrawing["data"]["1000r"]["xmlns"]="http://www.w3.org/2000/svg";
+			mDrawing["data"]["1000r"]["xmlns:xlink"]="http://www.w3.org/1999/xlink";
+			//we dont use this YET:
+			//drawing["data"]["1000r"]["xmlns:ev"]="http://www.w3.org/2001/xml-events";
+
+			mDrawing["data"]["1000r"]["stroke-linecap"]="round";
+			mDrawing["data"]["1000r"]["stroke-linejoin"]="round";
+
+			//drawing.setAttribute("preserveAspectRatio", "none");
+//				drawing.setAttribute("pointer-events","all");
+//				drawing.setAttribute("color-rendering","optimizeSpeed");
+//				drawing.setAttribute("shape-rendering","optimizeSpeed");
+//				drawing.setAttribute("text-rendering","optimizeSpeed");
+//				drawing.setAttribute("image-rendering","optimizeSpeed");
+
+			//we start at 1001 so the order stays correct in the stl map. once we get to 10000 the order gets screwed up, but that probably never happens ;)
+			mDrawing["lastElementId"]=1000;
+
+			//create appropriate files
 			mDrawing["path"]="/p/"+randomStr(8)+"/";
 			filesystem::create_directory("wwwdir" + mDrawing["path"].str());
 			createHtml();
+
+
 		}
 
 
@@ -555,6 +577,53 @@ namespace paper
 			mDrawing.load(path);
 		}
 
+		//authenticates clientId with key
+		void authenticate(int clientId, string key)
+		{
+			//key doesnt exists?
+			if (mDrawing["auth"].isSet(key))
+			{
+				Cmsg out;
+				out.event="paper_AuthWrongKey";
+				out.dst=id;
+				out.send();
+				return;
+			}
+
+			//if the key exists, authorize the client
+			getClient(clientId).authorize(mDrawing["auth"][key]);
+		}
+
+		//changes authentication keys and authorization
+		//rights is just a hasharray
+		//Specifying clientId checks if the client is allowed to give these rights
+		//specifying an empty rights-array will delete the key
+		void changeAuth(int clientId, string key, Cvar & rights)
+		{
+			if (!getClient(clientId).mAuthOwner)
+				throw(synapse::runtime_error("Only the owner can change the security settings of this drawing."));
+
+			mDrawing["auth"][key]["view"]=rights["view"];
+			mDrawing["auth"][key]["change"]=rights["change"];
+			mDrawing["auth"][key]["owner"]=rights["owner"];
+			mDrawing["auth"][key]["cursor"]=rights["cursor"];
+			mDrawing["auth"][key]["chat"]=rights["chat"];
+			if (rights["description"])
+				mDrawing["auth"]["description"]=rights["description"];
+
+			mDrawing.changed();
+
+		}
+
+		//get all authorisation and authentication info
+		void getAuth(int clientId)
+		{
+			if (!getClient(clientId).mAuthOwner)
+				throw(synapse::runtime_error("Only the owner can get the security settings of this drawing."));
+
+
+			throw(synapse::runtime_error("STUB"));
+		}
 
 		//send the drawing commands to all clients, except clientId
 		//(use clientId 0 if your want the message send to all clients)
@@ -820,28 +889,30 @@ namespace paper
 	 */
 	SYNAPSE_REGISTER(paper_Create)
 	{
+		int objectId;
+
 		//move all clients with us?
 		if (msg["moveClients"])
 		{
 
 			//get oldObjectId and create new object
 			int oldObjectId=gObjectMan.getObjectByClient(msg.src).getId();
-			int newObjectId=gObjectMan.add();
+			objectId=gObjectMan.add();
 
 			//now actually move the clients
-			gObjectMan.moveClients(oldObjectId, newObjectId);
+			gObjectMan.moveClients(oldObjectId, objectId);
 		}
 		else
 		{
-			int objectId=gObjectMan.add();
+			objectId=gObjectMan.add();
 			gObjectMan.getObject(objectId).addClient(msg.src);
 		}
 
-		//give the creator owner rights
-		if (msg["clientId"]!="")
-		{
-
-		}
+		//give the creator temporary owner rights.
+		//The client show add its own key and rights, otherwise the drawing will be inaccessible after leaving it.
+		Cvar rights;
+		rights["owner"]=1;
+		gObjectMan.getObject(objectId).getClient(msg.src).authorize(rights);
 
 	}
 
