@@ -36,7 +36,7 @@ function randomStr(length) {
 	return(s);
 }
 
-//get a random client identifier that stays the same accross javascript instances and browser sessions
+//get a random unguessable client identifier that stays the same accross javascript instances and browser sessions
 //(this one IS stored in a cookie, contrary to the authCookie which is different among javascript instances)
 function getClientId()
 {

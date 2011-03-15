@@ -23,7 +23,7 @@
 
 		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
 		{
-
+			
 			//submit on click	
 			$("#editButton").click(function(m)
 			{
@@ -42,18 +42,59 @@
 			{
 				$("#message").show();
 				$("#message").html("Pagina word aangemaakt...");
-				send(0,"paper_Create",{
-					clientId:getClientId() 
-				});
+				send(0,"paper_Create");
 			});
 
 			
 			$("#objectId").focus();
+
+			$("#addBox").show();
+			$("#editBox").show();
+
 			
 			send(0,"paper_GetList");
 		});
 
 
+		//we probably created a new object
+		synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
+		{
+			//up on creating we get temporary owner rights.
+			//now create our own permanent key with full rights:
+			send(msg_src,"paper_ChangeAuth",
+			{
+				"key":getClientId(),
+				"rights":
+				{
+					"owner":1,
+					"view":1,
+					"chat":1,
+					"cursor":1,
+					"change":1,
+					"description":"Creator of this paper"
+				}
+			}); 
+
+			//now go to the paper
+		//	document.location=msg["htmlPath"]+"#"+getClientId();
+		});
+
+
+		
+		//the requested paper exists, so go to the editor		
+		synapse_register("paper_CheckOk",function(msg_src, msg_dst, msg_event, msg)
+		{
+			$("#message").html("Pagina word ingeladen...");
+			document.location=msg["htmlPath"];			
+		});
+
+		//paper number does not exist
+		synapse_register("paper_CheckNotFound",function(msg_src, msg_dst, msg_event, msg)
+		{
+			$("#message").html("Deze pagina bestaat niet!");
+		});
+	
+	
 		//list of papers
 		synapse_register("paper_List",function(msg_src, msg_dst, msg_event, msg)
 		{
@@ -93,27 +134,6 @@
 				 send(0,"paper_GetList");
 			},10000);
 		});
-
-				
-		//we probably created a new object, so go to the editor
-		synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
-		{
-			//document.location=msg["htmlPath"];			
-		});
-
-		//the requested paper exists and is accesible, so go to the editor		
-		synapse_register("paper_CheckOk",function(msg_src, msg_dst, msg_event, msg)
-		{
-			$("#message").html("Pagina word ingeladen...");
-			document.location=msg["htmlPath"];			
-		});
-
-		synapse_register("paper_CheckNotFound",function(msg_src, msg_dst, msg_event, msg)
-		{
-			$("#message").html("Deze pagina bestaat niet!");
-		});
-	
-	
 	</script>
 
 
@@ -173,6 +193,7 @@
 			margin-left:auto;
 			margin-right:auto;
 			width:40em;
+			display: none;
 		}
 
 		#addButton
@@ -186,6 +207,7 @@
 			margin-left:auto;
 			margin-right:auto;
 			width:40em;
+			display: none;
 		}
 
 

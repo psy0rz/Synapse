@@ -94,6 +94,10 @@ namespace paper
 
 		out["event"]=	"paper_GetList";			out.send(); //get a list of papers
 
+		out["event"]=	"paper_Authenticate";			out.send();
+		out["event"]=	"paper_ChangeAuth";			out.send();
+
+
 		//client receive-only events:
 		out.clear();
 		out.event="core_ChangeEvent";
@@ -228,11 +232,6 @@ namespace paper
 			mAuthCursor=false;
 			mAuthChat=false;
 
-//			mAuthView=true;
-//			mAuthChange=true;
-//			mAuthOwner=true;
-//			mAuthCursor=true;
-//			mAuthChat=true;
 		}
 
 
@@ -581,7 +580,7 @@ namespace paper
 		void authenticate(int clientId, string key)
 		{
 			//key doesnt exists?
-			if (mDrawing["auth"].isSet(key))
+			if (!mDrawing["auth"].isSet(key))
 			{
 				Cmsg out;
 				out.event="paper_AuthWrongKey";
@@ -608,8 +607,8 @@ namespace paper
 			mDrawing["auth"][key]["owner"]=rights["owner"];
 			mDrawing["auth"][key]["cursor"]=rights["cursor"];
 			mDrawing["auth"][key]["chat"]=rights["chat"];
-			if (rights["description"])
-				mDrawing["auth"]["description"]=rights["description"];
+			if (rights.isSet("description"))
+				mDrawing["auth"][key]["description"]=rights["description"];
 
 			mDrawing.changed();
 
@@ -933,6 +932,32 @@ namespace paper
 		gObjectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
 		gObjectMan.getObject(msg["objectId"]).addClient(msg.src);
 
+	}
+
+	/** Try to authenticate client with key.
+	 * \param key The key to autenticate with.
+	 *
+	 * \par Replies \c paper_Authorized when key was ok.
+	 * \par Replies \c paper_AuthWrongKey when key was not found.
+	 */
+	SYNAPSE_REGISTER(paper_Authenticate)
+	{
+		gObjectMan.getObjectByClient(msg.src).authenticate(msg.src,msg["key"]);
+	}
+
+	/** Change authentication and authorisation info
+	 * \param key The key to change or add. Specify an empty key to set the default rights.
+	 * \param rights Hasharray of rights to apply. Leave empty to delete the key.
+	 * 		\param chat User can chat.
+	 * 		\param view User can view the drawing.
+	 * 		\param cursor User can send cursor updates (other people with view-rights see the cursor, so you can point at stufF)
+	 * 		\param change User can change the drawing.
+	 * 		\param owner User is owner and can change rights
+	 * 		\param description Description of the key
+	 */
+	SYNAPSE_REGISTER(paper_ChangeAuth)
+	{
+		gObjectMan.getObjectByClient(msg.src).changeAuth(msg.src,msg["key"],msg["rights"]);
 	}
 
 	/** Client wants to check if the paper exists and credentials are ok
