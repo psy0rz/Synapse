@@ -982,6 +982,88 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 		$(this).addClass("loading");
 	});
 
+	$("#authShow").click(function(m)
+	{
+		$('#authMsg').html("");
+		$('#authForm').dialog({ 
+			buttons:
+			{
+				'Annuleren': function()
+				{ 
+					$('#authForm').dialog("destroy"); 
+				},
+				'Inloggen als gast': function()
+				{
+					$('#authKey').val("");
+					send(paperModId,"paper_Authenticate",{
+						key:""
+					});
+				}
+			},
+			'close': function ()
+			{ 
+			},
+			modal: true
+		});
+		$('#authKey').focus();
+	});
+	
+	$("#authKey").keyup(function(m)
+	{
+		if ($('#authKey').val()!="")
+		{
+			send(paperModId,"paper_Authenticate",{
+				key:$('#authKey').val()
+			});
+		}					
+		$('#authMsg').html("");
+	});
+
+	//authenticated with wrong key
+	synapse_register("paper_AuthWrongKey",function(msg_src, msg_dst, msg_event, msg)
+	{
+		if ($('#authKey').val()=="")
+		{
+			$('#authMsg').html("Inloggen als gast is niet mogelijk.");
+			$('#authKey').focus();
+		}
+		else
+			$('#authMsg').html("Wachtwoord ongeldig (blijft u typen)");
+	});
+
+	//our authorisation changed
+	synapse_register("paper_Authorized",function(msg_src, msg_dst, msg_event, msg)
+	{
+		$('#authForm').dialog("destroy"); 
+
+		authorized=msg;
+		updateAuthorisation();
+
+		//we now may view, reload the drawing
+		if (authorized["view"])
+		{
+			sendDraw({
+				'cmd':'reload'
+			});
+		}
+
+		if (authorized["cursor"])
+		{
+			//tell people who we are and set random mouse position
+			sendDraw({
+				'cursor':{
+					'clientName':$("#chatClientName").val(),
+					'x':Math.round(9000*Math.random())+1000,
+					'y':Math.round(9000*Math.random())+1000
+				}
+			});
+		}
+
+	});
+
+
+
+	
 	//we also receive this if somebody else requested the save!
 	synapse_register("paper_Exported",function(msg_src, msg_dst, msg_event, msg)
 	{
@@ -1038,8 +1120,6 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 			//when its in flashmode, the references change somehow, so re-get it:				
 			drawing=document.getElementsByTagNameNS(svgns, 'svg')[0];
 
-			//clear/reset drawing
-			reset();
 			
 			//set mouse move event
 			//NOTE: pageX is not set when using chromium in flash mode? when we use jquery mousemove its ok ,but then we cant see 
@@ -1136,40 +1216,6 @@ synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
 		key:document.location.hash.substr(1)
 	});
 	
+	document.location.hash="";
 });
-
-//authenticated with wrong key
-synapse_register("paper_AuthWrongKey",function(msg_src, msg_dst, msg_event, msg)
-{
-
-});
-
-//our authorisation changed
-synapse_register("paper_Authorized",function(msg_src, msg_dst, msg_event, msg)
-{
-	authorized=msg;
-	updateAuthorisation();
-
-	//we now may view, reload the drawing
-	if (authorized["view"])
-	{
-		sendDraw({
-			'cmd':'reload'
-		});
-	}
-
-	if (authorized["cursor"])
-	{
-		//tell people who we are and set random mouse position
-		sendDraw({
-			'cursor':{
-				'clientName':$("#chatClientName").val(),
-				'x':Math.round(9000*Math.random())+1000,
-				'y':Math.round(9000*Math.random())+1000
-			}
-		});
-	}
-
-});
-
 

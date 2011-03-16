@@ -532,6 +532,7 @@
 		top: 34px;
 		left:0px;'>
 			<div id='clear' class='menuItem'>Nieuw papier</div>
+			<div id='authShow' class='menuItem'>Inloggen</div>
 			<div class='menuSeperator'></div>
 			<div id='savePNG' class='save menuItem'>Bekijk als PNG</div>
 			<div id='saveSVG' class='save menuItem'>Bekijk als SVG</div>
@@ -628,6 +629,11 @@
 	text-align:center;
 	color: red;
 	font-size: 1000%;'>
+	</div>
+
+	<div style='display:none' id='authForm' title='Wachtwoord'>
+		<p>Wachtwoord: <input type='text' id='authKey'>
+		<div id='authMsg' style='background-color:yellow'></div>
 	</div>
 	
 </body>
