@@ -54,6 +54,8 @@ var loading=true;
 var chatLastClientName="";
 var chatTypeHere="Type hier je bericht...";
 
+//current autentorisation info
+var authorized;
 		
 
 //filter dangerous stuff from user input.
@@ -136,6 +138,32 @@ function getUrlId()
 		return($("head").attr("paperId"));
 }
 
+//reset and prepare for a complete reload of all data
+function reset()
+{
+	//remove all child nodes from drawing
+	while(drawing.hasChildNodes())
+	{
+		drawing.removeChild(drawing.lastChild);
+	}
+
+	//add a node that indicates where drawing elements should be inserted before
+	drawingInsert = document.createElementNS(svgns, 'g');
+	drawing.appendChild(drawingInsert);
+
+	
+	$('#clientList').empty();
+	$('#chatList').empty();
+	$("#chatInput").val("");
+	
+	
+	//select default tools
+	$(".tool").removeClass('selected');
+	$(".defaultTool").addClass('selected');
+	$(".defaultSetting").show();
+
+}
+
 
 /*** Drawing protocol
 
@@ -145,14 +173,14 @@ The message is normally not echoed back, unless requested
 
 ### Common parameters
 src:		added by server. session id that send the message
-noreplay:	dont relay the command to other clients
 
 ### Drawing commands and parameters:
 cmd:		command to do:
 				update: create/modify element 
 				delete: remove element
-				refresh: 	let the server resend an update cmd with all info about the element, to this client. 
-				ready: when doing a full redraw on join, this indicates the drawing is "ready"					
+				refresh: ask the server to resend an update cmd with all info about the specified element, to this client. (message wont be relayed to clients) 
+				reload: indicates the start of a reload of ALL data (drawing, chat, cursors etc) (message wont be relayed to clients)
+				ready: indicates refresh of all data is ready (message can only be send by server)
 			
 Only for updates with new (not yet existing) objects:
 element:		svg element type (e.g. circle,rect,polyline)
@@ -284,6 +312,14 @@ function draw(msg)
 			drawing.removeChild(element);
 		}	
 	}
+	//start of complete refresh 
+	else if (msg["cmd"]=="reload")
+	{
+		$("#loading").show();
+		loading=true;		
+		reset();
+	}
+	//ready with complete refresh
 	else if (msg["cmd"]=="ready")
 	{
 		//NOTE: this also works around a weird chromuim refresh bug.
@@ -724,7 +760,6 @@ function mouseEnd(m)
 		mouseMode="";
 		sendDraw({
 			'cmd'		:'refresh',
-			'norelay'	:1,
 			'tempId'	:'temp'+tempCount
 		});				
 	};
@@ -1003,9 +1038,8 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 			//when its in flashmode, the references change somehow, so re-get it:				
 			drawing=document.getElementsByTagNameNS(svgns, 'svg')[0];
 
-			//add a node that indicates where drawing elements should be inserted before
-			drawingInsert = document.createElementNS(svgns, 'g');
-			drawing.appendChild(drawingInsert);
+			//clear/reset drawing
+			reset();
 			
 			//set mouse move event
 			//NOTE: pageX is not set when using chromium in flash mode? when we use jquery mousemove its ok ,but then we cant see 
@@ -1073,21 +1107,12 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 	
 });
 
-
-
-	
-function reset()
+//update all the widgets to match the current autorisation
+function updateAuthorisation()
 {
-	$('#clientList').empty();
-	$('#chatList').empty();
-	$("#chatInput").val("");
 	
-	
-	//select default tools
-	$(".tool").removeClass('selected');
-	$(".defaultTool").addClass('selected');
-	$(".defaultSetting").show();
 }
+
 
 
 //we've joined a object
@@ -1095,25 +1120,56 @@ synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
 {
 	//doesnt the url id match?
 	if (getUrlId()!=msg["objectId"])
-		document.location=msg["htmlPath"];
+		document.location=msg["htmlPath"]+document.location.hash;
 	
-	//we've joined a object, from now on draw on it.
+	//we've joined a object, remeber the ids
 	currentObjectId=msg["objectId"];
 	paperModId=msg_src;
 	$("#objectId").html(msg["objectId"]);
-	
-	//reset stuff
-	reset();
 
-	//tell people who we are and set random mouse position
-	sendDraw({
-		'cursor':{
-			'clientName':$("#chatClientName").val(),
-			'x':Math.round(9000*Math.random())+1000,
-			'y':Math.round(9000*Math.random())+1000
-		}
+	//we're not yet authorized to do anything if we just joined.
+	authorized=new Array();
+	updateAuthorisation();
+	
+	//authenticate using specified key
+	send(paperModId,"paper_Authenticate",{
+		key:document.location.hash.substr(1)
 	});
+	
 });
 
+//authenticated with wrong key
+synapse_register("paper_AuthWrongKey",function(msg_src, msg_dst, msg_event, msg)
+{
+
+});
+
+//our authorisation changed
+synapse_register("paper_Authorized",function(msg_src, msg_dst, msg_event, msg)
+{
+	authorized=msg;
+	updateAuthorisation();
+
+	//we now may view, reload the drawing
+	if (authorized["view"])
+	{
+		sendDraw({
+			'cmd':'reload'
+		});
+	}
+
+	if (authorized["cursor"])
+	{
+		//tell people who we are and set random mouse position
+		sendDraw({
+			'cursor':{
+				'clientName':$("#chatClientName").val(),
+				'x':Math.round(9000*Math.random())+1000,
+				'y':Math.round(9000*Math.random())+1000
+			}
+		});
+	}
+
+});
 
 

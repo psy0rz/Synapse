@@ -88,7 +88,6 @@ namespace paper
 		out["event"]=	"paper_GetClients";	out.send(); //a list of clients that are member of specified object. (returns object_Clients for every object)
 
 		out["event"]=	"paper_ClientDraw";		out.send(); //draw something
-		out["event"]=	"paper_Redraw";		out.send(); //ask the server to send an entire redraw
 
 		out["event"]=	"paper_Export";			out.send(); //export the paper to svg/png
 
@@ -584,7 +583,7 @@ namespace paper
 			{
 				Cmsg out;
 				out.event="paper_AuthWrongKey";
-				out.dst=id;
+				out.dst=clientId;
 				out.send();
 				return;
 			}
@@ -694,6 +693,52 @@ namespace paper
 			}
 		}
 
+		//resend all data to dst
+		void reload(int dst)
+		{
+			if (!getClient(dst).mAuthView)
+				throw(synapse::runtime_error("You're not authorized to view this drawing."));
+
+			Cmsg out;
+			out.event="paper_ServerDraw";
+			out.dst=dst;
+
+			//indicate start of complete reload
+			out["cmd"]="reload";
+			out.send();
+
+			//send all elements
+			for(Cvar::iterator elementI=mDrawing["data"].begin(); elementI!=mDrawing["data"].end(); elementI++)
+			{
+				out.clear();
+				out["cmd"]="update";
+				element2msg(elementI->first, out);
+				out.send();
+			}
+
+			//send all cursors
+			for(CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
+			{
+				out.clear();
+				out["cursor"].map()=I->second.mCursor;
+				out["src"]=I->first;
+				out.send();
+			}
+
+			//send chat log
+			for(CvarList::iterator I=mDrawing["chat"].list().begin(); I!=mDrawing["chat"].list().end(); I++)
+			{
+				out.clear();
+				out["chat"]=*I;
+				out.send();
+			}
+
+
+			out.clear();
+			out["cmd"]="ready";
+			out.send();
+		}
+
 		//process drawing data received from a client store it, and relay it to other clients via serverDraw
 		//if a client is not authorized to do certain stuff, an exception is thrown
 		void clientDraw(Cmsg & msg)
@@ -775,7 +820,7 @@ namespace paper
 
 				changed();
 			}
-			//send refresh?
+			//send refresh of requested element?
 			else if (msg["cmd"].str()=="refresh")
 			{
 				//id not set? the use the last one that was used by this client
@@ -795,6 +840,8 @@ namespace paper
 				if (msg.isSet("id"))
 					element2msg(msg["id"].str(), out);
 				getClient(msg.src).sendFiltered(out);
+
+				return;
 			}
 			//delete object?
 			else if (msg["cmd"].str()=="delete")
@@ -809,65 +856,21 @@ namespace paper
 
 				getClient(msg.src).mLastElementId=0;
 			}
-
+			//request a reload of all the data
+			else if (msg["cmd"].str()=="reload")
+			{
+				reload(msg.src);
+				return;
+			}
 
 			//relay the command to other clients
-			if (!msg.isSet("norelay"))
-				serverDraw(msg,msg.src);
-		}
-
-
-
-		//send redrawing instructions to dst
-		void redraw(int dst)
-		{
-			if (!getClient(dst).mAuthView)
-				throw(synapse::runtime_error("You're not authorized to view this drawing."));
-
-			Cmsg out;
-			out.event="paper_ServerDraw";
-			out.dst=dst;
-
-			//send all elements
-			for(Cvar::iterator elementI=mDrawing["data"].begin(); elementI!=mDrawing["data"].end(); elementI++)
-			{
-				out.clear();
-				out["cmd"]="update";
-				element2msg(elementI->first, out);
-				out.send();
-			}
-
-			//send all cursors
-			for(CclientMap::iterator I=clientMap.begin(); I!=clientMap.end(); I++)
-			{
-				out.clear();
-				out["cursor"].map()=I->second.mCursor;
-				out["src"]=I->first;
-				out.send();
-			}
-
-			//send chat log
-			for(CvarList::iterator I=mDrawing["chat"].list().begin(); I!=mDrawing["chat"].list().end(); I++)
-			{
-				out.clear();
-				out["chat"]=*I;
-				out.send();
-			}
-
-
-			out.clear();
-			out["cmd"]="ready";
-			out.send();
+			serverDraw(msg,msg.src);
 		}
 
 		virtual void addClient(int id)
 		{
 			//let the base class do its work:
 			synapse::CsharedObject<CpaperClient>::addClient(id);
-			//make sure redraw commands are send BEFORE any other draw commands
-			if (getClient(id).mAuthView)
-				redraw(id);
-
 		}
 
 		virtual bool isIdle()
