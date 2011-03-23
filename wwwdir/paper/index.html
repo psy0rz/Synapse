@@ -14,8 +14,8 @@
 		//submit value to server
 		function submit()
 		{
-			$("#message").show();
-			$("#message").html("Zoeken...");
+			$("#addMessage").show();
+			$("#addMessage").html("Zoeken...");
 			send(0,"paper_Check", {
 				"objectId":$("#objectId").val(),
 			});
@@ -40,8 +40,8 @@
 			//request new object	
 			$("#addButton").click(function(m)
 			{
-				$("#message").show();
-				$("#message").html("Pagina word aangemaakt...");
+				$("#addMessage").show();
+				$("#addMessage").html("Pagina word aangemaakt...");
 				send(0,"paper_Create");
 			});
 
@@ -51,6 +51,14 @@
 			$("#addBox").show();
 			$("#editBox").show();
 
+			$("#protected").change(function()
+			{
+				if ($("#protected:checked").val())
+					$("#passwordBox").show();
+				else
+					$("#passwordBox").hide();
+			});
+			$("#protected").change();
 			
 			send(0,"paper_GetList");
 		});
@@ -216,11 +224,12 @@
 			background-color:blue;
 		}
 
-		#message
+		.hidden
 		{
 			display: none;
 		}	
-		
+
+	
 		#footer
 		{
 			position:fixed;
@@ -281,18 +290,28 @@
 			<img src='/paper/note_add.png'/>	
 			Nieuw...
 		</div>
+		<div>
+			<input type='checkbox' id='protected'>Beveiligen met een wachtwoord</input>
+			<div id='passwordBox' class='hidden'>
+				Wachtwoord voor de nieuwe tekening: <input type='text' id='password'></input>
+			</div>
+			<div class='hidden ui-state-highlight' id='addMessage'>
+			</div>
+			
+		</div>
 	</div>
 
 	<div id='editBox'>
 			<div class='description'>
-					Bekijk dit papier nummer: <input size='5' id='objectId'>
+					Bekijk dit papier nummer: 
 			</div>	
 			<div class='button' id='editButton'>
 				<img src='/paper/note_edit.png'/>
+				<input size='5' id='objectId'>
 				Bekijk...
 			</div>
 			<br>
-			<div class='ui-state-highlight' id='message'>
+			<div class='hidden ui-state-highlight' id='editMessage'>
 			</div>
 	</div>
 
