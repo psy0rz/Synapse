@@ -24,13 +24,21 @@
 
 #include "exception/cexception.h"
 
+//include curl_ssl_lock to initalise correct thread locking for the ssl libraries
+#define USE_OPENSSL
 #include <curl/curl.h>
+#include "curl_ssl_lock.hpp"
 
 
 namespace synapse_curl
 {
 
 using namespace std;
+
+
+
+
+
 
 
 //A curl instance
@@ -57,7 +65,8 @@ SYNAPSE_REGISTER(module_Init)
 
 	defaultSession=dst;
 
-	  curl_global_init(CURL_GLOBAL_ALL);
+	curl_global_init(CURL_GLOBAL_ALL);
+	init_locks();
 
 	out.clear();
 	out.event="core_Ready";
@@ -67,6 +76,7 @@ SYNAPSE_REGISTER(module_Init)
 
 SYNAPSE_REGISTER(module_Shutdown)
 {
+	kill_locks();
 }
 
 

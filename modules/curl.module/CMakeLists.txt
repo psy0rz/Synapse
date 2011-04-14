@@ -3,7 +3,6 @@
 cmake_minimum_required(VERSION 2.6)
 
 INCLUDE(FindCURL)
-#pkg_check_modules (CURL libcurl>=7.0)
 IF(CURL_FOUND)
 
 	#add definitions, compiler switches, etc.
