@@ -77,11 +77,14 @@ SYNAPSE_REGISTER(module_Init)
 //	out["path"]="modules/http_json.module/libhttp_json.so";
 //	out.send();
 
-	out["path"]="modules/play_vlc.module/libplay_vlc.so";
-	out.send();
+//	out["path"]="modules/play_vlc.module/libplay_vlc.so";
+//	out.send();
 
 //		out["path"]="modules/exec.module/libexec.so";
 //		out.send();
+
+	out["path"]="modules/curl.module/libcurl.so";
+	out.send();
 
 	// Counter that ever counterSleep seconds emits a message.
 	// Speed can be changed with appropriate messages
@@ -115,6 +118,18 @@ SYNAPSE_REGISTER(module_Init)
 	out["modifyGroup"]=	"modules";
 	out["sendGroup"]=	"anonymous";
 	out["recvGroup"]=	"anonymous";
+	out.send();
+
+}
+
+
+SYNAPSE_REGISTER(curl_Ready)
+{
+	Cmsg out;
+	out.event="curl_Get";
+	out["id"]="test";
+	out["url"]="ftp://ftp.ttn.ru/test/10mb.bin";
+	out["url"]="http://www.google.com";
 	out.send();
 
 }
