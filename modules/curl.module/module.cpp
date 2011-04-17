@@ -21,6 +21,7 @@
 #include "clog.h"
 #include <map>
 #include <string>
+#include <deque>
 
 #include "exception/cexception.h"
 
@@ -45,55 +46,116 @@ class Ccurl
 {
 	private:
 	shared_ptr<mutex> mMutex;
-	bool mAbort;		//try to abort this transfer
+	condition_variable mQueueChanged;
 
-	//throws error when a curl error is passed
-	void curlThrow(CURLcode err)
-	{
-		if (err!=0)
-		{
-			throw(synapse::runtime_error(curl_easy_strerror(err)));
-		}
-	}
+
+	bool mAbort;		//try to abort this transfer
+	bool mPerforming; 	//we have assigned a performer
+	deque<Cmsg> mQueue;	//queue with operations to perform
+	CURL *mCurl;
+
+
 
 	public:
 
 	Ccurl()
 	{
 		mAbort=false;
+		mPerforming=false;
 		mMutex=shared_ptr<mutex>(new mutex);
+
+		mCurl=curl_easy_init();
+		if (!mCurl)
+			throw(synapse::runtime_error("Error creating new curl instance"));
+
 	}
 
+	//aborts all downloads and empties queue
 	void abort()
 	{
 		lock_guard<mutex> lock(*mMutex);
 		mAbort=true;
+		mQueue.empty();
+		mQueueChanged.notify_one();
 	}
 
-	//only one thread may call perform at a time.
-	//(the other public functions are threadsafe)
-	void perform(Cmsg & msg)
+	//enqueues a download. returns true if the calling thread should call perform().
+	bool enqueue(Cmsg & msg)
 	{
-		CURL *pCurl;
-		pCurl=curl_easy_init();
-		if (!pCurl)
-			throw(synapse::runtime_error("Error creating new curl instance"));
+		lock_guard<mutex> lock(*mMutex);
+		mQueue.push_back(msg);
+		//make sure messages can send back correctly:
+		mQueue.end()->dst=mQueue.end()->src;
+		mQueue.end()->src=0;
 
-		//now we must call curl_easy_cleanup in case of exception:
-		try
+		mQueueChanged.notify_one();
+
+		//no performing thread yet?
+		if (!mPerforming)
 		{
-			curlThrow(curl_easy_setopt(pCurl, CURLOPT_NOSIGNAL, 1));
-			curlThrow(curl_easy_setopt(pCurl, CURLOPT_URL, msg["url"].str().c_str()));
-			curlThrow(curl_easy_perform(pCurl));
-		}
-		catch(...)
-		{
-			curl_easy_cleanup(pCurl);
-			throw;
+			mPerforming=true;
+			return(true);
 		}
 
-		curl_easy_cleanup(pCurl);
+		return(false);
+	}
 
+	//returns true if perform() should be called again
+	//only call this when not already performing. when it returns false , curl is uninitalized so dont call perform or anything else again.
+	bool shouldPerform()
+	{
+		lock_guard<mutex> lock(*mMutex);
+		if (mQueue.empty())
+		{
+			curl_easy_cleanup(mCurl);
+			return (false);
+		}
+		else
+		{
+			return(true);
+		}
+	}
+
+	//only one thread may call perform at a time: this is indicated with enqueue() returning true
+	//as long as shouldPerform() returns true you should recall this function, without any locking at all.
+	//(the other public functions are threadsafe)
+	void perform()
+	{
+
+		{
+			unique_lock<mutex> lock(*mMutex);
+
+			//nothing to do?
+			if (mQueue.empty())
+			{
+				//wait until someone throws something in the queue, or close this session
+				mQueueChanged.timed_wait(lock,10);
+			}
+
+			//still empty?
+			if (mQueue.empty())
+				return;
+
+			//set curl options
+			CURLcode err;
+			if (
+//				err=curl_easy_setopt(mCurl, CURLOPT_NOSIGNAL, 1)!=0 ||
+				(err=curl_easy_setopt(mCurl, CURLOPT_VERBOSE, 1))!=0
+//				err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mQueue.begin())["url"].str().c_str() )!=0
+			)
+			{
+				//something went wrong, inform requester
+				(*mQueue.begin()).event="curl_Error";
+				(*mQueue.begin())["error"]=curl_easy_strerror(err);
+				mQueue.pop_front();
+			}
+		}
+
+		curlThrow(curl_easy_perform(mCurl));
+		{
+			//done, remove it from queue
+			unique_lock<mutex> lock(*mMutex);
+		}
 	}
 };
 
@@ -112,10 +174,23 @@ SYNAPSE_REGISTER(module_Init)
 
 	defaultSession=dst;
 
+	//load config file
+	synapse::Cconfig config;
+	config.load("etc/synapse/curl.conf");
+
 	init_locks();
 	if (curl_global_init(CURL_GLOBAL_ALL)!=0)
 		throw(synapse::runtime_error("Error while initializing curl"));
 
+	out.clear();
+	out.event="core_ChangeModule";
+	out["maxThreads"]=config["maxProcesses"];
+	out.send();
+
+	out.clear();
+	out.event="core_ChangeSession";
+	out["maxThreads"]=config["maxProcesses"];
+	out.send();
 
 	out.clear();
 	out.event="core_Ready";
@@ -145,31 +220,37 @@ Ccurl & getCurl(int src, string & id)
 SYNAPSE_REGISTER(curl_Get)
 {
 	CcurlKey key(msg.src, msg["id"]);
-	CcurlMap::iterator curlI;
+	CcurlMap::iterator curlI=curlMap.end();
+	bool perform=true;
 
 	{
 		lock_guard<mutex> lock(curlMapMutex);
 
-		//already exists?
-		if (curlMap.find(key)!=curlMap.end())
-		{
-			throw(synapse::runtime_error("Already downloading"));
-		}
+		//returns true if we should call perform
+		perform=curlMap[key].enqueue(msg);
 
-		//create it and get iterator
-		curlMap[key];
 		curlI=curlMap.find(key);
 	}
 
-	//perform download (UNLOCKED)
-	curlI->second.perform(msg);
-
+	//loop while we should perform downloads
+	while (perform)
 	{
-		lock_guard<mutex> lock(curlMapMutex);
-		//delete it
-		curlMap.erase(curlI);
+		//call it unlocked! (since this is the thing that takes a long time)
+		curlI->second.perform(msg);
+
+		{
+			lock_guard<mutex> lock(curlMapMutex);
+			//we need this construction to prevent the racecondition when something is enqueued just after perform has returned
+			if (!curlI->second.shouldPerform())
+			{
+				//delete it
+				curlMap.erase(curlI);
+				perform=false;
+			}
+		}
 	}
 }
+
 
 SYNAPSE_REGISTER(curl_Abort)
 {
