@@ -46,7 +46,7 @@ class Ccurl
 {
 	private:
 	shared_ptr<mutex> mMutex;
-	condition_variable mQueueChanged;
+	shared_ptr<condition_variable> mQueueChanged;
 
 
 	bool mAbort;		//try to abort this transfer
@@ -63,6 +63,7 @@ class Ccurl
 		mAbort=false;
 		mPerforming=false;
 		mMutex=shared_ptr<mutex>(new mutex);
+		mQueueChanged=shared_ptr<condition_variable>(new condition_variable);
 
 		mCurl=curl_easy_init();
 		if (!mCurl)
@@ -76,7 +77,7 @@ class Ccurl
 		lock_guard<mutex> lock(*mMutex);
 		mAbort=true;
 		mQueue.empty();
-		mQueueChanged.notify_one();
+		mQueueChanged->notify_one();
 	}
 
 	//enqueues a download. returns true if the calling thread should call perform().
@@ -88,7 +89,7 @@ class Ccurl
 		mQueue.end()->dst=mQueue.end()->src;
 		mQueue.end()->src=0;
 
-		mQueueChanged.notify_one();
+		mQueueChanged->notify_one();
 
 		//no performing thread yet?
 		if (!mPerforming)
@@ -121,6 +122,7 @@ class Ccurl
 	//(the other public functions are threadsafe)
 	void perform()
 	{
+		CURLcode err;
 
 		{
 			unique_lock<mutex> lock(*mMutex);
@@ -129,32 +131,49 @@ class Ccurl
 			if (mQueue.empty())
 			{
 				//wait until someone throws something in the queue, or close this session
-				mQueueChanged.timed_wait(lock,10);
+				if (mQueueChanged->timed_wait(lock,boost::date_time::duration_traits_duration))
+					DEB("New data in the queue");
+				else
+					DEB("Idle, no date in the queue in time");
 			}
 
 			//still empty?
 			if (mQueue.empty())
 				return;
 
-			//set curl options
-			CURLcode err;
-			if (
-//				err=curl_easy_setopt(mCurl, CURLOPT_NOSIGNAL, 1)!=0 ||
-				(err=curl_easy_setopt(mCurl, CURLOPT_VERBOSE, 1))!=0
-//				err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mQueue.begin())["url"].str().c_str() )!=0
-			)
-			{
-				//something went wrong, inform requester
-				(*mQueue.begin()).event="curl_Error";
-				(*mQueue.begin())["error"]=curl_easy_strerror(err);
-				mQueue.pop_front();
-			}
+			//set curl options, as long as there are no errors
+			(err=curl_easy_setopt(mCurl, CURLOPT_NOSIGNAL, 1))==0 &&
+			(err=curl_easy_setopt(mCurl, CURLOPT_VERBOSE, 1))==0 &&
+			(err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mQueue.begin())["url"].str().c_str() ))==0;
+
+			//indicate start
+			(*mQueue.begin()).event="curl_Start";
+			(*mQueue.begin()).send();
 		}
 
-		curlThrow(curl_easy_perform(mCurl));
+		//perform the operation (unlocked)
+		if (err==0)
+			err=curl_easy_perform(mCurl);
+
 		{
-			//done, remove it from queue
 			unique_lock<mutex> lock(*mMutex);
+
+			if (err==0)
+			{
+				//ok, indicate done
+				(*mQueue.begin()).event="curl_Ok";
+				(*mQueue.begin()).send();
+			}
+			else
+			{
+				//error, indicate error
+				(*mQueue.begin()).event="curl_Error";
+				(*mQueue.begin())["error"]=curl_easy_strerror(err);
+				(*mQueue.begin()).send();
+			}
+
+			//remove from queue
+			mQueue.pop_front();
 		}
 	}
 };
@@ -214,8 +233,18 @@ Ccurl & getCurl(int src, string & id)
 }
 
 /** Get specified url
- * For now you only can have one download per id, and not queue downloads. (this might change but is more complex to implement.)
- *
+Downloads the specified url.
+
+	\param id uniq identifier to reconginise the download. multiple downloads with the same ID from the same source session will be queued.
+	\param url The url to download
+
+\par Replys:
+	In every reply all the parameters used in the curl_Get are returned.
+
+	curl_Start	Indicates start of download
+	curl_Data	Sended for received data. \param data will contain the data.
+	curl_Ok		Indicates downloading is ready
+	curl_Error  Indicates downloading is aborted.
  */
 SYNAPSE_REGISTER(curl_Get)
 {
@@ -236,10 +265,11 @@ SYNAPSE_REGISTER(curl_Get)
 	while (perform)
 	{
 		//call it unlocked! (since this is the thing that takes a long time)
-		curlI->second.perform(msg);
+		curlI->second.perform();
 
 		{
 			lock_guard<mutex> lock(curlMapMutex);
+
 			//we need this construction to prevent the racecondition when something is enqueued just after perform has returned
 			if (!curlI->second.shouldPerform())
 			{
