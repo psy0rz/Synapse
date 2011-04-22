@@ -51,7 +51,10 @@ class Ccurl
 
 	bool mAbort;		//try to abort this transfer
 	bool mPerforming; 	//we have assigned a performer
-	deque<Cmsg> mQueue;	//queue with operations to perform
+	typedef deque<Cmsg> Cqueue;
+	Cqueue::iterator mMsg; //current message being handled
+
+	Cqueue mQueue;	//queue with operations to perform
 	CURL *mCurl;
 
 
@@ -86,8 +89,9 @@ class Ccurl
 		lock_guard<mutex> lock(*mMutex);
 		mQueue.push_back(msg);
 		//make sure messages can send back correctly:
-		mQueue.end()->dst=mQueue.end()->src;
-		mQueue.end()->src=0;
+		Cqueue::iterator lastMsg=(--mQueue.end());
+		lastMsg->dst=lastMsg->src;
+		lastMsg->src=0;
 
 		mQueueChanged->notify_one();
 
@@ -105,9 +109,24 @@ class Ccurl
 	//only call this when not already performing. when it returns false , curl is uninitalized so dont call perform or anything else again.
 	bool shouldPerform()
 	{
-		lock_guard<mutex> lock(*mMutex);
+		unique_lock<mutex> lock(*mMutex);
+
+		//nothing to do, wait a while for new messages
+		//curl keeps connections open and remembers cookies and stuff.
 		if (mQueue.empty())
 		{
+			//wait until someone throws something in the queue
+			DEB("Queue empty, waiting...");
+			if (mQueueChanged->timed_wait(lock,posix_time::seconds(10)))
+				DEB("Queue filled again, continueing")
+			else
+				DEB("Queue wait timeout");
+		}
+
+		//still no data after waiting, delete curl instance and make sure we dont get called again
+		if (mQueue.empty())
+		{
+			DEB("Queue still empty, cleaning up curl instance")
 			curl_easy_cleanup(mCurl);
 			return (false);
 		}
@@ -117,6 +136,8 @@ class Ccurl
 		}
 	}
 
+	//static void callbackData
+
 	//only one thread may call perform at a time: this is indicated with enqueue() returning true
 	//as long as shouldPerform() returns true you should recall this function, without any locking at all.
 	//(the other public functions are threadsafe)
@@ -125,30 +146,23 @@ class Ccurl
 		CURLcode err;
 
 		{
-			unique_lock<mutex> lock(*mMutex);
+			lock_guard<mutex> lock(*mMutex);
 
-			//nothing to do?
-			if (mQueue.empty())
-			{
-				//wait until someone throws something in the queue, or close this session
-				if (mQueueChanged->timed_wait(lock,boost::date_time::duration_traits_duration))
-					DEB("New data in the queue");
-				else
-					DEB("Idle, no date in the queue in time");
-			}
-
-			//still empty?
+			//empty?
 			if (mQueue.empty())
 				return;
+
+			//activate message
+			mMsg=mQueue.begin();
 
 			//set curl options, as long as there are no errors
 			(err=curl_easy_setopt(mCurl, CURLOPT_NOSIGNAL, 1))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_VERBOSE, 1))==0 &&
-			(err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mQueue.begin())["url"].str().c_str() ))==0;
+			(err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mMsg)["url"].str().c_str() ))==0;
 
 			//indicate start
-			(*mQueue.begin()).event="curl_Start";
-			(*mQueue.begin()).send();
+			mMsg->event="curl_Start";
+			mMsg->send();
 		}
 
 		//perform the operation (unlocked)
@@ -161,15 +175,15 @@ class Ccurl
 			if (err==0)
 			{
 				//ok, indicate done
-				(*mQueue.begin()).event="curl_Ok";
-				(*mQueue.begin()).send();
+				mMsg->event="curl_Ok";
+				mMsg->send();
 			}
 			else
 			{
 				//error, indicate error
-				(*mQueue.begin()).event="curl_Error";
-				(*mQueue.begin())["error"]=curl_easy_strerror(err);
-				(*mQueue.begin()).send();
+				mMsg->event="curl_Error";
+				(*mMsg)["error"]=curl_easy_strerror(err);
+				mMsg->send();
 			}
 
 			//remove from queue
