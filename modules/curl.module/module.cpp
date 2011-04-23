@@ -40,6 +40,8 @@ namespace synapse_curl
 using namespace std;
 using namespace boost;
 
+synapse::Cconfig config;
+
 //A curl instance
 //TODO: make it so that new requests can get queued and the CURL handle will be reused. (more efficient and reuses cookies and stuff)
 class Ccurl
@@ -52,7 +54,6 @@ class Ccurl
 	bool mAbort;		//try to abort this transfer
 	bool mPerforming; 	//we have assigned a performer
 	typedef deque<Cmsg> Cqueue;
-	Cqueue::iterator mMsg; //current message being handled
 
 	Cqueue mQueue;	//queue with operations to perform
 	CURL *mCurl;
@@ -60,6 +61,7 @@ class Ccurl
 
 
 	public:
+	Cqueue::iterator mMsg; //current message being handled
 
 	Ccurl()
 	{
@@ -127,6 +129,7 @@ class Ccurl
 		if (mQueue.empty())
 		{
 			DEB("Queue still empty, cleaning up curl instance")
+			curl_easy_reset(mCurl); //make sure the callbacks aren't called anymore!
 			curl_easy_cleanup(mCurl);
 			return (false);
 		}
@@ -136,7 +139,20 @@ class Ccurl
 		}
 	}
 
-	//static void callbackData
+	static int curl_debug_callback (CURL * curl, curl_infotype type, char * data, size_t length, Ccurl *curlObj)
+	{
+		if (type==CURLINFO_TEXT)
+		{
+			string text;
+			text.resize(length);
+			memcpy((void *)text.c_str(),data,length);
+			INFO("curl (" <<
+					curlObj->mMsg->dst << " "  <<
+					(*curlObj->mMsg)["id"].str() << ") " << text);
+		}
+
+		return 0;
+	}
 
 	//only one thread may call perform at a time: this is indicated with enqueue() returning true
 	//as long as shouldPerform() returns true you should recall this function, without any locking at all.
@@ -156,8 +172,12 @@ class Ccurl
 			mMsg=mQueue.begin();
 
 			//set curl options, as long as there are no errors
+			curl_easy_reset(mCurl);
 			(err=curl_easy_setopt(mCurl, CURLOPT_NOSIGNAL, 1))==0 &&
-			(err=curl_easy_setopt(mCurl, CURLOPT_VERBOSE, 1))==0 &&
+			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGFUNCTION, curl_debug_callback))==0 &&
+			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGDATA, this))==0 &&
+			//(err=curl_easy_setopt(mCurl, CURLOPT_NOSIGNAL, 1))==0 &&
+			(err=curl_easy_setopt(mCurl, CURLOPT_VERBOSE, (int)config["verbose"]))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mMsg)["url"].str().c_str() ))==0;
 
 			//indicate start
@@ -208,7 +228,6 @@ SYNAPSE_REGISTER(module_Init)
 	defaultSession=dst;
 
 	//load config file
-	synapse::Cconfig config;
 	config.load("etc/synapse/curl.conf");
 
 	init_locks();

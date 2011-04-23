@@ -131,6 +131,7 @@ SYNAPSE_REGISTER(curl_Ready)
 //	out["url"]="ftp://ftp.ttn.ru/test/10mb.bin";
 	out["url"]="http://www.google.com";
 	out.send();
+	out["id"]="test2";
 	out.send();
 
 }
