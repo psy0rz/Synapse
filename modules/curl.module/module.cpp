@@ -146,6 +146,7 @@ class Ccurl
 			string text;
 			text.resize(length);
 			memcpy((void *)text.c_str(),data,length);
+			text.erase(--text.end());
 			INFO("curl (" <<
 					curlObj->mMsg->dst << " "  <<
 					(*curlObj->mMsg)["id"].str() << ") " << text);
