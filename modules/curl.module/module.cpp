@@ -89,11 +89,15 @@ class Ccurl
 	bool enqueue(Cmsg & msg)
 	{
 		lock_guard<mutex> lock(*mMutex);
-		mQueue.push_back(msg);
-		//make sure messages can send back correctly:
+
+		//only copy data of the message that we actually use:
+		Cmsg queueMsg;
+		queueMsg.dst=msg.src;
+		queueMsg["id"]=msg["id"];
+		queueMsg["url"]=msg["url"];
+		mQueue.push_back(queueMsg);
+
 		Cqueue::iterator lastMsg=(--mQueue.end());
-		lastMsg->dst=lastMsg->src;
-		lastMsg->src=0;
 
 		mQueueChanged->notify_one();
 
@@ -111,24 +115,13 @@ class Ccurl
 	//only call this when not already performing. when it returns false , curl is uninitalized so dont call perform or anything else again.
 	bool shouldPerform()
 	{
-		unique_lock<mutex> lock(*mMutex);
+		lock_guard<mutex> lock(*mMutex);
 
-		//nothing to do, wait a while for new messages
-		//curl keeps connections open and remembers cookies and stuff.
-		if (mQueue.empty())
-		{
-			//wait until someone throws something in the queue
-			DEB("Queue empty, waiting...");
-			if (mQueueChanged->timed_wait(lock,posix_time::seconds(10)))
-				DEB("Queue filled again, continueing")
-			else
-				DEB("Queue wait timeout");
-		}
 
 		//still no data after waiting, delete curl instance and make sure we dont get called again
 		if (mQueue.empty())
 		{
-			DEB("Queue still empty, cleaning up curl instance")
+			DEB("Queue empty, cleaning up curl instance")
 			curl_easy_reset(mCurl); //make sure the callbacks aren't called anymore!
 			curl_easy_cleanup(mCurl);
 			return (false);
@@ -155,6 +148,16 @@ class Ccurl
 		return 0;
 	}
 
+	static size_t curl_write_callback( void *data, size_t size, size_t nmemb, Ccurl *curlObj)
+	{
+		(*curlObj->mMsg)["data"].str().resize(size*nmemb);
+		memcpy( (void *)(*curlObj->mMsg)["data"].str().c_str(), data,size*nmemb);
+		curlObj->mMsg->event="curl_Data";
+		curlObj->mMsg->send();
+		curlObj->mMsg->erase("data");
+		return (size*nmemb);
+	}
+
 	//only one thread may call perform at a time: this is indicated with enqueue() returning true
 	//as long as shouldPerform() returns true you should recall this function, without any locking at all.
 	//(the other public functions are threadsafe)
@@ -163,7 +166,7 @@ class Ccurl
 		CURLcode err;
 
 		{
-			lock_guard<mutex> lock(*mMutex);
+			unique_lock<mutex> lock(*mMutex);
 
 			//empty?
 			if (mQueue.empty())
@@ -175,6 +178,8 @@ class Ccurl
 			//set curl options, as long as there are no errors
 			curl_easy_reset(mCurl);
 			(err=curl_easy_setopt(mCurl, CURLOPT_NOSIGNAL, 1))==0 &&
+			(err=curl_easy_setopt(mCurl, CURLOPT_WRITEFUNCTION, curl_write_callback))==0 &&
+			(err=curl_easy_setopt(mCurl, CURLOPT_WRITEDATA, this))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGFUNCTION, curl_debug_callback))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGDATA, this))==0 &&
 			//(err=curl_easy_setopt(mCurl, CURLOPT_NOSIGNAL, 1))==0 &&
@@ -188,7 +193,9 @@ class Ccurl
 
 		//perform the operation (unlocked)
 		if (err==0)
+		{
 			err=curl_easy_perform(mCurl);
+		}
 
 		{
 			unique_lock<mutex> lock(*mMutex);
@@ -209,6 +216,19 @@ class Ccurl
 
 			//remove from queue
 			mQueue.pop_front();
+
+			//queue is now empty? wait a while for new messages to be queued
+			//(curl keeps connections open and remembers cookies and stuff.)
+			if (mQueue.empty())
+			{
+				//wait until someone throws something in the queue
+				DEB("Queue empty, waiting...");
+				if (mQueueChanged->timed_wait(lock, posix_time::seconds(10)))
+					DEB("Queue filled again, continueing")
+				else
+					DEB("Queue wait timeout");
+			}
+
 		}
 	}
 };
