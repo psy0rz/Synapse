@@ -128,12 +128,18 @@ SYNAPSE_REGISTER(curl_Ready)
 	Cmsg out;
 	out.event="curl_Get";
 	out["id"]="test";
-	out["url"]="ftp://ftp.ttn.ru/test/10mb.bin";
-	out["url"]="http://www.google.com";
+//	out["url"]="ftp://ftp.ttn.ru/test/10mb.bin";
+//	out["url"]="https://www.google.com/accounts/ServiceLogin";
+	out["username"]="eheefting";
+	out["password"]="XXX";
+
+
+	out["url"]="http://stream.twitter.com/1/statuses/filter.json?track=e";
+
 	out.send();
-	out["url"]="http://www.google.com";
-	out["id"]="test2";
-	out.send();
+//	out["url"]="http://www.google.com";
+//	out["id"]="test2";
+//	out.send();
 
 }
 

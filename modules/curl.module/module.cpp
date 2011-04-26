@@ -90,11 +90,16 @@ class Ccurl
 	{
 		lock_guard<mutex> lock(*mMutex);
 
-		//only copy data of the message that we actually use:
+		//create new queue message
 		Cmsg queueMsg;
+		queueMsg=msg;
 		queueMsg.dst=msg.src;
-		queueMsg["id"]=msg["id"];
-		queueMsg["url"]=msg["url"];
+		queueMsg.src=0;
+//		queueMsg["id"]=msg["id"];
+//		queueMsg["url"]=msg["url"];
+//		queueMsg["httpauth"]=msg["httpauth"];
+//		queueMsg["username"]=msg["username"];
+//		queueMsg["password"]=msg["password"];
 		mQueue.push_back(queueMsg);
 
 		Cqueue::iterator lastMsg=(--mQueue.end());
@@ -182,9 +187,24 @@ class Ccurl
 			(err=curl_easy_setopt(mCurl, CURLOPT_WRITEDATA, this))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGFUNCTION, curl_debug_callback))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGDATA, this))==0 &&
-			//(err=curl_easy_setopt(mCurl, CURLOPT_NOSIGNAL, 1))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_VERBOSE, (int)config["verbose"]))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mMsg)["url"].str().c_str() ))==0;
+
+			if (err==0 && mMsg->isSet("username"))
+				err=curl_easy_setopt(mCurl, CURLOPT_USERNAME, (*mMsg)["username"].str().c_str() );
+
+			if (err==0 && mMsg->isSet("password"))
+				err=curl_easy_setopt(mCurl, CURLOPT_PASSWORD, (*mMsg)["password"].str().c_str() );
+
+			if (err==0 && mMsg->isSet("httpauth"))
+			{
+				if ((*mMsg)["httpauth"].str()=="basic")
+					err=curl_easy_setopt(mCurl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+				else if ((*mMsg)["httpauth"].str()=="digest")
+					err=curl_easy_setopt(mCurl, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
+				else if ((*mMsg)["httpauth"].str()=="any")
+					err=curl_easy_setopt(mCurl, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
+			}
 
 			//indicate start
 			mMsg->event="curl_Start";
