@@ -320,7 +320,7 @@ Downloads the specified url.
 	curl_Start	Indicates start of download
 	curl_Data	Sended for received data. \param data will contain the data.
 	curl_Ok		Indicates downloading is ready
-	curl_Error  Indicates downloading is aborted.
+	curl_Error  Indicates downloading is aborted. \param error contains error description.
  */
 SYNAPSE_REGISTER(curl_Get)
 {

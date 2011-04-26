@@ -21,6 +21,8 @@ The twitter module.
 
 This is a simple module that follows someones twitter feed.
 
+TODO: add oauth or oauth2 support.
+
 */
 
 
@@ -55,7 +57,7 @@ void callTwitter()
 
 	if (state==GET_USERID)
 	{
-		out["url"]="http://api.twitter.com/1/users/show.json?screen_name="+config["username"].str();
+		out["url"]="http://api.twitter.com/1/users/show.json?screen_name="+config["follow"].str();
 	}
 	else if (state==GET_HISTORY)
 	{
@@ -63,10 +65,18 @@ void callTwitter()
 	}
 	else if (state==STREAM)
 	{
+//		out["httpauth"]="basic";
 		out["username"]=config["username"];
 		out["password"]=config["password"];
 		out["url"]="http://stream.twitter.com/1/statuses/filter.json?follow="+userId;
 //		out["url"]="http://stream.twitter.com/1/statuses/filter.json?track=twitter";
+
+		//reset error status
+		Cmsg err;
+		err.event="twitter_Ok";
+		out.send();
+
+
 	}
 	out.send();
 }
@@ -92,6 +102,11 @@ SYNAPSE_REGISTER(curl_Ready)
 	Cmsg out;
 	//tell the rest of the world we are ready for duty
 	out.event="core_Ready";
+	out.send();
+
+	Cmsg err;
+	err.event="twitter_Error";
+	err["error"]="Connecting...";
 	out.send();
 
 	state=GET_USERID;
@@ -146,6 +161,11 @@ SYNAPSE_REGISTER(curl_Ok)
 
 SYNAPSE_REGISTER(curl_Error)
 {
+	Cmsg out;
+	out.event="twitter_Error";
+	out["error"]=msg["error"];
+	out.send();
+
 	if (state==STREAM)
 	{
 		//if we get disconnected, we need to reget history in case we missed something
@@ -166,15 +186,18 @@ SYNAPSE_REGISTER(curl_Data)
 			string jsonStr=queue.substr(0,queue.find("\n")+1);
 			queue.erase(0,jsonStr.length());
 
-			//convert to data
-			Cvar data;
-			data.fromJson(jsonStr);
+			if (jsonStr.length()>2)
+			{
+				//convert to data
+				Cvar data;
+				data.fromJson(jsonStr);
 
-			//send out message
-			Cmsg out;
-			out.event="twitter_Status";
-			out.map()=data;
-			out.send();
+				//send out message
+				Cmsg out;
+				out.event="twitter_Status";
+				out.map()=data;
+				out.send();
+			}
 		}
 	}
 }
