@@ -83,7 +83,10 @@ SYNAPSE_REGISTER(module_Init)
 //		out["path"]="modules/exec.module/libexec.so";
 //		out.send();
 
-	out["path"]="modules/curl.module/libcurl.so";
+//	out["path"]="modules/curl.module/libcurl.so";
+//	out.send();
+
+	out["path"]="modules/twitter.module/libtwitter.so";
 	out.send();
 
 	// Counter that ever counterSleep seconds emits a message.
@@ -126,20 +129,20 @@ SYNAPSE_REGISTER(module_Init)
 SYNAPSE_REGISTER(curl_Ready)
 {
 	Cmsg out;
-	out.event="curl_Get";
-	out["id"]="test";
-//	out["url"]="ftp://ftp.ttn.ru/test/10mb.bin";
-//	out["url"]="https://www.google.com/accounts/ServiceLogin";
-	out["username"]="eheefting";
-	out["password"]="XXX";
-
-
-	out["url"]="http://stream.twitter.com/1/statuses/filter.json?track=e";
-
-	out.send();
-//	out["url"]="http://www.google.com";
-//	out["id"]="test2";
+//	out.event="curl_Get";
+//	out["id"]="test";
+////	out["url"]="ftp://ftp.ttn.ru/test/10mb.bin";
+////	out["url"]="https://www.google.com/accounts/ServiceLogin";
+//	out["username"]="eheefting";
+//	out["password"]="XXX";
+//
+//
+//	out["url"]="http://stream.twitter.com/1/statuses/filter.json?track=e";
+//
 //	out.send();
+////	out["url"]="http://www.google.com";
+////	out["id"]="test2";
+////	out.send();
 
 }
 

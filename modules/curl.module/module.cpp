@@ -43,7 +43,6 @@ using namespace boost;
 synapse::Cconfig config;
 
 //A curl instance
-//TODO: make it so that new requests can get queued and the CURL handle will be reused. (more efficient and reuses cookies and stuff)
 class Ccurl
 {
 	private:
