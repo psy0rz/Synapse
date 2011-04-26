@@ -46,18 +46,19 @@ synapse::Cconfig config;
 class Ccurl
 {
 	private:
+	//threading stuff
 	shared_ptr<mutex> mMutex;
 	shared_ptr<condition_variable> mQueueChanged;
 
-
+	//Ccurl stuff:
 	bool mAbort;		//try to abort this transfer
 	bool mPerforming; 	//we have assigned a performer
 	typedef deque<Cmsg> Cqueue;
-
 	Cqueue mQueue;	//queue with operations to perform
+
+	//libcurl stuff:
 	CURL *mCurl;
-
-
+	char mError[CURL_ERROR_SIZE];
 
 	public:
 	Cqueue::iterator mMsg; //current message being handled
@@ -186,6 +187,8 @@ class Ccurl
 			(err=curl_easy_setopt(mCurl, CURLOPT_WRITEDATA, this))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGFUNCTION, curl_debug_callback))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGDATA, this))==0 &&
+			(err=curl_easy_setopt(mCurl, CURLOPT_FAILONERROR, 1))==0 &&
+			(err=curl_easy_setopt(mCurl, CURLOPT_ERRORBUFFER , &mError))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_VERBOSE, (int)config["verbose"]))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mMsg)["url"].str().c_str() ))==0;
 
@@ -229,7 +232,7 @@ class Ccurl
 			{
 				//error, indicate error
 				mMsg->event="curl_Error";
-				(*mMsg)["error"]=curl_easy_strerror(err);
+				(*mMsg)["error"]=mError;
 				mMsg->send();
 			}
 
