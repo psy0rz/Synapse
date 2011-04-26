@@ -421,6 +421,9 @@ void Cvar::fromJsonSpirit(Value &spiritValue)
 		case(int_type):
 			value=spiritValue.get_int();
 			break;
+		case(bool_type):
+			value=spiritValue.get_bool();
+			break;
 		case(obj_type):
 			value=CvarMap();
 			//convert the Object(string,Value) pairs to a CvarMap 
@@ -442,6 +445,7 @@ void Cvar::fromJsonSpirit(Value &spiritValue)
 			}
 			break;
 		default:
+			DEB("Unknown jsonspirit type: " << spiritValue.type());
 			castError("Cant convert this json spirit data to Cvar?");
 			break;
 	}
