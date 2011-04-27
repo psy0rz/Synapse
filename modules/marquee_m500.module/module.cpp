@@ -19,22 +19,29 @@
 #include "synapse.h"
 #include <string>
 
-using namespace std;
+#include "cconfig.h"
 
-string text;
+
+using namespace std;
+using namespace boost;
+
+Cvar status;
 bool changed;
 
+synapse::Cconfig config;
 
 SYNAPSE_REGISTER(module_Init)
 {
-	text="";
+
 	changed=true;
 	
 	Cmsg out;
 
+	config.load("etc/synapse/marquee.conf");
+
 	out.clear();
 	out.event="core_LoadModule";
-	out["path"]="modules/timer.module/libtimer.so";
+	out["name"]="timer";
 	out.send();
 }
 
@@ -58,9 +65,32 @@ SYNAPSE_REGISTER(timer_Ready)
 
 SYNAPSE_REGISTER(marquee_Set)
 {
-	if (text!=msg["text"].str())
+	//filter classes?
+	if (!config["classes"]["*"])
 	{
-		text=msg["text"].str();
+		bool match=false;
+		//do the specified classes match one of ours?
+		for (Cvar::iterator I=msg["classes"].begin(); I!=msg["classes"].end(); I++)
+		{
+			if (I->second)
+			{
+				if (config["classes"].isSet(I->first) && config["classes"][I->first])
+				{
+					match=true;
+					break;
+				}
+			}
+		}
+		if (!match)
+		{
+			DEB("Ignoring marquee message, no matching classes");
+			return;
+		}
+	}
+
+	if (status["text"].str()!=msg["text"].str())
+	{
+		status=msg;
 		changed=true;
 	}
 
@@ -71,7 +101,7 @@ SYNAPSE_REGISTER(marquee_Get)
 	Cmsg out;
 	out.dst=msg.src;
 	out.event="marquee_Set";
-	out["text"]=text;
+	out.map()=status;
 	out.send();
 }
 
@@ -80,9 +110,10 @@ SYNAPSE_REGISTER(marquee_SendChanges)
 	if (changed)
 	{
 		//HACK, implement in C++:
-		string cmd;
-		cmd="./writemarquee '"+text+"'";
-		if (system(cmd.c_str())) ;
+		if (!fork())
+		{
+			execlp("modules/marquee_m500.module/writemarquee", "writemarquee", status["text"].str().c_str(), NULL);
+		}
 
 		changed=false;
 	}
