@@ -16,8 +16,10 @@ PROJECT(synapse)
 #SET(CMAKE_BUILD_TYPE Release)
 SET(CMAKE_BUILD_TYPE Debug)
 
+SET(CMAKE_COLOR_MAKEFILE ON)
+
 #if you don't want the full compiler output, remove the following line
-SET(CMAKE_VERBOSE_MAKEFILE ON)
+#SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 #add definitions, compiler switches, etc.
 #ADD_DEFINITIONS(-Wall -O2 -pthread -pg -Werror)
