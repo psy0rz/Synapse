@@ -12,7 +12,7 @@ INCLUDE(FindCURL)
 IF(CURL_FOUND)
 
 	#add definitions, compiler switches, etc.
-	ADD_DEFINITIONS(-Wall -O2)
+	ADD_DEFINITIONS()
 	
 	
 	#automaticly add all sourcefiles to current module

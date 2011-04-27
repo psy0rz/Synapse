@@ -19,11 +19,14 @@ SET(CMAKE_BUILD_TYPE Debug)
 SET(CMAKE_COLOR_MAKEFILE ON)
 
 #if you don't want the full compiler output, remove the following line
-#SET(CMAKE_VERBOSE_MAKEFILE ON)
+SET(CMAKE_VERBOSE_MAKEFILE ON)
 
 #add definitions, compiler switches, etc.
-#ADD_DEFINITIONS(-Wall -O2 -pthread -pg -Werror)
-ADD_DEFINITIONS(-Wall -O3 -pthread -Werror -fno-strict-aliasing)
+if(${CMAKE_BUILD_TYPE} STREQUAL Debug)
+	ADD_DEFINITIONS(-Wall -O0 -pthread -Werror -fno-strict-aliasing)
+else(${CMAKE_BUILD_TYPE} STREQUAL Debug)
+	ADD_DEFINITIONS(-Wall -O3 -pthread -Werror -fno-strict-aliasing)
+endif(${CMAKE_BUILD_TYPE} STREQUAL Debug)
 
 #list all source files here
 file(GLOB sources *.cpp)

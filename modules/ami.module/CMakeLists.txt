@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 2.6)
 
 #add definitions, compiler switches, etc.
-ADD_DEFINITIONS(-Wall -O2)
+ADD_DEFINITIONS()
 
 #Determine name of the .so module:
 #A module should always be in a modulename.module directory!.
