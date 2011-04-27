@@ -7,6 +7,15 @@ cmake_minimum_required(VERSION 2.6)
 string(REGEX REPLACE ".*/([^/]*).module$" "\\1" module_name "${CMAKE_CURRENT_BINARY_DIR}")
 MESSAGE(STATUS "Module name of ${CMAKE_CURRENT_BINARY_DIR} is: '${module_name}'")
 
+INCLUDE(FindPkgConfig) 
+pkg_check_modules (OAUTH oauth>=0.9.4)
+IF(OAUTH_FOUND)
+	MESSAGE(STATUS "Building with oauth support.")
+	ADD_DEFINITIONS(-DOAUTH  )
+ELSE(OAUTH_FOUND)
+	MESSAGE(WARNING "Building without oauth support, modules like twitter depend on this and will not work without it.")
+ENDIF(OAUTH_FOUND)
+
 
 INCLUDE(FindCURL)
 IF(CURL_FOUND)
@@ -14,13 +23,12 @@ IF(CURL_FOUND)
 	#add definitions, compiler switches, etc.
 	ADD_DEFINITIONS()
 	
-	
 	#automaticly add all sourcefiles to current module
 	file(GLOB sources *.cpp)
 	ADD_LIBRARY(${module_name} MODULE ${sources})
 	
 	#need to link to some other libraries ? just add them here
-	TARGET_LINK_LIBRARIES(${module_name} ${CURL_LIBRARIES})
+	TARGET_LINK_LIBRARIES(${module_name} ${CURL_LIBRARIES} ${OAUTH_LIBRARIES} )
 	
 	INCLUDE_DIRECTORIES(../..)
 	
@@ -31,4 +39,5 @@ IF(CURL_FOUND)
 ELSE(CURL_FOUND)
 	MESSAGE(WARNING "curl libraries not found, not building ${module_name}")
 ENDIF(CURL_FOUND)
+
 

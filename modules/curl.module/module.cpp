@@ -33,6 +33,12 @@
 #include <boost/thread/thread.hpp>
 #include <boost/shared_ptr.hpp>
 
+//oauth support is optional!
+#ifdef OAUTH
+extern "C" {
+#include <oauth.h>
+}
+#endif
 
 namespace synapse_curl
 {
@@ -169,6 +175,7 @@ class Ccurl
 	void perform()
 	{
 		CURLcode err;
+		struct curl_slist *headers=NULL;
 
 		{
 			unique_lock<mutex> lock(*mMutex);
@@ -187,7 +194,6 @@ class Ccurl
 			(err=curl_easy_setopt(mCurl, CURLOPT_WRITEDATA, this))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGFUNCTION, curl_debug_callback))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGDATA, this))==0 &&
-			(err=curl_easy_setopt(mCurl, CURLOPT_FAILONERROR, 1))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_ERRORBUFFER , &mError))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_VERBOSE, (int)config["verbose"]))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mMsg)["url"].str().c_str() ))==0;
@@ -198,6 +204,15 @@ class Ccurl
 			if (err==0 && mMsg->isSet("password"))
 				err=curl_easy_setopt(mCurl, CURLOPT_PASSWORD, (*mMsg)["password"].str().c_str() );
 
+			if (err==0)
+			{
+				//NOTE: we default to failonerror=1, while libcurl normally defaults to 0
+				if ((*mMsg).isSet("failonerror"))
+					err=curl_easy_setopt(mCurl, CURLOPT_FAILONERROR, (int)(*mMsg)["failonerror"]);
+				else
+					err=curl_easy_setopt(mCurl, CURLOPT_FAILONERROR, 1);
+			}
+
 			if (err==0 && mMsg->isSet("httpauth"))
 			{
 				if ((*mMsg)["httpauth"].str()=="basic")
@@ -207,6 +222,77 @@ class Ccurl
 				else if ((*mMsg)["httpauth"].str()=="any")
 					err=curl_easy_setopt(mCurl, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
 			}
+
+#ifdef OAUTH
+			if (mMsg->isSet("oauth"))
+			{
+				const char *tkey=NULL;
+				const char *tsecret=NULL;
+				const char *ckey=NULL;
+				const char *csecret=NULL;
+
+				//NOTE: do all msg stuff before the oauth library c-stuff, because Cmsg can throw exceptions which will create memory leaks for the c-stuff
+
+				ckey=(*mMsg)["oauth"]["ckey"].str().c_str();
+				csecret=(*mMsg)["oauth"]["csecret"].str().c_str();
+
+				//tkey and secret are optional and not yet avaible in the first oauth step
+				if ((*mMsg)["oauth"].isSet("tkey"))
+				{
+					tkey=(*mMsg)["oauth"]["tkey"].str().c_str();
+					tsecret=(*mMsg)["oauth"]["tsecret"].str().c_str();
+				}
+
+				//split off the url parameters
+				int  argc;
+				char **argv = NULL;
+				argc = oauth_split_url_parameters((*mMsg)["url"].str().c_str(), &argv);
+
+				//sign it
+				oauth_sign_array2_process(
+						&argc,
+						&argv,
+						NULL, //< postargs (unused)
+						OA_HMAC,
+						NULL, //< HTTP method (defaults to "GET")
+						ckey,
+						csecret,
+						tkey,
+						tsecret
+					);
+
+				char *oauth_url = NULL;
+				char *oauth_hdr = NULL;
+
+				// we split [x_]oauth_ parameters (for use in HTTP Authorization header)
+				oauth_hdr = oauth_serialize_url_sep(argc, 1, argv, (char *)", ", 6);
+				// and other URL parameters
+				oauth_url = oauth_serialize_url_sep(argc, 0, argv, (char *)"&", 1);
+
+				//format headers and add curl
+				string authHeader="Authorization: OAuth ";
+				authHeader+=oauth_hdr;
+				DEB(authHeader);
+				headers = curl_slist_append(headers, authHeader.c_str());
+
+				//free oauth stuff again
+				oauth_free_array(&argc, &argv);
+
+				if (oauth_hdr!=NULL)
+					free(oauth_hdr);
+
+				if (oauth_url!=NULL)
+					free(oauth_url);
+
+
+			}
+
+
+#endif
+
+			//there are headers defined?
+			if (err==0 && headers!=NULL)
+				(err=curl_easy_setopt(mCurl, CURLOPT_HTTPHEADER, headers));
 
 			//indicate start
 			mMsg->event="curl_Start";
@@ -235,6 +321,10 @@ class Ccurl
 				(*mMsg)["error"]=mError;
 				mMsg->send();
 			}
+
+			//free headers
+			if (headers!=NULL)
+				curl_slist_free_all(headers);
 
 			//remove from queue
 			mQueue.pop_front();
@@ -290,7 +380,6 @@ SYNAPSE_REGISTER(module_Init)
 	out.clear();
 	out.event="core_Ready";
 	out.send();
-
 }
 
 SYNAPSE_REGISTER(module_Shutdown)
