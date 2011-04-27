@@ -242,6 +242,7 @@ SYNAPSE_REGISTER(module_Error)
 
 /** Dynamicly loads a synapse module.
 	\param path The absolute pathname of the .so file.
+	\param name Name of the module (will autodetermine the path)
 
 \post The module specified by path is loaded.
 After loading the module_Init event is sended to the initial session of the module. Directly after that the module_SessionStarted and module_SessionStart are also sended.
@@ -257,17 +258,24 @@ SYNAPSE_REGISTER(core_LoadModule)
 	string error;
 	Cmsg out;
 	Cmsg startmsg;
+	string path;
 
 	{
 		lock_guard<mutex> lock(messageMan->threadMutex);
 		CmodulePtr module;
 
-		module=messageMan->getModule(msg["path"]);
+		if (msg.isSet("path"))
+			path=msg["path"].str();
+		else
+			//TODO: make configurable
+			path="modules/"+msg["name"].str()+".module/lib"+msg["name"].str()+".so";
+
+		module=messageMan->getModule(path);
 
 		//is it already loaded?
 		if (module!=NULL)
 		{
-			DEB("module " << (string)msg["path"] << " is already loaded");
+			DEB("module " << path << " is already loaded");
 			//is it already ready?
 			if (module->readySession!=SESSION_DISABLED)
 			{
@@ -282,7 +290,7 @@ SYNAPSE_REGISTER(core_LoadModule)
 		else
 		{
 			CsessionPtr session;
-			session=messageMan->loadModule(msg["path"],"module");
+			session=messageMan->loadModule(path,"module");
 			if (!session)
 				error="Error while loading module.";
 			else
