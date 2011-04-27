@@ -54,6 +54,17 @@ SYNAPSE_REGISTER(module_Init)
 	out["maxThreads"]=10;
 	out.send();
 
+
+
+	//NOTE: make sure only modules or higher can set timers, otherwise it could be used to elevate synapse-privileges!
+	out.clear();
+	out.event="core_ChangeEvent";
+	out["event"]=		"timer_Set"; // SEND to module on all kinds of errors
+	out["modifyGroup"]=	"core";
+	out["sendGroup"]=	"modules";
+	out["recvGroup"]=	"anonymous";
+	out.send();
+
 	//tell the rest of the world we are ready for duty
 	//(the core will send a timer_Ready)
 	out.clear();
