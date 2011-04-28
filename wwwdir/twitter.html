@@ -87,6 +87,7 @@
 		});
 		
 		$('#doAuth').click(function(){
+			window.open('http://localhost:10080/twitter.html?synapse_debug','name','height=200,width=150');
 			$('#authStatus').html("Requesting token...");
 			//OAUTH 1: Ask for a request token.
 			data="";
