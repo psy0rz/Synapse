@@ -238,10 +238,11 @@ $(document).ready(function(){
 	//(if it fails its no problem: the session will eventually timeout in http_json)
 
 	//inoffical propiertary way, but earlier so message sending still works
-	window.onbeforeunload=function()
-	{
-		send(0,"core_DelSession");
-	}
+	//DONT, doesnt allow refresh while auto-loggin in again?
+//	window.onbeforeunload=function()
+//	{
+//		send(0,"core_DelSession");
+//	}
 
 	//official way, but too late for browsers like chromium
 	//$(window).unload(function()

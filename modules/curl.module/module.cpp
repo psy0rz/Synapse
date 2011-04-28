@@ -195,9 +195,9 @@ class Ccurl
 			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGFUNCTION, curl_debug_callback))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGDATA, this))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_ERRORBUFFER , &mError))==0 &&
-			(err=curl_easy_setopt(mCurl, CURLOPT_VERBOSE, (int)config["verbose"]))==0 &&
-			(err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mMsg)["url"].str().c_str() ))==0;
+			(err=curl_easy_setopt(mCurl, CURLOPT_VERBOSE, (int)config["verbose"]))==0;
 
+			//authorisation
 			if (err==0 && mMsg->isSet("username"))
 				err=curl_easy_setopt(mCurl, CURLOPT_USERNAME, (*mMsg)["username"].str().c_str() );
 
@@ -224,6 +224,7 @@ class Ccurl
 			}
 
 #ifdef OAUTH
+			//oauth autorisation (optionally compiled in)
 			if (mMsg->isSet("oauth"))
 			{
 				const char *tkey=NULL;
@@ -269,11 +270,15 @@ class Ccurl
 				// and other URL parameters
 				oauth_url = oauth_serialize_url_sep(argc, 0, argv, (char *)"&", 1);
 
-				//format headers and add curl
+				//format header and add to curl
 				string authHeader="Authorization: OAuth ";
 				authHeader+=oauth_hdr;
-				DEB(authHeader);
+				DEB("oauth header: " << authHeader);
 				headers = curl_slist_append(headers, authHeader.c_str());
+
+				//replace the url, since all the oauth_... stuff has moved to the header now
+				DEB("oauth url: " << oauth_url);
+				(*mMsg)["url"].str()=oauth_url;
 
 				//free oauth stuff again
 				oauth_free_array(&argc, &argv);
@@ -287,8 +292,14 @@ class Ccurl
 
 			}
 
-
+#else
+			err=CURLE_HTTP_POST_ERROR;
+			strcpy(mError,"Oauth support not compiled in. (please get liboauth and recompile synapse)");
 #endif
+
+			//set url AFTER oauth, since oauth might modify the url
+			if (err==0)
+				err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mMsg)["url"].str().c_str() );
 
 			//there are headers defined?
 			if (err==0 && headers!=NULL)
@@ -312,7 +323,13 @@ class Ccurl
 			{
 				//ok, indicate done
 				mMsg->event="curl_Ok";
+				long response=0;
+				if (curl_easy_getinfo(mCurl, CURLINFO_RESPONSE_CODE, &response)==0)
+				{
+					(*mMsg)["response"]=response;
+				}
 				mMsg->send();
+				mMsg->erase("response");
 			}
 			else
 			{

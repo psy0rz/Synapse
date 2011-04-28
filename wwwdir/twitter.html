@@ -1,0 +1,133 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<title>Twitter admin panel</title>
+
+	<script type="text/javascript" src="synapse/synapse.js"></script>
+
+	<script type="text/javascript">
+
+	/// SYNAPSE EVENT HANDLERS
+
+	var config=new Array();
+
+	synapse_register("error",function(errortxt)
+	{
+		$('#error').html(errortxt);
+	});	
+
+			
+	synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
+	{
+	if (msg["username"]=="anonymous")
+		synapse_login();
+	else
+		send(0,"twitter_GetConfig", { });
+	});
+
+	synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
+	{
+		send(0,"twitter_GetConfig", { });
+	});
+
+
+	synapse_register("twitter_Config",function(msg_src, msg_dst, msg_event, msg)
+	{
+		config=msg;
+		//set all config vars
+		for (configI in config)
+		{
+			$("#"+configI).val(config[configI]);
+		}
+			
+	});
+
+
+	var data="";
+	synapse_register("curl_Data",function(msg_src, msg_dst, msg_event, msg)
+	{
+		data+=msg["data"];
+	});
+
+
+	synapse_register("curl_Ok",function(msg_src, msg_dst, msg_event, msg)
+	{
+		//We did got data, but the request failed. So its probably some error message from the provider:
+		if (msg["response"]!="200")
+		{
+			$('#authStatus').html("Error: "+data);
+		}
+		//OAUTH 1: Received the request token
+		else if (msg["id"]="request_token")
+		{
+			$('#authStatus').html("Asking you for authorisation...");
+				
+		}
+
+	});
+
+	synapse_register("curl_Error",function(msg_src, msg_dst, msg_event, msg)
+	{
+		$('#authStatus').html("Error: "+msg["error"]);
+	});
+	
+			
+
+	/// JAVA SCRIPT EVENT HANDLERS
+	$(document).ready(function(){
+
+		$('#doSave').click(function(){
+			//save everything of class .config in the config array
+			$('.config').each(function(index) {
+				config[$(this).attr('id')]=$(this).val();
+			});
+		});
+		
+		$('#doAuth').click(function(){
+			$('#authStatus').html("Requesting token...");
+			//OAUTH 1: Ask for a request token.
+			data="";
+			send(0,"curl_Get",{
+					"id":"request_token",
+					"failonerror":0,
+					"url":"https://api.twitter.com/oauth/request_token?oauth_callback=bla.nl&piet=snot",
+					"oauth":{
+						"ckey":config["ckey"],
+						"csecret":config["csecret"]
+					}
+				}
+			);
+		});
+	});
+
+
+	</script>
+
+	<style>
+		body 
+		{
+		}
+ 	</style>
+</head>
+
+
+<body>
+	<table>
+		<tr><td>Users to follow (comma seperated):<td><input size=100 type='text' class='config' id='follow'></tr>
+		<tr><td>Access key: <td><input readonly size=50 type='text' class='config' id='akey'></tr>
+		<tr>
+			<td>Access secret:<td><input readonly size=50 type='text' class='config' id='asecret'> 
+			<input type='submit' id='doAuth' value='Reautenticate...'></input>
+			<span style='background:yellow' id='authStatus'></span>
+		</tr>	
+	</table>
+	<input type='submit' id='doSave' value='Save'>	
+</body>
+</html>
+
+
+
+
