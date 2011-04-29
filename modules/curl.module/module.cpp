@@ -227,27 +227,29 @@ class Ccurl
 			//oauth autorisation (optionally compiled in)
 			if (mMsg->isSet("oauth"))
 			{
-				const char *tkey=NULL;
-				const char *tsecret=NULL;
-				const char *ckey=NULL;
-				const char *csecret=NULL;
-
-				//NOTE: do all msg stuff before the oauth library c-stuff, because Cmsg can throw exceptions which will create memory leaks for the c-stuff
-
-				ckey=(*mMsg)["oauth"]["ckey"].str().c_str();
-				csecret=(*mMsg)["oauth"]["csecret"].str().c_str();
-
-				//tkey and secret are optional and not yet avaible in the first oauth step
-				if ((*mMsg)["oauth"].isSet("tkey"))
+				//WARNING: convert all used parameters to strings already so we dont throw errors later on and leak mem.
+				for(Cvar::iterator I=(*mMsg)["oauth"].begin(); I!=(*mMsg)["oauth"].end(); I++)
 				{
-					tkey=(*mMsg)["oauth"]["tkey"].str().c_str();
-					tsecret=(*mMsg)["oauth"]["tsecret"].str().c_str();
+					I->second.str();
 				}
 
-				//split off the url parameters
+				if ((*mMsg).isSet("post"))
+					(*mMsg)["post"].str();
+
+				(*mMsg)["url"].str();
+
+				//now collect base-uri, GET , POST and extra oauth_... parameters in a liboauth-array
 				int  argc;
 				char **argv = NULL;
 				argc = oauth_split_url_parameters((*mMsg)["url"].str().c_str(), &argv);
+				if ((*mMsg).isSet("post"))
+					argc = oauth_split_post_paramters((*mMsg)["post"].str().c_str(), &argv, 0);
+
+				if ((*mMsg)["oauth"].isSet("callback"))
+					oauth_add_param_to_array(&argc, &argv, (*mMsg)["oauth"]["callback"].str().c_str());
+
+				if ((*mMsg)["oauth"].isSet("verifier"))
+					oauth_add_param_to_array(&argc, &argv, (*mMsg)["oauth"]["verifier"].str().c_str());
 
 				//sign it
 				oauth_sign_array2_process(
@@ -255,20 +257,17 @@ class Ccurl
 						&argv,
 						NULL, //< postargs (unused)
 						OA_HMAC,
-						NULL, //< HTTP method (defaults to "GET")
-						ckey,
-						csecret,
-						tkey,
-						tsecret
+						(*mMsg).isSet("post")?"POST":"GET",
+						(*mMsg)["oauth"]["consumer_key"],
+						(*mMsg)["oauth"]["consumer_key_secret"],
+						(*mMsg)["oauth"]["token"],
+						(*mMsg)["oauth"]["token_secret"],
 					);
 
-				char *oauth_url = NULL;
 				char *oauth_hdr = NULL;
 
 				// we split [x_]oauth_ parameters (for use in HTTP Authorization header)
 				oauth_hdr = oauth_serialize_url_sep(argc, 1, argv, (char *)", ", 6);
-				// and other URL parameters
-				oauth_url = oauth_serialize_url_sep(argc, 0, argv, (char *)"&", 1);
 
 				//format header and add to curl
 				string authHeader="Authorization: OAuth ";
@@ -419,6 +418,12 @@ Downloads the specified url.
 
 	\param id uniq identifier to reconginise the download. multiple downloads with the same ID from the same source session will be queued.
 	\param url The url to download
+	\param httpauth HTTP authentication method (basic, digest, any)
+	\param username
+	\param password
+	\param failonerror Set to 0 to NOT fail on an HTTP error response codes. this way you can receive usefull error messages in the http response body.
+	\param post If set, issues a HTTP POST. The data string will be posted using the application/x-www-form-urlencoded type. (e.g. you need to encode the data yourself)
+	\param oauth Contains oauth parameters. (look at the examples like twitter, too complex to explain here)
 
 \par Replys:
 	In every reply all the parameters used in the curl_Get are returned.

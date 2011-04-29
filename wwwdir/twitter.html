@@ -6,7 +6,9 @@
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
 	<title>Twitter admin panel</title>
 
-	<script type="text/javascript" src="synapse/synapse.js"></script>
+	<script type="text/javascript" src="/synapse/synapse.js"></script>
+
+	<script type="text/javascript" src="/lib/jquery.url.js"></script>
 
 	<script type="text/javascript">
 
@@ -14,18 +16,12 @@
 
 	var config=new Array();
 
-	synapse_register("error",function(errortxt)
-	{
-		$('#error').html(errortxt);
-	});	
-
-			
 	synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
 	{
-	if (msg["username"]=="anonymous")
-		synapse_login();
-	else
-		send(0,"twitter_GetConfig", { });
+		if (msg["username"]=="anonymous")
+			synapse_login();
+		else
+			send(0,"twitter_GetConfig", { });
 	});
 
 	synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
@@ -45,33 +41,128 @@
 			
 	});
 
-
-	var data="";
+	//oauth stuff
+	var oauthWindow;
+	var oauthData="";
+	var oauthCallbackUrl=location.protocol+"//"+location.host+"/oauth_popup.html";
+	var oauth_token;
+	var oauth_token_secret;
+	
 	synapse_register("curl_Data",function(msg_src, msg_dst, msg_event, msg)
 	{
-		data+=msg["data"];
+		oauthData+=msg["data"];
 	});
 
+	function status(txt)
+	{
+		$('#status', oauthWindow.document).html(txt);
+	}
 
+	
+	function error(txt)
+	{
+		$('#error', oauthWindow.document).html("Error: "+txt);
+	}
+
+
+	//oauth_callback.html will pass the url to us for further processing:
+	function oauthCallback(urlStr)
+	{
+		var url=$.url(urlStr);
+		//oauth popup just openend, start the process
+		if (url.param("request")==1)
+		{
+			//OAUTH 1: ASK for a request token.
+			//FIXME: create a module for this so we dont expose the ckey to the webinterface.
+			status("Getting request token...");
+			oauthData="";
+			send(0,"curl_Get",{
+					"id":"request_token",
+					"failonerror":0,
+					"url":"https://api.twitter.com/oauth/request_token?oauth_callback="+oauthCallbackUrl,
+					"oauth":{
+						"ckey":config["ckey"],
+						"csecret":config["csecret"]
+					}
+				}
+			);
+		}
+		//OAUTH 4: RECEIVED authorisation callback
+		else if (url.param("oauth_verifier")!="")
+		{
+			if (url.param("oauth_token")!=oauth_token)
+			{
+				error("Received back wrong token");
+				return;
+			}
+			//OAUTH 5: Ask for permanent access token 
+			status("Getting permanent access token...");
+			oauthData="";
+			send(0,"curl_Get",{
+					"id":"access_token",
+					"failonerror":0,
+					"url":"https://api.twitter.com/oauth/access_token?oauth_verifier="+url.param("oauth_verifier"),
+					"method":"post",
+					"oauth":{
+						"ckey":config["ckey"],
+						"csecret":config["csecret"],
+						"akey":oauth_token,
+						"asecret":oauth_token_secret
+					}
+				}
+			);
+		}
+		else
+		{
+			error("unkown callback");
+		}
+	}
+	
 	synapse_register("curl_Ok",function(msg_src, msg_dst, msg_event, msg)
 	{
 		//We did got data, but the request failed. So its probably some error message from the provider:
 		if (msg["response"]!="200")
 		{
-			$('#authStatus').html("Error: "+data);
+			error("Request failed with code "+msg["response"]+"<br>"+oauthData);
 		}
-		//OAUTH 1: Received the request token
+		//OAUTH 2: RECEIVED the request token
 		else if (msg["id"]="request_token")
 		{
-			$('#authStatus').html("Asking you for authorisation...");
-				
+			var url=$.url("http://bla?"+oauthData);
+			if (url.param("oauth_callback_confirmed")!="true")
+			{
+				error("Request token failed!");
+				return;
+			}
+			oauth_token=url.param("oauth_token");
+			oauth_token_secret=url.param("oauth_token_secret");
+			//OAUTH 3: ASK user for authorisation
+			status("Asking you for authorisation...");
+			oauthWindow.location="http://api.twitter.com/oauth/authorize?oauth_token="+oauth_token;
+		}
+		//OAUTH 6: Permanent access token received 
+		else if (msg["id"]="access_token")
+		{
+			var url=$.url("http://bla?"+oauthData);
+//			if (url.param("oauth_callback_confirmed")!="true")
+	//		{
+		//		error("Request token failed!");
+		//		return;
+			//}
+			oauthWindow.close();
+		}
+		else
+		{
+			error("unkown data received");
 		}
 
 	});
 
+
+	
 	synapse_register("curl_Error",function(msg_src, msg_dst, msg_event, msg)
 	{
-		$('#authStatus').html("Error: "+msg["error"]);
+		error(msg["error"]);
 	});
 	
 			
@@ -87,20 +178,8 @@
 		});
 		
 		$('#doAuth').click(function(){
-			window.open('http://localhost:10080/twitter.html?synapse_debug','name','height=200,width=150');
-			$('#authStatus').html("Requesting token...");
-			//OAUTH 1: Ask for a request token.
-			data="";
-			send(0,"curl_Get",{
-					"id":"request_token",
-					"failonerror":0,
-					"url":"https://api.twitter.com/oauth/request_token?oauth_callback=bla.nl&piet=snot",
-					"oauth":{
-						"ckey":config["ckey"],
-						"csecret":config["csecret"]
-					}
-				}
-			);
+			//open the popup, this will call our oauthCallback()
+			oauthWindow=window.open(oauthCallbackUrl+"?request=1", 'oauth_popup' ,'height=400,width=800');
 		});
 	});
 
