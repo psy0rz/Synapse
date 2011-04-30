@@ -195,6 +195,7 @@ class Ccurl
 			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGFUNCTION, curl_debug_callback))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGDATA, this))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_ERRORBUFFER , &mError))==0 &&
+			(err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mMsg)["url"].str().c_str() ))==0 &&
 			(err=curl_easy_setopt(mCurl, CURLOPT_VERBOSE, (int)config["verbose"]))==0;
 
 			//authorisation
@@ -203,6 +204,16 @@ class Ccurl
 
 			if (err==0 && mMsg->isSet("password"))
 				err=curl_easy_setopt(mCurl, CURLOPT_PASSWORD, (*mMsg)["password"].str().c_str() );
+
+			if (err==0 && mMsg->isSet("httpauth"))
+			{
+				if ((*mMsg)["httpauth"].str()=="basic")
+					err=curl_easy_setopt(mCurl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+				else if ((*mMsg)["httpauth"].str()=="digest")
+					err=curl_easy_setopt(mCurl, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
+				else if ((*mMsg)["httpauth"].str()=="any")
+					err=curl_easy_setopt(mCurl, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
+			}
 
 			if (err==0)
 			{
@@ -213,14 +224,11 @@ class Ccurl
 					err=curl_easy_setopt(mCurl, CURLOPT_FAILONERROR, 1);
 			}
 
-			if (err==0 && mMsg->isSet("httpauth"))
+			if (err==0 && mMsg->isSet("post"))
 			{
-				if ((*mMsg)["httpauth"].str()=="basic")
-					err=curl_easy_setopt(mCurl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-				else if ((*mMsg)["httpauth"].str()=="digest")
-					err=curl_easy_setopt(mCurl, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
-				else if ((*mMsg)["httpauth"].str()=="any")
-					err=curl_easy_setopt(mCurl, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
+				(err=curl_easy_setopt(mCurl, CURLOPT_POST, 1))==0 &&
+				(err=curl_easy_setopt(mCurl, CURLOPT_POSTFIELDS, ((*mMsg)["post"].str().c_str())))==0 &&
+				(err=curl_easy_setopt(mCurl, CURLOPT_POSTFIELDSIZE, ((*mMsg)["post"].str().length())))==0;
 			}
 
 #ifdef OAUTH
@@ -243,13 +251,27 @@ class Ccurl
 				char **argv = NULL;
 				argc = oauth_split_url_parameters((*mMsg)["url"].str().c_str(), &argv);
 				if ((*mMsg).isSet("post"))
-					argc = oauth_split_post_paramters((*mMsg)["post"].str().c_str(), &argv, 0);
+					argc = oauth_split_post_paramters((*mMsg)["post"].str().c_str(), &argv, 1);
 
 				if ((*mMsg)["oauth"].isSet("callback"))
-					oauth_add_param_to_array(&argc, &argv, (*mMsg)["oauth"]["callback"].str().c_str());
+				{
+					string s="oauth_callback="+(*mMsg)["oauth"]["callback"].str();
+					oauth_add_param_to_array(&argc, &argv, s.c_str());
+				}
 
 				if ((*mMsg)["oauth"].isSet("verifier"))
-					oauth_add_param_to_array(&argc, &argv, (*mMsg)["oauth"]["verifier"].str().c_str());
+				{
+					string s="oauth_verifier="+(*mMsg)["oauth"]["verifier"].str();
+					oauth_add_param_to_array(&argc, &argv, s.c_str());
+				}
+
+				const char *oauth_token=NULL;
+				const char *oauth_token_secret=NULL;
+				if ((*mMsg)["oauth"].isSet("token"))
+				{
+					oauth_token=(*mMsg)["oauth"]["token"].str().c_str();
+					oauth_token_secret=(*mMsg)["oauth"]["token_secret"].str().c_str();
+				}
 
 				//sign it
 				oauth_sign_array2_process(
@@ -258,15 +280,15 @@ class Ccurl
 						NULL, //< postargs (unused)
 						OA_HMAC,
 						(*mMsg).isSet("post")?"POST":"GET",
-						(*mMsg)["oauth"]["consumer_key"],
-						(*mMsg)["oauth"]["consumer_key_secret"],
-						(*mMsg)["oauth"]["token"],
-						(*mMsg)["oauth"]["token_secret"],
+						(*mMsg)["oauth"]["consumer_key"].str().c_str(),
+						(*mMsg)["oauth"]["consumer_key_secret"].str().c_str(),
+						oauth_token,
+						oauth_token_secret
 					);
 
-				char *oauth_hdr = NULL;
 
-				// we split [x_]oauth_ parameters (for use in HTTP Authorization header)
+				// we split off the oauth_... parameters (for use in HTTP Authorization header)
+				char *oauth_hdr = NULL;
 				oauth_hdr = oauth_serialize_url_sep(argc, 1, argv, (char *)", ", 6);
 
 				//format header and add to curl
@@ -275,19 +297,10 @@ class Ccurl
 				DEB("oauth header: " << authHeader);
 				headers = curl_slist_append(headers, authHeader.c_str());
 
-				//replace the url, since all the oauth_... stuff has moved to the header now
-				DEB("oauth url: " << oauth_url);
-				(*mMsg)["url"].str()=oauth_url;
-
 				//free oauth stuff again
 				oauth_free_array(&argc, &argv);
-
 				if (oauth_hdr!=NULL)
 					free(oauth_hdr);
-
-				if (oauth_url!=NULL)
-					free(oauth_url);
-
 
 			}
 
@@ -296,9 +309,6 @@ class Ccurl
 			strcpy(mError,"Oauth support not compiled in. (please get liboauth and recompile synapse)");
 #endif
 
-			//set url AFTER oauth, since oauth might modify the url
-			if (err==0)
-				err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mMsg)["url"].str().c_str() );
 
 			//there are headers defined?
 			if (err==0 && headers!=NULL)

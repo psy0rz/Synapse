@@ -142,6 +142,7 @@ SYNAPSE_REGISTER(twitter_GetConfig)
 SYNAPSE_REGISTER(twitter_SetConfig)
 {
 	config.map()=msg.map();
+	config.changed();
 	config.save();
 
 

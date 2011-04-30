@@ -79,10 +79,11 @@
 			send(0,"curl_Get",{
 					"id":"request_token",
 					"failonerror":0,
-					"url":"https://api.twitter.com/oauth/request_token?oauth_callback="+oauthCallbackUrl,
+					"url":"https://api.twitter.com/oauth/request_token",
 					"oauth":{
-						"ckey":config["ckey"],
-						"csecret":config["csecret"]
+						"callback":oauthCallbackUrl,
+						"consumer_key":config["oauth_consumer_key"],
+						"consumer_key_secret":config["oauth_consumer_key_secret"]
 					}
 				}
 			);
@@ -101,13 +102,14 @@
 			send(0,"curl_Get",{
 					"id":"access_token",
 					"failonerror":0,
-					"url":"https://api.twitter.com/oauth/access_token?oauth_verifier="+url.param("oauth_verifier"),
-					"method":"post",
+					"url":"https://api.twitter.com/oauth/access_token",
+					"post":"",
 					"oauth":{
-						"ckey":config["ckey"],
-						"csecret":config["csecret"],
-						"akey":oauth_token,
-						"asecret":oauth_token_secret
+						"verifier":url.param("oauth_verifier"),
+						"consumer_key":config["oauth_consumer_key"],
+						"consumer_key_secret":config["oauth_consumer_key_secret"],
+						"token":oauth_token,
+						"token_secret":oauth_token_secret
 					}
 				}
 			);
@@ -126,7 +128,7 @@
 			error("Request failed with code "+msg["response"]+"<br>"+oauthData);
 		}
 		//OAUTH 2: RECEIVED the request token
-		else if (msg["id"]="request_token")
+		else if (msg["id"]=="request_token")
 		{
 			var url=$.url("http://bla?"+oauthData);
 			if (url.param("oauth_callback_confirmed")!="true")
@@ -134,6 +136,7 @@
 				error("Request token failed!");
 				return;
 			}
+
 			oauth_token=url.param("oauth_token");
 			oauth_token_secret=url.param("oauth_token_secret");
 			//OAUTH 3: ASK user for authorisation
@@ -141,14 +144,17 @@
 			oauthWindow.location="http://api.twitter.com/oauth/authorize?oauth_token="+oauth_token;
 		}
 		//OAUTH 6: Permanent access token received 
-		else if (msg["id"]="access_token")
+		else if (msg["id"]=="access_token")
 		{
 			var url=$.url("http://bla?"+oauthData);
-//			if (url.param("oauth_callback_confirmed")!="true")
-	//		{
-		//		error("Request token failed!");
-		//		return;
-			//}
+			if (url.param("oauth_token")=="")
+			{
+				error("Getting permanent access failed!");
+				return;
+			}
+			config["oauth_token"]=url.param("oauth_token");
+			config["oauth_token_secret"]=url.param("oauth_token_secret");
+			$('#doSave').click();
 			oauthWindow.close();
 		}
 		else
@@ -175,6 +181,25 @@
 			$('.config').each(function(index) {
 				config[$(this).attr('id')]=$(this).val();
 			});
+			send(0,"twitter_SetConfig",config);
+
+		});
+
+		$('#doTest').click(function(){
+
+			send(0,"curl_Get",{
+				"failonerror":0,
+				"id":"bla",
+				"url":"http://api.twitter.com/1/statuses/update.json",
+				"post":"status=test",
+				"oauth":{
+					"consumer_key":config["oauth_consumer_key"],
+					"consumer_key_secret":config["oauth_consumer_key_secret"],
+					"token":config["oauth_token"],
+					"token_secret":config["oauth_token_secret"]
+				}
+			});
+	
 		});
 		
 		$('#doAuth').click(function(){
@@ -197,14 +222,10 @@
 <body>
 	<table>
 		<tr><td>Users to follow (comma seperated):<td><input size=100 type='text' class='config' id='follow'></tr>
-		<tr><td>Access key: <td><input readonly size=50 type='text' class='config' id='akey'></tr>
-		<tr>
-			<td>Access secret:<td><input readonly size=50 type='text' class='config' id='asecret'> 
-			<input type='submit' id='doAuth' value='Reautenticate...'></input>
-			<span style='background:yellow' id='authStatus'></span>
-		</tr>	
 	</table>
+	<input type='submit' id='doAuth' value='Reautenticate...'></input>
 	<input type='submit' id='doSave' value='Save'>	
+	<input type='submit' id='doTest' value='tst'>	
 </body>
 </html>
 
