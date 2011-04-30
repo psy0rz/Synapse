@@ -57,17 +57,19 @@ SYNAPSE_REGISTER(twitter_Reconnect)
 	out.event="curl_Abort";
 	out.send();
 
+	//add oauth parameters:
+	out["oauth"]["consumer_key"]=config["oauth_consumer_key"];
+	out["oauth"]["consumer_key_secret"]=config["oauth_consumer_key_secret"];
+	out["oauth"]["token"]=config["oauth_token"];
+	out["oauth"]["token_secret"]=config["oauth_token_secret"];
+
 	if (state==GET_USERS)
 	{
-		out["url"]="http://api.twitter.com/1/users/lookup.format?screen_name="+config["follow"].str();
+		out["url"]="http://api.twitter.com/1/users/lookup.json?screen_name="+config["follow"].str();
 	}
 	else if (state==STREAM)
 	{
-//		out["httpauth"]="basic";
-		out["username"]=config["username"];
-		out["password"]=config["password"];
 		out["url"]="http://stream.twitter.com/1/statuses/filter.json?follow="+userIds;
-//		out["url"]="http://stream.twitter.com/1/statuses/filter.json?track=twitter";
 
 		//reset error status
 		Cmsg err;
