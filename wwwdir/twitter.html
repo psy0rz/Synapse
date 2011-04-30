@@ -39,6 +39,20 @@
 			$("#"+configI).val(config[configI]);
 		}
 			
+		oauthWindow=window;
+		send(0,"curl_Get",{
+			"failonerror":0,
+			"id":"bla",
+			"url":"http://api.twitter.com/1/statuses/update.json",
+//			"url":"http://api.twitter.com/1/statuses/user_timeline.json",
+			"post":"&status=%26encodingtest&",
+			"oauth":{
+				"consumer_key":config["oauth_consumer_key"],
+				"consumer_key_secret":config["oauth_consumer_key_secret"],
+				"token":config["oauth_token"],
+				"token_secret":config["oauth_token_secret"]
+			}
+		});
 	});
 
 	//oauth stuff
@@ -185,22 +199,7 @@
 
 		});
 
-		$('#doTest').click(function(){
-
-			send(0,"curl_Get",{
-				"failonerror":0,
-				"id":"bla",
-				"url":"http://api.twitter.com/1/statuses/update.json",
-				"post":"status=test",
-				"oauth":{
-					"consumer_key":config["oauth_consumer_key"],
-					"consumer_key_secret":config["oauth_consumer_key_secret"],
-					"token":config["oauth_token"],
-					"token_secret":config["oauth_token_secret"]
-				}
-			});
 	
-		});
 		
 		$('#doAuth').click(function(){
 			//open the popup, this will call our oauthCallback()

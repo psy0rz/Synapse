@@ -155,6 +155,19 @@ class Ccurl
 					curlObj->mMsg->dst << " "  <<
 					(*curlObj->mMsg)["id"].str() << ") " << text);
 		}
+#ifndef NDEBUG
+//		else
+//		{
+//			string text;
+//			text.resize(length);
+//			memcpy((void *)text.c_str(),data,length);
+//			text.erase(--text.end());
+//			INFO("curl (" <<
+//					curlObj->mMsg->dst << " "  <<
+//					(*curlObj->mMsg)["id"].str() << ") " << text);
+//
+//		}
+#endif
 
 		return 0;
 	}
@@ -246,12 +259,31 @@ class Ccurl
 
 				(*mMsg)["url"].str();
 
+				const char *oauth_token=NULL;
+				const char *oauth_token_secret=NULL;
+				if ((*mMsg)["oauth"].isSet("token"))
+				{
+					oauth_token=(*mMsg)["oauth"]["token"].str().c_str();
+					oauth_token_secret=(*mMsg)["oauth"]["token_secret"].str().c_str();
+				}
+
 				//now collect base-uri, GET , POST and extra oauth_... parameters in a liboauth-array
 				int  argc;
 				char **argv = NULL;
 				argc = oauth_split_url_parameters((*mMsg)["url"].str().c_str(), &argv);
+
 				if ((*mMsg).isSet("post"))
-					argc = oauth_split_post_paramters((*mMsg)["post"].str().c_str(), &argv, 1);
+				{
+					//split it into a new array and add that to our current array:
+					int  postArgc;
+					char **postArgv = NULL;
+					postArgc = oauth_split_post_paramters((*mMsg)["post"].str().c_str(), &postArgv, 0);
+					for (int a=0; a<postArgc; a++)
+					{
+						oauth_add_param_to_array(&argc, &argv, postArgv[a]);
+					}
+					oauth_free_array(&postArgc, &postArgv);
+				}
 
 				if ((*mMsg)["oauth"].isSet("callback"))
 				{
@@ -263,14 +295,6 @@ class Ccurl
 				{
 					string s="oauth_verifier="+(*mMsg)["oauth"]["verifier"].str();
 					oauth_add_param_to_array(&argc, &argv, s.c_str());
-				}
-
-				const char *oauth_token=NULL;
-				const char *oauth_token_secret=NULL;
-				if ((*mMsg)["oauth"].isSet("token"))
-				{
-					oauth_token=(*mMsg)["oauth"]["token"].str().c_str();
-					oauth_token_secret=(*mMsg)["oauth"]["token_secret"].str().c_str();
 				}
 
 				//sign it
@@ -305,8 +329,11 @@ class Ccurl
 			}
 
 #else
-			err=CURLE_HTTP_POST_ERROR;
-			strcpy(mError,"Oauth support not compiled in. (please get liboauth and recompile synapse)");
+			if (mMsg->isSet("oauth"))
+			{
+				err=CURLE_HTTP_POST_ERROR;
+				strcpy(mError,"Oauth support not compiled in. (please get liboauth and recompile synapse)");
+			}
 #endif
 
 
