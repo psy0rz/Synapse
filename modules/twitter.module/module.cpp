@@ -19,9 +19,8 @@
 /** \file
 The twitter module.
 
-This is a simple module that follows someones twitter feed.
+This is a simple module that follows twitterfeeds
 
-TODO: add oauth or oauth2 support.
 
 */
 
@@ -44,9 +43,10 @@ enum eState {
 };
 eState state;
 string queue;
+int moduleId;
 
 //send resquest based on current state
-SYNAPSE_REGISTER(twitter_Reconnect)
+SYNAPSE_REGISTER(twitter_Request)
 {
 	queue="";
 
@@ -62,14 +62,15 @@ SYNAPSE_REGISTER(twitter_Reconnect)
 	out["oauth"]["consumer_key_secret"]=config["oauth_consumer_key_secret"];
 	out["oauth"]["token"]=config["oauth_token"];
 	out["oauth"]["token_secret"]=config["oauth_token_secret"];
+	out["failonerror"]=0;
 
 	if (state==GET_USERS)
 	{
-		out["url"]="http://api.twitter.com/1/users/lookup.json?screen_name="+config["follow"].str();
+		out["url"]="http://api.twitter.com/1/statuses/user_timeline.json";
 	}
 	else if (state==STREAM)
 	{
-		out["url"]="http://stream.twitter.com/1/statuses/filter.json?follow="+userIds;
+		out["url"]="https://userstream.twitter.com/2/user.json";
 
 		//reset error status
 		Cmsg err;
@@ -81,10 +82,30 @@ SYNAPSE_REGISTER(twitter_Reconnect)
 	out.send();
 }
 
+void request()
+{
+	Cmsg out;
+	out.dst=moduleId;
+	out.event="twitter_Request";
+	out.send();
+}
+
+void delayedRequest()
+{
+	Cmsg out;
+	out.event="timer_Set";
+	out["seconds"]=60;
+	out["event"]="twitter_Request";
+	out["dst"]=moduleId;
+	out.send();
+}
+
 
 SYNAPSE_REGISTER(module_Init)
 {
 	Cmsg out;
+
+	moduleId=msg.dst;
 
 	config.load("etc/synapse/twitter.conf");
 
@@ -124,11 +145,9 @@ SYNAPSE_REGISTER(timer_Ready)
 	out.send();
 
 	out.clear();
-	state=GET_USERS;
-	out.dst=msg.dst;
-	out.event="twitter_Reconnect";
-	out.send();
 
+	state=GET_USERS;
+	request();
 }
 
 
@@ -155,45 +174,49 @@ SYNAPSE_REGISTER(curl_Ok)
 {
 	try
 	{
+
 		//determine how to interpret the data:
 		if (state==GET_USERS)
 		{
 			Cvar data;
 			data.fromJson(queue);
-			if (data.isSet("id_str"))
+			//traverse all the users and send their last statusses
+			userIds="";
+			for (CvarList::iterator I=data.list().begin(); I!=data.list().end(); I++)
 			{
-				//userId=data["id_str"].str();
-				state=STREAM;
+				if (userIds=="")
+					userIds+=(*I)["id_str"].str();
+				else
+					userIds+=","+(*I)["id_str"].str();
+
+				Cmsg out;
+				out.event="twitter_Data";
+				out.map()=(*I).map();
+				out.send();
 			}
+			state=STREAM;
+
+			request();
 		}
-//		else if (state==GET_HISTORY)
-//		{
-//			Cvar data;
-//			data.fromJson(queue);
-//			//traverse all the history items
-//			for (CvarList::iterator I=data.list().begin(); I!=data.list().end(); I++)
-//			{
-//				Cmsg out;
-//				out.event="twitter_Status";
-//				out.map()=I->map();
-//				out.send();
-//			}
-//			state=STREAM;
-//		}
 		else if (state==STREAM)
 		{
 			//if we get disconnected, we need to reget history in case we missed something
 			state=GET_USERS;
+
+			delayedRequest();
 		}
 	}
 	catch(...)
 	{
+		Cmsg out;
+		out.event="twitter_Error";
+		out["error"]="Error while parsing twitter data";
+		out.send();
 
-		sleep(5);
-		//callTwitter();
+		delayedRequest();
 		throw;
 	}
-//	callTwitter();
+
 
 }
 
@@ -209,8 +232,8 @@ SYNAPSE_REGISTER(curl_Error)
 		//if we get disconnected, we need to reget history in case we missed something
 		state=GET_USERS;
 	}
-	sleep(30);
-//	callTwitter();
+
+	delayedRequest();
 }
 
 SYNAPSE_REGISTER(curl_Data)
@@ -232,7 +255,7 @@ SYNAPSE_REGISTER(curl_Data)
 
 				//send out message
 				Cmsg out;
-				out.event="twitter_Status";
+				out.event="twitter_Data";
 				out.map()=data;
 				out.send();
 			}
