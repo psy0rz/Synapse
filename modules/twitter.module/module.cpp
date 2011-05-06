@@ -66,8 +66,9 @@ SYNAPSE_REGISTER(twitter_Request)
 
 	if (state==GET_USERS)
 	{
-		out["url"]="http://api.twitter.com/1/statuses/user_timeline.json";
+		out["url"]="http://api.twitter.com/1/statuses/home_timeline.json?count=200";
 	}
+
 	else if (state==STREAM)
 	{
 		out["url"]="https://userstream.twitter.com/2/user.json";
@@ -180,23 +181,38 @@ SYNAPSE_REGISTER(curl_Ok)
 		{
 			Cvar data;
 			data.fromJson(queue);
-			//traverse all the users and send their last statusses
-			userIds="";
-			for (CvarList::iterator I=data.list().begin(); I!=data.list().end(); I++)
+
+			if (data.which()==CVAR_MAP && data.isSet("error"))
 			{
-				if (userIds=="")
-					userIds+=(*I)["id_str"].str();
-				else
-					userIds+=","+(*I)["id_str"].str();
-
 				Cmsg out;
-				out.event="twitter_Data";
-				out.map()=(*I).map();
+				out.event="twitter_Error";
+				out["error"]=data["error"].str();
 				out.send();
-			}
-			state=STREAM;
 
-			request();
+				delayedRequest();
+			}
+			else
+			{
+				//traverse all the users and send their last statusses
+				userIds="";
+				ERROR("count " << data.list().size());
+
+				for (CvarList::reverse_iterator I=data.list().rbegin(); I!=data.list().rend(); I++)
+				{
+					if (userIds=="")
+						userIds+=(*I)["id_str"].str();
+					else
+						userIds+=","+(*I)["id_str"].str();
+
+					Cmsg out;
+					out.event="twitter_Data";
+					out.map()=(*I).map();
+					out.send();
+				}
+				state=STREAM;
+
+				request();
+			}
 		}
 		else if (state==STREAM)
 		{
@@ -251,7 +267,18 @@ SYNAPSE_REGISTER(curl_Data)
 			{
 				//convert to data
 				Cvar data;
-				data.fromJson(jsonStr);
+				try
+				{
+					data.fromJson(jsonStr);
+				}
+				catch(...)
+				{
+					Cmsg out;
+					out.event="twitter_Error";
+					out["error"]=jsonStr;
+					out.send();
+					return;
+				}
 
 				//send out message
 				Cmsg out;

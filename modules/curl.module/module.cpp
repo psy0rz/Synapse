@@ -156,17 +156,24 @@ class Ccurl
 					(*curlObj->mMsg)["id"].str() << ") " << text);
 		}
 #ifndef NDEBUG
-//		else
-//		{
-//			string text;
-//			text.resize(length);
-//			memcpy((void *)text.c_str(),data,length);
-//			text.erase(--text.end());
-//			INFO("curl (" <<
-//					curlObj->mMsg->dst << " "  <<
-//					(*curlObj->mMsg)["id"].str() << ") " << text);
-//
-//		}
+		else
+		{
+			if (type==CURLINFO_HEADER_IN || type==CURLINFO_HEADER_OUT)
+			{
+				string text;
+				text.resize(length);
+				memcpy((void *)text.c_str(),data,length);
+				text.erase(--text.end());
+
+				//remove newline
+				if (text.length()>0)
+					text.resize(text.length()-1);
+
+				DEB("curl (" <<
+						curlObj->mMsg->dst << " "  <<
+						(*curlObj->mMsg)["id"].str() << ") " << type << ": " << text);
+			}
+		}
 #endif
 
 		return 0;
@@ -272,6 +279,7 @@ class Ccurl
 				char **argv = NULL;
 				argc = oauth_split_url_parameters((*mMsg)["url"].str().c_str(), &argv);
 
+
 				if ((*mMsg).isSet("post"))
 				{
 					//split it into a new array and add that to our current array:
@@ -316,8 +324,12 @@ class Ccurl
 				oauth_hdr = oauth_serialize_url_sep(argc, 1, argv, (char *)", ", 6);
 
 				//format header and add to curl
-				string authHeader="Authorization: OAuth ";
-				authHeader+=oauth_hdr;
+				string authHeader=oauth_hdr;
+				//workaround oauth bug? (remove leading ", ")
+				if (authHeader.substr(0,2)==", ")
+					authHeader=authHeader.substr(2);
+
+				authHeader="Authorization: OAuth "+authHeader;
 				DEB("oauth header: " << authHeader);
 				headers = curl_slist_append(headers, authHeader.c_str());
 
