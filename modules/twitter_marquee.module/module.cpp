@@ -17,12 +17,17 @@
 
 
 #include "synapse.h"
+#include "cconfig.h"
 
 using namespace std;
 
 string statusStr;
 string errorStr;
 bool ok;
+
+synapse::Cconfig config;
+
+Cvar statusses;
 
 void setMarquee()
 {
@@ -41,6 +46,7 @@ void setMarquee()
 SYNAPSE_REGISTER(module_Init)
 {
 	ok=false;
+	config.load("etc/synapse/twitter_marquee.conf");
 	
 	Cmsg out;
 	out.event="core_LoadModule";
@@ -80,10 +86,33 @@ SYNAPSE_REGISTER(twitter_Error)
 	setMarquee();
 }
 
-SYNAPSE_REGISTER(twitter_Status)
+SYNAPSE_REGISTER(twitter_Data)
 {
-	statusStr="%C2TWITTER  %C6"+msg["user"]["name"].str()+":%C0"+msg["text"].str();
-	setMarquee();
+	if (msg.isSet("user"))
+	{
+		string name=msg["user"]["screen_name"];
+		statusses[name].list().push_front(msg["text"].str());
+
+		while ((long)statusses[name].list().size() > config["show"][name])
+		{
+			statusses[name].list().pop_back();
+		}
+
+		//now format a nice status string
+		statusStr="%C2TWITTER ";
+		for (	Cvar::iterator nameI=statusses.begin();
+				nameI!=statusses.end();
+				nameI++)
+		{
+			for (	CvarList::iterator statusI=nameI->second.list().begin();
+					statusI!=nameI->second.list().end();
+					statusI++)
+			{
+				statusStr+="%C6"+nameI->first+":%C0"+statusI->str()+"  ";
+			}
+		}
+		setMarquee();
+	}
 }
 
 
