@@ -57,10 +57,13 @@ namespace synapse
 	typedef map< string,class Cvar> CvarMap;
 	typedef list<class Cvar> CvarList;
 
+	//NOTE: we look at CvarMap as the "default" type, and CvarList as an extra type. so we make the CvarMap as easy accessible as possible. but the consequence is that using a CvarList will take a little more work. (involving a call to .list() and using CvarList::iterator)
+	//also look at the #defines below, containing easy to use FOREACH... macros.
+
 	class Cvar {
 	public:
 		typedef CvarMap::iterator iterator;
-		typedef CvarList::iterator iteratorList;
+		typedef CvarMap::value_type value_type;
 
 		//common stuff
 		int which();
@@ -86,7 +89,7 @@ namespace synapse
 
 
 		//CVAR_MAP and CVAR_LIST stuff
-		const int size();
+		//const int size();
 
 		//CVAR_MAP stuff
 		void operator=(CvarMap & value);
@@ -101,6 +104,7 @@ namespace synapse
 
 		//CVAR_LIST stuff
 		void operator=(CvarList & value);
+		operator CvarList & ();
 		CvarList & list();
 
 		//comparison
@@ -128,8 +132,23 @@ namespace synapse
 	};
 }
 
+//the main type:
 typedef synapse::Cvar Cvar;
-typedef synapse::CvarList CvarList;
 
+//easy acces to lists and maps:
+typedef synapse::CvarList CvarList;
+typedef synapse::CvarMap CvarMap;
+
+//traverse over a Cvar of type map. pair is a reference to the current item: pair.first will be the key (always a string), pair.second will be the value. (always a Cvar)
+#define FOREACH_VARMAP(pair, var) BOOST_FOREACH(CvarMap::value_type &pair, var.map())
+
+//traverse over a Cvar of type list. item will be a reference to the current item. (a Cvar)
+#define FOREACH_VARLIST(item, var) BOOST_FOREACH(CvarList::value_type &item, var.list())
+
+//traverse over a Cvar of type map. iter will contain a iterator to the current item.
+#define FOREACH_VARMAP_ITER(iter, var) for(CvarMap::iterator iter=var.map().begin(); iter!=var.map().end(); iter++)
+
+//traverse over a Cvar of type list. iter will contain a iterator to the current item.
+#define FOREACH_VARLIST_ITER(iter, var) for(CvarList::iterator iter=var.list().begin(); iter!=var.list().end(); iter++)
 
 #endif

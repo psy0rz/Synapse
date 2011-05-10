@@ -725,7 +725,7 @@ SYNAPSE_REGISTER(module_Init)
 
 	//listen on configured ports
 	//NOTE: applications may send additional Listen-events for other ports
-	for (Cvar::iteratorList I=config["ports"].list().begin(); I!=config["ports"].list().end(); I++)
+	for (CvarList::iterator I=config["ports"].list().begin(); I!=config["ports"].list().end(); I++)
 	{
 		out.clear();
 		out.event="http_json_Listen";

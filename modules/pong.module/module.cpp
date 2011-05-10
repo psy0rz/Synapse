@@ -520,7 +520,7 @@ namespace pong
 		lock_guard<mutex> lock(threadMutex);
 		if (msg.list().size()==3)
 		{
-			Cmsg::iteratorList I;
+			CvarList::iterator I;
 			I=msg.list().begin();
 			int x,y;
 			long double duration;

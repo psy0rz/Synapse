@@ -214,28 +214,26 @@ SYNAPSE_REGISTER(twitter_Data)
 	{
 		//now format a nice status string
 		gStatusStr=gConfig["main_header"].str();
-		for (	CvarList::iterator tweetI=gTweets.list().begin();
-				tweetI!=gTweets.list().end();
-				tweetI++)
+		FOREACH_VARLIST(tweet, gTweets)
 		{
 			//filter stuff out we dont want
 
 //			FOREACH_MAP(repalce,)
 //			VARMAP_EACH(replace, gConfig["replace"])
 //			VARLIST_EACH(replace, gConfig["replace"])
-			{
-				DEB(replace.second["poep"].str());
+///			{
+	//			DEB(replace.second["poep"].str());
 //				DEB(replace["poep"].str());
-			}
+		//	}
 
 
 
 
 
 			gStatusStr+=gConfig["name_header"].str();
-			gStatusStr+=(*tweetI)["user"]["screen_name"].str();
+			gStatusStr+=tweet["user"]["screen_name"].str();
 			gStatusStr+=gConfig["text_header"].str();
-			gStatusStr+=(*tweetI)["text"].str();
+			gStatusStr+=tweet["text"].str();
 		}
 
 		gStatusStr+=gConfig["main_footer"].str();

@@ -708,7 +708,7 @@ void CmessageMan::getEvents(Cvar & var)
 
 
 	//get more information for each event
-	for (Cvar::iterator eventI=var.begin();  eventI!=var.end(); eventI++)
+	FOREACH_VARMAP_ITER(eventI,var)
 	{
 		string s=eventI->first;
 		CeventPtr eventPtr=getEvent(s, CuserPtr());

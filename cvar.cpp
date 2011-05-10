@@ -243,18 +243,18 @@ Cvar::operator long double()
 }
 
 ///CVAR_MAP and CVAR_LIST stuff
-const int Cvar::size()
-{
-	switch (value.which())
-	{
-		case CVAR_MAP:
-			return (((CvarMap&)(*this)).size());
-		case CVAR_LIST:
-			return (((CvarList&)(*this)).size());
-		default:
-			return(0);
-	}
-}
+//const int Cvar::size()
+//{
+//	switch (value.which())
+//	{
+//		case CVAR_MAP:
+//			return (((CvarMap&)(*this)).size());
+//		case CVAR_LIST:
+//			return (((CvarList&)(*this)).size());
+//		default:
+//			return(0);
+//	}
+//}
 
 
 /// CVAR_MAP stuff
@@ -316,8 +316,7 @@ void Cvar::erase(const char * key)
 }
 
 /// CVAR_LIST stuff
-
-CvarList & Cvar::list()
+Cvar::operator CvarList & ()
 {
 	if (value.which()==CVAR_EMPTY)
 	{
@@ -328,7 +327,12 @@ CvarList & Cvar::list()
 		castError("cannot convert this to CVAR_LIST");
 	}
 	return (get<CvarList&>(value));
+}
 
+
+CvarList & Cvar::list()
+{
+	return ((CvarList &)(*this));
 }
 
 
@@ -336,6 +340,7 @@ CvarList & Cvar::list()
 bool Cvar::operator==( Cvar & other)
 {
 
+	//wrong type
 	if (value.which()!=other.value.which())
 		return (false);
 
@@ -371,7 +376,7 @@ bool Cvar::operator==( Cvar & other)
 			break;
 		case CVAR_LIST:
 			//wrong count?
-			if (((CvarList)(*this)).size()!=((CvarList)other).size())
+			if (list().size()!=other.list().size())
 				return (false);
 
 			{
