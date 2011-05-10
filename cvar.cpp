@@ -55,7 +55,6 @@ Cvar::~Cvar()
 void Cvar::clear()
 {
 	value=(void *)NULL;
-	
 }
 
 bool Cvar::isEmpty()
@@ -69,9 +68,6 @@ int Cvar::which()
 }
 
 
-/*!
-    \fn Cvar::print(string s)
- */
 string Cvar::getPrint(string prefix)
 {
 	stringstream print;
@@ -129,12 +125,77 @@ string Cvar::getPrint(string prefix)
 	return print.str();
 }
 
+bool Cvar::operator==( Cvar & other)
+{
+
+	//wrong type
+	if (value.which()!=other.value.which())
+		return (false);
+
+
+	switch (value.which())
+	{
+		case CVAR_EMPTY:
+			return (true);
+			break;
+		case CVAR_LONG_DOUBLE:
+			return ((long double)(*this)==(long double)other);
+			break;
+		case CVAR_STRING:
+			return ((string)(*this)==(string)(other));
+			break;
+		case CVAR_MAP:
+			//wrong count?
+			if (((CvarMap)(*this)).size()!=((CvarMap)other).size())
+				return (false);
+
+			//recursively compare keys and values
+			for (CvarMap::iterator varI=begin(); varI!=end(); varI++)
+			{
+				//key doesnt exists in other?
+				if (!other.isSet(varI->first))
+					return (false);
+
+				//compare values (this recurses)
+				if (varI->second!=other[varI->first])
+					return (false);
+			}
+			return (true);
+			break;
+		case CVAR_LIST:
+			//wrong count?
+			if (list().size()!=other.list().size())
+				return (false);
+
+			{
+				//recursively compare values (order has to be the same as well)
+				CvarList::iterator otherVarI;
+				for (CvarList::iterator varI=list().begin(); varI!=list().end(); varI++)
+				{
+					//compare values (this recurses)
+					if ((*varI)!=(*otherVarI))
+						return false;
+					otherVarI++;
+				}
+			}
+			return (true);
+			break;
+		default:
+			castError("trying to compare unknown types?");
+			return (false);
+			break;
+	}
+}
+
+bool Cvar::operator!=( Cvar & other)
+{
+	return !(*this == other);
+}
+
 
 
 
 /// CVAR_STRING stuff
-
-
 Cvar::Cvar(const string & value)
 {
 	this->value=value;
@@ -165,9 +226,7 @@ Cvar::operator string & ()
 		try
 		{
 			//DEB("Cvar " << this << ": converting CVAR_LONG_DOUBLE to CVAR_STRING");
-			//convert value to a permanent string
 			value=lexical_cast<string>(get<long double>(value));
-			return (get<string&>(value));
 		}
 		catch(...)
 		{
@@ -194,7 +253,7 @@ Cvar::operator string & ()
 
 string & Cvar::str()
 {
-	return((string &)*this);	
+	return((string &)(*this));
 }
 
 
@@ -210,7 +269,7 @@ void Cvar::operator=(const long double & value)
 	this->value=value;
 }
 
-Cvar::operator long double()
+Cvar::operator long double &()
 {
 	if (value.which()==CVAR_LONG_DOUBLE)
 	{
@@ -221,8 +280,8 @@ Cvar::operator long double()
 		try
 		{
 			//convert string to long double
-			//DEB("Cvar " << this << ": converting CVAR_STRING to CVAR_LONG_DOUBLE"); 
-			return (lexical_cast<long double>(get<string>(value)));
+			//DEB("Cvar " << this << ": converting CVAR_STRING to CVAR_LONG_DOUBLE");
+			value=lexical_cast<long double>(get<string>(value));
 		}
 		catch(...)
 		{
@@ -239,22 +298,9 @@ Cvar::operator long double()
 	{
 		castError("cannot convert this to CVAR_LONG_DOUBLE");
 	}
-	return (get<long double>(value));
+	return (get<long double&>(value));
 }
 
-///CVAR_MAP and CVAR_LIST stuff
-//const int Cvar::size()
-//{
-//	switch (value.which())
-//	{
-//		case CVAR_MAP:
-//			return (((CvarMap&)(*this)).size());
-//		case CVAR_LIST:
-//			return (((CvarList&)(*this)).size());
-//		default:
-//			return(0);
-//	}
-//}
 
 
 /// CVAR_MAP stuff
@@ -336,73 +382,6 @@ CvarList & Cvar::list()
 }
 
 
-/// COMPARISON STUFF
-bool Cvar::operator==( Cvar & other)
-{
-
-	//wrong type
-	if (value.which()!=other.value.which())
-		return (false);
-
-
-	switch (value.which())
-	{
-		case CVAR_EMPTY:
-			return (true);
-			break;
-		case CVAR_LONG_DOUBLE:
-			return ((long double)(*this)==(long double)other);
-			break;
-		case CVAR_STRING:
-			return ((string)(*this)==(string)(other));
-			break;
-		case CVAR_MAP:
-			//wrong count?
-			if (((CvarMap)(*this)).size()!=((CvarMap)other).size())
-				return (false);
-
-			//recursively compare keys and values
-			for (CvarMap::iterator varI=begin(); varI!=end(); varI++)
-			{
-				//key doesnt exists in other?
-				if (!other.isSet(varI->first))
-					return (false);
-
-				//compare values (this recurses)
-				if (varI->second!=other[varI->first])
-					return (false);
-			}
-			return (true);
-			break;
-		case CVAR_LIST:
-			//wrong count?
-			if (list().size()!=other.list().size())
-				return (false);
-
-			{
-				//recursively compare values (order has to be the same as well)
-				CvarList::iterator otherVarI;
-				for (CvarList::iterator varI=list().begin(); varI!=list().end(); varI++)
-				{
-					//compare values (this recurses)
-					if ((*varI)!=(*otherVarI))
-						return false;
-					otherVarI++;
-				}
-			}
-			return (true);
-			break;
-		default:
-			castError("trying to compare unknown types?");
-			return (false);
-			break;
-	}
-}
-
-bool Cvar::operator!=( Cvar & other)
-{
-	return !(*this == other);
-}
 
 
 
@@ -571,5 +550,38 @@ void Cvar::fromJson(string & jsonStr)
 	fromJsonSpirit(spiritValue);
 
 }
+
+//test functionality of Cvar class, returns false on failure
+bool Cvar::selfTest()
+{
+#define TEST(condition) if (!(condition)) return (false)
+#define TESTTHROW(operation) \
+		{ \
+			bool ok=false; \
+			try \
+			{ \
+				operation \
+			} \
+			catch(...) \
+			{ \
+				ok=true; \
+			} \
+			TEST(ok); \
+		}
+
+	DEB("Selftesting Cvar");
+
+	//CVAR_LONG_DOUBLE
+	{
+		//construct
+		Cvar var(5);
+		TEST(var==6);
+	}
+
+
+	DEB("Selftest Cvar OK");
+	return(true);
+}
+
 
 }

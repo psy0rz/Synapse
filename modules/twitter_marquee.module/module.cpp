@@ -191,9 +191,7 @@ SYNAPSE_REGISTER(twitter_Data)
 			CvarList::iterator lastTweetI;
 			int tweetCount=0;
 
-			for (	CvarList::iterator tweetI=gTweets.list().begin();
-					tweetI!=gTweets.list().end();
-					tweetI++)
+			FOREACH_VARLIST_ITER( tweetI, gTweets)
 			{
 				if ((*tweetI)["user"]["screen_name"].str()==name)
 				{

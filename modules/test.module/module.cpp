@@ -24,6 +24,13 @@ int counterSleep;
 
 SYNAPSE_REGISTER(module_Init)
 {
+	Cmsg bla;
+	Cvar test;
+	Cvar kut;
+	test=bla;
+	test=kut;
+
+
 	Cmsg out;
 
 	out.clear();

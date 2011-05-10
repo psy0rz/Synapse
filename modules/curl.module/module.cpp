@@ -256,9 +256,9 @@ class Ccurl
 			if (mMsg->isSet("oauth"))
 			{
 				//WARNING: convert all used parameters to strings already so we dont throw errors later on and leak mem.
-				for(Cvar::iterator I=(*mMsg)["oauth"].begin(); I!=(*mMsg)["oauth"].end(); I++)
+				FOREACH_VARMAP(param, (*mMsg)["oauth"])
 				{
-					I->second.str();
+					param.second.str();
 				}
 
 				if ((*mMsg).isSet("post"))

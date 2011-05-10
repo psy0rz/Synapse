@@ -73,6 +73,8 @@ namespace synapse
 		void clear();
 		bool isEmpty();
 		void castError(const char *txt);
+		bool operator==( Cvar & other);
+		bool operator!=( Cvar & other);
 
 		//CVAR_STRING stuff
 		Cvar(const string & value);
@@ -85,14 +87,10 @@ namespace synapse
 		//CVAR_LONG_DOUBLE stuff
 		void operator=(const long double & value);
 		Cvar(const long double & value);
-		operator long double  ();
-
-
-		//CVAR_MAP and CVAR_LIST stuff
-		//const int size();
+		operator long double & ();
 
 		//CVAR_MAP stuff
-		void operator=(CvarMap & value);
+		//void operator=(CvarMap & value);
 		operator CvarMap & ();
 		Cvar & operator [](const string & key);
 		bool isSet(const char * key);
@@ -103,21 +101,16 @@ namespace synapse
 		CvarMap & map();
 
 		//CVAR_LIST stuff
-		void operator=(CvarList & value);
+		//void operator=(CvarList & value);
 		operator CvarList & ();
 		CvarList & list();
-
-		//comparison
-		bool operator==( Cvar & other);
-		bool operator!=( Cvar & other);
-
 
 		//json conversion stuff
 		void toJson(string & jsonStr);
 		void toJsonFormatted(string & jsonStr);
 		void fromJson(string & jsonStr);
 
-
+		static bool selfTest();
 
 	protected:
 
@@ -141,14 +134,18 @@ typedef synapse::CvarMap CvarMap;
 
 //traverse over a Cvar of type map. pair is a reference to the current item: pair.first will be the key (always a string), pair.second will be the value. (always a Cvar)
 #define FOREACH_VARMAP(pair, var) BOOST_FOREACH(CvarMap::value_type &pair, var.map())
+#define FOREACH_REVERSE_VARMAP(pair, var) BOOST_REVERSE_FOREACH(CvarMap::value_type &pair, var.map())
 
 //traverse over a Cvar of type list. item will be a reference to the current item. (a Cvar)
 #define FOREACH_VARLIST(item, var) BOOST_FOREACH(CvarList::value_type &item, var.list())
+#define FOREACH_REVERSE_VARLIST(item, var) BOOST_REVERSE_FOREACH(CvarList::value_type &item, var.list())
 
 //traverse over a Cvar of type map. iter will contain a iterator to the current item.
 #define FOREACH_VARMAP_ITER(iter, var) for(CvarMap::iterator iter=var.map().begin(); iter!=var.map().end(); iter++)
+#define FOREACH_REVERSE_VARMAP_ITER(iter, var) for(CvarMap::iterator iter=var.map().rbegin(); iter!=var.map().rend(); iter++)
 
 //traverse over a Cvar of type list. iter will contain a iterator to the current item.
 #define FOREACH_VARLIST_ITER(iter, var) for(CvarList::iterator iter=var.list().begin(); iter!=var.list().end(); iter++)
+#define FOREACH_REVERSE_VARLIST_ITER(iter, var) for(CvarList::iterator iter=var.list().rbegin(); iter!=var.list().rend(); iter++)
 
 #endif

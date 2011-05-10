@@ -531,6 +531,12 @@ void CmessageMan::checkThread()
  */
 int CmessageMan::run(string coreName, string moduleName)
 {
+	//since CVAR is so crucial and complex, we selftest it first:
+	if (!Cvar::selfTest())
+	{
+		ERROR("Cvar selftest failed, aborting");
+	}
+
 	//load the first module as user core UNLOCKED!
 	loadModule(coreName, "core");
 	this->firstModuleName=moduleName;

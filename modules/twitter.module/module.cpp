@@ -36,9 +36,8 @@ using namespace std;
 
 
 synapse::Cconfig config;
-string userIds;
 enum eState {
-		GET_USERS,
+		GET_TIMELINE,
 		STREAM
 };
 eState state;
@@ -64,7 +63,7 @@ SYNAPSE_REGISTER(twitter_Request)
 	out["oauth"]["token_secret"]=config["oauth_token_secret"];
 	out["failonerror"]=0;
 
-	if (state==GET_USERS)
+	if (state==GET_TIMELINE)
 	{
 		out["url"]="http://api.twitter.com/1/statuses/home_timeline.json?count=200";
 	}
@@ -147,7 +146,7 @@ SYNAPSE_REGISTER(timer_Ready)
 
 	out.clear();
 
-	state=GET_USERS;
+	state=GET_TIMELINE;
 	request();
 }
 
@@ -177,7 +176,7 @@ SYNAPSE_REGISTER(curl_Ok)
 	{
 
 		//determine how to interpret the data:
-		if (state==GET_USERS)
+		if (state==GET_TIMELINE)
 		{
 			Cvar data;
 			data.fromJson(queue);
@@ -193,20 +192,12 @@ SYNAPSE_REGISTER(curl_Ok)
 			}
 			else
 			{
-				//traverse all the users and send their last statusses
-				userIds="";
-				ERROR("count " << data.list().size());
-
-				for (CvarList::reverse_iterator I=data.list().rbegin(); I!=data.list().rend(); I++)
+				//traverse all older tweets
+//				FOREACH_REVERSE_VARLIST(tweet, data)
 				{
-					if (userIds=="")
-						userIds+=(*I)["id_str"].str();
-					else
-						userIds+=","+(*I)["id_str"].str();
-
 					Cmsg out;
 					out.event="twitter_Data";
-					out.map()=(*I).map();
+//					out=tweet;
 					out.send();
 				}
 				state=STREAM;
@@ -217,7 +208,7 @@ SYNAPSE_REGISTER(curl_Ok)
 		else if (state==STREAM)
 		{
 			//if we get disconnected, we need to reget history in case we missed something
-			state=GET_USERS;
+			state=GET_TIMELINE;
 
 			delayedRequest();
 		}
@@ -246,7 +237,7 @@ SYNAPSE_REGISTER(curl_Error)
 	if (state==STREAM)
 	{
 		//if we get disconnected, we need to reget history in case we missed something
-		state=GET_USERS;
+		state=GET_TIMELINE;
 	}
 
 	delayedRequest();
