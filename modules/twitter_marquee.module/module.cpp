@@ -190,6 +190,7 @@ SYNAPSE_REGISTER(twitter_Data)
 			//count the messages for this user
 			CvarList::iterator lastTweetI;
 			int tweetCount=0;
+
 			for (	CvarList::iterator tweetI=gTweets.list().begin();
 					tweetI!=gTweets.list().end();
 					tweetI++)
@@ -212,16 +213,33 @@ SYNAPSE_REGISTER(twitter_Data)
 	if (changed)
 	{
 		//now format a nice status string
-		gStatusStr="%S1Webba TWITBAR  ";
+		gStatusStr=gConfig["main_header"].str();
 		for (	CvarList::iterator tweetI=gTweets.list().begin();
 				tweetI!=gTweets.list().end();
 				tweetI++)
 		{
+			//filter stuff out we dont want
 
-			gStatusStr+="%C7"+(*tweetI)["user"]["screen_name"].str()+":%C5"+(*tweetI)["text"].str()+"  ";
+//			FOREACH_MAP(repalce,)
+//			VARMAP_EACH(replace, gConfig["replace"])
+//			VARLIST_EACH(replace, gConfig["replace"])
+			{
+				DEB(replace.second["poep"].str());
+//				DEB(replace["poep"].str());
+			}
+
+
+
+
+
+			gStatusStr+=gConfig["name_header"].str();
+			gStatusStr+=(*tweetI)["user"]["screen_name"].str();
+			gStatusStr+=gConfig["text_header"].str();
+			gStatusStr+=(*tweetI)["text"].str();
 		}
 
-		//filter stuff out we dont want
+		gStatusStr+=gConfig["main_footer"].str();
+
 
 
 		setMarquee();
