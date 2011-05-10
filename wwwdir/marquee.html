@@ -67,6 +67,10 @@
 	    else
 		    scrollSpeed=1025;
 
+	    //replace movements with something simple (not supported yet)
+		s=s.replace(/%M./g, " %C0");
+	    
+	    
 		s="<span style='color: red'>"+s+"</span>";
 		s=s.replace(/%C0/g, "</span><span style='color: #ff0000'>");
 		s=s.replace(/%C1/g, "</span><span style='color: #aa0000'>");
