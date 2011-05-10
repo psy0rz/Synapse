@@ -35,12 +35,40 @@
 
 	synapse_register("marquee_Set",function(msg_src, msg_dst, msg_event, msg)
 	{
+		msg["text"]="0        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1        1";
+
 		var s;
 		s=msg["text"].replace(/&/gmi, '&amp;').
 			replace(/"/gmi, '&quot;').
 		    replace(/>/gmi, '&gt;').
-		    replace(/</gmi, '&lt;');
-	    
+		    replace(/</gmi, '&lt;').
+		    replace(/ /gmi, '&nbsp;');
+
+	    if (s.indexOf('%S')!=-1)
+	    {
+			var speed=s.substr(s.indexOf('%S')+2,1);
+			if (speed==0)
+				scrollSpeed=1025;
+			else if (speed==1)
+				scrollSpeed=950;
+			else if (speed==2)
+				scrollSpeed=825;
+			else if (speed==3)
+				scrollSpeed=725;
+			else if (speed==4)
+				scrollSpeed=650;
+			else if (speed==5)
+				scrollSpeed=525;
+			else if (speed==6)
+				scrollSpeed=450;
+			else if (speed==7)
+				scrollSpeed=125;
+
+			s=s.replace(/%S./g, "");
+	    }
+	    else
+		    scrollSpeed=1025;
+
 		s="<span style='color: red'>"+s+"</span>";
 		s=s.replace(/%C0/g, "</span><span style='color: #ff0000'>");
 		s=s.replace(/%C1/g, "</span><span style='color: #aa0000'>");
@@ -51,11 +79,37 @@
 		s=s.replace(/%C6/g, "</span><span style='color: #00aa00'>");
 		s=s.replace(/%C7/g, "</span><span style='color: #00ff00'>");
 		$('#text').html(s);
+
+		scrollPos=0;
 	});
 
 
 	/// JAVA SCRIPT EVENT HANDLERS
+	var scrollInterval=1;
+	//pixels per second:
+	var scrollSpeed=1000;
+	var scrollLastTime=new Date().getTime();
+	var scrollPos=0;
+	
+	function scroller()
+	{
+		var currentTime=new Date().getTime();
+		
+		scrollPos+=((currentTime-scrollLastTime)*scrollSpeed)/1000;
+		scrollLastTime=currentTime;
+		
+		if (scrollPos>=$('#scroller :first-child').width()+$('#scroller').parent().width())
+		{
+			scrollPos=0;
+		}
+		$('#scroller').css('left', $('#scroller').parent().width()-scrollPos);
+	}
+
+	
 	$(document).ready(function(){
+
+
+		setInterval(scroller, scrollInterval);
 
 	});
 
@@ -69,22 +123,30 @@
 			height:100%;
 			text-align:center;
 			background-color: #000000;
+
+			overflow: hidden;
 		}
 		
-		#text
+		#scroller
 		{
 			color: #ffffff;
-			font-size: 1000%;
+			font-size: 200px;
 			font-weight: bold;
 			font-family: monospace;
-		} 
+			
+			white-space: nowrap;
+			
+			overflow: visible;
+			position:relative;
+			
+		}
 
  	</style>
 </head>
 
 
 <body>
-	<div id='text'></div>
+	<div id='scroller'><span id='text'></span></div>
 </body>
 </html>
 
