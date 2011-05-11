@@ -169,7 +169,7 @@ bool Cvar::operator==( Cvar & other)
 
 			{
 				//recursively compare values (order has to be the same as well)
-				CvarList::iterator otherVarI;
+				CvarList::iterator otherVarI=other.list().begin();
 				for (CvarList::iterator varI=list().begin(); varI!=list().end(); varI++)
 				{
 					//compare values (this recurses)
@@ -578,7 +578,8 @@ void Cvar::fromJson(string & jsonStr)
 
 }
 
-//test functionality of Cvar class, returns false on failure
+//test functionality of Cvar class, returns false on failure.
+//Its wise to also  run this small and fast test in the non-debug version, to detect strange problems with compiler optimizations or different compiler version.
 bool Cvar::selfTest()
 {
 #define TEST(condition) if (!(condition)) return (false)
@@ -651,6 +652,11 @@ bool Cvar::selfTest()
 		a=8;
 		TESTTHROW(a.list());
 		TEST(a==8);
+
+		DEB("test long compare");
+		Cvar c;
+		c=a;
+		TEST(a==c);
 
 		DEB("test: long re-assign string");
 		a=9;
@@ -729,17 +735,21 @@ bool Cvar::selfTest()
 
 		DEB("test: string to list");
 		a="fifth";
-		CvarList c;
-		TESTTHROW(c=a);
+		CvarList d;
+		TESTTHROW(d=a);
 		TESTTHROW(a.list());
 		TEST(a=="fifth");
+
+		DEB("test string compare");
+		Cvar c;
+		c=a;
+		TEST(a==c);
 
 		DEB("test: string re-assign long");
 		a="sixth";
 		TEST(a=="sixth");
 		a=7;
 		TEST(a==7);
-
 
 		DEB("test: string re-assign list");
 		a="sixth";
@@ -756,6 +766,7 @@ bool Cvar::selfTest()
 		m.map();
 		a=m;
 		TEST(a.map().size()==0);
+
 	}
 
 
@@ -781,12 +792,16 @@ bool Cvar::selfTest()
 		TESTTHROW(a.map());
 		TEST(a.list().back()==2);
 
+		DEB("test list compare");
+		Cvar c;
+		c=a;
+		TEST(a==c);
+
 		DEB("test: list re-assign long");
 		a.clear();
 		a.list();
 		a=5;
 		TEST(a==5);
-
 
 		DEB("test: list re-assign string");
 		a.clear();
@@ -802,10 +817,98 @@ bool Cvar::selfTest()
 		a=b;
 		TEST(a.map().size()==0);
 
+
 	}
 
-	DEB("Selftest Cvar OK");
-	return(false);
+	{
+		DEB("test: Selftesting CVAR_MAP");
+
+		DEB("test: create basic map");
+		Cvar a;
+		a["first"]=1;
+		a["second"]="two";
+		TEST(a["first"]==1);
+		TEST(a["second"]=="two");
+
+		DEB("test: map to long");
+		TESTTHROW(a=a+1);
+		TEST(a["first"]==1);
+
+		DEB("test: map to string");
+		TESTTHROW(a.str());
+		TEST(a["first"]==1);
+
+		DEB("test: map to list");
+		TESTTHROW(a.list());
+		TEST(a["first"]==1);
+
+		DEB("test map compare");
+		Cvar c;
+		c=a;
+		TEST(a==c);
+
+		DEB("test: map re-assign long");
+		a.clear();
+		a.map();
+		a=5;
+		TEST(a==5);
+
+		DEB("test: map re-assign string");
+		a.clear();
+		a.map();
+		a="test";
+		TEST(a=="test");
+
+		DEB("test: map re-assign list");
+		a.clear();
+		a.map();
+		Cvar b;
+		b.list();
+		a=b;
+		TEST(a.list().size()==0);
+
+
+	}
+
+	{
+		DEB("test: Selftesting Cvar complex data structures");
+
+		DEB("test: create complex structure");
+		Cvar a;
+		a["empty"];
+		a["number"]=1;
+		a["list"].list().push_back(1);
+		a["list"].list().push_back(Cvar());
+		a["string"]="text";
+		a["map"]["number2"]=2;
+		a["map"]["list2"].list().push_back(2);
+		a["map"]["string2"]="text2";
+		a["list"].list().back()["submap"].list().push_back(3);
+		DEB("test: complex map layout:" << a.getPrint());
+
+		DEB("test: convert to json and back");
+		string s;
+		a.toJson(s);
+		Cvar b;
+		b.fromJson(s);
+
+		DEB("test: complex compare json result");
+		TEST(a==b);
+		//make a deep but small change:
+		b["list"].list().back()["submap"].list().back()=4;
+		TEST(a!=b);
+		//change it back:
+		b["list"].list().back()["submap"].list().back()=3;
+		TEST(a==b);
+
+		DEB("test: convert to formatted json and back");
+		a.toJsonFormatted(s);
+		b.fromJson(s);
+		TEST(a==b);
+
+	}
+
+	DEB("test: all Cvar tests OK");
 	return(true);
 }
 

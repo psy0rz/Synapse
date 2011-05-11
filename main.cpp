@@ -23,10 +23,17 @@
 
 #include "cmessageman.h"
 
-	int main(int argc, char *argv[])
+int main(int argc, char *argv[])
+{
+	//since CVAR is so crucial and complex, we selftest it first:
+	if (!synapse::Cvar::selfTest())
 	{
-		using namespace synapse;
-		CmessageMan messageMan;
+		ERROR("Cvar selftest failed. (this should not happen and is a compiler- or program bug!)");
+		return(1);
+	}
+
+	{
+		synapse::CmessageMan messageMan;
 		if (argc==2)
 		{
 			return (messageMan.run("modules/core.module/libcore.so",argv[1]));
@@ -37,5 +44,6 @@
 			return (1);
 		}
 	}
+}
 
 
