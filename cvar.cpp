@@ -206,9 +206,10 @@ Cvar::Cvar(const string & value)
 // 	this->value=string(value);
 // }
 
-void Cvar::operator=(const string & value)
+string & Cvar::operator=(const string & value)
 {
 	this->value=value;
+	return((string &)(*this));
 }
 
 
@@ -256,12 +257,33 @@ string & Cvar::str()
 	return((string &)(*this));
 }
 
+bool Cvar::operator==(const string & other)
+{
+	return ((string)(*this)==(other));
+}
+
+bool Cvar::operator!=(const string & other)
+{
+	return ((string)(*this)!=(other));
+}
+
+//bool Cvar::operator==(const char * other)
+//{
+//	return ((string)(*this)==other);
+//}
+//
+//bool Cvar::operator!=(const char * other)
+//{
+//	return ((string)(*this)!=other);
+//}
+
 
 /// CVAR_LONG_DOUBLE stuff
 
-void Cvar::operator=(const long double & value)
+long double & Cvar::operator=(const long double & value)
 {
 	this->value=value;
+	return((long double &)(*this));
 }
 
  Cvar::Cvar(const long double & value)
@@ -301,6 +323,11 @@ Cvar::operator long double &()
 	return (get<long double&>(value));
 }
 
+//bool Cvar::operator==(long double & other)
+//{
+//	return ((long double)(*this)==other);
+//
+//}
 
 
 /// CVAR_MAP stuff
@@ -555,31 +582,230 @@ void Cvar::fromJson(string & jsonStr)
 bool Cvar::selfTest()
 {
 #define TEST(condition) if (!(condition)) return (false)
+//tests if operation throws an exception.
+//NOTE: dont forget to check if the value is still what it is supposed to be, AFTER the throw.
 #define TESTTHROW(operation) \
 		{ \
 			bool ok=false; \
 			try \
 			{ \
-				operation \
+				operation ; \
+			} \
+			catch (const synapse::runtime_error& e) \
+			{ \
+				ok=true; \
+				DEB("exception: " << e.what()); \
 			} \
 			catch(...) \
 			{ \
 				ok=true; \
 			} \
+			if (!ok) ERROR("did not throw exception!"); \
 			TEST(ok); \
 		}
 
-	DEB("Selftesting Cvar");
 
-	//CVAR_LONG_DOUBLE
+
 	{
-		//construct
-		Cvar var(5);
-		TEST(var==6);
+		DEB("test: Selftesting CVAR_LONG_DOUBLE");
+
+		DEB("test: empty long value");
+		Cvar e;
+		TEST((int)e==0);
+
+		DEB("test: use long as boolean");
+		e=1;
+		TEST(e);
+
+		DEB("test: long construct");
+		Cvar a(2.12);
+		TEST(a==2.12);
+
+		DEB("test: long assignment");
+		TEST((a=3.13) == 3.13);
+		TEST(a==3.13);
+
+
+		DEB("test: long assignment reference")
+		Cvar b;
+		TEST((a=b=5.15) == 5.15);
+		TEST(a==5.15);
+		TEST(b==5.15);
+
+		DEB("test: int to string");
+		a=6;
+		TEST((string)a=="6");
+
+		DEB("test: long to string");
+		a=6.14;
+		TEST((string)a=="6.13999999999999968026");
+		TEST(a.str()=="6.13999999999999968026");
+
+		DEB("test: long to map");
+		a=7;
+		TESTTHROW((CvarMap)a);
+		TESTTHROW(a.map());
+		TEST(a==7);
+
+		DEB("test: long to list");
+		a=8;
+		TESTTHROW(a.list());
+		TEST(a==8);
+
+		DEB("test: long re-assign string");
+		a=9;
+		TEST(a==9);
+		a="test";
+		TEST(a.str()=="test");
+
+		DEB("test: long re-assign list");
+		a=9;
+		TEST(a==9);
+		Cvar l;
+		l.list();
+		a=l;
+		TEST(a.list().size()==0);
+
+		DEB("test: long re-assign map");
+		a=9;
+		TEST(a==9);
+		Cvar m;
+		m.map();
+		a=m;
+		TEST(a.map().size()==0);
+
+		DEB("test: basic arithmetic");
+		a=5;
+		a=a+1;
+		a=a-2;
+		TEST(a==4);
+	}
+
+	{
+		DEB("test: Selftesting CVAR_STRING");
+
+		DEB("test: empty string value");
+		Cvar e;
+		TEST(e=="");
+
+		DEB("test: use string as boolean");
+		e="1";
+		TEST(e);
+		TEST(e=="1");
+
+		DEB("test: use invalid string as boolean");
+		e="blah";
+		TESTTHROW(if (e););
+		TEST(e=="blah");
+
+		DEB("test: string construct from const char");
+		Cvar a("first");
+		TEST(a=="first");
+
+		DEB("test: const char assignment");
+		TEST((a="second") == "second");
+		TEST(a=="second");
+
+		DEB("test: const char assignment reference")
+		Cvar b;
+		TEST((a=b="third") == "third");
+		TEST(a=="third");
+		TEST(b=="third");
+
+		DEB("test: valid string number to int");
+		a="6";
+		TEST(a==6);
+
+		DEB("test: invalid string number to int");
+		a="blah";
+		TESTTHROW(a=a+6);
+		TEST(a=="blah");
+
+		DEB("test: string to map");
+		a="fourth";
+		TESTTHROW((CvarMap)a);
+		TESTTHROW(a.map());
+		TEST(a=="fourth");
+
+		DEB("test: string to list");
+		a="fifth";
+		CvarList c;
+		TESTTHROW(c=a);
+		TESTTHROW(a.list());
+		TEST(a=="fifth");
+
+		DEB("test: string re-assign long");
+		a="sixth";
+		TEST(a=="sixth");
+		a=7;
+		TEST(a==7);
+
+
+		DEB("test: string re-assign list");
+		a="sixth";
+		TEST(a=="sixth");
+		Cvar l;
+		l.list();
+		a=l;
+		TEST(a.list().size()==0);
+
+		DEB("test: string re-assign map");
+		a="sixth";
+		TEST(a=="sixth");
+		Cvar m;
+		m.map();
+		a=m;
+		TEST(a.map().size()==0);
 	}
 
 
+	{
+		DEB("test: Selftesting CVAR_LIST");
+
+		DEB("test: create basic list");
+		Cvar a;
+		a.list().push_back(Cvar("one"));
+		a.list().push_back(2);
+		TEST(a.list().front()=="one");
+		TEST(a.list().back()==2);
+
+		DEB("test: list to long");
+		TESTTHROW(a=a+1);
+		TEST(a.list().back()==2);
+
+		DEB("test: list to string");
+		TESTTHROW(a.str());
+		TEST(a.list().back()==2);
+
+		DEB("test: list to map");
+		TESTTHROW(a.map());
+		TEST(a.list().back()==2);
+
+		DEB("test: list re-assign long");
+		a.clear();
+		a.list();
+		a=5;
+		TEST(a==5);
+
+
+		DEB("test: list re-assign string");
+		a.clear();
+		a.list();
+		a="test";
+		TEST(a=="test");
+
+		DEB("test: list re-assign map");
+		a.clear();
+		a.list();
+		Cvar b;
+		b.map();
+		a=b;
+		TEST(a.map().size()==0);
+
+	}
+
 	DEB("Selftest Cvar OK");
+	return(false);
 	return(true);
 }
 

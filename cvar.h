@@ -78,19 +78,25 @@ namespace synapse
 
 		//CVAR_STRING stuff
 		Cvar(const string & value);
-	//    Cvar(const char * value);
-		void operator=(const string & value);
-	 //	void operator=(const char * value);
+//		Cvar(const char * value);
+		string & operator=(const string & value);
+//		void operator=(const char * value);
 		operator string &();
+		bool operator==(const string & other);
+		bool operator!=(const string & other);
+//		bool operator==(const char * other);
+//		bool operator!=(const char * other);
 		string & str();
 
 		//CVAR_LONG_DOUBLE stuff
-		void operator=(const long double & value);
+		long double & operator=(const long double & value);
 		Cvar(const long double & value);
 		operator long double & ();
+//		bool operator==(long double & other);
+//		bool operator!=(long double & other);
 
 		//CVAR_MAP stuff
-		//void operator=(CvarMap & value);
+//		void operator=(CvarMap & value);
 		operator CvarMap & ();
 		Cvar & operator [](const string & key);
 		bool isSet(const char * key);

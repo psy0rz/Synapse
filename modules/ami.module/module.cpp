@@ -199,7 +199,7 @@ synapse::CnetMan<CnetAmi> net;
 */
 SYNAPSE_REGISTER(ami_Connect)
 {
-	if (msg["port"]==0)
+	if ((int)msg["port"]==0)
 		net.runConnect(msg.src, msg["host"], 5038, 5);
 	else
 		net.runConnect(msg.src, msg["host"], msg["port"], 5);
