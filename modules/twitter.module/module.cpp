@@ -40,14 +40,14 @@ enum eState {
 		GET_TIMELINE,
 		STREAM
 };
-eState state;
-string queue;
-int moduleId;
+eState gState;
+string gQueue;
+int gModuleId;
 
 //send resquest based on current state
 SYNAPSE_REGISTER(twitter_Request)
 {
-	queue="";
+	gQueue="";
 
 	Cmsg out;
 
@@ -63,12 +63,12 @@ SYNAPSE_REGISTER(twitter_Request)
 	out["oauth"]["token_secret"]=config["oauth_token_secret"];
 	out["failonerror"]=0;
 
-	if (state==GET_TIMELINE)
+	if (gState==GET_TIMELINE)
 	{
 		out["url"]="https://api.twitter.com/1/statuses/home_timeline.json?count=200";
 	}
 
-	else if (state==STREAM)
+	else if (gState==STREAM)
 	{
 		out["url"]="https://userstream.twitter.com/2/user.json";
 
@@ -85,7 +85,7 @@ SYNAPSE_REGISTER(twitter_Request)
 void request()
 {
 	Cmsg out;
-	out.dst=moduleId;
+	out.dst=gModuleId;
 	out.event="twitter_Request";
 	out.send();
 }
@@ -94,9 +94,9 @@ void delayedRequest()
 {
 	Cmsg out;
 	out.event="timer_Set";
-	out["seconds"]=60;
+	out["seconds"]=config["reconnect_time"];
 	out["event"]="twitter_Request";
-	out["dst"]=moduleId;
+	out["dst"]=gModuleId;
 	out.send();
 }
 
@@ -105,7 +105,7 @@ SYNAPSE_REGISTER(module_Init)
 {
 	Cmsg out;
 
-	moduleId=msg.dst;
+	gModuleId=msg.dst;
 
 	config.load("etc/synapse/twitter.conf");
 
@@ -146,7 +146,7 @@ SYNAPSE_REGISTER(timer_Ready)
 
 	out.clear();
 
-	state=GET_TIMELINE;
+	gState=GET_TIMELINE;
 	request();
 }
 
@@ -176,10 +176,10 @@ SYNAPSE_REGISTER(curl_Ok)
 	{
 
 		//determine how to interpret the data:
-		if (state==GET_TIMELINE)
+		if (gState==GET_TIMELINE)
 		{
 			Cvar data;
-			data.fromJson(queue);
+			data.fromJson(gQueue);
 
 			if (data.which()==CVAR_MAP && data.isSet("error"))
 			{
@@ -200,15 +200,15 @@ SYNAPSE_REGISTER(curl_Ok)
 					out=tweet;
 					out.send();
 				}
-				state=STREAM;
+				gState=STREAM;
 
 				request();
 			}
 		}
-		else if (state==STREAM)
+		else if (gState==STREAM)
 		{
 			//if we get disconnected, we need to reget history in case we missed something
-			state=GET_TIMELINE;
+			gState=GET_TIMELINE;
 
 			delayedRequest();
 		}
@@ -234,10 +234,10 @@ SYNAPSE_REGISTER(curl_Error)
 	out["error"]=msg["error"];
 	out.send();
 
-	if (state==STREAM)
+	if (gState==STREAM)
 	{
 		//if we get disconnected, we need to reget history in case we missed something
-		state=GET_TIMELINE;
+		gState=GET_TIMELINE;
 	}
 
 	delayedRequest();
@@ -245,14 +245,14 @@ SYNAPSE_REGISTER(curl_Error)
 
 SYNAPSE_REGISTER(curl_Data)
 {
-	queue+=msg["data"].str();
-	if(state==STREAM)
+	gQueue+=msg["data"].str();
+	if(gState==STREAM)
 	{
-		while (queue.find("\n")!=string::npos)
+		while (gQueue.find("\n")!=string::npos)
 		{
 			//get the jsonStr, delimited by \n:
-			string jsonStr=queue.substr(0,queue.find("\n")+1);
-			queue.erase(0,jsonStr.length());
+			string jsonStr=gQueue.substr(0,gQueue.find("\n")+1);
+			gQueue.erase(0,jsonStr.length());
 
 			if (jsonStr.length()>2)
 			{

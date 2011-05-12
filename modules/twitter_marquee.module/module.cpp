@@ -83,9 +83,12 @@ SYNAPSE_REGISTER(twitter_Ok)
 
 SYNAPSE_REGISTER(twitter_Error)
 {
-	gOk=false;
-	gErrorStr=msg["error"].str();
-	setMarquee();
+	if (gConfig["show_errors"]==1)
+	{
+		gOk=false;
+		gErrorStr=msg["error"].str();
+		setMarquee();
+	}
 }
 
 /*
