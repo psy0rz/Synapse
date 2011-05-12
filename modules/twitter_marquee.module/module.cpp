@@ -18,6 +18,7 @@
 
 #include "synapse.h"
 #include "cconfig.h"
+#include <boost/regex.hpp>
 
 using namespace std;
 
@@ -203,7 +204,40 @@ SYNAPSE_REGISTER(twitter_Data)
 			if (tweetCount>maxTweets)
 				gTweets.list().erase(lastTweetI);
 
+			//count the total number of keyword-messages
+			tweetCount=0;
+			FOREACH_VARLIST_ITER(tweetI, gTweets)
+			{
+				//not a regular user?
+				if (!gConfig["show"].isSet( (*tweetI)["user"]["screen_name"] ))
+				{
+					//count it
+					tweetCount++;
+					lastTweetI=tweetI;
+				}
+			}
+
+			//too much? delete last one
+			if (tweetCount>gConfig["keyword_max_tweets"])
+				gTweets.list().erase(lastTweetI);
+
 			changed=true;
+		}
+	}
+
+	//delete a message
+	if (msg.isSet("delete"))
+	{
+		FOREACH_VARLIST_ITER(tweetI, gTweets)
+		{
+			//find the message
+			if ((*tweetI)["id_str"]==msg["delete"]["status"]["id_str"])
+			{
+				//delete it
+				gTweets.list().erase(tweetI);
+				changed=true;
+				break;
+			}
 		}
 	}
 
@@ -213,24 +247,25 @@ SYNAPSE_REGISTER(twitter_Data)
 		gStatusStr=gConfig["main_header"].str();
 		FOREACH_VARLIST(tweet, gTweets)
 		{
+
+			string text=tweet["text"];
+
 			//filter stuff out we dont want
-
-//			FOREACH_MAP(repalce,)
-//			VARMAP_EACH(replace, gConfig["replace"])
-//			VARLIST_EACH(replace, gConfig["replace"])
-///			{
-	//			DEB(replace.second["poep"].str());
-//				DEB(replace["poep"].str());
-		//	}
-
-
-
+			FOREACH_VARMAP(replace, gConfig["replace"])
+			{
+				text=regex_replace(
+						text,
+						boost::regex(replace.first),
+						replace.second.str(),
+						boost::match_default | boost::format_all
+				);
+			}
 
 
 			gStatusStr+=gConfig["name_header"].str();
 			gStatusStr+=tweet["user"]["screen_name"].str();
 			gStatusStr+=gConfig["text_header"].str();
-			gStatusStr+=tweet["text"].str();
+			gStatusStr+=text;
 		}
 
 		gStatusStr+=gConfig["main_footer"].str();

@@ -19,7 +19,7 @@
 /** \file
 The twitter module.
 
-This is a simple module that follows twitterfeeds
+This is a simple module that follow a twitterfeed of someone, using the REST and stream API.
 
 
 */
@@ -65,7 +65,7 @@ SYNAPSE_REGISTER(twitter_Request)
 
 	if (state==GET_TIMELINE)
 	{
-		out["url"]="http://api.twitter.com/1/statuses/home_timeline.json?count=200";
+		out["url"]="http://api.twitter.com/1/statuses/home_timeline.json?count=1200";
 	}
 
 	else if (state==STREAM)
