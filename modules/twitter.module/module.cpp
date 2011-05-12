@@ -65,7 +65,7 @@ SYNAPSE_REGISTER(twitter_Request)
 
 	if (state==GET_TIMELINE)
 	{
-		out["url"]="http://api.twitter.com/1/statuses/home_timeline.json?count=1200";
+		out["url"]="https://api.twitter.com/1/statuses/home_timeline.json?count=200";
 	}
 
 	else if (state==STREAM)

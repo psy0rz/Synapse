@@ -25,6 +25,8 @@
 
 #include "exception/cexception.h"
 
+#include <signal.h>
+
 //include curl_ssl_lock to initalise correct thread locking for the ssl libraries
 #define USE_OPENSSL
 #include <curl/curl.h>
@@ -361,7 +363,18 @@ class Ccurl
 		//perform the operation (unlocked)
 		if (err==0)
 		{
+			//ignore SIGPIPE
+			struct sigaction act;
+			struct sigaction oldact;
+			memset (&act, '\0', sizeof(act));
+			act.sa_handler=SIG_IGN;
+			sigaction(SIGPIPE,&act,&oldact);
+
+			//finally execute the curl action
 			err=curl_easy_perform(mCurl);
+
+			//restore SIGPIPE to previous handler
+			sigaction(SIGPIPE,&oldact,NULL);
 		}
 
 		{

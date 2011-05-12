@@ -5,6 +5,7 @@ static pthread_mutex_t *lockarray;
 
 #ifdef USE_OPENSSL
 #include <openssl/crypto.h>
+
 static void lock_callback(int mode, int type, const char *file, int line)
 {
   (void)file;
