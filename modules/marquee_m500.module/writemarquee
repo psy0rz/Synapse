@@ -7,6 +7,7 @@
 
 #Set comport with stty -F /dev/ttyS0 2400
 #(8,n,1)
+system("stty -F /dev/ttyS0 2400");
 
 use Fcntl;
 

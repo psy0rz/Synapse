@@ -94,6 +94,9 @@ namespace synapse
 		void toJson(string & jsonStr);
 		void fromJson(string & jsonStr);
 
+		//things to make Cvar usage easier
+		Cvar & operator=(Cvar & var);
+
 	};
 
 	typedef shared_ptr<Cmsg> CmsgPtr;

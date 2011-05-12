@@ -192,12 +192,12 @@ SYNAPSE_REGISTER(curl_Ok)
 			}
 			else
 			{
-				//traverse all older tweets
-//				FOREACH_REVERSE_VARLIST(tweet, data)
+				//broadcast all older tweets
+				FOREACH_REVERSE_VARLIST(tweet, data)
 				{
 					Cmsg out;
 					out.event="twitter_Data";
-//					out=tweet;
+					out=tweet;
 					out.send();
 				}
 				state=STREAM;

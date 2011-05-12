@@ -190,7 +190,6 @@ SYNAPSE_REGISTER(twitter_Data)
 			//count the messages for this user
 			CvarList::iterator lastTweetI;
 			int tweetCount=0;
-
 			FOREACH_VARLIST_ITER( tweetI, gTweets)
 			{
 				if ((*tweetI)["user"]["screen_name"].str()==name)

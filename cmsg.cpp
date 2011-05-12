@@ -84,3 +84,8 @@ void Cmsg::fromJson(string & jsonStr)
 }
 
 
+Cvar & Cmsg::operator=(Cvar & var)
+{
+	(Cvar&)(*this)=var;
+	return((Cvar&)(*this));
+}
