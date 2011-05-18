@@ -35,6 +35,7 @@ This module can dynamicly generate playlists from directory's. It also can cache
 
 #include "exception/cexception.h"
 
+#define BOOST_FILESYSTEM_VERSION 3
 #include "boost/filesystem.hpp"
 
 
@@ -93,11 +94,12 @@ namespace pl
 
 		public:
 
-		Cpath()
-		:path()
+		Cpath(const path & p)
+		:path(p)
 		{
 			mWriteDate=0;
 		}
+
 
 		//get/cache modification date
 		int getDate()
@@ -114,6 +116,8 @@ namespace pl
 			return(filename());
 		}
 
+
+
 		//get/cache metadata field (from the path database)
 		std::string getMeta(std::string key)
 		{
@@ -128,14 +132,15 @@ namespace pl
 		}
 	};
 
-	class CsortedDir
+	class CsortedDir: public list<Cpath>
 	{
 		private:
 		path mBasePath;
 		string mSortField;
 
 		public:
-		list<Cpath> mPaths;
+//		list<Cpath> mPaths;
+//		list<Cpath>::iterator iterator;
 
 		static bool compareFilename (Cpath first, Cpath second)
 		{
@@ -153,26 +158,23 @@ namespace pl
 			mBasePath=basePath;
 			mSortField=sortField;
 
-			DEB("Reading directory " << basePath);
+			DEB("Reading directory " << basePath.string());
 			directory_iterator end_itr;
 			for ( directory_iterator itr( basePath );
 				itr != end_itr;
 				++itr )
 			{
-				Cpath p;
-				//p=*itr;
-				mPaths.push_back(p);
+				path p;
+				p=itr->filename();
+				push_back(p);
 			}
 
 			if (sortField=="filename")
-				mPaths.sort(compareFilename);
+				sort(compareFilename);
 			else if (sortField=="date")
-				mPaths.sort(compareDate);
+				sort(compareDate);
 			else
 				throw(synapse::runtime_error("sort mode not implemented yet!"));
-
-
-			mPaths.sort(compareFilename);
 		}
 	};
 
@@ -193,18 +195,56 @@ namespace pl
 		//to make stuff more readable and less error prone
 		enum Edirection { NEXT, PREVIOUS };
 		enum Erecursion { RECURSE, DONT_RECURSE };
-		enum Efiletype { DIRECTORY, FILE };
+///		enum Efiletype { DIRECTORY, FILE };
 
+		/*
+		/a/b
+		/a/b/c/d
+		*/
 
 		//traverses directories/files
-		path movePath(path currentPath, string sortField, Edirection direction, Erecursion recursion, Efiletype filetype)
+		//start at startPath, currentPath contains the 'selected' path. direction tells if you want to move up or down.
+		//returns resulting path after this movement. when first or last path is reached it loops.
+		path movePath(path startPath, path currentPath, string sortField, Edirection direction, Erecursion recursion)
 		{
-			//get directory listing of the path
-			CsortedDir sortedDir(currentPath,sortField);
+			//move one dir higher (if not at startPath already)
+			path parentPath;
+			if (currentPath==startPath)
+				parentPath=currentPath;
+			else
+				parentPath=currentPath.parent_path();
 
-			//find the path
-			path p;
-			return p;
+			//get directory listing of the parentPath
+			CsortedDir sortedDir(parentPath,sortField);
+
+			//iterate to the current path
+			CsortedDir::iterator dirI;
+			for(	dirI=sortedDir.begin();
+					dirI!=sortedDir.end();
+					dirI++)
+			{
+				//found it!
+				if (*dirI==currentPath.filename())
+				{
+					if (direction==NEXT)
+						dirI++;
+					else if (direction==PREVIOUS)
+					{
+						if (dirI==sortedDir.begin())
+							dirI==--sortedDir.end();
+						else
+							dirI--;
+					}
+					break;
+				}
+			}
+
+			if (dirI==sortedDir.end())
+			{
+				dirI=sortedDir.begin();
+			}
+
+			return (parentPath/=(*dirI));
 		}
 
 		public:
@@ -212,7 +252,7 @@ namespace pl
 		//next file
 		void next()
 		{
-			mCurrentFile=movePath(mCurrentFile,"filename",NEXT,RECURSE,FILE);
+			mCurrentFile=movePath(mCurrentPath, mCurrentFile,"filename",NEXT,RECURSE);
 		}
 
 		//prev file
@@ -220,14 +260,19 @@ namespace pl
 		{
 		}
 
+		void reset()
+		{
+			mCurrentPath=mBasePath;
+			mCurrentFile=mBasePath;
+			next();
+		}
+
 		void create(string id, string basePath)
 		{
 			mId=id;
 			mBasePath=basePath;
-			mCurrentPath=basePath;
-			mCurrentFile=basePath;
-			next();
-//			reset();
+			DEB("Created iterator " << id << " for path " << basePath);
+			reset();
 		}
 
 
@@ -239,6 +284,7 @@ namespace pl
 			out["id"]=mId;
 			out["basePath"]=mBasePath.directory_string();
 			out["currentPath"]=mCurrentPath.directory_string();
+			out["currentFile"]=mCurrentFile.directory_string();
 
 //			if (*mIterDir!= directory_iterator())
 //				out["selectedDir"]=(*mIterDir)->path().directory_string();
