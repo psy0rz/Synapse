@@ -176,13 +176,14 @@ namespace pl
 			else
 				throw(synapse::runtime_error("sort mode not implemented yet!"));
 		}
+
 	};
 
 
 	class Citer
 	{
 		private:
-		path mBasePath;
+		path mRootPath;
 		path mCurrentPath;
 		path mCurrentFile;
 
@@ -203,48 +204,93 @@ namespace pl
 		*/
 
 		//traverses directories/files
-		//start at startPath, currentPath contains the 'selected' path. direction tells if you want to move up or down.
+		//currentPath contains the 'selected' path. direction tells if you want to move up or down.
 		//returns resulting path after this movement. when first or last path is reached it loops.
-		path movePath(path startPath, path currentPath, string sortField, Edirection direction, Erecursion recursion)
+		//recursion means, recurse until we're at a file
+		//rootPath is the highest path, it can never be escaped.
+		path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion)
 		{
-			//move one dir higher (if not at startPath already)
-			path parentPath;
-			if (currentPath==startPath)
-				parentPath=currentPath;
+			//determine the path we should get the initial listing of:
+			path listPath;
+			if (currentPath==rootPath)
+				listPath=currentPath;
 			else
-				parentPath=currentPath.parent_path();
+				listPath=currentPath.parent_path();
 
-			//get directory listing of the parentPath
-			CsortedDir sortedDir(parentPath,sortField);
-
-			//iterate to the current path
 			CsortedDir::iterator dirI;
-			for(	dirI=sortedDir.begin();
-					dirI!=sortedDir.end();
-					dirI++)
+
+			while(1)
 			{
-				//found it!
-				if (*dirI==currentPath.filename())
+				//get sorted directory listing
+				CsortedDir sortedDir(listPath,sortField);
+
+				//try to find the current path:
+				if (!currentPath.empty())
+					dirI=find(sortedDir.begin(), sortedDir.end(), currentPath.filename());
+				else
+					dirI=sortedDir.end();
+
+				//currentPath not found?
+				if (dirI==sortedDir.end())
 				{
+					//start at the first or last entry depending on direction
 					if (direction==NEXT)
+						dirI=sortedDir.begin();
+					else
+						dirI==--sortedDir.end();
+				}
+				else
+				{
+					//move one step in the correct direction
+					if (direction==NEXT)
+					{
 						dirI++;
-					else if (direction==PREVIOUS)
+					}
+					//PREVIOUS:
+					else
 					{
 						if (dirI==sortedDir.begin())
-							dirI==--sortedDir.end();
+							dirI=sortedDir.end();
 						else
 							dirI--;
 					}
-					break;
+				}
+
+				//top or bottom was reached
+				if (dirI==sortedDir.end())
+				{
+					//can we one dir higher?
+					if (recursion==RECURSE && listPath!=rootPath)
+					{
+						//yes, so go one dir higher and continue the loop
+						currentPath=listPath;
+						listPath=currentPath.parent_path();
+					}
+					else
+					{
+						//no, cant go higher.
+						//clear the current path, so it just gets the first or last entry
+						currentPath.clear();
+					}
+				}
+				//we found something
+				else
+				{
+					//should we recurse and is it a directory?
+					if (recursion==RECURSE && is_directory(listPath/(*dirI)))
+					{
+						//enter it
+						listPath=listPath/(*dirI);
+						currentPath.clear();
+					}
+					else
+					{
+						//we've found a entry we like, so return it
+						return (listPath/(*dirI));
+					}
+
 				}
 			}
-
-			if (dirI==sortedDir.end())
-			{
-				dirI=sortedDir.begin();
-			}
-
-			return (parentPath/=(*dirI));
 		}
 
 		public:
@@ -256,22 +302,23 @@ namespace pl
 		}
 
 		//prev file
-		void prev()
+		void previous()
 		{
+			mCurrentFile=movePath(mCurrentPath, mCurrentFile,"filename",PREVIOUS,RECURSE);
 		}
 
 		void reset()
 		{
-			mCurrentPath=mBasePath;
-			mCurrentFile=mBasePath;
+			mCurrentPath=mRootPath;
+			mCurrentFile=mRootPath;
 			next();
 		}
 
-		void create(string id, string basePath)
+		void create(string id, string rootPath)
 		{
 			mId=id;
-			mBasePath=basePath;
-			DEB("Created iterator " << id << " for path " << basePath);
+			mRootPath=rootPath;
+			DEB("Created iterator " << id << " for path " << rootPath);
 			reset();
 		}
 
@@ -282,7 +329,7 @@ namespace pl
 			out.event="pl_Entry";
 			out.dst=dst;
 			out["id"]=mId;
-			out["basePath"]=mBasePath.directory_string();
+			out["rootPath"]=mRootPath.directory_string();
 			out["currentPath"]=mCurrentPath.directory_string();
 			out["currentFile"]=mCurrentFile.directory_string();
 
@@ -449,7 +496,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_Previous)
 	{
-
+		iterMan.get(msg["id"]).previous();
+		iterMan.get(msg["id"]).send(msg.src);
 	}
 
 
