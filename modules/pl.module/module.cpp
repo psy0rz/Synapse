@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -139,6 +139,7 @@ namespace pl
 		string mSortField;
 
 		public:
+		enum Efiletype  { FILE, DIR, ALL };
 //		list<Cpath> mPaths;
 //		list<Cpath>::iterator iterator;
 
@@ -153,7 +154,7 @@ namespace pl
 		}
 
 
-		CsortedDir(path basePath, string sortField)
+		CsortedDir(path basePath, string sortField, Efiletype filetype)
 		{
 			mBasePath=basePath;
 			mSortField=sortField;
@@ -166,7 +167,14 @@ namespace pl
 			{
 				path p;
 				p=itr->filename();
-				push_back(p);
+				if (
+						(filetype==ALL) ||
+						(filetype==DIR && is_directory(*itr)) ||
+						(filetype==FILE && is_regular(*itr))
+				)
+				{
+					push_back(p);
+				}
 			}
 
 			if (sortField=="filename")
@@ -196,7 +204,6 @@ namespace pl
 		//to make stuff more readable and less error prone
 		enum Edirection { NEXT, PREVIOUS };
 		enum Erecursion { RECURSE, DONT_RECURSE };
-///		enum Efiletype { DIRECTORY, FILE };
 
 		/*
 		/a/b
@@ -208,7 +215,7 @@ namespace pl
 		//returns resulting path after this movement. when first or last path is reached it loops.
 		//recursion means, recurse until we're at a file
 		//rootPath is the highest path, it can never be escaped.
-		path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion)
+		path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype)
 		{
 			//determine the path we should get the initial listing of:
 			path listPath;
@@ -218,11 +225,10 @@ namespace pl
 				listPath=currentPath.parent_path();
 
 			CsortedDir::iterator dirI;
-
-			while(1)
+			do
 			{
 				//get sorted directory listing
-				CsortedDir sortedDir(listPath,sortField);
+				CsortedDir sortedDir(listPath, sortField, filetype);
 
 				//try to find the current path:
 				if (!currentPath.empty())
@@ -237,7 +243,10 @@ namespace pl
 					if (direction==NEXT)
 						dirI=sortedDir.begin();
 					else
-						dirI==--sortedDir.end();
+					{
+						dirI=sortedDir.end();
+						dirI--;
+					}
 				}
 				else
 				{
@@ -276,7 +285,7 @@ namespace pl
 				//we found something
 				else
 				{
-					//should we recurse and is it a directory?
+					//should we recurse?
 					if (recursion==RECURSE && is_directory(listPath/(*dirI)))
 					{
 						//enter it
@@ -285,12 +294,14 @@ namespace pl
 					}
 					else
 					{
-						//we've found a entry we like, so return it
 						return (listPath/(*dirI));
 					}
-
 				}
 			}
+			while(listPath!=currentPath);
+
+			//not found, return currentpath
+			return(currentPath);
 		}
 
 		public:
@@ -298,13 +309,44 @@ namespace pl
 		//next file
 		void next()
 		{
-			mCurrentFile=movePath(mCurrentPath, mCurrentFile,"filename",NEXT,RECURSE);
+			mCurrentFile=movePath(mCurrentPath, mCurrentFile, "filename", NEXT, RECURSE, CsortedDir::FILE);
 		}
 
 		//prev file
 		void previous()
 		{
-			mCurrentFile=movePath(mCurrentPath, mCurrentFile,"filename",PREVIOUS,RECURSE);
+			mCurrentFile=movePath(mCurrentPath, mCurrentFile,"filename", PREVIOUS, RECURSE, CsortedDir::FILE);
+		}
+
+		void nextDir()
+		{
+			mCurrentPath=movePath(mRootPath, mCurrentPath, "filename", NEXT, DONT_RECURSE, CsortedDir::DIR);
+			mCurrentFile=mCurrentPath;
+			next();
+		}
+
+		void previousDir()
+		{
+			mCurrentPath=movePath(mRootPath, mCurrentPath, "filename", PREVIOUS, DONT_RECURSE, CsortedDir::DIR);
+			mCurrentFile=mCurrentPath;
+			previous();
+		}
+
+		void exitDir()
+		{
+			if (mCurrentPath!=mRootPath)
+			{
+				mCurrentPath=mCurrentPath.parent_path();
+				mCurrentFile=mCurrentPath;
+				next();
+			}
+		}
+
+		void enterDir()
+		{
+//			mCurrentPath=movePath(mRootPath, mCurrentPath,"filename",NEXT,DONT_RECURSE);
+			mCurrentFile=mCurrentPath;
+			next();
 		}
 
 		void reset()
@@ -443,6 +485,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_NextDir)
 	{
+		iterMan.get(msg["id"]).nextDir();
+		iterMan.get(msg["id"]).send(msg.src);
 
 	}
 
@@ -454,7 +498,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_PreviousDir)
 	{
-
+		iterMan.get(msg["id"]).previousDir();
+		iterMan.get(msg["id"]).send(msg.src);
 	}
 
 	/** Enters selected directory
@@ -464,7 +509,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_EnterDir)
 	{
-
+		iterMan.get(msg["id"]).enterDir();
+		iterMan.get(msg["id"]).send(msg.src);
 	}
 
 	/** Exits directory, selecting directory on higher up the hierarchy
@@ -474,6 +520,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_ExitDir)
 	{
+		iterMan.get(msg["id"]).exitDir();
+		iterMan.get(msg["id"]).send(msg.src);
 
 	}
 
