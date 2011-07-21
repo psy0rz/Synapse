@@ -131,7 +131,8 @@ function chatPrintOnline()
 //determine the id of the paper the user wants to edit
 function getUrlId()
 {
-	var file=jQuery.url.segment(1);
+
+	var file=$.url(document.location).segment(1);
 	if (file==parseInt(file))
 		return(file);
 	else
@@ -795,6 +796,11 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 		}
 	});
 
+	//delete the session just before unloading 
+	window.onbeforeunload=function()
+	{
+		send(0,"core_DelSession");
+	}
 	
 	
 	/// JAVA SCRIPT EVENT HANDLERS

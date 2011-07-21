@@ -231,6 +231,7 @@ namespace paper
 			mAuthCursor=false;
 			mAuthChat=false;
 
+
 		}
 
 
@@ -601,13 +602,20 @@ namespace paper
 			if (!getClient(clientId).mAuthOwner)
 				throw(synapse::runtime_error("Only the owner can change the security settings of this drawing."));
 
-			mDrawing["auth"][key]["view"]=rights["view"];
-			mDrawing["auth"][key]["change"]=rights["change"];
-			mDrawing["auth"][key]["owner"]=rights["owner"];
-			mDrawing["auth"][key]["cursor"]=rights["cursor"];
-			mDrawing["auth"][key]["chat"]=rights["chat"];
-			if (rights.isSet("description"))
-				mDrawing["auth"][key]["description"]=rights["description"];
+			if (rights.map().size()!=0)
+			{
+				mDrawing["auth"][key]["view"]=rights["view"];
+				mDrawing["auth"][key]["change"]=rights["change"];
+				mDrawing["auth"][key]["owner"]=rights["owner"];
+				mDrawing["auth"][key]["cursor"]=rights["cursor"];
+				mDrawing["auth"][key]["chat"]=rights["chat"];
+				if (rights.isSet("description"))
+					mDrawing["auth"][key]["description"]=rights["description"];
+			}
+			else
+			{
+				mDrawing["auth"].map().erase(key);
+			}
 
 			mDrawing.changed();
 

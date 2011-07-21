@@ -68,10 +68,10 @@
 		synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
 		{
 			//up on creating we get temporary owner rights.
-			//now create our own permanent key with full rights:
+			//now set permanent global rights to "allow all"
 			send(msg_src,"paper_ChangeAuth",
 			{
-				"key":getClientId(),
+				"key":"",
 				"rights":
 				{
 					"owner":1,
@@ -84,7 +84,7 @@
 			}); 
 
 			//now go to the paper
-			document.location=msg["htmlPath"]+"#"+getClientId();
+			document.location=msg["htmlPath"];//+"#"+getClientId();
 		});
 
 

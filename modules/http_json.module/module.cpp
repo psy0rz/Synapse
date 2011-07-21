@@ -15,6 +15,8 @@
     You should have received a copy of the GNU General Public License
     along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
 
+//remove this to enable debugging in this module:
+#define NDEBUG
 
 #include "cnetman.h"
 #include "synapse.h"
@@ -45,6 +47,7 @@
 #include "cconfig.h"
 
 #include <time.h>
+
 
 
 /**
