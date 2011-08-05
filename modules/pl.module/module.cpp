@@ -217,6 +217,9 @@ namespace pl
 		//rootPath is the highest path, it can never be escaped.
 		path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype)
 		{
+			DEB("rootpath:" << rootPath);
+			DEB("currentpath:" << currentPath);
+			
 			//determine the path we should get the initial listing of:
 			path listPath;
 			if (currentPath==rootPath)
@@ -224,6 +227,8 @@ namespace pl
 			else
 				listPath=currentPath.parent_path();
 
+			path startPath=listPath;
+			
 			CsortedDir::iterator dirI;
 			do
 			{
@@ -297,8 +302,9 @@ namespace pl
 						return (listPath/(*dirI));
 					}
 				}
+ 				DEB(listPath << " en " << startPath);
 			}
-			while(listPath!=currentPath);
+			while(listPath!=startPath);
 
 			//not found, return currentpath
 			return(currentPath);
@@ -309,13 +315,13 @@ namespace pl
 		//next file
 		void next()
 		{
-			mCurrentFile=movePath(mCurrentPath, mCurrentFile, "filename", NEXT, RECURSE, CsortedDir::FILE);
+			mCurrentFile=movePath(mCurrentPath, mCurrentFile, "filename", NEXT, RECURSE, CsortedDir::ALL);
 		}
 
 		//prev file
 		void previous()
 		{
-			mCurrentFile=movePath(mCurrentPath, mCurrentFile,"filename", PREVIOUS, RECURSE, CsortedDir::FILE);
+			mCurrentFile=movePath(mCurrentPath, mCurrentFile,"filename", PREVIOUS, RECURSE, CsortedDir::ALL);
 		}
 
 		void nextDir()
@@ -344,7 +350,8 @@ namespace pl
 
 		void enterDir()
 		{
-//			mCurrentPath=movePath(mRootPath, mCurrentPath,"filename",NEXT,DONT_RECURSE);
+			//find the first directory in that directory, and dont go higher:
+			mCurrentPath=movePath(mCurrentPath, mCurrentPath, "filename", NEXT, DONT_RECURSE, CsortedDir::DIR);
 			mCurrentFile=mCurrentPath;
 			next();
 		}
