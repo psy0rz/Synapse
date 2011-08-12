@@ -57,8 +57,9 @@ SYNAPSE_REGISTER(module_Init)
 	out.clear();
 	out.event="dmx_Connect";
   	out["id"]=1;
-  	out["host"]="localhost";
-  	out["port"]=7777;
+  	out["host"]="192.168.14.77";
+//  	out["host"]="localhost";
+  	out["port"]=777;
   	out.send();
 
 
@@ -79,6 +80,10 @@ class CnetDmx : public synapse::Cnet
 		out.dst=id;
 		out.event="dmx_Connected";
 		out.send();
+
+		//password
+		string s("777\n\r");
+		doWrite(s);
 	}
 
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
@@ -132,6 +137,15 @@ class CnetDmx : public synapse::Cnet
 		out.send();
 	}
 
+// 	void startAsyncRead()
+// 	{
+// 		asio::async_read_until(
+// 				tcpSocket,
+// 				readBuffer,
+// 				boost::regex("a"),
+// 				bind(&Cnet::readHandler, this, _1, _2)
+// 			);
+// 	}
 
 };
 

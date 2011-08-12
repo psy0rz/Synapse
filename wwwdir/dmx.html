@@ -42,27 +42,39 @@
 				ui.value
 				send(0,"dmx_Set",{
 					id:1,
-					channel:5,
+					channel:$(this).attr('_channel'),
 					value:ui.value
 				});
 				
 			}
 		 
 		});
+
+		synapse_register("dmx_Set",function(msg_src, msg_dst, msg_event, msg)
+		{
+			$("[_channel="+msg["channel"]+"]").slider("option", "value", msg["value"]);
+		});
+			
 	});
 
 
 	</script>
 
 	<style>
-
+		.slider{
+			float:left;
+			margin:2em;
+		}
 
  	</style>
 </head>
 
 
 <body>	
-<div class='slider'></div>
+<div class='slider' _channel='5'>red</div>
+<div class='slider' _channel='7'>green</div>
+<div class='slider' _channel='6'>white</div>
+<div class='slider' _channel='8'>blue</div>
 </body>
 </html>
 
