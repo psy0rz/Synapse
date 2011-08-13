@@ -64,6 +64,15 @@ SYNAPSE_REGISTER(module_Init)
 	out["recvGroup"]=	"modules";
 	out.send();
 
+	//anyone can set positions
+	out.clear();
+	out.event="core_ChangeEvent";
+	out["event"]=		"dmx_SetPosition";
+	out["modifyGroup"]=	"modules";
+	out["sendGroup"]=	"anonymous";
+	out["recvGroup"]=	"modules";
+	out.send();
+
 	//anyone can receive updates
 	out.clear();
 	out.event="core_ChangeEvent";
@@ -225,15 +234,34 @@ SYNAPSE_REGISTER(dmx_Set)
 	net.doWrite(msg["id"], s);
 
 	Cmsg out;
+	out=msg;
 	out.event="dmx_Update";
-	out["channel"]=msg["channel"];
-	out["value"]=msg["value"];
+	out.src=0;
+	out.dst=0;
 	out.send();
 
 	dmxValues[msg["channel"]]["value"]=msg["value"];
-	dmxValues[msg["channel"]]["channel"]=msg["channel"];
 }
 
+
+/** Set dmx position
+ *
+ */
+SYNAPSE_REGISTER(dmx_SetPosition)
+{
+	if (msg["channel"]>1024 || msg["channel"]<0)
+		throw(synapse::runtime_error("Illegal channel"));
+
+	dmxValues[msg["channel"]]["left"]=msg["left"];
+	dmxValues[msg["channel"]]["top"]=msg["top"];
+
+	Cmsg out;
+	out=msg;
+	out.event="dmx_Update";
+	out.src=0;
+	out.dst=0;
+	out.send();
+}
 
 SYNAPSE_REGISTER(dmx_Get)
 {
@@ -242,8 +270,8 @@ SYNAPSE_REGISTER(dmx_Get)
 		Cmsg out;
 		out.dst=msg.src;
 		out.event="dmx_Update";
-		out["channel"]=value.second["channel"];
-		out["value"]=value.second["value"];
+		out=value.second;
+		out["channel"]=value.first;
 		out.send();
 
 	}
