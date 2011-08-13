@@ -210,6 +210,8 @@ SYNAPSE_REGISTER(dmx_Set)
 	if (msg["value"]>255 || msg["value"]<0)
 		throw(synapse::runtime_error("Illegal value"));
 
+	if (msg["channel"]==6 && msg["value"]<180)
+		msg["value"]=180;
 
 
 	stringstream dmxStr;

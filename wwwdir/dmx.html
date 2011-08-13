@@ -6,7 +6,7 @@
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
 	<title>playlist test</title>
 
-	<script type="text/javascript" src="/synapse/synapse.js"></script>
+	<script type="text/javascript" src="/synapse/synapse.js?1"></script>
 
 	<script type="text/javascript">
 
@@ -28,13 +28,6 @@
 	/// JAVA SCRIPT EVENT HANDLERS
 	$(document).ready(function(){
 		
-
-		$(".send").click(function()
-		{
-			var msg=JSON.parse($(this).parent().children(".message").val());
-			send(msg[0],msg[1],msg[2]);
-			
-		});
 
 		$(".slider").slider({ 
 			orientation: 'vertical',
@@ -67,6 +60,7 @@
 		.slider {
 			float:left;
 			margin:2em;
+			height: 255px;
 		}
 
  	</style>
