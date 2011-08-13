@@ -21,13 +21,20 @@
 #include <boost/regex.hpp>
 #include <sstream>
 #include <iomanip>
+#include "exception/cexception.h"
 
 using namespace boost;
 using namespace std;
 
+int moduleSessionId=0;
+int netSessionId=0;
+Cvar dmxValues;
+
 SYNAPSE_REGISTER(module_Init)
 {
 	Cmsg out;
+
+	moduleSessionId=msg.dst;
 
 	out.clear();
 	out.event="core_ChangeModule";
@@ -36,7 +43,7 @@ SYNAPSE_REGISTER(module_Init)
 
 	out.clear();
 	out.event="core_ChangeSession";
-	out["maxThreads"]=10;
+	out["maxThreads"]=1;
 	out.send();
 
 	out.clear();
@@ -44,13 +51,35 @@ SYNAPSE_REGISTER(module_Init)
   	out["name"]="http_json";
   	out.send();
 
-  	//anyone can set
+	out.clear();
+	out.event="core_NewSession";
+  	out.send();
+
+  	//anyone can set values
 	out.clear();
 	out.event="core_ChangeEvent";
 	out["event"]=		"dmx_Set";
 	out["modifyGroup"]=	"modules";
 	out["sendGroup"]=	"anonymous";
+	out["recvGroup"]=	"modules";
+	out.send();
+
+	//anyone can receive updates
+	out.clear();
+	out.event="core_ChangeEvent";
+	out["event"]=		"dmx_Update";
+	out["modifyGroup"]=	"modules";
+	out["sendGroup"]=	"modules";
 	out["recvGroup"]=	"anonymous";
+	out.send();
+
+	//anyone can request full updates
+	out.clear();
+	out.event="core_ChangeEvent";
+	out["event"]=		"dmx_Get";
+	out["modifyGroup"]=	"modules";
+	out["sendGroup"]=	"anonymous";
+	out["recvGroup"]=	"modules";
 	out.send();
 
 	//just connect something
@@ -90,39 +119,30 @@ class CnetDmx : public synapse::Cnet
 	{
 		//convert streambuf to string
 		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), readBuffer.size());
-		dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 
-		
-		/* Example lirc output:
-			0000000000001010 00 sys_00_command_10 PHILIPS_RC-5
-			0000000000001010 01 sys_00_command_10 PHILIPS_RC-5
-			0000000000001010 02 sys_00_command_10 PHILIPS_RC-5
-			0000000000001010 03 sys_00_command_10 PHILIPS_RC-5
-			0000000000001011 00 sys_00_command_11 PHILIPS_RC-5
-			0000000000001011 01 sys_00_command_11 PHILIPS_RC-5
-			0000000000001011 02 sys_00_command_11 PHILIPS_RC-5
-		*/
 		//parse lirc output
-		smatch what;
-		if (regex_match(
-			dataStr,
-			what, 
-			boost::regex("(.*?) (.*?) (.*?) (.*?)\n")
-		))
-		{
-			//send to destination -1: this is the user configurable event mapper
-			//TODO: different events for long-presses and double presses?
-			Cmsg out;
-			out.dst=-1;
-			out.event="dmx_"+what[4]+"."+what[3];
-			out["code"]		=what[1];
-			out["repeat"]	=what[2];
-			out.send();
-		}
-		else
-		{
-			ERROR("Cant parse dmx output: " << dataStr);
-		}
+//		smatch what;
+//		if (regex_match(
+//			dataStr,
+//			what,
+//			boost::regex("(.*?) (.*?) (.*?) (.*?)\n")
+//		))
+//		{
+//			//send to destination -1: this is the user configurable event mapper
+//			//TODO: different events for long-presses and double presses?
+//			Cmsg out;
+//			out.dst=-1;
+//			out.event="dmx_"+what[4]+"."+what[3];
+//			out["code"]		=what[1];
+//			out["repeat"]	=what[2];
+//			out.send();
+//		}
+//		else
+//		{
+//			ERROR("Cant parse dmx output: " << dataStr);
+//		}
+
+		DEB("DMX answer: "<<dataStr);
 
 		readBuffer.consume(dataStr.length());
 
@@ -137,24 +157,46 @@ class CnetDmx : public synapse::Cnet
 		out.send();
 	}
 
-// 	void startAsyncRead()
-// 	{
-// 		asio::async_read_until(
-// 				tcpSocket,
-// 				readBuffer,
-// 				boost::regex("a"),
-// 				bind(&Cnet::readHandler, this, _1, _2)
-// 			);
-// 	}
+ 	void startAsyncRead()
+ 	{
+ 		asio::async_read_until(
+ 				tcpSocket,
+ 				readBuffer,
+ 				boost::regex("."),
+ 				bind(&Cnet::readHandler, this, _1, _2)
+ 			);
+ 	}
 
 };
 
 synapse::CnetMan<CnetDmx> net;
 
+SYNAPSE_REGISTER(module_SessionStart)
+{
+	if (msg.dst!=moduleSessionId)
+	{
+		netSessionId=msg.dst;
+
+		Cmsg out;
+		out.clear();
+		out.event="core_ChangeSession";
+		out["maxThreads"]=10;
+		out.send();
+	}
+}
+
+
 SYNAPSE_REGISTER(dmx_Connect)
 {
-	net.runConnect(msg["id"], msg["host"], msg["port"], 5);
-
+	if (msg.dst==netSessionId)
+	{
+		net.runConnect(msg["id"], msg["host"], msg["port"], 5);
+	}
+	else
+	{
+		msg.dst=netSessionId;
+		msg.send();
+	}
 }
 
 /** Set specified dmx channel to a value
@@ -162,6 +204,14 @@ SYNAPSE_REGISTER(dmx_Connect)
  */
 SYNAPSE_REGISTER(dmx_Set)
 {
+	if (msg["channel"]>1024 || msg["channel"]<0)
+		throw(synapse::runtime_error("Illegal channel"));
+
+	if (msg["value"]>255 || msg["value"]<0)
+		throw(synapse::runtime_error("Illegal value"));
+
+
+
 	stringstream dmxStr;
 	//*C9<layer><channel><value>#
 	dmxStr << "*C9fe";
@@ -171,8 +221,32 @@ SYNAPSE_REGISTER(dmx_Set)
 	dmxStr << "#";
 	string s=dmxStr.str();
 	net.doWrite(msg["id"], s);
+
+	Cmsg out;
+	out.event="dmx_Update";
+	out["channel"]=msg["channel"];
+	out["value"]=msg["value"];
+	out.send();
+
+	dmxValues[msg["channel"]]["value"]=msg["value"];
+	dmxValues[msg["channel"]]["channel"]=msg["channel"];
 }
 
+
+SYNAPSE_REGISTER(dmx_Get)
+{
+	FOREACH_VARMAP(value, dmxValues)
+	{
+		Cmsg out;
+		out.dst=msg.src;
+		out.event="dmx_Update";
+		out["channel"]=value.second["channel"];
+		out["value"]=value.second["value"];
+		out.send();
+
+	}
+
+}
 
 SYNAPSE_REGISTER(dmx_Disconnect)
 {

@@ -21,12 +21,14 @@
 			
 	synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
 	{
+		send(0,"dmx_Get",{});
 	});
 
 	
 	/// JAVA SCRIPT EVENT HANDLERS
 	$(document).ready(function(){
 		
+
 		$(".send").click(function()
 		{
 			var msg=JSON.parse($(this).parent().children(".message").val());
@@ -50,10 +52,11 @@
 		 
 		});
 
-		synapse_register("dmx_Set",function(msg_src, msg_dst, msg_event, msg)
+		synapse_register("dmx_Update",function(msg_src, msg_dst, msg_event, msg)
 		{
 			$("[_channel="+msg["channel"]+"]").slider("option", "value", msg["value"]);
 		});
+
 			
 	});
 
@@ -61,7 +64,7 @@
 	</script>
 
 	<style>
-		.slider{
+		.slider {
 			float:left;
 			margin:2em;
 		}
@@ -71,10 +74,25 @@
 
 
 <body>	
-<div class='slider' _channel='5'>red</div>
-<div class='slider' _channel='7'>green</div>
-<div class='slider' _channel='6'>white</div>
-<div class='slider' _channel='8'>blue</div>
+
+<h1>Dyne village light controller</h1>
+<div>
+	<div class='slider' _channel='5'>red</div>
+	<div class='slider' _channel='7'>green</div>
+	<div class='slider' _channel='6'>white</div>
+	<div class='slider' _channel='8'>blue</div>
+</div>
+
+<p>
+Yeah...this actually controls our lights..please turn at least the white light back on after you're done playing :D
+
+<p>
+Powered by <a href='http://lanbox.com/'>LanBox DMX controllers</a>.
+
+<p>
+<a href='http://events.ccc.de/camp/2011/wiki/Dyne#Projects'>Dyne village</a>
+
+
 </body>
 </html>
 
