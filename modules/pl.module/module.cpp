@@ -217,8 +217,8 @@ namespace pl
 		//rootPath is the highest path, it can never be escaped.
 		path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype)
 		{
-			DEB("rootpath:" << rootPath);
-			DEB("currentpath:" << currentPath);
+//			DEB("rootpath:" << rootPath);
+//			DEB("currentpath:" << currentPath);
 			
 			//determine the path we should get the initial listing of:
 			path listPath;
@@ -227,7 +227,7 @@ namespace pl
 			else
 				listPath=currentPath.parent_path();
 
-			path startPath=listPath;
+			path startPath=currentPath;
 			
 			CsortedDir::iterator dirI;
 			do
@@ -235,78 +235,93 @@ namespace pl
 				//get sorted directory listing
 				CsortedDir sortedDir(listPath, sortField, filetype);
 
-				//try to find the current path:
-				if (!currentPath.empty())
-					dirI=find(sortedDir.begin(), sortedDir.end(), currentPath.filename());
-				else
-					dirI=sortedDir.end();
-
-				//currentPath not found?
-				if (dirI==sortedDir.end())
+				if (!sortedDir.empty())
 				{
-					//start at the first or last entry depending on direction
-					if (direction==NEXT)
-						dirI=sortedDir.begin();
+					
+					//try to find the current path:
+					if (!currentPath.empty())
+						dirI=find(sortedDir.begin(), sortedDir.end(), currentPath.filename());
 					else
-					{
 						dirI=sortedDir.end();
-						dirI--;
+
+					//currentPath not found?
+					if (dirI==sortedDir.end())
+					{
+						//start at the first or last entry depending on direction
+						if (direction==NEXT)
+							dirI=sortedDir.begin();
+						else
+						{
+							dirI=sortedDir.end();
+							dirI--;
+						}
+					}
+					else
+					{
+						//move one step in the correct direction
+						if (direction==NEXT)
+						{
+							dirI++;
+						}
+						//PREVIOUS:
+						else
+						{
+							if (dirI==sortedDir.begin())
+								dirI=sortedDir.end();
+							else
+								dirI--;
+						}
+					}
+
+					//top or bottom was reached
+					if (dirI==sortedDir.end())
+					{
+						//can we one dir higher?
+						if (recursion==RECURSE && listPath!=rootPath)
+						{
+							//yes, so go one dir higher and continue the loop
+							currentPath=listPath;
+							listPath=currentPath.parent_path();
+						}
+						else
+						{
+							//no, cant go higher.
+							//clear the current path, so it just gets the first or last entry
+							currentPath.clear();
+						}
+					}
+					//we found something
+					else
+					{
+						//should we recurse?
+						if (recursion==RECURSE && is_directory(listPath/(*dirI)))
+						{
+							//enter it
+							listPath=listPath/(*dirI);
+							currentPath.clear();
+						}
+						else
+						{
+							//return the new path
+							return (listPath/(*dirI));
+						}
 					}
 				}
 				else
 				{
-					//move one step in the correct direction
-					if (direction==NEXT)
-					{
-						dirI++;
-					}
-					//PREVIOUS:
-					else
-					{
-						if (dirI==sortedDir.begin())
-							dirI=sortedDir.end();
-						else
-							dirI--;
-					}
-				}
-
-				//top or bottom was reached
-				if (dirI==sortedDir.end())
-				{
-					//can we one dir higher?
+					//list is empty, our last chance is to go one dir higher, otherwise we will exit the loop:
 					if (recursion==RECURSE && listPath!=rootPath)
 					{
-						//yes, so go one dir higher and continue the loop
+						//go one dir higher and continue the loop
 						currentPath=listPath;
 						listPath=currentPath.parent_path();
 					}
-					else
-					{
-						//no, cant go higher.
-						//clear the current path, so it just gets the first or last entry
-						currentPath.clear();
-					}
 				}
-				//we found something
-				else
-				{
-					//should we recurse?
-					if (recursion==RECURSE && is_directory(listPath/(*dirI)))
-					{
-						//enter it
-						listPath=listPath/(*dirI);
-						currentPath.clear();
-					}
-					else
-					{
-						return (listPath/(*dirI));
-					}
-				}
- 				DEB(listPath << " en " << startPath);
-			}
-			while(listPath!=startPath);
 
-			//not found, return currentpath
+			}
+			while(currentPath!=startPath);
+
+			//nothing found, just return currentPath
 			return(currentPath);
 		}
 
