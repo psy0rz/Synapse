@@ -31,11 +31,19 @@ SYNAPSE_REGISTER(module_Init)
 	
 	out.clear();
 	out.event="core_LoadModule";
-  	out["path"]="modules/asterisk.module/libasterisk.so";
+  	out["name"]="marquee_m500";
   	out.send();
 }
 
-//TODO: load libmarquee in between
+
+SYNAPSE_REGISTER(marquee_m500_Ready)
+{
+	Cmsg out;
+	out.clear();
+	out.event="core_LoadModule";
+  	out["name"]="asterisk";
+  	out.send();
+}
 
 SYNAPSE_REGISTER(asterisk_Ready)
 {
@@ -129,7 +137,7 @@ void updateMarquee()
 		}
 		Cmsg out;
 		out.event="marquee_Set";
-		out["text"]="%C0"+text;
+		out["text"]="%S1%C0"+text;
 		out.send();
 	}
 	//nothing ringing, show active calls
@@ -160,7 +168,7 @@ SYNAPSE_REGISTER(asterisk_authCall)
 {
 	Cmsg out;
 	out.event="marquee_Set";
-	out["text"]="Call "+msg["number"].str() + " to login...";
+	out["text"]="%S1Call "+msg["number"].str() + " to login...";
 	out.send();
 }
 

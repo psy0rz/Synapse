@@ -286,6 +286,7 @@ void CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg, in
 	}
 	else
 	{
+		//TODO: move mapping functionality back to modules. current implementation is kind of a hack and not compatible with future expantions in the no-broadcast branch.
 		//when we're done send a special mapping message that shows us what is mapped.
 		//used by the mapper GUI.
 		CmsgPtr mappedMsg=CmsgPtr(new Cmsg());

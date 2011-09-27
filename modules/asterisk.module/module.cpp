@@ -362,21 +362,20 @@ namespace asterisk
 			if (isFiltered())
 				return(false);
 
-			Cmsg out;
-			out.event="asterisk_updateDevice";
-			out.dst=forceDst;
-			out["id"]=id;
-			out["callerId"]=callerId;
-			out["callerIdName"]=callerIdName;
-			out["online"]=online;
-			out["trunk"]=trunk;
-
 			if (groupPtr!=NULL)
 			{
+				Cmsg out;
+				out.event="asterisk_updateDevice";
+				out.dst=forceDst;
+				out["id"]=id;
+				out["callerId"]=callerId;
+				out["callerIdName"]=callerIdName;
+				out["online"]=online;
+				out["trunk"]=trunk;
 				out["groupId"]=groupPtr->getId();
+				groupPtr->send(sessionMap,out);
 			}
 
-			groupPtr->send(sessionMap,out);
 			return(true);
 		}
 
