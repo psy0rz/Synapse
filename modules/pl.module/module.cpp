@@ -113,7 +113,7 @@ namespace pl
 		//get sort filename string
 		std::string getSortName()
 		{
-			return(filename());
+			return(filename().string());
 		}
 
 
@@ -166,7 +166,7 @@ namespace pl
 				++itr )
 			{
 				path p;
-				p=itr->filename();
+				p=itr->path().filename();
 				if (
 						(filetype==ALL) ||
 						(filetype==DIR && is_directory(*itr)) ||
@@ -393,9 +393,9 @@ namespace pl
 			out.event="pl_Entry";
 			out.dst=dst;
 			out["id"]=mId;
-			out["rootPath"]=mRootPath.directory_string();
-			out["currentPath"]=mCurrentPath.directory_string();
-			out["currentFile"]=mCurrentFile.directory_string();
+			out["rootPath"]=mRootPath.string();
+			out["currentPath"]=mCurrentPath.string();
+			out["currentFile"]=mCurrentFile.string();
 
 //			if (*mIterDir!= directory_iterator())
 //				out["selectedDir"]=(*mIterDir)->path().directory_string();

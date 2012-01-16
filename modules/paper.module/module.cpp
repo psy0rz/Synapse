@@ -93,8 +93,9 @@ namespace paper
 
 		out["event"]=	"paper_GetList";			out.send(); //get a list of papers
 
-		out["event"]=	"paper_Authenticate";			out.send();
-		out["event"]=	"paper_ChangeAuth";			out.send();
+		out["event"]=	"paper_Authenticate";			out.send(); //try authenticate ourselfs with specified key
+		out["event"]=	"paper_ChangeAuth";			out.send(); //adds or changes authentication keys (only owner can do this offcourse)
+
 
 
 		//client receive-only events:

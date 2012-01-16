@@ -37,7 +37,7 @@ ADD_EXECUTABLE(synapse ${sources})
 #################### ADD BOOST STUFF HERE
 INCLUDE(FindBoost)
 set(Boost_USE_MULTITHREADED ON)
-find_package( Boost 1.40.0 REQUIRED thread regex system )
+find_package( Boost 1.40.0 REQUIRED thread regex system filesystem)
 
 
 
