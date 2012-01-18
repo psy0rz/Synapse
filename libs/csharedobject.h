@@ -21,6 +21,7 @@
 #define CSHAREDOBJECT_H_
 
 #include "exception/cexception.h"
+#include <set>
 
 namespace synapse
 {

@@ -20,6 +20,8 @@
 #ifndef CCLIENT_H_
 #define CCLIENT_H_
 
+#include "cmsg.h"
+
 namespace synapse
 {
 	using namespace std;
