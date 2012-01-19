@@ -33,6 +33,9 @@ Internet paper.
 
 #include "exception/cexception.h"
 
+/** Paper namespace
+ *
+ */
 namespace paper
 {
 
@@ -131,14 +134,6 @@ namespace paper
 	}
 
 
-
-
-
-
-
-
-
-
 	synapse::CobjectMan<CpaperObject> gObjectMan("var/paper");
 
 
@@ -194,25 +189,25 @@ namespace paper
 	}
 
 	/** Try to authenticate client with key.
-	 * \param key The key to autenticate with.
+	 * \P key The key to autenticate with.
 	 *
-	 * \par Replies \c paper_Authorized when key was ok.
-	 * \par Replies \c paper_AuthWrongKey when key was not found.
-	 */
+	 * \REPLY paper_Authorized when key was ok.
+	 * \REPLY paper_AuthWrongKey when key was not found.
+ 	 */
 	SYNAPSE_REGISTER(paper_Authenticate)
 	{
 		gObjectMan.getObjectByClient(msg.src).authenticate(msg.src,msg["key"]);
 	}
 
 	/** Change authentication and authorisation info
-	 * \param key The key to change or add. Specify an empty key to set the default rights.
-	 * \param rights Hasharray of rights to apply. Leave empty to delete the key.
-	 * 		\param chat User can chat.
-	 * 		\param view User can view the drawing.
-	 * 		\param cursor User can send cursor updates (other people with view-rights see the cursor, so you can point at stufF)
-	 * 		\param change User can change the drawing.
-	 * 		\param owner User is owner and can change rights
-	 * 		\param description Description of the key
+	 * 		\P key The key to change or add. Specify an empty key to set the default rights.
+	 * 		\P description Description of the key
+	 * 		\P rights.chat User can chat.
+	 * 		\P rights.view User can view the drawing.
+	 * 		\P rights.cursor User can send cursor updates (other people with view-rights see the cursor, so you can point at stufF)
+	 * 		\P rights.change User can change the drawing.
+	 * 		\P rights.owner User is owner and can change rights
+	 *
 	 */
 	SYNAPSE_REGISTER(paper_ChangeAuth)
 	{
