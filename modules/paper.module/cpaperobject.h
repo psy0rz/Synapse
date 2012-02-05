@@ -25,8 +25,8 @@ namespace paper
 		public:
 		CpaperObject();
 
-		//send message to all clients that are joined, using filtering.
-		void sendAllFiltered(Cmsg & msg);
+		//send message to all clients
+		void sendAll(Cmsg & msg);
 
 		//get filenames, relative to wwwdir, or relative to synapse main dir.
 		//these probably are going to give different results when papers are made private.
@@ -60,7 +60,7 @@ namespace paper
 		void load(string path);
 
 		//authenticates clientId with key
-		void authenticate(int clientId, string key);
+		void login(int clientId, string key);
 
 		//changes authentication keys and authorization
 		//rights is just a hasharray
@@ -94,7 +94,7 @@ namespace paper
 		//if a client is not authorized to do certain stuff, an exception is thrown
 		void clientDraw(Cmsg & msg);
 
-		virtual void addClient(int id);
+		//virtual void addClient(int id);
 
 		virtual bool isIdle();
 

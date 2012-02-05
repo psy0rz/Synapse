@@ -55,10 +55,10 @@
 <table class="memberdecls">
 <tr><td colspan="2"><h2><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a128791b77d210aaf3e6d54ca34e30847"></a><!-- doxytag: member="paper::CpaperClient::sendFiltered" ref="a128791b77d210aaf3e6d54ca34e30847" args="(Cmsg &amp;msg)" -->
-void&#160;</td><td class="memItemRight" valign="bottom"><b>sendFiltered</b> (Cmsg &amp;msg)</td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a9e6dddcce2b76edabb44d0955ac16968"></a><!-- doxytag: member="paper::CpaperClient::authorize" ref="a9e6dddcce2b76edabb44d0955ac16968" args="(Cvar &amp;rights)" -->
 void&#160;</td><td class="memItemRight" valign="bottom"><b>authorize</b> (Cvar &amp;rights)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classpaper_1_1CpaperClient.html#af3ea075424b1ae21ddf6b2b3bada7e8b">getInfo</a> (Cvar &amp;var)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Fills var with information about the client.  <a href="#af3ea075424b1ae21ddf6b2b3bada7e8b"></a><br/></td></tr>
 <tr><td colspan="2"><h2><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="afcee5bd87823211a58d51a2f0a635d35"></a><!-- doxytag: member="paper::CpaperClient::mCursor" ref="afcee5bd87823211a58d51a2f0a635d35" args="" -->
@@ -69,23 +69,51 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>mLastElementId</b></td
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>mAuthCursor</b></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a10c443887a28ceca1732379797ec1c46"></a><!-- doxytag: member="paper::CpaperClient::mAuthChat" ref="a10c443887a28ceca1732379797ec1c46" args="" -->
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>mAuthChat</b></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="add607fe875458986c5121dae15853579"></a><!-- doxytag: member="paper::CpaperClient::mAuthView" ref="add607fe875458986c5121dae15853579" args="" -->
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>mAuthView</b></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="adc9bbe7eeb619d45b0f480bf10f131e3"></a><!-- doxytag: member="paper::CpaperClient::mAuthChange" ref="adc9bbe7eeb619d45b0f480bf10f131e3" args="" -->
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>mAuthChange</b></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ab3c89718fc506033f76fb24f0b37a7fa"></a><!-- doxytag: member="paper::CpaperClient::mAuthOwner" ref="ab3c89718fc506033f76fb24f0b37a7fa" args="" -->
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>mAuthOwner</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="abc32ee59149ea6462779b8b5d8fbe261"></a><!-- doxytag: member="paper::CpaperClient::mDescription" ref="abc32ee59149ea6462779b8b5d8fbe261" args="" -->
+string&#160;</td><td class="memItemRight" valign="bottom"><b>mDescription</b></td></tr>
 <tr><td colspan="2"><h2><a name="friends"></a>
 Friends</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a10180dc57a835ca6853b32f523abd27a"></a><!-- doxytag: member="paper::CpaperClient::CpaperObject" ref="a10180dc57a835ca6853b32f523abd27a" args="" -->
 class&#160;</td><td class="memItemRight" valign="bottom"><b>CpaperObject</b></td></tr>
 </table>
+<hr/><h2>Member Function Documentation</h2>
+<a class="anchor" id="af3ea075424b1ae21ddf6b2b3bada7e8b"></a><!-- doxytag: member="paper::CpaperClient::getInfo" ref="af3ea075424b1ae21ddf6b2b3bada7e8b" args="(Cvar &amp;var)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void paper::CpaperClient::getInfo </td>
+          <td>(</td>
+          <td class="paramtype">Cvar &amp;&#160;</td>
+          <td class="paramname"><em>var</em></td><td>)</td>
+          <td><code> [virtual]</code></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Fills var with information about the client. </p>
+<ul>
+<li><code>clientId</code> Id of client </li>
+<li><code>rights.change</code> Set to 1 when client has rights to change drawing. </li>
+<li><code>rights.owner</code> Set to 1 when client is owner. </li>
+<li><code>rights.cursor</code> Set to 1 when client may show a cursor. </li>
+<li><code>rights.chat</code> Set to 1 when client may chat. </li>
+<li><code>rights.description</code> Description of the key </li>
+</ul>
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>paper.module/cpaperclient.h</li>
 <li>paper.module/cpaperclient.cpp</li>
 </ul>
 </div>
-<hr class="footer"/><address class="footer"><small>Generated on Fri Jan 20 2012 00:43:21 for Synapsemoduledocumentation by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Fri Jan 27 2012 16:48:52 for Synapsemoduledocumentation by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.4 </small></address>
 </body>

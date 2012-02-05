@@ -30,7 +30,7 @@ namespace paper
 
 
 	//send message to all clients that are joined, using filtering.
-	void CpaperObject::sendAllFiltered(Cmsg & msg)
+	void CpaperObject::sendAll(Cmsg & msg)
 	{
 		CclientMap::iterator I;
 		for (I=clientMap.begin(); I!=clientMap.end(); I++)
@@ -38,7 +38,7 @@ namespace paper
 			msg.dst=I->first;
 			try
 			{
-				I->second.sendFiltered(msg);
+				msg.send();
 			}
 			catch(...)
 			{
@@ -149,7 +149,14 @@ namespace paper
 	}
 
 
-	//called by the object manager to get interesting metadata about this object
+	/** Fills var with information about the drawing.
+	 * \P changeTime Time of last change.
+	 * \P clients Number of joined clients
+	 * \P htmlPath Path to html file to edit drawing.
+	 * \P thumbPath Path to thumbnail of drawing.
+	 * \P version Version of the drawing (increases with every change)
+	 *
+	 */
 	void CpaperObject::getInfo(Cvar & var)
 	{
 		synapse::CsharedObject<CpaperClient>::getInfo(var);
@@ -180,7 +187,7 @@ namespace paper
 		out["svgPath"]=getSvgFilename(true);
 		out["pngPath"]=getPngFilename(true);
 		out["thumbPath"]=getThumbFilename(true);
-		sendAllFiltered(out);
+		sendAll(out);
 
 	}
 
@@ -294,7 +301,7 @@ namespace paper
 	}
 
 	//authenticates clientId with key
-	void CpaperObject::authenticate(int clientId, string key)
+	void CpaperObject::login(int clientId, string key)
 	{
 		//key doesnt exists?
 		if (!mDrawing["auth"].isSet(key))
@@ -305,9 +312,10 @@ namespace paper
 			out.send();
 			return;
 		}
-
-		//if the key exists, authorize the client
+		//if the key exists, add and authorize the client
+		synapse::CsharedObject<CpaperClient>::addClient(clientId);
 		getClient(clientId).authorize(mDrawing["auth"][key]);
+		sendClientUpdate(clientId);
 	}
 
 	//changes authentication keys and authorization
@@ -363,7 +371,7 @@ namespace paper
 				out.dst=I->first;
 				try
 				{
-					I->second.sendFiltered(out);
+					out.send();
 				}
 				catch(...)
 				{
@@ -421,8 +429,8 @@ namespace paper
 	//resend all data to dst
 	void CpaperObject::reload(int dst)
 	{
-		if (!getClient(dst).mAuthView)
-			throw(synapse::runtime_error("You're not authorized to view this drawing."));
+//		if (!getClient(dst).mAuthView)
+//			throw(synapse::runtime_error("You're not authorized to view this drawing."));
 
 		Cmsg out;
 		out.event="paper_ServerDraw";
@@ -564,7 +572,7 @@ namespace paper
 			out["cmd"]="update";
 			if (msg.isSet("id"))
 				element2msg(msg["id"].str(), out);
-			getClient(msg.src).sendFiltered(out);
+			out.send();
 
 			return;
 		}
@@ -592,11 +600,11 @@ namespace paper
 		serverDraw(msg,msg.src);
 	}
 
-	void CpaperObject::addClient(int id)
-	{
-		//let the base class do its work:
-		synapse::CsharedObject<CpaperClient>::addClient(id);
-	}
+//	void CpaperObject::addClient(int id)
+//	{
+//		//let the base class do its work:
+//		synapse::CsharedObject<CpaperClient>::addClient(id);
+//	}
 
 	bool CpaperObject::isIdle()
 	{

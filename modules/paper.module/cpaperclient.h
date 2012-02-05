@@ -24,9 +24,9 @@ namespace paper
 		//authorized functions
 		bool mAuthCursor;
 		bool mAuthChat;
-		bool mAuthView;
 		bool mAuthChange;
 		bool mAuthOwner;
+		string mDescription;
 
 
 
@@ -35,10 +35,13 @@ namespace paper
 
 		//sends a message to the client, only if the client has view-rights
 		//otherwise the message is ignored.
-		void sendFiltered(Cmsg & msg);
+//		void sendFiltered(Cmsg & msg);
 
 		//authorizes the client withclient with key and rights
 		void authorize(Cvar & rights);
+
+		virtual void getInfo(Cvar & var);
+
 	};
 }
 #endif

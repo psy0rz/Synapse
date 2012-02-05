@@ -125,7 +125,6 @@ namespace synapse
 			Cmsg out;
 			out.event="object_Client";
 			clientMap[id].getInfo(out);
-			//niet: getInfo(out);
 			sendAll(out); //inform all members of the new client
 		}
 
@@ -143,12 +142,12 @@ namespace synapse
 			{
 				clientMap[id].id=id;
 
-				//tell the client they are joined
-				Cmsg out;
-				out.event="object_Joined";
-				out.dst=id;
-				getInfo(out);
-				out.send();
+				//tell everyone a new client has joined
+//				Cmsg out;
+//				out.event="object_Joined";
+//				out.dst=id;
+//				getInfo(out);
+//				out.send();
 
 				//send the other clients an update about this new client.
 				sendClientUpdate(id);

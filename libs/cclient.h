@@ -20,7 +20,7 @@
 #ifndef CCLIENT_H_
 #define CCLIENT_H_
 
-#include "cmsg.h"
+#include "cvar.h"
 
 namespace synapse
 {
@@ -36,9 +36,10 @@ namespace synapse
 		{
 		}
 
-		virtual void getInfo(Cmsg & msg)
+
+		virtual void getInfo(Cvar & var)
 		{
-			msg["clientId"]=id;
+			var["clientId"]=id;
 		}
 	};
 };

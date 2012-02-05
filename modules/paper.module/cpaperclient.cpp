@@ -6,7 +6,6 @@ namespace paper
 	CpaperClient::CpaperClient()
 	{
 		mLastElementId=0;
-		mAuthView=false;
 		mAuthChange=false;
 		mAuthOwner=false;
 		mAuthCursor=false;
@@ -18,21 +17,21 @@ namespace paper
 
 	//sends a message to the client, only if the client has view-rights
 	//otherwise the message is ignored.
-	void CpaperClient::sendFiltered(Cmsg & msg)
-	{
-		if (mAuthView)
-			msg.send();
-
-	}
+//	void CpaperClient::sendFiltered(Cmsg & msg)
+//	{
+//		if (mAuthView)
+//			msg.send();
+//
+//	}
 
 	//authorizes the client withclient with key and rights
 	void CpaperClient::authorize(Cvar & rights)
 	{
-		mAuthView=rights["view"];
 		mAuthChange=rights["change"];
 		mAuthOwner=rights["owner"];
 		mAuthCursor=rights["cursor"];
 		mAuthChat=rights["chat"];
+		mDescription=rights["description"].str();
 
 		//inform the client of its new rights
 		Cmsg out;
@@ -42,4 +41,24 @@ namespace paper
 		out.send();
 
 	}
+
+	/** Fills var with information about the client.
+	 * \P clientId Id of client
+	 * \P rights.change Set to 1 when client has rights to change drawing.
+	 * \P rights.owner Set to 1 when client  is owner.
+	 * \P rights.cursor Set to 1 when client may show a cursor.
+	 * \P rights.chat Set to 1 when client may chat.
+	 * \P rights.description Description of the key
+	 *
+	 */
+	void CpaperClient::getInfo(Cvar & var)
+	{
+		var["clientId"]=id;
+		var["rights"]["change"]=mAuthChange;
+		var["rights"]["owner"]=mAuthOwner;
+		var["rights"]["cursor"]=mAuthCursor;
+		var["rights"]["chat"]=mAuthChat;
+		var["rights"]["description"]=mDescription;
+	}
+
 }

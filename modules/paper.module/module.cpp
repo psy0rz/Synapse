@@ -137,7 +137,19 @@ namespace paper
 	synapse::CobjectMan<CpaperObject> gObjectMan("var/paper");
 
 
-	/** Client wants new paper
+	/** Client wants new paper.
+	 * \P moveClients set this to one to move all the clients to the new paper.
+
+	 * \note After creating, the creator has temporary owner rights. Dont forget to assign some kind of permanent key, otherwise the drawing will be unaccesible.
+
+	 * \SEND object_Client
+	 * Send to inform all the other clients of this new one
+	 * Filled with parameters from \ref CpaperObject::getInfo
+
+	 * \SEND object_Joined
+	 * When moveClients is set to 1 it will send this to all clients.
+	 * Filled with parameters from \ref CpaperObject::getInfo
+	 *
 	 *
 	 */
 	SYNAPSE_REGISTER(paper_Create)
@@ -173,41 +185,33 @@ namespace paper
 	 * TODO: implement credentials first
 	 * TODO: implement delete
 	 */
-//	SYNAPSE_REGISTER(paper_Delete)
-//	{
-//		objectMan.destroy(msg["objectId"]);
-//	}
-
-	/** Client wants to join a paper
-	 *
-	 */
-	SYNAPSE_REGISTER(paper_Join)
+	SYNAPSE_REGISTER(paper_Delete)
 	{
-		gObjectMan.leaveAll(msg.src); //remove this if you want clients to be able to join multiple objects
-		gObjectMan.getObject(msg["objectId"]).addClient(msg.src);
-
+		//objectMan.destroy(msg["objectId"]);
 	}
 
-	/** Try to authenticate client with key.
-	 * \P key The key to autenticate with.
+
+	/** Try to authenticate and join a client to a paper.
+	 * Can also be used to reauthenticate.
+	 * \P objectId The paper to login to.
+	 * \P key The key to authenticate with.
 	 *
-	 * \REPLY paper_Authorized when key was ok.
-	 * \REPLY paper_AuthWrongKey when key was not found.
+	 * \SEND object_Client
+	 * When authentication succeeded.
+	 * Send to all connected clients to indicate a new client has joined.
+	 * Filled with info from \ref CpaperClient::getInfo
+	 *
+	 * \REPLY paper_AuthWrongKey
+	 * When authentication has failed.
  	 */
-	SYNAPSE_REGISTER(paper_Authenticate)
+	SYNAPSE_REGISTER(paper_Login)
 	{
-		gObjectMan.getObjectByClient(msg.src).authenticate(msg.src,msg["key"]);
+		gObjectMan.getObjectByClient(msg["objectId"]).login(msg.src,msg["key"]);
 	}
 
 	/** Change authentication and authorisation info
 	 * 		\P key The key to change or add. Specify an empty key to set the default rights.
-	 * 		\P description Description of the key
-	 * 		\P rights.chat User can chat.
-	 * 		\P rights.view User can view the drawing.
-	 * 		\P rights.cursor User can send cursor updates (other people with view-rights see the cursor, so you can point at stufF)
-	 * 		\P rights.change User can change the drawing.
-	 * 		\P rights.owner User is owner and can change rights
-	 *
+	 * 		\P rights See \ref CpaperClient::getInfo
 	 */
 	SYNAPSE_REGISTER(paper_ChangeAuth)
 	{
