@@ -120,8 +120,25 @@ bool CnetMan<Tnet>::runListen(int port)
 	//at this point the ioservice has no work yet, so make sure it keeps running:
 	asio::io_service::work work(ioService);
 
-	//let the ioservice run, until the acceptor is closed 
-	ioService.run();
+	//let the ioservice run, until the listener is closed correctly
+	for (;;)
+	{
+		try
+		{
+			ioService.run();
+			break; // run() exited normally
+		}
+	  	catch (const std::exception& e)
+  		{
+			ERROR("ignoring exception in CnetMan::runListen: " << e.what());
+		}
+		catch(...)
+		{
+			ERROR("ignoring unknown exception in CnetMan::runListen");
+		}
+	}
+
+
 	{
 		lock_guard<mutex> lock(threadMutex);
 		//we're done, remove the acceptor from the list
