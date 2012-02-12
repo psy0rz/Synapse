@@ -74,7 +74,7 @@ namespace paper
 		out["event"]=	"paper_Create";		out.send(); //create new object
 		out["event"]=	"paper_Check";		out.send(); //check if object exists/access is allowed
 		out["event"]=	"paper_Delete";		out.send(); //delete a object
-		out["event"]=	"paper_Join";		out.send(); //join a object
+		out["event"]=	"paper_Login";		out.send(); //join a object
 		out["event"]=	"paper_Leave";		out.send(); //leave a object
 		out["event"]=	"paper_GetPapers";	out.send(); //a list of all papers (returns object_Object for every object)
 		out["event"]=	"paper_GetClients";	out.send(); //a list of clients that are member of specified object. (returns object_Clients for every object)
@@ -206,7 +206,7 @@ namespace paper
  	 */
 	SYNAPSE_REGISTER(paper_Login)
 	{
-		gObjectMan.getObjectByClient(msg["objectId"]).login(msg.src,msg["key"]);
+		gObjectMan.getObject(msg["objectId"]).login(msg.src,msg["key"]);
 	}
 
 	/** Change authentication and authorisation info

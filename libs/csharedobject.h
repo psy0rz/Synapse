@@ -143,11 +143,11 @@ namespace synapse
 				clientMap[id].id=id;
 
 				//tell everyone a new client has joined
-//				Cmsg out;
-//				out.event="object_Joined";
-//				out.dst=id;
-//				getInfo(out);
-//				out.send();
+				Cmsg out;
+				out.event="object_Joined";
+				out.dst=id;
+				getInfo(out);
+				out.send();
 
 				//send the other clients an update about this new client.
 				sendClientUpdate(id);
