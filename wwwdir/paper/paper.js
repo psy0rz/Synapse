@@ -139,6 +139,22 @@ function getUrlId()
 		return($("head").attr("paperId"));
 }
 
+function updateAuthorisation(newRights)
+{
+	authorized=newRights;
+	//hide/show widgets according to rights
+	if (authorized.change)
+		$("#toolbox").show();
+	else
+		$("#toolbox").hide();
+	
+	if (authorized.chat)
+		$("#chatInput").show();
+	else
+		$("#chatInput").hide();
+
+}
+
 //reset and prepare for a complete reload of all data
 function reset()
 {
@@ -162,7 +178,61 @@ function reset()
 	$(".tool").removeClass('selected');
 	$(".defaultTool").addClass('selected');
 	$(".defaultSetting").show();
+	
+	updateAuthorisation({
+		owner:0,
+		cursor:0,
+		chat:0,
+		change:0
+	});
 
+}
+
+//create/get cursor svg object for specified client
+function getCursor(clientId)
+{
+	var cursor=document.getElementById('cursor'+clientId);
+	if (cursor==null)
+	{
+		//create a group for this client's cursor
+		cursor = document.createElementNS(svgns, 'g');
+		cursor.setAttribute('id', 'cursor'+clientId);
+		cursor.setAttribute('stroke', '#000000');
+		cursor.setAttribute('stroke-width', '10');
+		drawing.appendChild(cursor);
+	
+		//add drawing to the cursor group
+		var e = document.createElementNS(svgns, 'line');
+		e.setAttribute('x1', '-200');
+		e.setAttribute('x2', '+200');
+		e.setAttribute('y1', '0');
+		e.setAttribute('y2', '0');
+		cursor.appendChild(e);					
+	
+		var e = document.createElementNS(svgns, 'line');
+		e.setAttribute('x1', '0');
+		e.setAttribute('x2', '0');
+		e.setAttribute('y1', '-200');
+		e.setAttribute('y2', '+200');
+		cursor.appendChild(e);					
+	
+		//create text element
+		var e = document.createElementNS(svgns, 'text');
+		e.setAttribute('id', 'cursorName'+clientId);
+		e.setAttribute('x', '0');
+		e.setAttribute('y', '300');
+		e.setAttribute('font-size','200');
+		e.setAttribute('font-weight','bold');
+		e.setAttribute('stroke','#000000');
+		e.setAttribute('fill','#000000');
+		cursor.appendChild(e);					
+	
+		//add the actual text
+		var textNode = document.createTextNode("(unknown)", true);
+		e.appendChild(textNode);
+		
+	}
+	return (cursor);
 }
 
 
@@ -200,7 +270,7 @@ beforeId:   set by server to the id of the element this element should be insert
 normally only set when requesting a refresh.
 
 #### Cursor indication
-cursor:     Cursor and name information: x,y,clientName. 
+cursor:     Cursor and name information: x,y 
 			The server keeps a list of cursors and sends them when a client joins.
 
 ### Chat
@@ -328,82 +398,20 @@ function draw(msg)
 		loading=false;		
 	}			
 
-	//update cursor/client name?
+	//update cursor?
 	if (msg["cursor"]!=null && msg["src"]!=ourId)
 	{
-		var cursor=document.getElementById('cursor'+msg["src"]);
-		if (cursor==null)
-		{
-			//create a group for this client's cursor
-			cursor = document.createElementNS(svgns, 'g');
-			cursor.setAttribute('id', 'cursor'+msg["src"]);
-			cursor.setAttribute('stroke', '#000000');
-			cursor.setAttribute('stroke-width', '10');
-			drawing.appendChild(cursor);
-
-			//add drawing to the cursor group
-			var e = document.createElementNS(svgns, 'line');
-			e.setAttribute('x1', '-200');
-			e.setAttribute('x2', '+200');
-			e.setAttribute('y1', '0');
-			e.setAttribute('y2', '0');
-			cursor.appendChild(e);					
-
-			var e = document.createElementNS(svgns, 'line');
-			e.setAttribute('x1', '0');
-			e.setAttribute('x2', '0');
-			e.setAttribute('y1', '-200');
-			e.setAttribute('y2', '+200');
-			cursor.appendChild(e);					
-
-			//create text element
-			var e = document.createElementNS(svgns, 'text');
-			e.setAttribute('id', 'clientName'+msg["src"]);
-			e.setAttribute('x', '0');
-			e.setAttribute('y', '300');
-			e.setAttribute('font-size','200');
-			e.setAttribute('font-weight','bold');
-			e.setAttribute('stroke','#000000');
-			e.setAttribute('fill','#000000');
-			cursor.appendChild(e);					
-
-			//add the actual text
-			var textNode = document.createTextNode("(unknown)", true);
-			e.appendChild(textNode);
-			
-		}
+		//get/create cursor:
+		var cursor=getCursor(msg["src"]);
 
 		//update cursor position?
 		if (msg["cursor"]["x"]!=null)
 		{
 			cursor.setAttribute('transform', 'translate('+msg["cursor"]["x"]+','+msg["cursor"]["y"]+')');
 		}
-			
-		//update cursor clientname?
-		if (msg["cursor"]["clientName"]!=null)
-		{
-			//update cursor text:
-			var e=document.getElementById('clientName'+msg["src"]);
-			e.childNodes[0].data=filterInput(msg["cursor"]["clientName"],15);
-		}
 	}
 
 
-	//update chat client list
-	if (msg["cursor"]!=null && msg["cursor"]["clientName"]!=null)
-	{
-		var clientName=filterInput(msg["cursor"]["clientName"],15);
-		
-		var e=document.getElementById('chatClient'+msg["src"]);
-		if (e==null)
-		{
-			$("#chatClients").append("<div id='chatClient"+msg["src"]+"' class='chatClient'>"+clientName+"</div>");
-			chatPrintOnline();
-		}
-		else
-			e.childNodes[0].data=clientName;
-
-	}	
 
 	//received chat text?
 	if (msg["chat"] != null)
@@ -521,8 +529,11 @@ function mouseMove(force)
 		var c=toServer(mousePoint.x,mousePoint.y);
 		var msg={};
 
-		//cursor
-		msg['cursor']=c;
+		//cursor authorized?
+		if (authorized.cursor)
+			msg['cursor']=c;
+		else 
+			return; //no? then we may not do anything
 		
 		if (mouseMode=="polyline")
 		{
@@ -615,6 +626,9 @@ function mouseMove(force)
 //user starts a mouse operation (clicks somewhere)
 function mouseStart(m)
 {
+	if (!authorized.change)
+		return;
+	
 	if (mousePoint.x==null || mousePoint.y==null)
 		return;
 	tempCount++;
@@ -826,12 +840,9 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 	$("#chatClientName").keyup(function(m)
 	{
 		$.setCookie('clientName', $("#chatClientName").val(), { duration:365, path:"/" });
-		sendDraw({
-			'cursor':{
-				'clientName':$("#chatClientName").val()
-			}
-		});
-			
+		send(paperModId,"paper_ChangeInfo", { 
+			name: $("#chatClientName").val()
+		});			
 	});
 
 	//user presses enter in chatInput:
@@ -1168,7 +1179,7 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 		if (msg_dst==msg["clientId"])
 		{
 			//store rights in global array for easy access
-			authorized=msg["rights"];
+			updateAuthorisation(msg["rights"]);
 	//		if (authorized["cursor"])
 	//		{
 	//			//tell people who we are and set random mouse position
@@ -1184,8 +1195,24 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 	//		});
 			
 		}
-	
-		//TODO:update client list
+		
+		var name=filterInput(msg.name,15);
+
+		//update cursor text, if it exists
+		var e=document.getElementById('cursorName'+msg.clientId);
+		if (e)
+			e.childNodes[0].data=filterInput(name,15);
+		
+		//update chat client list
+		var e=document.getElementById('chatClient'+msg.clientId);
+		if (e==null)
+		{
+			$("#chatClients").append("<div id='chatClient"+msg.clientId+"' class='chatClient'>"+name+"</div>");
+			chatPrintOnline();
+		}
+		else
+			e.childNodes[0].data=name;
+		
 	});
 	
 	//we've joined a object

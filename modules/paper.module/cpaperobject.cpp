@@ -500,6 +500,8 @@ namespace paper
 			if (!getClient(msg.src).mAuthChat)
 				throw(synapse::runtime_error("You're not allowed to chat"));
 
+			//TODO: overwrite clientName with real client name
+
 			//store in chat log for this object
 			mDrawing["chat"].list().push_back(msg["chat"]);
 		}

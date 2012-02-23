@@ -20,13 +20,15 @@ namespace paper
 		Cvar mCursor;
 		int mLastElementId;
 
+		//arbitrary info field for stuff like name
+		Cvar mInfo;
 
 		//authorized functions
 		bool mAuthCursor;
 		bool mAuthChat;
 		bool mAuthChange;
 		bool mAuthOwner;
-		string mDescription;
+		string mAuthDescription;
 
 
 
@@ -41,7 +43,7 @@ namespace paper
 		void authorize(Cvar & rights);
 
 		virtual void getInfo(Cvar & var);
-
+		void setInfo(Cvar & var);
 	};
 }
 #endif

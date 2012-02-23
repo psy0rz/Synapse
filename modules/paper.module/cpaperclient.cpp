@@ -31,7 +31,7 @@ namespace paper
 		mAuthOwner=rights["owner"];
 		mAuthCursor=rights["cursor"];
 		mAuthChat=rights["chat"];
-		mDescription=rights["description"].str();
+		mAuthDescription=rights["description"].str();
 
 //		//inform the client of its new rights
 //		Cmsg out;
@@ -41,6 +41,15 @@ namespace paper
 //		out.send();
 
 	}
+
+	/** Sets info fields of client (can be anything)
+	 *
+	 */
+	void CpaperClient::setInfo(Cvar & var)
+	{
+		mInfo=var;
+	}
+
 
 	/** Fills var with information about the client.
 	 * \P clientId Id of client
@@ -53,12 +62,13 @@ namespace paper
 	 */
 	void CpaperClient::getInfo(Cvar & var)
 	{
+		var=mInfo;
 		var["clientId"]=id;
 		var["rights"]["change"]=mAuthChange;
 		var["rights"]["owner"]=mAuthOwner;
 		var["rights"]["cursor"]=mAuthCursor;
 		var["rights"]["chat"]=mAuthChat;
-		var["rights"]["description"]=mDescription;
+		var["rights"]["description"]=mAuthDescription;
 	}
 
 }

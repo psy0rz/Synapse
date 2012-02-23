@@ -81,12 +81,14 @@ namespace paper
 
 		out["event"]=	"paper_ClientDraw";		out.send(); //draw something
 
+
 		out["event"]=	"paper_Export";			out.send(); //export the paper to svg/png
 
 		out["event"]=	"paper_GetList";			out.send(); //get a list of papers
 
-		out["event"]=	"paper_Authenticate";			out.send(); //try authenticate ourselfs with specified key
+//		out["event"]=	"paper_Authenticate";			out.send(); //try authenticate ourselfs with specified key
 		out["event"]=	"paper_ChangeAuth";			out.send(); //adds or changes authentication keys (only owner can do this offcourse)
+		out["event"]=	"paper_ChangeInfo";		out.send(); //change client info
 
 
 
@@ -112,7 +114,7 @@ namespace paper
 		out["event"]=	"paper_List";		out.send(); //list of papers
 
 		out["event"]=	"paper_AuthWrongKey";		out.send(); //client tried to authenticate with wrong key
-		out["event"]=	"paper_Authorized";		out.send(); //client is authorized new rights
+//		out["event"]=	"paper_Authorized";		out.send(); //client is authorized new rights
 
 		out.clear();
 		out.event="core_LoadModule";
@@ -223,6 +225,19 @@ namespace paper
 	{
 		gObjectMan.getObjectByClient(msg.src).changeAuth(msg.src,msg["key"],msg["rights"]);
 	}
+
+	/** Change arbitrary client info (name etc)
+	 *
+	 * \SEND object_Client
+	 * With new info, filled with \ref CpaperClient::getInfo
+	 */
+	SYNAPSE_REGISTER(paper_ChangeInfo)
+	{
+		gObjectMan.getObjectByClient(msg.src).getClient(msg.src).setInfo(msg);
+		gObjectMan.getObjectByClient(msg.src).sendClientUpdate(msg.src);
+
+	}
+
 
 	/** Client wants to check if the paper exists and credentials are ok
 	 * TODO: credential stuff
