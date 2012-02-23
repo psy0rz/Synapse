@@ -315,6 +315,8 @@ namespace paper
 		//if the key exists, add and authorize the client
 		synapse::CsharedObject<CpaperClient>::addClient(clientId);
 		getClient(clientId).authorize(mDrawing["auth"][key]);
+
+		//inform all clients about the new credentials
 		sendClientUpdate(clientId);
 	}
 

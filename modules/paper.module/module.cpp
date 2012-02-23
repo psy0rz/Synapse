@@ -173,12 +173,12 @@ namespace paper
 			gObjectMan.getObject(objectId).addClient(msg.src);
 		}
 
-		//give the creator temporary owner rights.
-		//The client show add its own key and rights, otherwise the drawing will be inaccessible after leaving it.
+		//give the creator temporary owner rights and inform the others about it
+		//The client should add a key and rights as soon as possible, otherwise the drawing will be inaccessible after leaving it!
 		Cvar rights;
 		rights["owner"]=1;
 		gObjectMan.getObject(objectId).getClient(msg.src).authorize(rights);
-
+		gObjectMan.getObject(objectId).sendClientUpdate(msg.src);
 	}
 
 	/** Clients wants to delete a paper
@@ -195,6 +195,10 @@ namespace paper
 	 * Can also be used to reauthenticate.
 	 * \P objectId The paper to login to.
 	 * \P key The key to authenticate with.
+     *
+	 * \SEND object_Joined
+	 * Send to client to indicate they have joined a new object.
+	 * Filled with parameters from \ref CpaperObject::getInfo
 	 *
 	 * \SEND object_Client
 	 * When authentication succeeded.
@@ -212,6 +216,8 @@ namespace paper
 	/** Change authentication and authorisation info
 	 * 		\P key The key to change or add. Specify an empty key to set the default rights.
 	 * 		\P rights See \ref CpaperClient::getInfo
+	 *
+	 * You need owner rights to do this.
 	 */
 	SYNAPSE_REGISTER(paper_ChangeAuth)
 	{

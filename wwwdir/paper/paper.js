@@ -54,7 +54,7 @@ var loading=true;
 var chatLastClientName="";
 var chatTypeHere="Type hier je bericht...";
 
-//current autentorisation info
+//current rights
 var authorized;
 		
 
@@ -1001,9 +1001,9 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 				'Inloggen als gast': function()
 				{
 					$('#authKey').val("");
-					send(paperModId,"paper_Authenticate",{
-						key:""
-					});
+//					send(paperModId,"paper_Authenticate",{
+//						key:""
+//					});
 				}
 			},
 			'close': function ()
@@ -1018,9 +1018,9 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 	{
 		if ($('#authKey').val()!="")
 		{
-			send(paperModId,"paper_Authenticate",{
-				key:$('#authKey').val()
-			});
+//			send(paperModId,"paper_Authenticate",{
+//				key:$('#authKey').val()
+//			});
 		}					
 		$('#authMsg').html("");
 	});
@@ -1036,37 +1036,6 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 		else
 			$('#authMsg').html("Wachtwoord ongeldig (blijft u typen)");
 	});
-
-	//our authorisation changed
-	synapse_register("paper_Authorized",function(msg_src, msg_dst, msg_event, msg)
-	{
-		$('#authForm').dialog("destroy"); 
-
-		authorized=msg;
-		updateAuthorisation();
-
-		//we now may view, reload the drawing
-		if (authorized["view"])
-		{
-			sendDraw({
-				'cmd':'reload'
-			});
-		}
-
-		if (authorized["cursor"])
-		{
-			//tell people who we are and set random mouse position
-			sendDraw({
-				'cursor':{
-					'clientName':$("#chatClientName").val(),
-					'x':Math.round(9000*Math.random())+1000,
-					'y':Math.round(9000*Math.random())+1000
-				}
-			});
-		}
-
-	});
-
 
 
 	
@@ -1176,9 +1145,11 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 			/// start mouse update engine
 			window.setInterval(function() { mouseMove(false) }, mouseInterval);
 
-			//join the specified paper
-			send(0,"paper_Join", {
-				"objectId":getUrlId()
+			//finally!... 
+			//join the specified paper!
+			send(0,"paper_Login", {
+				"objectId":getUrlId(),
+				"key": ""
 			});
 					
 
@@ -1190,38 +1161,53 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
      }, false);
 
 
+	//update client rights and other info..
+	synapse_register("object_Client",function(msg_src, msg_dst, msg_event, msg)
+	{	
+		//its our own info, update the widgets to match the state of autorisation!
+		if (msg_dst==msg["clientId"])
+		{
+			//store rights in global array for easy access
+			authorized=msg["rights"];
+	//		if (authorized["cursor"])
+	//		{
+	//			//tell people who we are and set random mouse position
+	//			sendDraw({
+	//				'cursor':{
+	//					'clientName':$("#chatClientName").val(),
+	//					'x':Math.round(9000*Math.random())+1000,
+	//					'y':Math.round(9000*Math.random())+1000
+	//				}
+	//			});
+	//		}
+	//
+	//		});
+			
+		}
 	
-});
-
-//update all the widgets to match the current autorisation
-function updateAuthorisation()
-{
-	
-}
-
-
-
-//we've joined a object
-synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
-{
-	//doesnt the url id match?
-	if (getUrlId()!=msg["objectId"])
-		document.location=msg["htmlPath"]+document.location.hash;
-	
-	//we've joined a object, remeber the ids
-	currentObjectId=msg["objectId"];
-	paperModId=msg_src;
-	$("#objectId").html(msg["objectId"]);
-
-	//we're not yet authorized to do anything if we just joined.
-	authorized=new Array();
-	updateAuthorisation();
-	
-	//authenticate using specified key
-	send(paperModId,"paper_Authenticate",{
-		key:document.location.hash.substr(1)
+		//TODO:update client list
 	});
 	
-	document.location.hash="";
-});
+	//we've joined a object
+	synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
+	{
+		//doesnt the url id match?
+	//FIXME: push history
+	//	if (getUrlId()!=msg["objectId"])
+	//		document.location=msg["htmlPath"]+document.location.hash;
+		
+		//we've joined a object, remeber the ids
+		currentObjectId=msg["objectId"];
+		paperModId=msg_src;
+		$("#objectId").html(msg["objectId"]);
+	
+		//since we've joined, ask for a complete reload of the drawing
+		sendDraw({
+			'cmd':'reload'
+		});
+	
+		
+		document.location.hash="";
+	});
 
+});

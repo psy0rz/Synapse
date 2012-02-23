@@ -33,12 +33,12 @@ namespace paper
 		mAuthChat=rights["chat"];
 		mDescription=rights["description"].str();
 
-		//inform the client of its new rights
-		Cmsg out;
-		out.event="paper_Authorized";
-		out.dst=id;
-		out.map()=rights;
-		out.send();
+//		//inform the client of its new rights
+//		Cmsg out;
+//		out.event="paper_Authorized";
+//		out.dst=id;
+//		out.map()=rights;
+//		out.send();
 
 	}
 
