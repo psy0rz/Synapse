@@ -142,17 +142,20 @@ function getUrlId()
 function updateAuthorisation(newRights)
 {
 	authorized=newRights;
-	//hide/show widgets according to rights
-	if (authorized.change)
-		$("#toolbox").show();
-	else
-		$("#toolbox").hide();
-	
-	if (authorized.chat)
-		$("#chatInput").show();
-	else
-		$("#chatInput").hide();
-
+	//automaticly add/remove classes
+	$.each(authorized, function(authType, authOn)
+	{
+		if (authOn)
+		{
+			$(".auth_"+authType).removeClass("auth_"+authType+"_disabled");
+			$(".auth_"+authType).addClass("auth_"+authType+"_enabled");
+		}
+		else
+		{
+			$(".auth_"+authType).addClass("auth_"+authType+"_disabled");
+			$(".auth_"+authType).removeClass("auth_"+authType+"_enabled");
+		}
+	});
 }
 
 //reset and prepare for a complete reload of all data
