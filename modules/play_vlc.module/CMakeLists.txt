@@ -10,7 +10,7 @@ MESSAGE(STATUS "Module name of ${CMAKE_CURRENT_BINARY_DIR} is: '${module_name}'"
 
 #we really at least need 1.1.x, since the API has changed 
 INCLUDE(FindPkgConfig)
-pkg_check_modules (VLC libvlc>=1.1.0)
+#pkg_check_modules (VLC libvlc>=1.1.0)
 IF(VLC_FOUND)
 
 

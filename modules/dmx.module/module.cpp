@@ -95,7 +95,7 @@ SYNAPSE_REGISTER(module_Init)
 	out.clear();
 	out.event="dmx_Connect";
   	out["id"]=1;
-  	out["host"]="192.168.14.77";
+  	out["host"]="192.168.1.6";
 //  	out["host"]="localhost";
   	out["port"]=777;
   	out.send();
@@ -120,8 +120,12 @@ class CnetDmx : public synapse::Cnet
 		out.send();
 
 		//password
-		string s("777\n\r");
-		doWrite(s);
+        string s("777\r\n");
+        doWrite(s);
+
+        //16bits mode
+//        s="*65FF#\n";
+   //     doWrite(s);
 	}
 
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
@@ -219,17 +223,17 @@ SYNAPSE_REGISTER(dmx_Set)
 	if (msg["value"]>255 || msg["value"]<0)
 		throw(synapse::runtime_error("Illegal value"));
 
-	if (msg["channel"]==6 && msg["value"]<180)
-		msg["value"]=180;
+//	if (msg["channel"]==6 && msg["value"]<180)
+//		msg["value"]=180;
 
 
 	stringstream dmxStr;
 	//*C9<layer><channel><value>#
-	dmxStr << "*C9fe";
+	dmxStr << "*C901";
 	dmxStr << setfill('0');
 	dmxStr << hex << setw(2) << (int)msg["channel"];
 	dmxStr << hex << setw(2) << (int)msg["value"];
-	dmxStr << "#";
+	dmxStr << "#\n";
 	string s=dmxStr.str();
 	net.doWrite(msg["id"], s);
 

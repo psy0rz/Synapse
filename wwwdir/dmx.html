@@ -7,6 +7,8 @@
 	<title>playlist test</title>
 
 	<script type="text/javascript" src="/synapse/synapse.js?1"></script>
+    <script type="text/javascript" src="lib/raphael.js"></script>
+    <script type="text/javascript" src="lib/colorwheel.js"></script>
 
 	<script type="text/javascript">
 
@@ -55,7 +57,37 @@
 					top:ui.offset.top
 				});
 			}
-		}); 
+        });
+
+//        $(".colorwheel").each(function()
+//        {
+
+            var cw = Raphael.colorwheel(10,0,300);
+            cw.onchange=function(color)
+                {
+                    var channel=15;
+                    console.log(color);
+                    var c = Raphael.color(color);
+                    console.log(c);
+///                    var channel=$(this).attr('_channel');
+                    send(0,"dmx_Set",{
+                        id:1,
+                        'channel':channel,
+                        value:c.r
+                    });
+                    send(0,"dmx_Set",{
+                        id:1,
+                        'channel':channel+1,
+                        value:c.g
+                    });
+                    send(0,"dmx_Set",{
+                        id:1,
+                        'channel':channel+2,
+                        value:c.b
+                    });
+                };
+
+//        });
 
 		synapse_register("dmx_Update",function(msg_src, msg_dst, msg_event, msg)
 		{
@@ -108,21 +140,15 @@
 
 <h1>Dyne village light controller</h1>
 <div>
-	<div class='draggable'  _channel='1'>
+	<div class='draggable'  _channel='1' style='left:150px'>
 		<div class='slider' _channel='1'></div>
 	</div>
 
-	<div class='draggable'  _channel='2'>
-		<div class='slider' _channel='2'></div>
-	</div>
+    <div class='Xdraggable'  _channel='15' >
+        <div class='colorwheel' _channel='15' style='left:300px; position:absolute'></div>
+    </div>
 
-	<div class='draggable'  _channel='3'>
-		<div class='slider' _channel='3'></div>
-	</div>
 
-	<div class='draggable'  _channel='4'>
-		<div class='slider' _channel='4'></div>
-	</div>
 <!-- 
 	<div class='draggable'  _channel='5'>
 		<div class='slider' _channel='5'></div>

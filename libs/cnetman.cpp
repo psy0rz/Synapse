@@ -206,7 +206,7 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
 
 
 	{
-		FIXEN: dit word niet gedaan bij exception, en exception word niet door called afgehandled!
+//		FIXEN: dit word niet gedaan bij exception, en exception word niet door caller afgehandled!
 		lock_guard<mutex> lock(threadMutex);
 		//we're done, remove the Cnetobject from the list
  		nets.erase(id);
