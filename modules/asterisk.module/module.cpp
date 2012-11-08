@@ -246,16 +246,16 @@ namespace asterisk
 		bool isFiltered()
 		{
 			//dont show trunks
-			if (trunk)
-				return (true);
+			// if (trunk)
+			// 	return (true);
 
 			//dont show devices with empty caller ID's
-			if (callerIdName=="")
-				return (true);
+			// if (callerIdName=="")
+			// 	return (true);
 
 			//dont show anything thats not sip (for now)
-			if (id.substr(0,3)!="SIP")
-				return (true);
+			// if (id.substr(0,3)!="SIP")
+			// 	return (true);
 
 			return(false);
 		}
@@ -1122,16 +1122,38 @@ namespace asterisk
 		else if (msg["ActionID"].str()=="Login")
 		{
 			serverMap[msg.dst].status=Cserver::AUTHENTICATED;
-
+            Cmsg out;
 
 			//learn all SIP peers as soon as we login
-			Cmsg out;
 			out.clear();
 			out.src=msg.dst;
 			out.event="ami_Action";
 			out["Action"]="SIPPeers";
 			out.send();
 	
+            //learn all IAX peers as soon as we login
+            out.clear();
+            out.src=msg.dst;
+            out.event="ami_Action";
+            out["Action"]="IAXPeers";
+            out.send();
+
+            //learn all ZAP channels as soon as we login
+            //NOTE: gives useless info
+            // out.clear();
+            // out.src=msg.dst;
+            // out.event="ami_Action";
+            // out["Action"]="ZapShowChannels";
+            // out.send();
+
+            //learn all DAHDI channels as soon as we login
+            //NOTE: gives useless info
+            // out.clear();
+            // out.src=msg.dst;
+            // out.event="ami_Action";
+            // out["Action"]="DahdiShowChannels";
+            // out.send();
+
 			//learn current channel status as soon as we login
 			out.clear();
 			out.src=msg.dst;
@@ -1179,7 +1201,35 @@ namespace asterisk
 	}
 	
 	
-	//we got a response to our SIPPeers request.
+	//we got a response to our SIPPeers/IAXpeers request.
+    /* IAX2 1.8:
+        |ChanObjectType = peer (string)
+        |Channeltype = IAX2 (string)
+        |Dynamic = no (string)
+        |Encryption = no (string)
+        |Event = PeerEntry (string)
+        |IPaddress = 81.18.245.155 (string)
+        |IPport = 4569 (string)
+        |ObjectName = flexvoice/201-CDS_Datux (string)
+        |Status = Unmonitored (string)
+        |Trunk = yes (string)
+
+       SIP 1.8:
+        |ACL = no (string)
+        |ChanObjectType = peer (string)
+        |Channeltype = SIP (string)
+        |Dynamic = yes (string)
+        |Event = PeerEntry (string)
+        |Forcerport = yes (string)
+        |IPaddress = -none- (string)
+        |IPport = 0 (string)
+        |ObjectName = 1002 (string)
+        |RealtimeDevice = no (string)
+        |Status = Unmonitored (string)
+        |TextSupport = no (string)
+        |VideoSupport = no (string)
+
+    */
 	SYNAPSE_REGISTER(ami_Event_PeerEntry)
 	{
 		serverMap[msg.dst].getDevicePtr(msg["Channeltype"].str()+"/"+msg["ObjectName"].str());
@@ -1202,6 +1252,21 @@ namespace asterisk
 	
 	}
 	
+    /*
+        1.8:
+        |Alarm = No Alarm (string)
+        |Context = phones (string)
+        |DAHDIChannel = 1 (string)
+        |DND = Disabled (string)
+        |Event = DAHDIShowChannels (string)
+        |Signalling = FXO Kewlstart (string)
+        |SignallingCode = 4128 (string)
+    */
+    SYNAPSE_REGISTER(ami_Event_DAHDIShowChannels)
+    {
+
+    }
+
 	void channelStatus(Cmsg & msg)
 	{
 		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
@@ -1296,7 +1361,22 @@ namespace asterisk
 		State: Down
 		CallerIDNum: <unknown>
 		CallerIDName: <unknown>
-		Uniqueid: 1269871368.144*/
+		Uniqueid: 1269871368.144
+
+        1.8 dahdi horn pickup:
+        |Account =  (string)
+        |CallerIDName = <unknown> (string)
+        |CallerIDNum = <unknown> (string)
+        |Channel = DAHDI/1-1 (string)
+        |ConnectedLineName = <unknown> (string)
+        |ConnectedLineNum = <unknown> (string)
+        |Event = Status (string)
+        |Privilege = Call (string)
+        |State = Rsrvd (string)
+        |Uniqueid = 1352387005.54 (string)
+
+
+        */
 	
 		channelStatus(msg);
 	}
@@ -1324,10 +1404,21 @@ namespace asterisk
 	// 	State: Up
 	// 	Link: SIP/604-00000046
 	// 	Uniqueid: 1269958018.98
-	
+/*
+        1.8 dahdi:	
+        |Account =  (string)
+        |CallerIDName = <unknown> (string)
+        |CallerIDNum = <unknown> (string)
+        |Channel = DAHDI/1-1 (string)
+        |ConnectedLineName = <unknown> (string)
+        |ConnectedLineNum = <unknown> (string)
+        |Event = Status (string)
+        |Privilege = Call (string)
+        |State = Rsrvd (string)
+        |Uniqueid = 1352387096.56 (string)
 	
 		channelStatus(msg);
-	
+*/	
 	}
 	
 	// channel status is changing
