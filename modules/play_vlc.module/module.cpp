@@ -45,8 +45,8 @@ class CPlayer
 	//pointers to vlc objects and event managers
 	libvlc_instance_t * mVlc;
 
-	libvlc_log_t * mLog;
-	libvlc_log_iterator_t * mLogIterator;
+    //dont log for now, since the log api doesnt even specify to which libvlc instance the logentries belong:
+    //libvlc_log_subscriber_t  *mLogSubscriber;
 
 	libvlc_media_list_t* mList;
 	libvlc_event_manager_t *mListEm;
@@ -120,7 +120,7 @@ class CPlayer
 	}
 
 	//converts metadata from a mediaobject into a var
-	static void vlcMeta2Var(libvlc_media_t * m, Cvar & var)
+    	static void vlcMeta2Var(libvlc_media_t * m, Cvar & var)
 	{
 		char * s;
 
@@ -226,7 +226,7 @@ class CPlayer
 
 		out.send();
 
-
+/**
 		//check the logs as well
 		libvlc_log_message_t logMessage;
 		out.clear();
@@ -257,6 +257,7 @@ class CPlayer
 		}
 		//clear logs
 		libvlc_log_clear(((CPlayer *)player)->mLog);
+**/
 	}
 
 	static void vlcEventMediaSubItemAdded(const libvlc_event_t * event, void *player)
@@ -294,7 +295,7 @@ class CPlayer
 		if (!mVlc)
 			throwError("Problem creating new vlc instance");
 
-
+/*
 		//open logger
 		mLog=libvlc_log_open(mVlc);
 		if (!mVlc)
@@ -303,6 +304,7 @@ class CPlayer
 		mLogIterator=libvlc_log_get_iterator(mLog);
 		if (!mLogIterator)
 			throwError("Problem getting log iterator");
+*/
 
 		//create list player
 		DEB("Creating list player");
@@ -355,7 +357,7 @@ class CPlayer
 
 	bool ok()
 	{
-		return (mLogIterator!=NULL && mLog!=NULL && mVlc!=NULL && mPlayer!=NULL && mList!=NULL && mListPlayer!=NULL);
+		return (/*mLogIterator!=NULL && mLog!=NULL &&*/ mVlc!=NULL && mPlayer!=NULL && mList!=NULL && mListPlayer!=NULL);
 	}
 
 	void destroy()
@@ -373,11 +375,13 @@ class CPlayer
 		if (mListPlayer)
 			libvlc_media_list_player_release(mListPlayer);
 
+/*
 		if (mLogIterator)
 			libvlc_log_iterator_free(mLogIterator);
 
 		if (mLog)
 			libvlc_log_close(mLog);
+*/
 
 		if (mVlc)
 			libvlc_release(mVlc);
