@@ -39,6 +39,9 @@ This module can dynamicly generate playlists from directory's. It also can cache
 #include "boost/filesystem.hpp"
 
 
+/** Playlist namespace
+ *
+ */
 namespace pl
 {
 	using namespace std;
