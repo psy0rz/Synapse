@@ -46,7 +46,7 @@ SYNAPSE_REGISTER(module_Init)
 
 	out.clear();
 	out.event="core_ChangeModule";
-	out["maxThreads"]=1;
+	out["maxThreads"]=10;
 	out.send();
 
 	out.clear();
@@ -213,16 +213,13 @@ SYNAPSE_REGISTER(module_SessionStart)
 
 SYNAPSE_REGISTER(timer_Ready)
 {
-    ERROR("JA");
     Cmsg out;
     out.event="timer_Set";
     out["seconds"]=10;
     out["repeat"]=-1;
     out["dst"]=dst;
     out["event"]="dmx_Timer";
-    out.dst=msg.src;
     out.send();
-    ERROR("kek");
 }
 
 SYNAPSE_REGISTER(dmx_Timer)
