@@ -17,6 +17,7 @@
 
 
 #include "cnetman.h"
+#include "cconfig.h"
 #include "synapse.h"
 #include <boost/regex.hpp>
 #include <sstream>
@@ -28,7 +29,11 @@ using namespace std;
 
 int moduleSessionId=0;
 int netSessionId=0;
-Cvar dmxValues;
+
+namespace dmx
+{
+
+synapse::Cconfig dmxValues;
 
 SYNAPSE_REGISTER(module_Init)
 {
@@ -36,9 +41,12 @@ SYNAPSE_REGISTER(module_Init)
 
 	moduleSessionId=msg.dst;
 
+    dmxValues.load("etc/synapse/dmx.conf");
+
+
 	out.clear();
 	out.event="core_ChangeModule";
-	out["maxThreads"]=10;
+	out["maxThreads"]=1;
 	out.send();
 
 	out.clear();
@@ -50,6 +58,11 @@ SYNAPSE_REGISTER(module_Init)
 	out.event="core_LoadModule";
   	out["name"]="http_json";
   	out.send();
+
+    out.clear();
+    out.event="core_LoadModule";
+    out["name"]="timer";
+    out.send();
 
 	out.clear();
 	out.event="core_NewSession";
@@ -198,6 +211,25 @@ SYNAPSE_REGISTER(module_SessionStart)
 	}
 }
 
+SYNAPSE_REGISTER(timer_Ready)
+{
+    ERROR("JA");
+    Cmsg out;
+    out.event="timer_Set";
+    out["seconds"]=10;
+    out["repeat"]=-1;
+    out["dst"]=dst;
+    out["event"]="dmx_Timer";
+    out.dst=msg.src;
+    out.send();
+    ERROR("kek");
+}
+
+SYNAPSE_REGISTER(dmx_Timer)
+{
+    if (dmxValues.isChanged())
+        dmxValues.save();
+}
 
 SYNAPSE_REGISTER(dmx_Connect)
 {
@@ -245,6 +277,7 @@ SYNAPSE_REGISTER(dmx_Set)
 	out.send();
 
 	dmxValues[msg["channel"]]["value"]=msg["value"];
+    dmxValues.changed();
 }
 
 
@@ -265,6 +298,8 @@ SYNAPSE_REGISTER(dmx_SetPosition)
 	out.src=0;
 	out.dst=0;
 	out.send();
+
+    dmxValues.changed();
 }
 
 SYNAPSE_REGISTER(dmx_Get)
@@ -304,4 +339,5 @@ SYNAPSE_REGISTER(module_Shutdown)
 	INFO("dmx shutting down...");
 	//let the net module shut down to fix the rest
 	net.doShutdown();
+}
 }

@@ -100,20 +100,21 @@ void CcallMan::endCall(CcallList::iterator callI)
 
 void CcallMan::getStatus(Cvar & var)
 {
-	//NOTE: only running calls, otherwise the performance inpact is too big when the queue fills up
 	for (CcallList::iterator callI=callList.begin(); callI!=callList.end(); callI++)
 	{
 		Cvar c;
-		if (callI->started)
-		{
-			c["data"]=*callI->msg;
-			c["event"]=callI->msg->event;
-			c["src"]=callI->msg->src;
-			c["dst"]=callI->dst->id;
-			c["dstUserName"]=callI->dst->user->getName();
-			c["dstModule"]=callI->dst->module->name;
-			var["queue"].list().push_back(c);
-		}
+        if (callI->started)
+            c["started"]=true;
+        else
+            c["started"]=false;
+
+        c["data"]=*callI->msg;
+        c["event"]=callI->msg->event;
+        c["src"]=callI->msg->src;
+        c["dst"]=callI->dst->id;
+        c["dstUserName"]=callI->dst->user->getName();
+        c["dstModule"]=callI->dst->module->name;
+        var["queue"].list().push_back(c);
 	}
 
 	var["statCallsQueued"]=statCallsQueued;

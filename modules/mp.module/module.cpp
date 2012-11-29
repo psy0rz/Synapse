@@ -19,71 +19,93 @@
 #include "synapse.h"
 #include "cconfig.h"
 #include "clog.h"
-int counter;
-int counterSleep;
 
-SYNAPSE_REGISTER(module_Init)
+namespace mp
 {
-	Cmsg out;
+    using namespace std;
 
-	out.clear();
-	out.event="core_ChangeModule";
-	out["maxThreads"]=1;
-	out.send();
+    int playerId;
 
-	out.clear();
-	out.event="core_ChangeSession";
-	out["maxThreads"]=1;
-	out.send();
+    SYNAPSE_REGISTER(module_Init)
+    {
+    	Cmsg out;
 
-	///tell the rest of the world we are ready for duty
-	out.clear();
-	out.event="core_Ready";
-	out.send();
+        playerId=0;
+
+    	out.clear();
+    	out.event="core_ChangeModule";
+    	out["maxThreads"]=1;
+    	out.send();
+
+    	out.clear();
+    	out.event="core_ChangeSession";
+    	out["maxThreads"]=1;
+    	out.send();
+
+    	out.clear();
+    	out.event="core_LoadModule";
+        out["name"]="play_vlc";
+        out.send();
+    }
 
 
-	out.clear();
+    SYNAPSE_REGISTER(play_vlc_Ready)
+    {
+        Cmsg out;
+        out.event="core_LoadModule";
+        out["name"]="pl_dir";
+        out.send();
+    }
 
-	out.event="core_LoadModule";
-    out["name"]="play_vlc";
-    out.send();
+
+    SYNAPSE_REGISTER(pl_dir_Ready)
+    {
+        Cmsg out;
+        out.event="core_LoadModule";
+        out["name"]="http_json";
+        out.send();
+
+        out.clear();
+        out.event="pl_Create";
+        out["id"]="/home/psy/pl";
+        out.send();
+
+    }
+
+    SYNAPSE_REGISTER(http_json_Ready)
+    {
+        //tell the rest of the world we are ready for duty
+        Cmsg out;
+        out.clear();
+        out.event="core_Ready";
+        out.send();
+    }
+
+    // SYNAPSE_REGISTER(play_vlc_Ready)
+    // {
+    // 	playUrl="http://listen.di.fm/public3/chilloutdreams.pls";
+    // 	Cmsg out;
+    // 	out.dst=msg["session"];
+    // 	out.event="play_NewPlayer";
+    // 	out["description"]="second player instance";
+    // 	out.send();
+    // }
+
+    //a new player has emerged
+    SYNAPSE_REGISTER(play_Player)
+    {
+        //for now we just support one player
+        if (!playerId)
+            playerId=msg.src;
+    }
+
+
+
+    SYNAPSE_REGISTER(play_InfoMeta)
+    {
+
+    }
+
+
 
 }
-
-
-SYNAPSE_REGISTER(play_vlc_Ready)
-{
-
-}
-
-SYNAPSE_REGISTER(play_vlc_Ready)
-{
-	playUrl="http://listen.di.fm/public3/chilloutdreams.pls";
-	Cmsg out;
-	out.dst=msg["session"];
-	out.event="play_NewPlayer";
-	out["description"]="second player instance";
-	out.send();
-}
-
-//a new player has emerged
-SYNAPSE_REGISTER(play_Player)
-{
-	Cmsg out;
-	out.dst=msg.src;
-	out.event="play_Open";
-	out["url"]=playUrl;
-	out.send();
-
-
-	playUrl="/home/psy/mp3/01. Experience (1992)/sadfds";
-
-}
-
-
-
-SYNAPSE_REGISTER(play_InfoMeta)
-{
-
-}
-

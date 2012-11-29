@@ -36,6 +36,7 @@ This module can dynamicly generate playlists from directory's. It also can cache
 #include "exception/cexception.h"
 
 #define BOOST_FILESYSTEM_VERSION 3
+
 #include "boost/filesystem.hpp"
 
 
@@ -70,12 +71,6 @@ namespace pl
 		out.event="core_ChangeSession";
 		out["maxThreads"]=1;
 		out.send();
-
-		out.clear();
-		out.event="core_LoadModule";
-		out["path"]="modules/http_json.module/libhttp_json.so";
-		out.send();
-
 
 		//tell the rest of the world we are ready for duty
 		out.clear();

@@ -61,7 +61,7 @@
 
 //        $(".colorwheel").each(function()
 //        {
-
+/*
             var cw = Raphael.colorwheel(10,0,300);
             cw.onchange=function(color)
                 {
@@ -88,7 +88,7 @@
                 };
 
 //        });
-
+*/
 		synapse_register("dmx_Update",function(msg_src, msg_dst, msg_event, msg)
 		{
 			if (msg.value!=null)
@@ -141,31 +141,29 @@
 <h1>Dyne village light controller</h1>
 <div>
 	<div class='draggable'  _channel='1' style='left:150px'>
-		<div class='slider' _channel='1'></div>
+		<div class='slider' _channel='1'>groen</div>
 	</div>
-
-    <div class='Xdraggable'  _channel='15' >
-        <div class='colorwheel' _channel='15' style='left:300px; position:absolute'></div>
+    <div class='draggable'  _channel='2' style='left:150px'>
+        <div class='slider' _channel='2'>blauw</div>
+    </div>
+    <div class='draggable'  _channel='9' style='left:150px'>
+        <div class='slider' _channel='9'>9</div>
+    </div>
+    <div class='draggable'  _channel='4' style='left:150px'>
+        <div class='slider' _channel='4'>4</div>
+    </div>
+    <div class='draggable'  _channel='5' style='left:150px'>
+        <div class='slider' _channel='5'>5</div>
+    </div>
+    <div class='draggable'  _channel='6' style='left:150px'>
+        <div class='slider' _channel='6'>6</div>
+    </div>
+    <div class='draggable'  _channel='7' style='left:150px'>
+        <div class='slider' _channel='7'>7</div>
     </div>
 
 
-<!-- 
-	<div class='draggable'  _channel='5'>
-		<div class='slider' _channel='5'></div>
-	</div>
 
-	<div class='draggable'  _channel='7'>
-		<div class='slider' _channel='7'></div>
-	</div>
-
-	<div class='draggable'  _channel='6'>
-		<div class='slider' _channel='6'></div>
-	</div>
-
-	<div class='draggable'  _channel='8'>
-		<div class='slider' _channel='8'></div>
-	</div>
- -->
 </div>
 
 

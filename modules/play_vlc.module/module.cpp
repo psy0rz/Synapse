@@ -493,7 +493,7 @@ SYNAPSE_REGISTER(module_SessionStart)
 SYNAPSE_REGISTER(module_SessionEnd)
 {
 	players[dst].destroy();
-	players.erase(msg.dst);
+	players.erase(dst);
 }
 
 /** Get a list of players
@@ -592,7 +592,7 @@ SYNAPSE_REGISTER(play_Open)
 */
 SYNAPSE_REGISTER(play_Stop)
 {
-	players[msg.dst].stop();
+	players[dst].stop();
 }
 
 
