@@ -182,12 +182,6 @@ function reset()
 	$(".defaultTool").addClass('selected');
 	$(".defaultSetting").show();
 	
-	updateAuthorisation({
-		owner:0,
-		cursor:0,
-		chat:0,
-		change:0
-	});
 
 }
 
@@ -1171,6 +1165,7 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 		
 		//add drawing rootobject to html container
 		var drawingHtml = document.getElementById("drawing");
+		console.log("tis", drawing, drawingHtml);
 		svgweb.appendChild(drawing, drawingHtml);
      }, false);
 
