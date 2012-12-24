@@ -99,7 +99,7 @@ void getHttpDate(string & s)
 	if (gmtime_r(&currTime,&currTm)!=NULL)
 	{
 		char outstr[200];
-		if (strftime(outstr, sizeof(outstr), "%a, %d %b %Y %H:%M:%S GMT", &currTm) != 0)
+		if (strftime(outstr, 200, "%a, %d %b %Y %H:%M:%S GMT", &currTm) != 0)
 		{
 			s=outstr;
 		}

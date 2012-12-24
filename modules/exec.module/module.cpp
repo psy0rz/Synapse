@@ -140,7 +140,8 @@ namespace exec
 			msg.src=msg["originalSrc"];
 		}
 
-		char buffer[4049];
+		const int buffer_size=4049;
+		char buffer[buffer_size];
 		Cmsg out;
 		if (msg.isSet("id"))
 			out["id"]=msg["id"];
@@ -163,7 +164,7 @@ namespace exec
 		//read as long as there is data
 		while (!feof(fh))
 		{
-			if (fgets(buffer, sizeof(buffer), fh)==NULL)
+			if (fgets(buffer, buffer_size, fh)==NULL)
 			{
 				if (!feof(fh))
 				{

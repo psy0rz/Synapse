@@ -9,14 +9,15 @@ namespace synapse
 	runtime_error::runtime_error(const std::string &err )
 	:std::runtime_error(err)
 	{
-		#ifdef NDEBUG
+		#ifdef true
 			mTrace="Please enable debugging to get exception stack traces.";
 		#else
 				int j, nptrs;
-				void *buffer[100];
+				const int buffer_size=100;
+				void *buffer[buffer_size];
 				char **strings;
 
-				nptrs = backtrace(buffer, sizeof(buffer));
+				nptrs = backtrace(buffer, buffer_size);
 
 				strings = backtrace_symbols(buffer, nptrs);
 				if (strings == NULL)
@@ -31,7 +32,7 @@ namespace synapse
 					mTrace+="\n";
 				}
 
-	           free(strings);
+				free(strings);
 
 		#endif
 	}
@@ -41,9 +42,10 @@ namespace synapse
 		return(mTrace.c_str());
 	}
 
-    runtime_error::~runtime_error() throw()
+	runtime_error::~runtime_error() throw()
 	{
 
 	}
 
 }
+ 
