@@ -16,265 +16,7 @@
 	<script type="text/javascript" src="/paper/svg.js"></script>
 	<script type="text/javascript" src="/lib/jquery.url.js"></script>
 	<script type="text/javascript" src="/paper/paper.js?1"></script>
-
-	<style>
-		@media print
-		{
-			body * { visibility: hidden; }
-		
-			#drawing * { visibility: visible; }
-		
-			#drawing { 
-				position: absolute; 
-				left: 0px; 
-				right:0px;
-				top:0px;
-				bottom: 0px; 
-			}
-		}
-		
-		@media screen 
-		{
-			#drawing {
-				position:absolute; 
-				left:200px;
-				top: 88px;
-				right:0;
-				bottom:0;
-				cursor:crosshair;
-				margin: 0;
-				padding: 0;
-				background-color:#ffffff;
-			}
-		}
-
-		.chatClient
-		{
-			margin-top:2px;
-			border-bottom-style:solid;
-			border-bottom-color:#dddddd;
-			border-bottom-width:1px;
-		}
-
-		
-		.tool
-		{
-			width:34px;
-			height:34px;
-			border-width:1px;
-			border-style:solid;
-			cursor:pointer;
-			display:inline-block;
-			border-color:#dddddd;
-			margin:2px;
-		}
-		
-		.toolList
-		{
-			margin-left:18px;
-		}
-		
-		.selected
-		{
-			border-color:#421F59;
-			border-width:2px;
-			margin:1px;
-		}
-
-		.toolHeader
-		{
-			border-color:#dddddd;
-			border-top-style:solid;
-			border-width:1px;
-			padding:.5em;
-			padding-left:2em;
-			background-position:5px top;
-			background-repeat:no-repeat;
-			margin-top:1em;
-			margin-bottom:1em;
-			padding-left:40px;
-			font-size:18px;
-		}
-		
-		.setting
-		{
-			display:none;
-		}
-
-		.chatTypeHere
-		{
-			color:#aaaaaa;
-		}
-		
-		.chatOnline
-		{
-			font-weight: bold;
-		
-		}
-		
-		.chatName
-		{
-			font-weight: bold;
-		}
-
-		.chatText
-		{
-		
-		}
-
-		.chatBar
-		{
-			cursor:pointer;
-			border-style:none;
-			color: #ffffff;
-			line-height:34px;
-			background-color:#FF8400;
-			padding-left:28px;
-			background-position: 8px 12px;
-			background-repeat:no-repeat;
-			background-image: url("/paper/pijl-rechts.png");
-		}
-		
-		.chatBar:hover
-		{
-			background-color: #FF982A;			
-		}
-
-		.chatBarOpen
-		{
-			background-image: url("/paper/pijl-beneden.png");
-		}
-		
-		.menuBar
-		{
-			cursor:pointer;
-			border-width:1px;
-			border-color:#A28FAB;
-			border-right-style:solid;
-			border-left-style:solid;
-			line-height:34px;
-			color: #ffffff;
-			padding-left:28px;
-			padding-right:18px;
-			background-image: url("/paper/pijl-rechts.png");
-			background-position: 8px 12px;
-			background-repeat:no-repeat;
-		}
-
-		.menuBar:hover
-		{
-			background-color: #633680;			
-		}
-		
-		.menuBarOpen
-		{
-			background-image: url("/paper/pijl-beneden.png");
-		}
-		
-		.menuBar.loading
-		{
-			background-image: url("/paper/spinner.gif");
-			background-repeat:no-repeat;
-			background-position: center center;
-			background-color: #ffffff;
-		}
-		
-		.menu
-		{
-			cursor:pointer;
-			background-color:#efefef;
-			color:#000000;
-			border-width:1px;
-			border-color:#CED5DB;
-			border-style:solid;
-			display:none;
-			min-width: 150px;
-		}
-		
-		.menuItem
-		{
-			padding-left:1em;
-		}
-		
-		.menuSeperator
-		{
-			border-top-style:solid;
-			border-top-color:#CED5DB;
-			border-width:1px;
-			border-bottom-style:solid;
-			border-bottom-color:#ffffff;
-			width:100%;
-		}
-		
-		.menuItem:hover
-		{
-			background-color: #CED5DB;
-			
-		}
-
-		img
-		{
-			border:0;
-			margin:0;
-			padding:0;
-			display:inline;
-		}
-
-		.share
-		{
-			width:16px;
-			height:16px;
-			cursor:pointer;
-			display:inline-block;
-			margin:2px;
-		}
-		
-		.share.loading
-		{
-			background-image: url("/paper/spinner.gif");
-		}
-		
-		.facebook
-		{
-			 background-image:url("/paper/facebook.png");
-		}
-
-		.twitter
-		{
-			 background-image:url("/paper/twitter.png");
-		}
-
-		.hyves
-		{
-			 background-image:url("/paper/hyves.png");
-		}
-		
-		.email
-		{
-			 background-image:url("/paper/email.png");
-		}
-
-		.linkedin
-		{
-			 background-image:url("/paper/linkedin.png");
-		}
-		
-		.addthis
-		{
-			 background-image:url("/paper/addthis.png");
-		}
-
-		.print
-		{
-			width:16px;
-			height:16px;
-			cursor:pointer;
-			display:inline-block;
-			margin:2px;
-			background-image:url("/paper/print.png");
-		}
-		
-	</style>
+	<link rel="stylesheet" href="/paper/paper.css" type="text/css" />
 
 </head>
 
@@ -335,172 +77,173 @@
 			<div class='print' title='Printen'></div>
 		</div>
 
-		<div class='toolHeader' style='background-image:url("/paper/paper.png");'>
-			Gereedschappen	
-		</div>
-
-
-		<div id='modes' class='toolList'>
-			<div 
-				class='tool' 
-				value='move' 
-				changeHigh='1' 
-				changeShow='' 
-				changeFocus='#chatInput' 
-				style='background-image:url("/paper/icon-pijl.jpg")'>
-			</div>
-			
-			<div 
-				class='tool' 
-				value='line' 
-				changeHigh='0' 
-				changeShow='.settingWidth'  
-				changeFocus='#chatInput'
-				style='background-image:url("/paper/icon-lijn.jpg")'>
-			</div>
-			
-			<div 
-				class='tool defaultTool' 
-				value='polyline' 
-				changeHigh=0 
-				changeShow='.settingWidth'
-				changeFocus='#chatInput'
-				style='background-image:url("/paper/icon-potlood.jpg")'>
-			</div>
-			
-			<div 
-				class='tool' 
-				value='polyline' 
-				fill 
-				changeHigh=0 
-				changeShow='' 
-				changeFocus='#chatInput'
-				style='background-image:url("/paper/icon-potlood-rondje.jpg")'>
-			</div>
-
-			<br></br>
-
-			<div 
-				class='tool' 
-				value='rect' 
-				changeHigh=0 
-				changeShow='.settingWidth'
-				changeFocus='#chatInput'
-				style='background-image:url("/paper/icon-vierkant-open.jpg")'>
-			</div>
-			
-			<div 
-				class='tool'
-				value='rect'
-				fill
-				changeHigh=0
-				changeShow=''
-				changeFocus='#chatInput'
-				style='background-image:url("/paper/icon-vierkant-dicht.jpg")'>
-			</div>
-			
-			<div 
-				class='tool' 
-				value='circle' 
-				changeHigh=0 
-				changeShow='.settingWidth'  
-				changeFocus='#chatInput'
-				style='background-image:url("/paper/icon-rondje-open.jpg")'>
-			</div>
-			
-			<div 
-				class='tool' 
-				value='circle' 
-				fill 
-				changeHigh=0 
-				changeShow='' 
-				changeFocus='#chatInput'
-				style='background-image:url("/paper/icon-rondje-dicht.jpg")'>
-			</div>
-			
-			<br></br>
-			
-			<div 
-				class='tool' 
-				value='text' 
-				fill 
-				changeHigh=0 
-				changeShow='.settingText' 
-				changeFocus='#textInput'
-				style='background-image:url("/paper/icon-tekst.jpg")'>
-			</div>	
-			
-			<div 
-				class='tool' 
-				value='delete' 
-				changeHigh='1' 
-				changeShow='' 
-				changeFocus='#chatInput'
-				style='background-image:url("/paper/icon-gum.jpg")'>
-			</div>
-			
-			<div
-				class='tool'
-				value='image'
-				changeHigh='0'
-				changeShow='.settingImage'
-				fill
-				changeFocus='#imageInput'
-				style='background-image:url("/paper/icon-afbeelding.jpg")'>
-			</div>
-
-			<!-- add extra per-tool settings here, will be automaticly shown if show=... is specified in a tool -->
-			<div class='setting settingWidth defaultSetting'>
-				Grootte (<span id='widthText'>3</span>)
-				<div id='width' style='
-					margin:1em;			
-				'></div>
+		<div class='auth_change'>
+			<div class='toolHeader' style='background-image:url("/paper/paper.png");'>
+				Gereedschappen	
 			</div>
 	
-			<div class='setting settingText'>
-				Text: 
-				<textarea id='textInput' class='autoFocus' cols=20 rows=3></textarea>
+	
+			<div id='modes' class='toolList'>
+				<div 
+					class='tool' 
+					value='move' 
+					changeHigh='1' 
+					changeShow='' 
+					changeFocus='#chatInput' 
+					style='background-image:url("/paper/icon-pijl.jpg")'>
+				</div>
+				
+				<div 
+					class='tool' 
+					value='line' 
+					changeHigh='0' 
+					changeShow='.settingWidth'  
+					changeFocus='#chatInput'
+					style='background-image:url("/paper/icon-lijn.jpg")'>
+				</div>
+				
+				<div 
+					class='tool defaultTool' 
+					value='polyline' 
+					changeHigh=0 
+					changeShow='.settingWidth'
+					changeFocus='#chatInput'
+					style='background-image:url("/paper/icon-potlood.jpg")'>
+				</div>
+				
+				<div 
+					class='tool' 
+					value='polyline' 
+					fill 
+					changeHigh=0 
+					changeShow='' 
+					changeFocus='#chatInput'
+					style='background-image:url("/paper/icon-potlood-rondje.jpg")'>
+				</div>
+	
+				<br></br>
+	
+				<div 
+					class='tool' 
+					value='rect' 
+					changeHigh=0 
+					changeShow='.settingWidth'
+					changeFocus='#chatInput'
+					style='background-image:url("/paper/icon-vierkant-open.jpg")'>
+				</div>
+				
+				<div 
+					class='tool'
+					value='rect'
+					fill
+					changeHigh=0
+					changeShow=''
+					changeFocus='#chatInput'
+					style='background-image:url("/paper/icon-vierkant-dicht.jpg")'>
+				</div>
+				
+				<div 
+					class='tool' 
+					value='circle' 
+					changeHigh=0 
+					changeShow='.settingWidth'  
+					changeFocus='#chatInput'
+					style='background-image:url("/paper/icon-rondje-open.jpg")'>
+				</div>
+				
+				<div 
+					class='tool' 
+					value='circle' 
+					fill 
+					changeHigh=0 
+					changeShow='' 
+					changeFocus='#chatInput'
+					style='background-image:url("/paper/icon-rondje-dicht.jpg")'>
+				</div>
+				
+				<br></br>
+				
+				<div 
+					class='tool' 
+					value='text' 
+					fill 
+					changeHigh=0 
+					changeShow='.settingText' 
+					changeFocus='#textInput'
+					style='background-image:url("/paper/icon-tekst.jpg")'>
+				</div>	
+				
+				<div 
+					class='tool' 
+					value='delete' 
+					changeHigh='1' 
+					changeShow='' 
+					changeFocus='#chatInput'
+					style='background-image:url("/paper/icon-gum.jpg")'>
+				</div>
+				
+				<div
+					class='tool'
+					value='image'
+					changeHigh='0'
+					changeShow='.settingImage'
+					fill
+					changeFocus='#imageInput'
+					style='background-image:url("/paper/icon-afbeelding.jpg")'>
+				</div>
+	
+				<!-- add extra per-tool settings here, will be automaticly shown if show=... is specified in a tool -->
+				<div class='setting settingWidth defaultSetting'>
+					Grootte (<span id='widthText'>3</span>)
+					<div id='width' style='
+						margin:1em;			
+					'></div>
+				</div>
+		
+				<div class='setting settingText'>
+					Text: 
+					<textarea id='textInput' class='autoFocus' cols=20 rows=3></textarea>
+				</div>
+		
+				<div class='setting settingImage'>
+					Image url: 
+					<textarea id='imageInput' class='autoFocus' cols=20 rows=3></textarea>
+				</div>
+	
 			</div>
 	
-			<div class='setting settingImage'>
-				Image url: 
-				<textarea id='imageInput' class='autoFocus' cols=20 rows=3></textarea>
+	
+			<div class='toolHeader' style='background-image:url("/paper/paper.png");'>
+				Kleuren	
 			</div>
-
+	
+			<div id='colors'  class='toolList'>
+				<div class='tool color defaultTool' style='background-color:#000000' value='#000000'>&nbsp;</div>
+				<div class='tool color' style='background-color:#0000ff' value='#0000ff'>&nbsp;</div>
+				<div class='tool color' style='background-color:#00ff00' value='#00ff00'>&nbsp;</div>
+				<div class='tool color' style='background-color:#00ffff' value='#00ffff'>&nbsp;</div>
+				<br>
+				<div class='tool color' style='background-color:#FF8040' value='#FF8040'>&nbsp;</div>
+				<div class='tool color' style='background-color:#ffffff' value='#ffffff'>&nbsp;</div>
+				<div class='tool color' style='background-color:#ff0000' value='#ff0000'>&nbsp;</div>
+				<div class='tool color' style='background-color:#ff00ff' value='#ff00ff'>&nbsp;</div>
+				<br>
+				<div class='tool color' style='background-color:#ffff00' value='#ffff00'>&nbsp;</div>
+				<div class='tool color' style='background-color:#999999' value='#999999'>&nbsp;</div>
+				<div class='tool color' style='background-color:#804000' value='#804000'>&nbsp;</div>
+				<div class='tool color' style='background-color:#F87217' value='#F87217'>&nbsp;</div>
+			</div>		
+	
+	
+			<!-- 
+			<div id='styles'>
+				<div class='tool defaultTool' value='none'>norm</div>
+				<div class='tool' value='20,200'>stip</div>
+				<div class='tool' value='200,200'>streep</div>
+			</div>
+	 -->
+	
 		</div>
-
-
-		<div class='toolHeader' style='background-image:url("/paper/paper.png");'>
-			Kleuren	
-		</div>
-
-		<div id='colors'  class='toolList'>
-			<div class='tool color defaultTool' style='background-color:#000000' value='#000000'>&nbsp;</div>
-			<div class='tool color' style='background-color:#0000ff' value='#0000ff'>&nbsp;</div>
-			<div class='tool color' style='background-color:#00ff00' value='#00ff00'>&nbsp;</div>
-			<div class='tool color' style='background-color:#00ffff' value='#00ffff'>&nbsp;</div>
-			<br>
-			<div class='tool color' style='background-color:#FF8040' value='#FF8040'>&nbsp;</div>
-			<div class='tool color' style='background-color:#ffffff' value='#ffffff'>&nbsp;</div>
-			<div class='tool color' style='background-color:#ff0000' value='#ff0000'>&nbsp;</div>
-			<div class='tool color' style='background-color:#ff00ff' value='#ff00ff'>&nbsp;</div>
-			<br>
-			<div class='tool color' style='background-color:#ffff00' value='#ffff00'>&nbsp;</div>
-			<div class='tool color' style='background-color:#999999' value='#999999'>&nbsp;</div>
-			<div class='tool color' style='background-color:#804000' value='#804000'>&nbsp;</div>
-			<div class='tool color' style='background-color:#F87217' value='#F87217'>&nbsp;</div>
-		</div>		
-
-
-		<!-- 
-		<div id='styles'>
-			<div class='tool defaultTool' value='none'>norm</div>
-			<div class='tool' value='20,200'>stip</div>
-			<div class='tool' value='200,200'>streep</div>
-		</div>
- -->
-
-
 	</div>
 
 
@@ -517,7 +260,7 @@
 	background-color:#eeeeee;
 	'></div>
 
-	<div id='drawing'>
+	<div id='auth_cursor drawing'>
 	</div>		
 
 
@@ -539,6 +282,14 @@
 		</div>
 	</div>
 
+	<div id='loginButton' style='
+	position:absolute; 
+	top: 54px;
+	left:299px;
+	height:34px;'> 
+	
+		Inloggen
+	</div>
 
 
 	<div  style='
@@ -606,7 +357,7 @@
 		'>
 		</div>
 
-		<textarea id='chatInput' class='autoFocus' rows=3 cols=30 style='
+		<textarea id='auth_chat chatInput' class='autoFocus' rows=3 cols=30 style='
 		position:absolute; 	
 		bottom: 1em;
 		left: 1em;

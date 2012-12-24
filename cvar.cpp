@@ -639,8 +639,9 @@ bool Cvar::selfTest()
 
 		DEB("test: long to string");
 		a=6.14;
-		TEST((string)a=="6.13999999999999968026");
-		TEST(a.str()=="6.13999999999999968026");
+		//actual value depends on the architecture you use, on arm its 6.1399999999999997
+		TEST((string)a=="6.13999999999999968026" || (string)a=="6.1399999999999997");
+		TEST(a.str()=="6.13999999999999968026" || a.str()=="6.1399999999999997");
 
 		DEB("test: long to map");
 		a=7;

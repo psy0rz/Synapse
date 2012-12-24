@@ -21,6 +21,7 @@
 #define CSHAREDOBJECT_H_
 
 #include "exception/cexception.h"
+#include <set>
 
 namespace synapse
 {
@@ -124,7 +125,6 @@ namespace synapse
 			Cmsg out;
 			out.event="object_Client";
 			clientMap[id].getInfo(out);
-			//niet: getInfo(out);
 			sendAll(out); //inform all members of the new client
 		}
 
@@ -142,14 +142,14 @@ namespace synapse
 			{
 				clientMap[id].id=id;
 
-				//tell the client they are joined
+				//tell the client about the new object they've joined.
 				Cmsg out;
 				out.event="object_Joined";
 				out.dst=id;
 				getInfo(out);
 				out.send();
 
-				//send the other clients an update about this new client.
+				//tell everyone about the new client that just joined
 				sendClientUpdate(id);
 			}
 			else

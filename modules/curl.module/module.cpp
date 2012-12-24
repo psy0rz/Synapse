@@ -110,8 +110,8 @@ class Ccurl
 //		queueMsg["password"]=msg["password"];
 		mQueue.push_back(queueMsg);
 
-		Cqueue::iterator lastMsg=(--mQueue.end());
-
+		//Cqueue::iterator lastMsg=(--mQueue.end());
+		
 		mQueueChanged->notify_one();
 
 		//no performing thread yet?

@@ -16,16 +16,6 @@
     along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-/** \file
-The core module.
-
-This contains all the core functionality to control the synapse framework.
-
-Here are some common sends that can be emitted by all event-handers of the core:
-\par Sends \c module_Error:
-	Sended to the requesting session if some error happend.
-		\arg \c error A string describing the error.
-*/
 
 
 
@@ -41,6 +31,16 @@ Look in the files section for more info..
 #include "synapse.h"
 #include <signal.h>
 
+/** The core module.
+
+This contains all the core functionality to control the synapse framework.
+
+Here are some common sends that can be emitted by all event-handers of the core:
+\SEND module_Error:
+	Sended to the requesting session if some error happend.
+	\P error A string describing the error.
+ *
+ */
 namespace synapse
 {
 
@@ -241,16 +241,31 @@ SYNAPSE_REGISTER(module_Error)
 
 
 /** Dynamicly loads a synapse module.
-	\param path The absolute pathname of the .so file.
-	\param name Name of the module (will autodetermine the path)
+
+\P path The absolute pathname of the .so file.
+\P name Name of the module (will autodetermine the path)
 
 \post The module specified by path is loaded.
-After loading the module_Init event is sended to the initial session of the module. Directly after that the module_SessionStarted and module_SessionStart are also sended.
 
-\par Replys \c modulename_Ready:
+\SEND module_Init
+To the initial session of the new module, so it can initalize itself.
+
+\SEND module_SessionStart
+To the initial session of the new module. (just like any other session that is started for a module)
+\P username Username thats logged in to this session.
+\P synapse_cookie Custom session cookie.
+\P description Description of the session.
+
+\BROADCAST module_SessionStarted
+Tells the world a new session is started for this module.
+\P session The session id of the new session.
+
+\REPLY modulename_Ready
 	Sended to all the sessions that requested the load, after the module indicates its ready.
 	A module should always send a \c core_Ready when its ready.
-		\arg \c session The original session id that sended the core_Ready.
+	\P session The original session id that sended the core_Ready.
+
+\note If the module is already loaded, only a modulename_Ready is send.
 
 */
 SYNAPSE_REGISTER(core_LoadModule)
@@ -342,8 +357,9 @@ SYNAPSE_REGISTER(core_LoadModule)
 
 \post The module is marked as ready, so that a future \c core_LoadModule can return modulename_Ready immediatly.
 
-\par Sends \c modulename_Ready to all modules that requested the module:
-		\arg \c session The default session of the ready module.
+\SEND modulename_Ready
+	to all modules that requested the module
+	\P session The default session of the ready module.
 */
 SYNAPSE_REGISTER(core_Ready)
 {
@@ -382,8 +398,8 @@ SYNAPSE_REGISTER(core_Ready)
 
 
 /** Registers an event handler.
-	\param event The name of the event.
-	\param hander (optional) The function name of the handler. If not specified, the name of the event will be used. A pointer to the function is looked up via the symbol table of the dynamicly loaded object.
+	\P event The name of the event.
+	\P hander (optional) The function name of the handler. If not specified, the name of the event will be used. A pointer to the function is looked up via the symbol table of the dynamicly loaded object.
 
 You also can set a default handler that will be called for ALL events: Leave \c event empty and only specify \c handler.
 
@@ -431,10 +447,10 @@ SYNAPSE_REGISTER(core_Register)
 
 
 /** Changes the settings of an event.
-	\param event The event you want to change.
-	\param sendGroup The group that has permission to send the event.
-	\param recvGroup The group that has permission to receive the event.
-	\param modifyGroup The group that has permission to modify the permissions.
+	\P event The event you want to change.
+	\P sendGroup The group that has permission to send the event.
+	\P recvGroup The group that has permission to receive the event.
+	\P modifyGroup The group that has permission to modify the permissions.
 
 \post The permissions are changed.
 
@@ -506,12 +522,12 @@ SYNAPSE_REGISTER(core_ChangeEvent)
 
 
 /** Changes the user of the \c src session.
-	\param username The username of the user you want to become.
-	\param password The password to authenticate you.
+	\P username The username of the user you want to become.
+	\P password The password to authenticate you.
 
 \post The \c src session has changed user. (e.g. has different permissions)
 
-\par Replies \c module_Login:
+\REPLY module_Login:
 	To indicate a succesfull login.
 		\arg \c username The username the session has become.
 */
@@ -541,21 +557,21 @@ SYNAPSE_REGISTER(core_Login)
 
 
 /** Starts a new session, with the same user as \c src.
-	\param username (optional)
-	\param password (optional) If specified will create a session with a different user instead of the \c src user.
-	\param maxThreads (optional) Max threads of new session.
-	\param synapse_cookie (optional) Cookie, can be used internally by module. This value is passed every time a handler for the session is called. It is passed as \c cookie parameter to the handler-function.
-	\param description (optional) description of the session
+	\P username (optional)
+	\P password (optional) If specified will create a session with a different user instead of the \c src user.
+	\P maxThreads (optional) Max threads of new session.
+	\P synapse_cookie (optional) Cookie, can be used internally by module. This value is passed every time a handler for the session is called. It is passed as \c cookie parameter to the handler-function.
+	\P description (optional) description of the session
 
 \post A new session is created.
 
-\par Sends \c module_SessionStart:
+\SEND module_SessionStart:
 	to the new session, within the same module. This is to let the module know about its new session.
 		\arg \c username Username of the session
 		\arg \c description (optional) description of the session, usefull for debugging and administration.
 		\arg \c (other parameters) Contains all specified arguments. (without password)
 
-\par Broadcasts \c module_SessionStarted:
+\BROADCAST module_SessionStarted:
 	to let the rest of the word know of the new session.
 		\arg \c session The session id of the new session.
 */
@@ -637,13 +653,13 @@ SYNAPSE_REGISTER(core_NewSession)
 
 \post Deleted all sessions, including the core-session: You cant call any core-functions after sending this.
 
-\par Broadcasts \c module_Shutdown:
+\BROADCAST module_Shutdown:
 	To let all modules know they should cleanup/shutdown and end all their threads.
 
-\par Sends \c module_SessionEnd:
+\SEND module_SessionEnd:
 	To all sessions.
 
-\par Broadcasts \c module_SessionEnded:
+\BROADCAST module_SessionEnded:
 	For all sessions, to indicate to the rest of the world that the sessions have been ended.
 		\arg \c session The session that has been ended.
 
@@ -709,10 +725,10 @@ SYNAPSE_REGISTER(core_Shutdown)
 
 /** Delete \c src session.
 
-\par Replies \c module_SessionEnd:
+\REPLY module_SessionEnd:
 	To \c src to indicate session has ended.
 
-\par Broadcasts \c module_SessionEnded:
+\BROADCAST module_SessionEnded:
 	To indicate to the rest of the world that the session has been ended.
 		\arg \c session The session that has been ended.
 */
@@ -755,7 +771,7 @@ SYNAPSE_REGISTER(core_DelSession)
 
 Only deletes sessions belonging to \c src module.
 
-\par Broadcasts \c module_SessionEnded:
+\BROADCAST module_SessionEnded:
 	To indicate to the rest of the world that the sessions have been ended.
 		\arg \c session The session that has been ended.
 */
@@ -792,9 +808,9 @@ SYNAPSE_REGISTER(core_DelCookieSessions)
 
 
 /** Changes the settings of the \c src module.
-	\param maxThreads (optional) The maximum number of threads for the module. (default 1, e.g. single threaded)
-	\param broadcastMulti (optional) Set to 1 to deliver broadcasts to every session specific, instead of only to the default session of the module.
-	\param broadcastCookie (optional) Set to 1 to deliver broadcasts to every uniq session-cookie specific, instead of only to the default session of the module.
+	\P maxThreads (optional) The maximum number of threads for the module. (default 1, e.g. single threaded)
+	\P broadcastMulti (optional) Set to 1 to deliver broadcasts to every session specific, instead of only to the default session of the module.
+	\P broadcastCookie (optional) Set to 1 to deliver broadcasts to every uniq session-cookie specific, instead of only to the default session of the module.
 
 \post Settings have been changed.
 */
@@ -825,7 +841,7 @@ SYNAPSE_REGISTER(core_ChangeModule)
 
 
 /** Changes the settings of \c src session.
-	\param maxThreads (optional) The maximum number of threads for the module. (default 1, e.g. single threaded)
+	\P maxThreads (optional) The maximum number of threads for the module. (default 1, e.g. single threaded)
 
 \post Settings have been changed.
 */
@@ -851,13 +867,13 @@ SYNAPSE_REGISTER(core_ChangeSession)
 
 //
 /** Sends a thread.interrupt() to a executing call that was previously send from \c src. It removes the call form the queue if its not executing yet.
-	\param event The event you want to interupt or cancel.
-	\param dst The destination session the event was send to.
+	\P event The event you want to interupt or cancel.
+	\P dst The destination session the event was send to.
 
 
 \post The event wont be delivered anymore, or a interrupt is send to the thread.
 
-\par Replies \c core_InterruptSent
+\REPLY core_InterruptSent
 	To indicate the interrupt is send OR the call is removed.
 		\arg \c pars The above specified parameters.
 
@@ -885,8 +901,8 @@ SYNAPSE_REGISTER(core_Interrupt)
 }
 
 /** Changes the logging-setting of the synapse core.
-	\param logSends Boolean to control the printing of Send messages.
-	\param logReceives Boolean to control the printing of the receiving of messages.
+	\P logSends Boolean to control the printing of Send messages.
+	\P logReceives Boolean to control the printing of the receiving of messages.
 
 \post Settings have been changed.
 
@@ -907,7 +923,7 @@ SYNAPSE_REGISTER(core_ChangeLogging)
 /** Requests status of core.
 Usefull for debugging and administration.
 
-\par Replies \c core_Status:
+\REPLY core_Status:
 	Contains several status fields. Mainly used by status.html.
 */
 SYNAPSE_REGISTER(core_GetStatus)
@@ -928,7 +944,7 @@ SYNAPSE_REGISTER(core_GetStatus)
 /** Gets a list of all registered events from core.
 Usefull for automated event mappers.
 
-\par Replies \c core_Events:
+\REPLY core_Events:
 	Contains array with all known events.
 */
 SYNAPSE_REGISTER(core_GetEvents)
@@ -944,15 +960,15 @@ SYNAPSE_REGISTER(core_GetEvents)
 }
 
 /** Adds a new event mapping.
-	\param mapFrom Event to map from
-	\param mapTo Event to map to
+	\P mapFrom Event to map from
+	\P mapTo Event to map to
 
 \post Whenever event mapFrom is sent to destination -1, it will be remapped to mapTo. Multiple mappings per event are possible. Whenever the core maps an event, a core_MappedEvent is broadcasted. The end users should use mapper.html to remap events for things like remote controls or keyboard input.
 
-\par Broadcasts \c core_MappedEvent:
+\BROADCAST core_MappedEvent:
 	Informs of the new mapping status.
-	\param mappedFrom Event which got mapped
-	\param mappedTo List of target events we map to.
+	\P mappedFrom Event which got mapped
+	\P mappedTo List of target events we map to.
 
 */
 SYNAPSE_REGISTER(core_AddMapping)
@@ -976,12 +992,12 @@ SYNAPSE_REGISTER(core_AddMapping)
 }
 
 /** Deletes an event mapping.
-	\param mapFrom Event that is mapped from
-	\param mapTo Event that is mapped to
+	\P mapFrom Event that is mapped from
+	\P mapTo Event that is mapped to
 
 \post Mapping is removed.
 
-\par Broadcasts \c core_MappedEvent.
+\BROADCAST core_MappedEvent.
 	(see core_AddMapping)
 
 */

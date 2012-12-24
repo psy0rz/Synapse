@@ -86,17 +86,23 @@
 			}
 
  			$('#queue').empty();
- 			$('#queue').append("<tr><th>Event<th>Src<th>Dst<th>Data</tr>");
+ 			$('#queue').append("<tr><th>Event<th>Src<th>Dst<th>started</th>Data</tr>");
 			for (var call in msg["queue"])
 			{
 				var html;
 				var m=msg["queue"][call];
 
+                //NOTE:usually when things stay queued and never run, something is wrong with the number-of-threads per session or module
+                var on='';
+                if (!m["started"])
+                    on='on';
+
 				$('#queue').append(
-					"<tr>"+
+					"<tr class='"+on+"'>"+
 					"<td>"+m["event"]+
 					"<td>"+m["src"]+
 					"<td>"+m["dst"]+":"+m["dstUserName"]+"@"+m["dstModule"]+
+                    "<td>"+m["started"]+
 					"<td>"+"<pre>"+JSON.stringify(m["data"],null," ")+"</pre>"+
 					"</tr>"
 				);

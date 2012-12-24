@@ -15,7 +15,7 @@ file(GLOB sources *.cpp)
 ADD_LIBRARY(${module_name} MODULE ${sources})
 
 #need to link to some other libraries ? just add them here
-#TARGET_LINK_LIBRARIES(test)
+TARGET_LINK_LIBRARIES(timer rt)
 
 INCLUDE_DIRECTORIES(../..)
 

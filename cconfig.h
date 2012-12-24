@@ -35,7 +35,7 @@ namespace synapse
 {
 	using namespace std;
 	using namespace boost::filesystem;
-
+    
 
 	class Cconfig : public Cvar
 	{

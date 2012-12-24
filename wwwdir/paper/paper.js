@@ -54,7 +54,7 @@ var loading=true;
 var chatLastClientName="";
 var chatTypeHere="Type hier je bericht...";
 
-//current autentorisation info
+//current rights
 var authorized;
 		
 
@@ -139,6 +139,25 @@ function getUrlId()
 		return($("head").attr("paperId"));
 }
 
+function updateAuthorisation(newRights)
+{
+	authorized=newRights;
+	//automaticly add/remove classes
+	$.each(authorized, function(authType, authOn)
+	{
+		if (authOn)
+		{
+			$(".auth_"+authType).removeClass("auth_"+authType+"_disabled");
+			$(".auth_"+authType).addClass("auth_"+authType+"_enabled");
+		}
+		else
+		{
+			$(".auth_"+authType).addClass("auth_"+authType+"_disabled");
+			$(".auth_"+authType).removeClass("auth_"+authType+"_enabled");
+		}
+	});
+}
+
 //reset and prepare for a complete reload of all data
 function reset()
 {
@@ -162,7 +181,61 @@ function reset()
 	$(".tool").removeClass('selected');
 	$(".defaultTool").addClass('selected');
 	$(".defaultSetting").show();
+	
+	updateAuthorisation({
+		owner:0,
+		cursor:0,
+		chat:0,
+		change:0
+	});
 
+}
+
+//create/get cursor svg object for specified client
+function getCursor(clientId)
+{
+	var cursor=document.getElementById('cursor'+clientId);
+	if (cursor==null)
+	{
+		//create a group for this client's cursor
+		cursor = document.createElementNS(svgns, 'g');
+		cursor.setAttribute('id', 'cursor'+clientId);
+		cursor.setAttribute('stroke', '#000000');
+		cursor.setAttribute('stroke-width', '10');
+		drawing.appendChild(cursor);
+	
+		//add drawing to the cursor group
+		var e = document.createElementNS(svgns, 'line');
+		e.setAttribute('x1', '-200');
+		e.setAttribute('x2', '+200');
+		e.setAttribute('y1', '0');
+		e.setAttribute('y2', '0');
+		cursor.appendChild(e);					
+	
+		var e = document.createElementNS(svgns, 'line');
+		e.setAttribute('x1', '0');
+		e.setAttribute('x2', '0');
+		e.setAttribute('y1', '-200');
+		e.setAttribute('y2', '+200');
+		cursor.appendChild(e);					
+	
+		//create text element
+		var e = document.createElementNS(svgns, 'text');
+		e.setAttribute('id', 'cursorName'+clientId);
+		e.setAttribute('x', '0');
+		e.setAttribute('y', '300');
+		e.setAttribute('font-size','200');
+		e.setAttribute('font-weight','bold');
+		e.setAttribute('stroke','#000000');
+		e.setAttribute('fill','#000000');
+		cursor.appendChild(e);					
+	
+		//add the actual text
+		var textNode = document.createTextNode("(unknown)", true);
+		e.appendChild(textNode);
+		
+	}
+	return (cursor);
 }
 
 
@@ -200,7 +273,7 @@ beforeId:   set by server to the id of the element this element should be insert
 normally only set when requesting a refresh.
 
 #### Cursor indication
-cursor:     Cursor and name information: x,y,clientName. 
+cursor:     Cursor and name information: x,y 
 			The server keeps a list of cursors and sends them when a client joins.
 
 ### Chat
@@ -328,82 +401,20 @@ function draw(msg)
 		loading=false;		
 	}			
 
-	//update cursor/client name?
+	//update cursor?
 	if (msg["cursor"]!=null && msg["src"]!=ourId)
 	{
-		var cursor=document.getElementById('cursor'+msg["src"]);
-		if (cursor==null)
-		{
-			//create a group for this client's cursor
-			cursor = document.createElementNS(svgns, 'g');
-			cursor.setAttribute('id', 'cursor'+msg["src"]);
-			cursor.setAttribute('stroke', '#000000');
-			cursor.setAttribute('stroke-width', '10');
-			drawing.appendChild(cursor);
-
-			//add drawing to the cursor group
-			var e = document.createElementNS(svgns, 'line');
-			e.setAttribute('x1', '-200');
-			e.setAttribute('x2', '+200');
-			e.setAttribute('y1', '0');
-			e.setAttribute('y2', '0');
-			cursor.appendChild(e);					
-
-			var e = document.createElementNS(svgns, 'line');
-			e.setAttribute('x1', '0');
-			e.setAttribute('x2', '0');
-			e.setAttribute('y1', '-200');
-			e.setAttribute('y2', '+200');
-			cursor.appendChild(e);					
-
-			//create text element
-			var e = document.createElementNS(svgns, 'text');
-			e.setAttribute('id', 'clientName'+msg["src"]);
-			e.setAttribute('x', '0');
-			e.setAttribute('y', '300');
-			e.setAttribute('font-size','200');
-			e.setAttribute('font-weight','bold');
-			e.setAttribute('stroke','#000000');
-			e.setAttribute('fill','#000000');
-			cursor.appendChild(e);					
-
-			//add the actual text
-			var textNode = document.createTextNode("(unknown)", true);
-			e.appendChild(textNode);
-			
-		}
+		//get/create cursor:
+		var cursor=getCursor(msg["src"]);
 
 		//update cursor position?
 		if (msg["cursor"]["x"]!=null)
 		{
 			cursor.setAttribute('transform', 'translate('+msg["cursor"]["x"]+','+msg["cursor"]["y"]+')');
 		}
-			
-		//update cursor clientname?
-		if (msg["cursor"]["clientName"]!=null)
-		{
-			//update cursor text:
-			var e=document.getElementById('clientName'+msg["src"]);
-			e.childNodes[0].data=filterInput(msg["cursor"]["clientName"],15);
-		}
 	}
 
 
-	//update chat client list
-	if (msg["cursor"]!=null && msg["cursor"]["clientName"]!=null)
-	{
-		var clientName=filterInput(msg["cursor"]["clientName"],15);
-		
-		var e=document.getElementById('chatClient'+msg["src"]);
-		if (e==null)
-		{
-			$("#chatClients").append("<div id='chatClient"+msg["src"]+"' class='chatClient'>"+clientName+"</div>");
-			chatPrintOnline();
-		}
-		else
-			e.childNodes[0].data=clientName;
-
-	}	
 
 	//received chat text?
 	if (msg["chat"] != null)
@@ -521,8 +532,11 @@ function mouseMove(force)
 		var c=toServer(mousePoint.x,mousePoint.y);
 		var msg={};
 
-		//cursor
-		msg['cursor']=c;
+		//cursor authorized?
+		if (authorized.cursor)
+			msg['cursor']=c;
+		else 
+			return; //no? then we may not do anything
 		
 		if (mouseMode=="polyline")
 		{
@@ -615,6 +629,9 @@ function mouseMove(force)
 //user starts a mouse operation (clicks somewhere)
 function mouseStart(m)
 {
+	if (!authorized.change)
+		return;
+	
 	if (mousePoint.x==null || mousePoint.y==null)
 		return;
 	tempCount++;
@@ -826,12 +843,9 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 	$("#chatClientName").keyup(function(m)
 	{
 		$.setCookie('clientName', $("#chatClientName").val(), { duration:365, path:"/" });
-		sendDraw({
-			'cursor':{
-				'clientName':$("#chatClientName").val()
-			}
-		});
-			
+		send(paperModId,"paper_ChangeInfo", { 
+			name: $("#chatClientName").val()
+		});			
 	});
 
 	//user presses enter in chatInput:
@@ -1001,9 +1015,9 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 				'Inloggen als gast': function()
 				{
 					$('#authKey').val("");
-					send(paperModId,"paper_Authenticate",{
-						key:""
-					});
+//					send(paperModId,"paper_Authenticate",{
+//						key:""
+//					});
 				}
 			},
 			'close': function ()
@@ -1018,9 +1032,9 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 	{
 		if ($('#authKey').val()!="")
 		{
-			send(paperModId,"paper_Authenticate",{
-				key:$('#authKey').val()
-			});
+//			send(paperModId,"paper_Authenticate",{
+//				key:$('#authKey').val()
+//			});
 		}					
 		$('#authMsg').html("");
 	});
@@ -1036,37 +1050,6 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 		else
 			$('#authMsg').html("Wachtwoord ongeldig (blijft u typen)");
 	});
-
-	//our authorisation changed
-	synapse_register("paper_Authorized",function(msg_src, msg_dst, msg_event, msg)
-	{
-		$('#authForm').dialog("destroy"); 
-
-		authorized=msg;
-		updateAuthorisation();
-
-		//we now may view, reload the drawing
-		if (authorized["view"])
-		{
-			sendDraw({
-				'cmd':'reload'
-			});
-		}
-
-		if (authorized["cursor"])
-		{
-			//tell people who we are and set random mouse position
-			sendDraw({
-				'cursor':{
-					'clientName':$("#chatClientName").val(),
-					'x':Math.round(9000*Math.random())+1000,
-					'y':Math.round(9000*Math.random())+1000
-				}
-			});
-		}
-
-	});
-
 
 
 	
@@ -1176,9 +1159,11 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 			/// start mouse update engine
 			window.setInterval(function() { mouseMove(false) }, mouseInterval);
 
-			//join the specified paper
-			send(0,"paper_Join", {
-				"objectId":getUrlId()
+			//finally!... 
+			//join the specified paper!
+			send(0,"paper_Login", {
+				"objectId":getUrlId(),
+				"key": ""
 			});
 					
 
@@ -1190,38 +1175,69 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
      }, false);
 
 
-	
-});
+	//update client rights and other info..
+	synapse_register("object_Client",function(msg_src, msg_dst, msg_event, msg)
+	{	
+		//its our own info, update the widgets to match the state of autorisation!
+		if (msg_dst==msg["clientId"])
+		{
+			//store rights in global array for easy access
+			updateAuthorisation(msg["rights"]);
+	//		if (authorized["cursor"])
+	//		{
+	//			//tell people who we are and set random mouse position
+	//			sendDraw({
+	//				'cursor':{
+	//					'clientName':$("#chatClientName").val(),
+	//					'x':Math.round(9000*Math.random())+1000,
+	//					'y':Math.round(9000*Math.random())+1000
+	//				}
+	//			});
+	//		}
+	//
+	//		});
+			
+		}
+		
+		var name=filterInput(msg.name,15);
 
-//update all the widgets to match the current autorisation
-function updateAuthorisation()
-{
-	
-}
-
-
-
-//we've joined a object
-synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
-{
-	//doesnt the url id match?
-	if (getUrlId()!=msg["objectId"])
-		document.location=msg["htmlPath"]+document.location.hash;
-	
-	//we've joined a object, remeber the ids
-	currentObjectId=msg["objectId"];
-	paperModId=msg_src;
-	$("#objectId").html(msg["objectId"]);
-
-	//we're not yet authorized to do anything if we just joined.
-	authorized=new Array();
-	updateAuthorisation();
-	
-	//authenticate using specified key
-	send(paperModId,"paper_Authenticate",{
-		key:document.location.hash.substr(1)
+		//update cursor text, if it exists
+		var e=document.getElementById('cursorName'+msg.clientId);
+		if (e)
+			e.childNodes[0].data=filterInput(name,15);
+		
+		//update chat client list
+		var e=document.getElementById('chatClient'+msg.clientId);
+		if (e==null)
+		{
+			$("#chatClients").append("<div id='chatClient"+msg.clientId+"' class='chatClient'>"+name+"</div>");
+			chatPrintOnline();
+		}
+		else
+			e.childNodes[0].data=name;
+		
 	});
 	
-	document.location.hash="";
-});
+	//we've joined a object
+	synapse_register("object_Joined",function(msg_src, msg_dst, msg_event, msg)
+	{
+		//doesnt the url id match?
+	//FIXME: push history
+	//	if (getUrlId()!=msg["objectId"])
+	//		document.location=msg["htmlPath"]+document.location.hash;
+		
+		//we've joined a object, remeber the ids
+		currentObjectId=msg["objectId"];
+		paperModId=msg_src;
+		$("#objectId").html(msg["objectId"]);
+	
+		//since we've joined, ask for a complete reload of the drawing
+		sendDraw({
+			'cmd':'reload'
+		});
+	
+		
+		document.location.hash="";
+	});
 
+});

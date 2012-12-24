@@ -1,0 +1,195 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<title>playlist test</title>
+
+	<script type="text/javascript" src="/synapse/synapse.js?1"></script>
+
+    <script src="lib/jquery.ui.colorPicker.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="lib/jquery.ui.colorPicker.css">
+
+	<script type="text/javascript">
+
+	/// SYNAPSE EVENT HANDLERS
+
+
+	synapse_register("error",function(errortxt)
+	{
+		$('#error').html(errortxt);
+	});	
+
+    synapse_register("dmx_Update",function(msg_src, msg_dst, msg_event, msg)
+    {
+        if (msg.value!=null)
+        {
+            $(".slider[_channel="+msg.channel+"]").slider("option", "value", msg.value);
+        }
+
+        if (msg.top!=null)
+        {
+            $(".draggable[_channel="+msg.channel+"]").css("top", msg.top);
+            $(".draggable[_channel="+msg.channel+"]").css("left", msg.left);
+        }
+        
+    });
+			
+	synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
+	{
+
+
+        $(".slider").slider({ 
+            orientation: 'vertical',
+            min:0,
+            max:255,
+            slide: function(event, ui) {
+                ui.value
+                send(0,"dmx_Set",{
+                    id:1,
+                    channel:$(this).attr('_channel'),
+                    value:ui.value
+                });
+                
+            }
+         
+        });
+
+        $(".draggable").draggable({
+            drag:function(event,ui)
+            {
+                send(0,"dmx_SetPosition",{
+                    id:1,
+                    channel:$(this).attr('_channel'),
+                    left:ui.offset.left,
+                    top:ui.offset.top
+                });
+            }
+        });
+
+        send(0,"dmx_Get",{});
+
+        //NOTE: somehow this throws an exception but it still works.
+        $(".colorwheel").colorPicker({
+            size: 100,
+            format: 'rgb',
+            colorChange:function(e, ui)
+            {
+                var channel=parseInt($(this).attr('_channel'));
+                console.log(ui);
+                send(0,"dmx_Set",{
+                    id:1,
+                    channel:channel,
+                    value:ui.red
+                });
+                send(0,"dmx_Set",{
+                    id:1,
+                    channel:channel+1,
+                    value:ui.green
+                });
+                send(0,"dmx_Set",{
+                    id:1,
+                    channel:channel+2,
+                    value:ui.blue
+                });
+            }
+
+        });
+	});
+
+	
+
+
+	</script>
+
+	<style>
+		body
+		{
+			background: url("http://internetpapier.nl/p/1v2zte2s/paper.png?386");
+			background-repeat:no-repeat;
+			background-position: 50px 100px;
+		}
+
+		.slider {
+			float:left;
+			margin:1em;
+			height: 128px;
+		}
+		
+		.draggable
+		{
+			border-style:solid;
+			border-color:#aaaaaa;
+			border-width:1px;
+			position:absolute;
+		}
+
+ 	</style>
+</head>
+
+
+<body>	
+
+<h1>Nurdspace light controller</h1>
+<div>
+    <div class='draggable'  _channel='15' style='left:150px'>
+        <div class='colorwheel' _channel='15' >
+        </div>
+    </div>
+
+    <div class='draggable'  _channel='18' style='left:150px'>
+        <div class='colorwheel' _channel='18' >
+        </div>
+    </div>
+
+    <div class='draggable'  _channel='21' style='left:150px'>
+        <div class='colorwheel' _channel='21' >
+        </div>
+    </div>
+
+    <div class='draggable'  _channel='24' style='left:150px'>
+        <div class='colorwheel' _channel='24' >
+        </div>
+    </div>
+
+    <div class='draggable'  _channel='9' style='left:150px'>
+        <div class='colorwheel' _channel='9' >
+        </div>
+    </div>
+
+    <div class='draggable'  _channel='12' style='left:150px'>
+        <div class='colorwheel' _channel='12' >
+        </div>
+    </div>
+
+	<div class='draggable'  _channel='1' style='left:150px'>
+		<div class='slider' _channel='1'>1</div>
+	</div>
+    <div class='draggable'  _channel='2' style='left:150px'>
+        <div class='slider' _channel='2'>2</div>
+    </div>
+
+</div>
+
+
+<div style='
+	position:fixed;
+	bottom:0px;
+    right:0px'
+    >
+	Powered by <a href='http://lanbox.com/'>LanBox DMX controllers</a>.
+	
+
+	<p>
+	<a href='http://internetpapier.nl/p/1v2zte2s/edit.html'>Change background</a> 
+
+</div>
+
+
+
+
+
+</body>
+</html>
+

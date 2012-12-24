@@ -25,6 +25,7 @@
 
 int main(int argc, char *argv[])
 {
+
 	//since CVAR is so crucial and complex, we selftest it first:
 	if (!synapse::Cvar::selfTest())
 	{
@@ -33,6 +34,7 @@ int main(int argc, char *argv[])
 	}
 
 	{
+
 		synapse::CmessageMan messageMan;
 		if (argc==2)
 		{

@@ -77,8 +77,8 @@ SYNAPSE_REGISTER(module_Init)
 //	out["path"]="modules/http_json.module/libhttp_json.so";
 //	out.send();
 
-//	out["path"]="modules/play_vlc.module/libplay_vlc.so";
-//	out.send();
+	out["path"]="modules/play_vlc.module/libplay_vlc.so";
+	out.send();
 
 //		out["path"]="modules/exec.module/libexec.so";
 //		out.send();
@@ -208,7 +208,7 @@ SYNAPSE_REGISTER(exec_Ended)
 std::string playUrl;
 SYNAPSE_REGISTER(play_vlc_Ready)
 {
-	playUrl="http://listen.diXXX.fm/public3/chilloutdreams.pls";
+	playUrl="http://listen.di.fm/public3/chilloutdreams.pls";
 	Cmsg out;
 	out.dst=msg["session"];
 	out.event="play_NewPlayer";

@@ -134,7 +134,7 @@ class CnetAmi : public synapse::Cnet
 		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), readBuffer.size());
 		dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 
-		DEB("RECEIVED FROM ASTERISK:\n" << dataStr );
+		// DEB("RECEIVED FROM ASTERISK:\n" << dataStr );
 
 		//create a regex iterator
 		boost::sregex_iterator regexI(
@@ -251,7 +251,7 @@ SYNAPSE_REGISTER(ami_Action)
 	}
 	amiString+="\r\n";
 	
-	DEB("SEND TO ASTERISK:\n" << amiString);
+	// DEB("SEND TO ASTERISK:\n" << amiString);
 
 	net.doWrite(msg.src, amiString);
 }

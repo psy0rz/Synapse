@@ -36,9 +36,13 @@ This module can dynamicly generate playlists from directory's. It also can cache
 #include "exception/cexception.h"
 
 #define BOOST_FILESYSTEM_VERSION 3
+
 #include "boost/filesystem.hpp"
 
 
+/** Playlist namespace
+ *
+ */
 namespace pl
 {
 	using namespace std;
@@ -67,12 +71,6 @@ namespace pl
 		out.event="core_ChangeSession";
 		out["maxThreads"]=1;
 		out.send();
-
-		out.clear();
-		out.event="core_LoadModule";
-		out["path"]="modules/http_json.module/libhttp_json.so";
-		out.send();
-
 
 		//tell the rest of the world we are ready for duty
 		out.clear();
@@ -113,7 +111,7 @@ namespace pl
 		//get sort filename string
 		std::string getSortName()
 		{
-			return(filename());
+			return(filename().string());
 		}
 
 
@@ -166,7 +164,7 @@ namespace pl
 				++itr )
 			{
 				path p;
-				p=itr->filename();
+				p=itr->path().filename();
 				if (
 						(filetype==ALL) ||
 						(filetype==DIR && is_directory(*itr)) ||
@@ -217,6 +215,9 @@ namespace pl
 		//rootPath is the highest path, it can never be escaped.
 		path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype)
 		{
+//			DEB("rootpath:" << rootPath);
+//			DEB("currentpath:" << currentPath);
+			
 			//determine the path we should get the initial listing of:
 			path listPath;
 			if (currentPath==rootPath)
@@ -224,83 +225,101 @@ namespace pl
 			else
 				listPath=currentPath.parent_path();
 
+			path startPath=currentPath;
+			
 			CsortedDir::iterator dirI;
 			do
 			{
 				//get sorted directory listing
 				CsortedDir sortedDir(listPath, sortField, filetype);
 
-				//try to find the current path:
-				if (!currentPath.empty())
-					dirI=find(sortedDir.begin(), sortedDir.end(), currentPath.filename());
-				else
-					dirI=sortedDir.end();
-
-				//currentPath not found?
-				if (dirI==sortedDir.end())
+				if (!sortedDir.empty())
 				{
-					//start at the first or last entry depending on direction
-					if (direction==NEXT)
-						dirI=sortedDir.begin();
+					
+					//try to find the current path:
+					if (!currentPath.empty())
+						dirI=find(sortedDir.begin(), sortedDir.end(), currentPath.filename());
 					else
-					{
 						dirI=sortedDir.end();
-						dirI--;
+
+					//currentPath not found?
+					if (dirI==sortedDir.end())
+					{
+						//start at the first or last entry depending on direction
+						if (direction==NEXT)
+							dirI=sortedDir.begin();
+						else
+						{
+							dirI=sortedDir.end();
+							dirI--;
+						}
+					}
+					else
+					{
+						//move one step in the correct direction
+						if (direction==NEXT)
+						{
+							dirI++;
+						}
+						//PREVIOUS:
+						else
+						{
+							if (dirI==sortedDir.begin())
+								dirI=sortedDir.end();
+							else
+								dirI--;
+						}
+					}
+
+					//top or bottom was reached
+					if (dirI==sortedDir.end())
+					{
+						//can we one dir higher?
+						if (recursion==RECURSE && listPath!=rootPath)
+						{
+							//yes, so go one dir higher and continue the loop
+							currentPath=listPath;
+							listPath=currentPath.parent_path();
+						}
+						else
+						{
+							//no, cant go higher.
+							//clear the current path, so it just gets the first or last entry
+							currentPath.clear();
+						}
+					}
+					//we found something
+					else
+					{
+						//should we recurse?
+						if (recursion==RECURSE && is_directory(listPath/(*dirI)))
+						{
+							//enter it
+							listPath=listPath/(*dirI);
+							currentPath.clear();
+						}
+						else
+						{
+							//return the new path
+							return (listPath/(*dirI));
+						}
 					}
 				}
 				else
 				{
-					//move one step in the correct direction
-					if (direction==NEXT)
-					{
-						dirI++;
-					}
-					//PREVIOUS:
-					else
-					{
-						if (dirI==sortedDir.begin())
-							dirI=sortedDir.end();
-						else
-							dirI--;
-					}
-				}
-
-				//top or bottom was reached
-				if (dirI==sortedDir.end())
-				{
-					//can we one dir higher?
+					//list is empty, our last chance is to go one dir higher, otherwise we will exit the loop:
 					if (recursion==RECURSE && listPath!=rootPath)
 					{
-						//yes, so go one dir higher and continue the loop
+						//go one dir higher and continue the loop
 						currentPath=listPath;
 						listPath=currentPath.parent_path();
 					}
-					else
-					{
-						//no, cant go higher.
-						//clear the current path, so it just gets the first or last entry
-						currentPath.clear();
-					}
 				}
-				//we found something
-				else
-				{
-					//should we recurse?
-					if (recursion==RECURSE && is_directory(listPath/(*dirI)))
-					{
-						//enter it
-						listPath=listPath/(*dirI);
-						currentPath.clear();
-					}
-					else
-					{
-						return (listPath/(*dirI));
-					}
-				}
-			}
-			while(listPath!=currentPath);
 
-			//not found, return currentpath
+			}
+			while(currentPath!=startPath);
+
+			//nothing found, just return currentPath
 			return(currentPath);
 		}
 
@@ -309,13 +328,13 @@ namespace pl
 		//next file
 		void next()
 		{
-			mCurrentFile=movePath(mCurrentPath, mCurrentFile, "filename", NEXT, RECURSE, CsortedDir::FILE);
+			mCurrentFile=movePath(mCurrentPath, mCurrentFile, "filename", NEXT, RECURSE, CsortedDir::ALL);
 		}
 
 		//prev file
 		void previous()
 		{
-			mCurrentFile=movePath(mCurrentPath, mCurrentFile,"filename", PREVIOUS, RECURSE, CsortedDir::FILE);
+			mCurrentFile=movePath(mCurrentPath, mCurrentFile,"filename", PREVIOUS, RECURSE, CsortedDir::ALL);
 		}
 
 		void nextDir()
@@ -344,7 +363,8 @@ namespace pl
 
 		void enterDir()
 		{
-//			mCurrentPath=movePath(mRootPath, mCurrentPath,"filename",NEXT,DONT_RECURSE);
+			//find the first directory in that directory, and dont go higher:
+			mCurrentPath=movePath(mCurrentPath, mCurrentPath, "filename", NEXT, DONT_RECURSE, CsortedDir::DIR);
 			mCurrentFile=mCurrentPath;
 			next();
 		}
@@ -371,9 +391,9 @@ namespace pl
 			out.event="pl_Entry";
 			out.dst=dst;
 			out["id"]=mId;
-			out["rootPath"]=mRootPath.directory_string();
-			out["currentPath"]=mCurrentPath.directory_string();
-			out["currentFile"]=mCurrentFile.directory_string();
+			out["rootPath"]=mRootPath.string();
+			out["currentPath"]=mCurrentPath.string();
+			out["currentFile"]=mCurrentFile.string();
 
 //			if (*mIterDir!= directory_iterator())
 //				out["selectedDir"]=(*mIterDir)->path().directory_string();

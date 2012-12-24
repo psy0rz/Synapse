@@ -57,8 +57,8 @@
 			loginDeviceId=msg["deviceId"];
 
 			//store the device and authcookie in a browser cookie, so the user doesnt have to relogin everytime.
-			$.setCookie('asterisk_authCookie',msg["authCookie"], {});
-			$.setCookie('asterisk_deviceId',msg["deviceId"], {});
+			$.setCookie('asterisk_authCookie',msg["authCookie"], {duration:365, path:"/"});
+			$.setCookie('asterisk_deviceId',msg["deviceId"], {duration:365, path:"/"});
 
 			//request a refresh, to learn about all objects
 			send(0,"asterisk_refresh", { 
@@ -107,6 +107,7 @@
 				else
 					$('#deviceList').append(html);
 
+
 			}
 
 
@@ -126,7 +127,6 @@
 //				$('#statusLoginUser').text(msg["callerId"]);				
 //			}
 
-			$(escapeId(msg["id"])+":hidden").slideDown();
 
  		});
 
@@ -143,6 +143,7 @@
 
  		synapse_register("asterisk_debugChannel",function(msg_src, msg_dst, msg_event, msg)
 		{
+			//TODO: make it possible to disable debugging, its slow
 			//add debug dom object?
  			if ($(escapeId("debug_"+msg["id"])).length==0)
 			{
@@ -420,7 +421,6 @@
 
 		.device
 		{
-			display: none;
 			float: left;
 			width: 20em;
 			min-height: 3em;
