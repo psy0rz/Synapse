@@ -154,12 +154,13 @@ SYNAPSE_REGISTER(module_Init)
 	out["recvGroup"]=	"anonymous";
 	out.send();
 
+/*useless..? (most modules have there own event to announch their sessions in a more meaning full way to others)
 	out["event"]=		"module_SessionStarted"; // SEND to broadcast, on newly created session
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"core";
 	out["recvGroup"]=	"everyone";
 	out.send();
-
+*/
 	out["event"]=		"core_DelSession"; // RECV to delete src session
 	out["modifyGroup"]=	"core";
 	out["sendGroup"]=	"anonymous";
@@ -256,7 +257,7 @@ To the initial session of the new module. (just like any other session that is s
 \P synapse_cookie Custom session cookie.
 \P description Description of the session.
 
-\BROADCAST module_SessionStarted
+\BROADCAST module_SessionStarted (REMOVED )
 Tells the world a new session is started for this module.
 \P session The session id of the new session.
 
@@ -341,12 +342,14 @@ SYNAPSE_REGISTER(core_LoadModule)
 			//the module_SessionStart
 			startmsg.send();
 
+/*
 			//also broadcast module_SessionStarted, so other modules know that a session is started
 			startmsg.clear();
 			startmsg.event="module_SessionStarted";
 			startmsg["session"]=startmsg.dst;
 			startmsg.dst=0;
 			startmsg.send();
+            */
 		}
 	}
 }
@@ -571,7 +574,7 @@ SYNAPSE_REGISTER(core_Login)
 		\arg \c description (optional) description of the session, usefull for debugging and administration.
 		\arg \c (other parameters) Contains all specified arguments. (without password)
 
-\BROADCAST module_SessionStarted:
+\BROADCAST module_SessionStarted (REMOVED):
 	to let the rest of the word know of the new session.
 		\arg \c session The session id of the new session.
 */
@@ -639,12 +642,14 @@ SYNAPSE_REGISTER(core_NewSession)
 	{
 		startmsg.send();
 
+/*
 		//also broadcast module_SessionStarted, so other modules know that a session is started
 		startmsg.clear();
 		startmsg.event="module_SessionStarted";
 		startmsg["session"]=startmsg.dst;
 		startmsg.dst=0;
 		startmsg.send();
+        */
 	}
 }
 

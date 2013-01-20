@@ -43,6 +43,7 @@
 #include <boost/thread/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/recursive_mutex.hpp>
+#include <boost/thread/tss.hpp>
 
 namespace synapse
 {
@@ -69,6 +70,7 @@ using namespace boost;
 /**
 	@author 
 */
+
 
 
 class CmessageMan{
