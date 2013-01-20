@@ -74,6 +74,8 @@
 <code>#include &quot;exception/cexception.h&quot;</code><br/>
 <code>#include &quot;boost/bind.hpp&quot;</code><br/>
 <code>#include &lt;functional&gt;</code><br/>
+<code>#include &lt;boost/thread/mutex.hpp&gt;</code><br/>
+<code>#include &lt;boost/thread/recursive_mutex.hpp&gt;</code><br/>
 </div><table class="memberdecls">
 <tr><td colspan="2"><h2><a name="nested-classes"></a>
 Classes</h2></td></tr>
@@ -98,7 +100,7 @@ Functions</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a85e2a1f79ec9295c04848d47d3b08b43"></a><!-- doxytag: member="play_vlc.module/module.cpp::SYNAPSE_REGISTER" ref="a85e2a1f79ec9295c04848d47d3b08b43" args="(module_SessionEnd)" -->
 &#160;</td><td class="memItemRight" valign="bottom"><b>play_vlc::SYNAPSE_REGISTER</b> (module_SessionEnd)</td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceplay__vlc.html#a0ee16a84fbb1b8ec0afa9a8a3f446bb9">play_vlc::SYNAPSE_REGISTER</a> (play_GetPlayers)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a list of players Returns a play_Players event with a list of available player ids.  <a href="#a0ee16a84fbb1b8ec0afa9a8a3f446bb9"></a><br/></td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a list of players.  <a href="#a0ee16a84fbb1b8ec0afa9a8a3f446bb9"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceplay__vlc.html#a92c196b48daa10c84da50c0aaefeda1e">play_vlc::SYNAPSE_REGISTER</a> (play_DelPlayer)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete the player instance.  <a href="#a92c196b48daa10c84da50c0aaefeda1e"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceplay__vlc.html#afb1964ede7792427166c5734af1a9e63">play_vlc::SYNAPSE_REGISTER</a> (play_NewPlayer)</td></tr>
@@ -107,8 +109,12 @@ Functions</h2></td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Opens and starts playing an url.  <a href="#a7cf66043964d0628f09b006490f01c15"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceplay__vlc.html#a49a63ddf628c67643894f9c73370ec41">play_vlc::SYNAPSE_REGISTER</a> (play_Stop)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Stops playing.  <a href="#a49a63ddf628c67643894f9c73370ec41"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceplay__vlc.html#a56cc479958ef3b55b520614ab44c758a">play_vlc::SYNAPSE_REGISTER</a> (play_GetStatus)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets status of player.  <a href="#a56cc479958ef3b55b520614ab44c758a"></a><br/></td></tr>
 <tr><td colspan="2"><h2><a name="var-members"></a>
 Variables</h2></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a74b3a9a5ec2d35d06d1fdcd32c9a4d74"></a><!-- doxytag: member="play_vlc.module/module.cpp::vlcMutex" ref="a74b3a9a5ec2d35d06d1fdcd32c9a4d74" args="" -->
+recursive_mutex&#160;</td><td class="memItemRight" valign="bottom"><b>play_vlc::vlcMutex</b></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="afe14b89af865a06366dd2b8185e29620"></a><!-- doxytag: member="play_vlc.module/module.cpp::players" ref="afe14b89af865a06366dd2b8185e29620" args="" -->
 CPlayerMap&#160;</td><td class="memItemRight" valign="bottom"><b>play_vlc::players</b></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a992e55c5e86cb2d6c29888f177595483"></a><!-- doxytag: member="play_vlc.module/module.cpp::defaultSession" ref="a992e55c5e86cb2d6c29888f177595483" args="" -->

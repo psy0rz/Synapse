@@ -83,7 +83,7 @@ Functions</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a85e2a1f79ec9295c04848d47d3b08b43"></a><!-- doxytag: member="play_vlc::SYNAPSE_REGISTER" ref="a85e2a1f79ec9295c04848d47d3b08b43" args="(module_SessionEnd)" -->
 &#160;</td><td class="memItemRight" valign="bottom"><b>SYNAPSE_REGISTER</b> (module_SessionEnd)</td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceplay__vlc.html#a0ee16a84fbb1b8ec0afa9a8a3f446bb9">SYNAPSE_REGISTER</a> (play_GetPlayers)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a list of players Returns a play_Players event with a list of available player ids.  <a href="#a0ee16a84fbb1b8ec0afa9a8a3f446bb9"></a><br/></td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a list of players.  <a href="#a0ee16a84fbb1b8ec0afa9a8a3f446bb9"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceplay__vlc.html#a92c196b48daa10c84da50c0aaefeda1e">SYNAPSE_REGISTER</a> (play_DelPlayer)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete the player instance.  <a href="#a92c196b48daa10c84da50c0aaefeda1e"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceplay__vlc.html#afb1964ede7792427166c5734af1a9e63">SYNAPSE_REGISTER</a> (play_NewPlayer)</td></tr>
@@ -92,8 +92,12 @@ Functions</h2></td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Opens and starts playing an url.  <a href="#a7cf66043964d0628f09b006490f01c15"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceplay__vlc.html#a49a63ddf628c67643894f9c73370ec41">SYNAPSE_REGISTER</a> (play_Stop)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Stops playing.  <a href="#a49a63ddf628c67643894f9c73370ec41"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceplay__vlc.html#a56cc479958ef3b55b520614ab44c758a">SYNAPSE_REGISTER</a> (play_GetStatus)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets status of player.  <a href="#a56cc479958ef3b55b520614ab44c758a"></a><br/></td></tr>
 <tr><td colspan="2"><h2><a name="var-members"></a>
 Variables</h2></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a74b3a9a5ec2d35d06d1fdcd32c9a4d74"></a><!-- doxytag: member="play_vlc::vlcMutex" ref="a74b3a9a5ec2d35d06d1fdcd32c9a4d74" args="" -->
+recursive_mutex&#160;</td><td class="memItemRight" valign="bottom"><b>vlcMutex</b></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="afe14b89af865a06366dd2b8185e29620"></a><!-- doxytag: member="play_vlc::players" ref="afe14b89af865a06366dd2b8185e29620" args="" -->
 CPlayerMap&#160;</td><td class="memItemRight" valign="bottom"><b>players</b></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a992e55c5e86cb2d6c29888f177595483"></a><!-- doxytag: member="play_vlc::defaultSession" ref="a992e55c5e86cb2d6c29888f177595483" args="" -->
@@ -117,7 +121,8 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>defaultSession</b></td
 </div>
 <div class="memdoc">
 
-<p>Get a list of players Returns a play_Players event with a list of available player ids. </p>
+<p>Get a list of players. </p>
+<dl class="user"><dt><b>Sends reply: <em><code>play_Player</code> </em> </b></dt><dd>For every player. </dd></dl>
 
 </div>
 </div>
@@ -181,14 +186,13 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>defaultSession</b></td
 <li><code>url</code> The url or local filename to open.</li>
 </ul>
 <dl class="user"><dt><b>Broadcasts: <em><code>play_InfoMeta</code>:</em> </b></dt><dd>Metadata for the current url. (can also be sended while playing, for streams for example)</dd></dl>
-<dl class="user"><dt><b>Broadcasts: <em><code>play_StateNone</code>:</em> </b></dt><dd>Player has no status.</dd></dl>
-<dl class="user"><dt><b>Broadcasts: <em><code>play_StateOpening</code>:</em> </b></dt><dd>Player is opening an url</dd></dl>
-<dl class="user"><dt><b>Broadcasts: <em><code>play_StateBuffering</code>:</em> </b></dt><dd>Player is buffering data</dd></dl>
-<dl class="user"><dt><b>Broadcasts: <em><code>play_StatePlaying</code>:</em> </b></dt><dd>Player is playing.</dd></dl>
-<dl class="user"><dt><b>Broadcasts: <em><code>play_StatePaused</code>:</em> </b></dt><dd>Player is paused</dd></dl>
-<dl class="user"><dt><b>Broadcasts: <em><code>play_StateStopped</code>:</em> </b></dt><dd>Player has stopped</dd></dl>
-<dl class="user"><dt><b>Broadcasts: <em><code>play_StateEnded</code>:</em> </b></dt><dd>Media has ended</dd></dl>
-<dl class="user"><dt><b>Broadcasts: <em><code>play_StateError</code>:</em> </b></dt><dd>An error has occured. TOOD: need to fix logging, to show what actually went wrong.</dd></dl>
+<dl class="user"><dt><b>Broadcasts: <em><code>play_State</code>:</em> </b></dt><dd>Current status. </dd></dl>
+<dl class="params"><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">state,:</td><td>none: no status yet opening: Player is opening an url buffering: Player is buffering data playing: Player is playing something paused: Player is pausing stopped: Player is stopped ended: Media has ended error: an error occured. TOOD: need to fix logging, to show what actually went wrong.</td></tr>
+  </table>
+  </dd>
+</dl>
 <dl class="user"><dt><b>Broadcasts: <em><code>play_Time</code>:</em> </b></dt><dd>Sended every second with time and position info. <ul>
 <li><code>length</code> total length of media in seconds. (0 for streams) </li>
 <li><code>time</code> current position of the media, in seconds. </li>
@@ -213,6 +217,27 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>defaultSession</b></td
 <div class="memdoc">
 
 <p>Stops playing. </p>
+
+</div>
+</div>
+<a class="anchor" id="a56cc479958ef3b55b520614ab44c758a"></a><!-- doxytag: member="play_vlc::SYNAPSE_REGISTER" ref="a56cc479958ef3b55b520614ab44c758a" args="(play_GetStatus)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">play_vlc::SYNAPSE_REGISTER </td>
+          <td>(</td>
+          <td class="paramtype">play_GetStatus&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Gets status of player. </p>
+<p>This is just to allow new clients to get the latest events.</p>
+<p>Usually play_InfoMeta and stuff. </p>
 
 </div>
 </div>

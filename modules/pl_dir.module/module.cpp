@@ -49,40 +49,6 @@ namespace pl
 	using namespace boost::filesystem;
 	using namespace boost;
 
-	bool shutdown;
-	int defaultId=-1;
-
-	SYNAPSE_REGISTER(module_Init)
-	{
-		Cmsg out;
-		shutdown=false;
-		defaultId=msg.dst;
-
-		//load config file
-		synapse::Cconfig config;
-		config.load("etc/synapse/pl.conf");
-
-		out.clear();
-		out.event="core_ChangeModule";
-		out["maxThreads"]=1;
-		out.send();
-
-		out.clear();
-		out.event="core_ChangeSession";
-		out["maxThreads"]=1;
-		out.send();
-
-		//tell the rest of the world we are ready for duty
-		out.clear();
-		out.event="core_Ready";
-		out.send();
-
-	}
-
-	SYNAPSE_REGISTER(module_SessionStart)
-	{
-	}
-
 
 
 	class Cpath : public path
@@ -194,7 +160,7 @@ namespace pl
 		path mCurrentFile;
 
 
-		string mId;
+		int mId;
 
 
 		private:
@@ -376,7 +342,7 @@ namespace pl
 			next();
 		}
 
-		void create(string id, string rootPath)
+		void create(int id, string rootPath)
 		{
 			mId=id;
 			mRootPath=rootPath;
@@ -390,7 +356,6 @@ namespace pl
 			Cmsg out;
 			out.event="pl_Entry";
 			out.dst=dst;
-			out["id"]=mId;
 			out["rootPath"]=mRootPath.string();
 			out["currentPath"]=mCurrentPath.string();
 			out["currentFile"]=mCurrentFile.string();
@@ -414,19 +379,19 @@ namespace pl
 	class CiterMan
 	{
 		private:
-		typedef map<string,Citer> CiterMap;
+		typedef map<int,Citer> CiterMap;
 		CiterMap mIterMap;
 
 		public:
 
-		Citer & get(string id)
+		Citer & get(int id)
 		{
 			if (mIterMap.find(id)==mIterMap.end())
 				throw(synapse::runtime_error("Playlist not found"));
 			return(mIterMap[id]);
 		}
 
-		void create(string id, string basePath)
+		void create(int id, string basePath)
 		{
 			if (mIterMap.find(id)!=mIterMap.end())
 				throw(synapse::runtime_error("Playlist already exists"));
@@ -434,7 +399,7 @@ namespace pl
 			mIterMap[id].create(id, basePath);
 		}
 
-		void destroy(string id)
+		void destroy(int id)
 		{
 			get(id).destroy();
 			mIterMap.erase(id);
@@ -444,7 +409,51 @@ namespace pl
 	};
 
 	CiterMan iterMan;
+    synapse::Cconfig config;
 
+    bool shutdown;
+    int defaultId=-1;
+
+    SYNAPSE_REGISTER(module_Init)
+    {
+        Cmsg out;
+        shutdown=false;
+        defaultId=msg.dst;
+
+        //load config file
+        config.load("etc/synapse/pl.conf");
+
+        out.clear();
+        out.event="core_ChangeModule";
+        out["maxThreads"]=1;
+        out.send();
+
+        out.clear();
+        out.event="core_ChangeSession";
+        out["maxThreads"]=1;
+        out.send();
+
+        //tell the rest of the world we are ready for duty
+        out.clear();
+        out.event="core_Ready";
+        out.send();
+
+    }
+
+    SYNAPSE_REGISTER(module_SessionStart)
+    {
+        if (msg.isSet("path"))
+            iterMan.create(msg.dst, msg["path"]);
+        else
+            iterMan.create(msg.dst, config["path"]);
+
+        iterMan.get(msg.dst).send(0);
+    }
+
+    SYNAPSE_REGISTER(module_SessionEnd)
+    {
+        iterMan.destroy(msg.dst);
+    }
 
 	/** Create a new iterator
 		\param id Traverser id
@@ -453,24 +462,32 @@ namespace pl
 		SECURITY WARNING: Its possible to traverse the whole filesystem for users that have permission to send pl_Create!
 
 	\par Replies pl_Entry:
-		\param id Traverser id
 		\param path Current path
 		\param file Current file, selected according to search criteria
 
 	*/
-	SYNAPSE_REGISTER(pl_Create)
+	SYNAPSE_REGISTER(pl_New)
 	{
-		iterMan.create(msg["id"], msg["path"]);
-		iterMan.get(msg["id"]).send(msg.src);
+        Cmsg out;
+        out.event="core_NewSession";
+        out["path"]=msg["path"];
+        out.dst=1;
+        out.send();
 	}
 
 
-	/** Delete specified iterator
+	/** Delete specified iterator (actually ends session, so you cant destroy default iterator)
 		\param id Traverser id
 	*/
-	SYNAPSE_REGISTER(pl_Destroy)
+	SYNAPSE_REGISTER(pl_Del)
 	{
-		iterMan.destroy(msg["id"]);
+        if (msg.dst!=defaultId)
+		{
+            Cmsg out;
+            out.event="core_DelSession";
+            out.dst=1;
+            out.send();
+        }
 	}
 
 
@@ -493,9 +510,9 @@ namespace pl
 
 	\par Replies pl_Entry.
 	*/
-	SYNAPSE_REGISTER(pl_Current)
+	SYNAPSE_REGISTER(pl_GetStatus)
 	{
-		iterMan.get(msg["id"]).send(msg.src);
+		iterMan.get(msg.dst).send(msg.src);
 	}
 
 	/** Select next directory entry in list
@@ -505,8 +522,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_NextDir)
 	{
-		iterMan.get(msg["id"]).nextDir();
-		iterMan.get(msg["id"]).send(msg.src);
+		iterMan.get(msg.dst).nextDir();
+		iterMan.get(msg.dst).send(0);
 
 	}
 
@@ -518,8 +535,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_PreviousDir)
 	{
-		iterMan.get(msg["id"]).previousDir();
-		iterMan.get(msg["id"]).send(msg.src);
+		iterMan.get(msg.dst).previousDir();
+		iterMan.get(msg.dst).send(0);
 	}
 
 	/** Enters selected directory
@@ -529,8 +546,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_EnterDir)
 	{
-		iterMan.get(msg["id"]).enterDir();
-		iterMan.get(msg["id"]).send(msg.src);
+		iterMan.get(msg.dst).enterDir();
+		iterMan.get(msg.dst).send(0);
 	}
 
 	/** Exits directory, selecting directory on higher up the hierarchy
@@ -540,8 +557,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_ExitDir)
 	{
-		iterMan.get(msg["id"]).exitDir();
-		iterMan.get(msg["id"]).send(msg.src);
+		iterMan.get(msg.dst).exitDir();
+		iterMan.get(msg.dst).send(0);
 
 	}
 
@@ -552,8 +569,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_Next)
 	{
-		iterMan.get(msg["id"]).next();
-		iterMan.get(msg["id"]).send(msg.src);
+		iterMan.get(msg.dst).next();
+		iterMan.get(msg.dst).send(0);
 
 	}
 
@@ -564,8 +581,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_Previous)
 	{
-		iterMan.get(msg["id"]).previous();
-		iterMan.get(msg["id"]).send(msg.src);
+		iterMan.get(msg.dst).previous();
+		iterMan.get(msg.dst).send(0);
 	}
 
 

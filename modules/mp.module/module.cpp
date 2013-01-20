@@ -25,12 +25,14 @@ namespace mp
     using namespace std;
 
     int playerId;
+    int plId;
 
     SYNAPSE_REGISTER(module_Init)
     {
     	Cmsg out;
 
         playerId=0;
+        plId=0;
 
     	out.clear();
     	out.event="core_ChangeModule";
@@ -65,10 +67,6 @@ namespace mp
         out["name"]="http_json";
         out.send();
 
-        out.clear();
-        out.event="pl_Create";
-        out["id"]="/home/psy/pl";
-        out.send();
 
     }
 
@@ -97,6 +95,25 @@ namespace mp
         //for now we just support one player
         if (!playerId)
             playerId=msg.src;
+    }
+
+    //playlist switched to different path/file
+    SYNAPSE_REGISTER(pl_Entry)
+    {
+        //for now we just support one playlist
+        if (!plId)
+            plId=msg.src;
+
+
+        if (msg.src==plId)
+        {
+            //lets play it
+            Cmsg out;
+            out.event="play_Open";
+            out["url"]="file://"+msg["currentFile"].str();
+            out.dst=playerId;
+            out.send();
+        }
     }
 
 
