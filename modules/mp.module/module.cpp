@@ -97,6 +97,27 @@ namespace mp
             playerId=msg.src;
     }
 
+    SYNAPSE_REGISTER(play_State)
+    {
+        static int lastTime=0;
+
+
+        if (msg["state"]=="ended" || msg["state"]=="error")
+        {
+            if (time(NULL)-lastTime<=2)
+            {
+                sleep(1);
+            }
+            lastTime=time(NULL);
+
+            Cmsg out;
+            out.dst=plId;
+            out.event="pl_Next";
+            out.send();
+
+        }
+    }
+
     //playlist switched to different path/file
     SYNAPSE_REGISTER(pl_Entry)
     {

@@ -34,6 +34,10 @@
         send(0, "play_GetStatus", { 
         });
 
+        //get status from playlist
+        send(0, "pl_GetStatus", { 
+        });
+
         //translate clicks on elements that have the send-class to a synapse event:
         $(".send").click(function() 
         {
@@ -53,13 +57,33 @@
 
     });
 
+
+    synapse_register("pl_Entry",function(msg_src, msg_dst, msg_event, msg)
+    {
+        for (key in msg)
+        {
+            $('.entry[key="'+key+'"]').text(msg[key]);
+        }
+    });
+
     synapse_register("play_Time",function(msg_src, msg_dst, msg_event, msg)
     {
         $(".time").slider("value", msg['time']);
         $(".time").slider("option", "max", msg['length']);
     });
 
+    synapse_register("play_State",function(msg_src, msg_dst, msg_event, msg)
+    {
+        $(".state").text(msg['state']);
+    });
 
+    synapse_register("play_InfoMeta",function(msg_src, msg_dst, msg_event, msg)
+    {
+        for (key in msg)
+        {
+            $('.meta[key="'+key+'"]').text(msg[key]);
+        }
+    });
 
 	</script>
 
@@ -70,13 +94,51 @@
 </head>
 
 
-<body>	
-<button class="send" event="pl_Previous">Previous</button>
+<body>
+
+
+<table>
+<tr><th colspan=2>filesystem data </tr>
+<tr><th>Root dir     <td class="entry" key="rootPath"></tr>
+<tr><th>Selected dir <td class="entry" key="currentPath"></tr>
+<tr><th>File         <td class="entry" key="currentFile"></tr>
+</table>
+
+<table>
+    <tr>
+            <td rowspan=2><button class="send" event="pl_ExitDir">&lt;</button>
+            <td><button class="send" event="pl_PreviousDir">^</button>  
+            <td rowspan=2><button class="send" event="pl_EnterDir">&gt;</button>     
+    </tr>
+
+    <tr>
+            <td><button class="send" event="pl_NextDir">v</button>
+    </tr>
+</table>
+
+
+
+
+
+<p>	
+<button class="send" event="pl_Previous">&lt; &lt; Previous song</button>
 <button class="send" event="play_Pause">Pause</button>
 <button class="send" event="play_Stop">Stop</button>
-<button class="send" event="pl_Next">Next</button>
-<div class="time"></div>
+<button class="send" event="pl_Next">Next song &gt; &gt; </button>
+<b class="state"></b>
 
+<p>
+<div  class="time"></div>
+
+<p>
+
+<table>
+<tr><th colspan=2>player metadata </tr>
+<tr><th>Title   <td class="meta" key="title"></tr>
+<tr><th>url     <td class="meta" key="url"></tr>
+<tr><th>mrl     <td class="meta" key="mrl"></tr>
+<tr><th>artist  <td class="meta" key="artist"></tr>
+</table>
 
 </body>
 </html>

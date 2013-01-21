@@ -181,9 +181,10 @@ namespace pl
 		//rootPath is the highest path, it can never be escaped.
 		path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype)
 		{
-//			DEB("rootpath:" << rootPath);
-//			DEB("currentpath:" << currentPath);
-			
+            DEB("rootpath:" << rootPath);
+            DEB("currentpath:" << currentPath);
+            DEB("gelijko?" << ( currentPath==rootPath));
+
 			//determine the path we should get the initial listing of:
 			path listPath;
 			if (currentPath==rootPath)
@@ -245,7 +246,7 @@ namespace pl
 						{
 							//yes, so go one dir higher and continue the loop
 							currentPath=listPath;
-							listPath=currentPath.parent_path();
+							listPath=listPath.parent_path();
 						}
 						else
 						{
@@ -278,7 +279,7 @@ namespace pl
 					{
 						//go one dir higher and continue the loop
 						currentPath=listPath;
-						listPath=currentPath.parent_path();
+						listPath=listPath.parent_path();
 					}
 				}
 
