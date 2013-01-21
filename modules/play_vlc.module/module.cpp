@@ -444,7 +444,6 @@ class CPlayer
 	{
 		throwIfBad();
 
-		stop();
 
 		mVlcUrl=url;
 
@@ -461,6 +460,8 @@ class CPlayer
 		//clear the list
 		while(libvlc_media_list_count(mList))
 		{
+            INFO("remove");
+
 			libvlc_media_list_remove_index(mList, 0);
 		}
 
@@ -471,6 +472,7 @@ class CPlayer
 		//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ LOCKED
 
 		//command the list player to play
+        libvlc_media_list_player_next(mListPlayer);
 		libvlc_media_list_player_play(mListPlayer);
 
 		libvlc_media_release(m);
@@ -492,6 +494,16 @@ class CPlayer
 			sleep(1);
 		}
 	}
+
+    void pause()
+    {
+        libvlc_media_player_pause(mPlayer);
+    }
+
+    void setTime(int time)
+    {
+        libvlc_media_player_set_time(mPlayer, time);
+    }
 
 };
 
@@ -613,7 +625,7 @@ SYNAPSE_REGISTER(play_NewPlayer)
  */
 SYNAPSE_REGISTER(play_Open)
 {
-    lock_guard<recursive_mutex> lock(vlcMutex);
+    //lock_guard<recursive_mutex> lock(vlcMutex);
 
 	INFO("vlc opening " << msg["url"].str());
 
@@ -632,6 +644,20 @@ SYNAPSE_REGISTER(play_Stop)
 	players[dst].stop();
 }
 
+SYNAPSE_REGISTER(play_Pause)
+{
+    lock_guard<recursive_mutex> lock(vlcMutex);
+
+    players[dst].pause();
+}
+
+
+SYNAPSE_REGISTER(play_SetTime)
+{
+    lock_guard<recursive_mutex> lock(vlcMutex);
+
+    players[dst].setTime(msg["time"] * 1000);
+}
 
 /** Gets status of player.
  * This is just to allow new clients to get the latest events. 

@@ -512,7 +512,7 @@ namespace pl
 	*/
 	SYNAPSE_REGISTER(pl_GetStatus)
 	{
-		iterMan.get(msg.dst).send(msg.src);
+		iterMan.get(dst).send(msg.src);
 	}
 
 	/** Select next directory entry in list
@@ -522,8 +522,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_NextDir)
 	{
-		iterMan.get(msg.dst).nextDir();
-		iterMan.get(msg.dst).send(0);
+		iterMan.get(dst).nextDir();
+		iterMan.get(dst).send(0);
 
 	}
 
@@ -535,8 +535,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_PreviousDir)
 	{
-		iterMan.get(msg.dst).previousDir();
-		iterMan.get(msg.dst).send(0);
+		iterMan.get(dst).previousDir();
+		iterMan.get(dst).send(0);
 	}
 
 	/** Enters selected directory
@@ -546,8 +546,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_EnterDir)
 	{
-		iterMan.get(msg.dst).enterDir();
-		iterMan.get(msg.dst).send(0);
+		iterMan.get(dst).enterDir();
+		iterMan.get(dst).send(0);
 	}
 
 	/** Exits directory, selecting directory on higher up the hierarchy
@@ -557,8 +557,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_ExitDir)
 	{
-		iterMan.get(msg.dst).exitDir();
-		iterMan.get(msg.dst).send(0);
+		iterMan.get(dst).exitDir();
+		iterMan.get(dst).send(0);
 
 	}
 
@@ -569,8 +569,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_Next)
 	{
-		iterMan.get(msg.dst).next();
-		iterMan.get(msg.dst).send(0);
+		iterMan.get(dst).next();
+		iterMan.get(dst).send(0);
 
 	}
 
@@ -581,8 +581,8 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_Previous)
 	{
-		iterMan.get(msg.dst).previous();
-		iterMan.get(msg.dst).send(0);
+		iterMan.get(dst).previous();
+		iterMan.get(dst).send(0);
 	}
 
 
