@@ -152,6 +152,150 @@ namespace pl
 	};
 
 
+    //compares two absolute paths, to see if subdir is really a subdir of dir. (or the same dir)
+    bool isSubdir(path dir, path subdir)
+    {
+        if (dir==subdir)
+        {
+            return(true);
+        }
+
+        while (!subdir.empty())
+        {
+            subdir=subdir.parent_path();
+            if (dir==subdir)
+                return(true);
+        }
+        return(false);
+    }
+
+    /*
+    /a/b
+    /a/b/c/d
+    */
+
+    /*** traverses directories/files
+
+    -currentPath contains the currently 'selected' path.
+    -rootPath is the 'highest' path we can ever reach.
+    -filetype determines if we're looking for a file or directory or both.
+    -direction tells if you want the next or previous file or directory.
+    -RECURSE: its allow to enter or exit directories to find the next of previous file.
+    
+    returns resulting path after this movement.
+    when first or last path is reached it loops.
+
+    */
+    enum Edirection { NEXT, PREVIOUS };
+    enum Erecursion { RECURSE, DONT_RECURSE };
+    path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype)
+    {
+
+        //determine the path we should get the initial listing of:
+        path listPath;
+        if (currentPath==rootPath)
+            listPath=currentPath;
+        else
+            listPath=currentPath.parent_path();
+
+        path startPath=currentPath;
+        
+        CsortedDir::iterator dirI;
+        do
+        {
+            //get sorted directory listing
+            CsortedDir sortedDir(listPath, sortField, filetype);
+
+            if (!sortedDir.empty())
+            {
+                
+                //try to find the current path:
+                if (!currentPath.empty())
+                    dirI=find(sortedDir.begin(), sortedDir.end(), currentPath.filename());
+                else
+                    dirI=sortedDir.end();
+
+                //currentPath not found?
+                if (dirI==sortedDir.end())
+                {
+                    //start at the first or last entry depending on direction
+                    if (direction==NEXT)
+                        dirI=sortedDir.begin();
+                    else
+                    {
+                        dirI=sortedDir.end();
+                        dirI--;
+                    }
+                }
+                else
+                {
+                    //move one step in the correct direction
+                    if (direction==NEXT)
+                    {
+                        dirI++;
+                    }
+                    //PREVIOUS:
+                    else
+                    {
+                        if (dirI==sortedDir.begin())
+                            dirI=sortedDir.end();
+                        else
+                            dirI--;
+                    }
+                }
+
+                //top or bottom was reached
+                if (dirI==sortedDir.end())
+                {
+                    //can we one dir higher?
+                    if (recursion==RECURSE && listPath!=rootPath)
+                    {
+                        //yes, so go one dir higher and continue the loop
+                        currentPath=listPath;
+                        listPath=listPath.parent_path();
+                    }
+                    else
+                    {
+                        //no, cant go higher.
+                        //clear the current path, so it just gets the first or last entry
+                        currentPath.clear();
+                    }
+                }
+                //we found something
+                else
+                {
+                    //should we recurse?
+                    if (recursion==RECURSE && is_directory(listPath/(*dirI)))
+                    {
+                        //enter it
+                        listPath=listPath/(*dirI);
+                        currentPath.clear();
+                    }
+                    else
+                    {
+                        //return the new path
+                        return (listPath/(*dirI));
+                    }
+                }
+            }
+            else
+            {
+                //list is empty, our last chance is to go one dir higher, otherwise we will exit the loop:
+                if (recursion==RECURSE && listPath!=rootPath)
+                {
+                    //go one dir higher and continue the loop
+                    currentPath=listPath;
+                    listPath=listPath.parent_path();
+                }
+            }
+
+        }
+        while(currentPath!=startPath);
+
+        //nothing found, just return currentPath
+        return(currentPath);
+    }
+
 	class Citer
 	{
 		private:
@@ -161,134 +305,6 @@ namespace pl
 
 
 		int mId;
-
-
-		private:
-
-		//to make stuff more readable and less error prone
-		enum Edirection { NEXT, PREVIOUS };
-		enum Erecursion { RECURSE, DONT_RECURSE };
-
-		/*
-		/a/b
-		/a/b/c/d
-		*/
-
-		//traverses directories/files
-		//currentPath contains the 'selected' path. direction tells if you want to move up or down.
-		//returns resulting path after this movement. when first or last path is reached it loops.
-		//recursion means, recurse until we're at a file
-		//rootPath is the highest path, it can never be escaped.
-		path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype)
-		{
-            DEB("rootpath:" << rootPath);
-            DEB("currentpath:" << currentPath);
-            DEB("gelijko?" << ( currentPath==rootPath));
-
-			//determine the path we should get the initial listing of:
-			path listPath;
-			if (currentPath==rootPath)
-				listPath=currentPath;
-			else
-				listPath=currentPath.parent_path();
-
-			path startPath=currentPath;
-			
-			CsortedDir::iterator dirI;
-			do
-			{
-				//get sorted directory listing
-				CsortedDir sortedDir(listPath, sortField, filetype);
-
-				if (!sortedDir.empty())
-				{
-					
-					//try to find the current path:
-					if (!currentPath.empty())
-						dirI=find(sortedDir.begin(), sortedDir.end(), currentPath.filename());
-					else
-						dirI=sortedDir.end();
-
-					//currentPath not found?
-					if (dirI==sortedDir.end())
-					{
-						//start at the first or last entry depending on direction
-						if (direction==NEXT)
-							dirI=sortedDir.begin();
-						else
-						{
-							dirI=sortedDir.end();
-							dirI--;
-						}
-					}
-					else
-					{
-						//move one step in the correct direction
-						if (direction==NEXT)
-						{
-							dirI++;
-						}
-						//PREVIOUS:
-						else
-						{
-							if (dirI==sortedDir.begin())
-								dirI=sortedDir.end();
-							else
-								dirI--;
-						}
-					}
-
-					//top or bottom was reached
-					if (dirI==sortedDir.end())
-					{
-						//can we one dir higher?
-						if (recursion==RECURSE && listPath!=rootPath)
-						{
-							//yes, so go one dir higher and continue the loop
-							currentPath=listPath;
-							listPath=listPath.parent_path();
-						}
-						else
-						{
-							//no, cant go higher.
-							//clear the current path, so it just gets the first or last entry
-							currentPath.clear();
-						}
-					}
-					//we found something
-					else
-					{
-						//should we recurse?
-						if (recursion==RECURSE && is_directory(listPath/(*dirI)))
-						{
-							//enter it
-							listPath=listPath/(*dirI);
-							currentPath.clear();
-						}
-						else
-						{
-							//return the new path
-							return (listPath/(*dirI));
-						}
-					}
-				}
-				else
-				{
-					//list is empty, our last chance is to go one dir higher, otherwise we will exit the loop:
-					if (recursion==RECURSE && listPath!=rootPath)
-					{
-						//go one dir higher and continue the loop
-						currentPath=listPath;
-						listPath=listPath.parent_path();
-					}
-				}
-
-			}
-			while(currentPath!=startPath);
-
-			//nothing found, just return currentPath
-			return(currentPath);
-		}
 
 		public:
 
@@ -354,6 +370,13 @@ namespace pl
 
 		void send(int dst)
 		{
+            //there are lots of places/situations where things can go wrong, so do this extra check:
+            if (!isSubdir(mRootPath, mCurrentPath) || !isSubdir(mRootPath, mCurrentFile))
+            {
+                ERROR("escaped rootpath: " << mRootPath << " " << mCurrentPath << " " << mCurrentFile);
+                throw(synapse::runtime_error("Program error: ended up outside rootpath. (dont use trailing slashes for rootpath)"));
+            }
+
 			Cmsg out;
 			out.event="pl_Entry";
 			out.dst=dst;
