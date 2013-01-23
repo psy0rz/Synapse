@@ -60,37 +60,62 @@
 
     synapse_register("pl_Entry",function(msg_src, msg_dst, msg_event, msg)
     {
-        var stripIndex=msg.currentPath.length;
 
         $('.entry[key="rootPath"]').text(msg.rootPath);
-        $('.entry[key="currentPath"]').text(msg.currentPath);
-        $('.entry[key="currentFile"]').text(msg.currentFile.substr(stripIndex));
+        $('.entry[key="currentPath"]').text(msg.currentPath.substr(msg.parentPath.length));
+        $('.entry[key="parentPath"]').text(msg.parentPath);
+        $('.entry[key="currentFile"]').text(msg.currentFile.substr(msg.currentPath.length));
 
-        //some dom magic going on here...for more of it and a better way to do it look at my kmur2 project
+        //some dom magic going on here...for more of it and a better way to do it look at the kmur2 project
 
         //delete old clones
         $(".entry.cloned").remove();
 
             
         //next files
-        var src=$('.entry[key="nextFiles"]');
+        var src=$('.entry_clone[key="nextFiles"]');
         for (nr=msg['nextFiles'].length; nr--; nr>0)
         {
             var element=$(src).clone();
             src.after(element);
             element.addClass("cloned");
-            $('.entry[key=nextFile]', element).text(msg.nextFiles[nr].substr(stripIndex));
+            //$('.entry[key="nextFiles"]', element).text(msg.nextFiles[nr].substr(msg.currentPath.length));
+            element.text(msg.nextFiles[nr].substr(msg.currentPath.length));
         }
 
         //prev files
-        var src=$('.entry[key="prevFiles"]');
+        var src=$('.entry_clone[key="prevFiles"]');
         for (nr=msg['prevFiles'].length; nr--; nr>0)
         {
             var element=$(src).clone();
             src.before(element);
             element.addClass("cloned");
-            $('.entry[key=prevFile]', element).text(msg['prevFiles'][nr].substr(stripIndex));
+//           $('.entry[key="prevFiles"]', element).text(msg['prevFiles'][nr].substr(msg.currentPath.length));
+            element.text(msg.prevFiles[nr].substr(msg.currentPath.length));
         }
+
+        //next paths
+        var src=$('.entry_clone[key="nextPaths"]');
+        for (nr=msg['nextPaths'].length; nr--; nr>0)
+        {
+            var element=$(src).clone();
+            src.after(element);
+            element.addClass("cloned");
+            //$('.entry[key="nextFiles"]', element).text(msg.nextFiles[nr].substr(msg.currentPath.length));
+            element.text(msg.nextPaths[nr].substr(msg.parentPath.length));
+        }
+
+        //prev paths
+        var src=$('.entry_clone[key="prevPaths"]');
+        for (nr=msg['prevPaths'].length; nr--; nr>0)
+        {
+            var element=$(src).clone();
+            src.before(element);
+            element.addClass("cloned");
+            //$('.entry[key="nextFiles"]', element).text(msg.nextFiles[nr].substr(msg.currentPath.length));
+            element.text(msg.prevPaths[nr].substr(msg.parentPath.length));
+        }
+
 
     });
 
@@ -117,6 +142,17 @@
 
 	<style>
 
+    body
+    {
+        background-color: #000000;
+        color: #ffffff;
+    }
+
+    .selectedPath
+    {
+        background-color: #0000aa;
+    }
+
 
  	</style>
 </head>
@@ -124,14 +160,40 @@
 
 <body>
 
-
+Current path: 
+<span class="entry selectedPath" key="parentPath"></span>
 
 <table>
-<tr><th colspan=2>file navigator</tr>
-<tr class="entry" key="prevFiles"><td class="entry" key="prevFile"></tr>
-<tr><td style="background-color: #ccccff" class="entry" key="currentFile"></tr>
-<tr class="entry" key="nextFiles"> ><td class="entry" key="nextFile"></tr>
+<tr>    
+        <td><button class="send" event="pl_PreviousPath">^^^ Previous directory ^^^</button>
+        <td><button class="send" event="pl_Previous">^^^ Previous song ^^^</button>
+ 
+</tr>
+<tr>
+        <td><div class="entry_clone entry" key="prevPaths"></div>
+        <td style="border-style: solid none none solid; "><div class="entry_clone entry" key="prevFiles"></div>
+</tr>
+<tr>    
+        <td style="border-style: solid none solid none; " ><div  class="entry selectedPath" key="currentPath"></div>
+        <td><div class="entry selectedPath" key="currentFile"></div>
+</tr>
+<tr>    
+        <td><div class="entry_clone entry" key="nextPaths"></div>
+        <td style="border-style: none none solid solid; "><div class="entry_clone entry" key="nextFiles"></div>
+</tr>
+<tr>    
+        <td>
+            <button class="send" event="pl_NextPath">vvv Next directory vvv</button>
+            <br>
+            <button class="send" event="pl_ExitPath">&lt;&lt;&lt; Exit directory</button>
+            <button class="send" event="pl_EnterPath">Enter directory&gt;&gt;&gt; </button>
+
+        <td><button class="send" event="pl_Next">vvv Next song vvv</button>
+ 
+</tr>
 </table>
+
+
 
 
 <table>

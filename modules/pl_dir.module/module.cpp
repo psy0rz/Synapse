@@ -517,6 +517,9 @@ namespace pl
 			out["currentPath"]=mCurrentPath.string();
 			out["currentFile"]=mCurrentFile.string();
 
+            //to make life easier for user interfaces in a crossplatform way:
+            out["parentPath"]=mCurrentPath.parent_path().string();
+
             BOOST_FOREACH(path prevFile, mPrevFiles)
             {
                 out["prevFiles"].list().push_back(prevFile.string());
