@@ -303,21 +303,79 @@ namespace pl
 		path mCurrentPath;
 		path mCurrentFile;
 
+        list<path> mPrevFiles;
+        list<path> mNextFiles;
+        list<path> mPrevPaths;
+        list<path> mNextPaths;
 
 		int mId;
 
+        unsigned int mNextLen;
+        unsigned int mPrevLen;
+
 		public:
+
+        Citer()
+        {
+            mNextLen=5;
+            mPrevLen=5;            
+        }
+
+        //make sure there are enough entries in the file and path lists
+        void updateLists()
+        {
+            //next file list:
+            //make sure its not too long
+            while (mNextFiles.size()>mNextLen)
+                mNextFiles.pop_back();
+
+            //fill it back with newer entries until its long enough
+            {
+                path p=mCurrentFile;
+                if (!mNextFiles.empty())
+                    p=mNextFiles.back();
+                while(mNextFiles.size()<mNextLen)
+                {
+                    p=movePath(mCurrentPath, p, "filename", NEXT, RECURSE, CsortedDir::ALL);
+                    mNextFiles.push_back(p.string());
+                }
+            }
+
+            //prev file list:
+            //make sure its not too long
+            while (mPrevFiles.size()>mPrevLen)
+                mPrevFiles.pop_back();
+
+            //fill the back older entries until its long enough
+            {
+                path p=mCurrentFile;
+                if (!mPrevFiles.empty())
+                    p=mPrevFiles.back();
+                while(mPrevFiles.size()<mPrevLen)
+                {
+                    p=movePath(mCurrentPath, p, "filename", PREVIOUS, RECURSE, CsortedDir::ALL);
+                    mPrevFiles.push_back(p.string());
+                }
+            }
+
+        }
 
 		//next file
 		void next()
 		{
-			mCurrentFile=movePath(mCurrentPath, mCurrentFile, "filename", NEXT, RECURSE, CsortedDir::ALL);
+            mPrevFiles.push_front(mCurrentFile);
+            mCurrentFile=mNextFiles.front();
+            mNextFiles.pop_front();
+            updateLists();
 		}
 
 		//prev file
 		void previous()
 		{
-			mCurrentFile=movePath(mCurrentPath, mCurrentFile,"filename", PREVIOUS, RECURSE, CsortedDir::ALL);
+            mNextFiles.push_front(mCurrentFile);
+            mCurrentFile=mPrevFiles.front();
+            mPrevFiles.pop_front();
+            updateLists();
 		}
 
 		void nextDir()
@@ -356,7 +414,7 @@ namespace pl
 		{
 			mCurrentPath=mRootPath;
 			mCurrentFile=mRootPath;
-			next();
+			updateLists();
 		}
 
 		void create(int id, string rootPath)
@@ -384,12 +442,11 @@ namespace pl
 			out["currentPath"]=mCurrentPath.string();
 			out["currentFile"]=mCurrentFile.string();
 
-//			if (*mIterDir!= directory_iterator())
-//				out["selectedDir"]=(*mIterDir)->path().directory_string();
-//
-//			if (*mIterFile!= recursive_directory_iterator())
-//				out["selectedFile"]=(*mIterFile)->path().file_string();
-
+            BOOST_FOREACH(path prevFile, mPrevFiles)
+            {
+                out["prevFiles"].list().push_back(prevFile.string());
+            }
+    
 			out.send();
 		}
 
