@@ -313,14 +313,7 @@ namespace pl
         unsigned int mNextLen;
         unsigned int mPrevLen;
 
-		public:
-
-        Citer()
-        {
-            mNextLen=5;
-            mPrevLen=5;            
-        }
-
+	
         //make sure there are enough entries in the file and path lists
         void updateLists()
         {
@@ -329,7 +322,7 @@ namespace pl
             while (mNextFiles.size()>mNextLen)
                 mNextFiles.pop_back();
 
-            //fill it back with newer entries until its long enough
+            //fill the back with newer entries until its long enough
             {
                 path p=mCurrentFile;
                 if (!mNextFiles.empty())
@@ -358,7 +351,70 @@ namespace pl
                 }
             }
 
+            //next path list:
+            //make sure its not too long
+            while (mNextPaths.size()>mNextLen)
+                mNextPaths.pop_back();
+
+            //fill the back with newer entries until its long enough
+            {
+                path p=mCurrentPath;
+                if (!mNextPaths.empty())
+                    p=mNextPaths.back();
+                while(mNextPaths.size()<mNextLen)
+                {
+					p=movePath(mRootPath, p, "filename", NEXT, DONT_RECURSE, CsortedDir::DIR);
+                    mNextPaths.push_back(p.string());
+                }
+            }
+
+            //prev path list:
+            //make sure its not too long
+            while (mPrevPaths.size()>mPrevLen)
+                mPrevPaths.pop_back();
+
+            //fill the back with newer entries until its long enough
+            {
+                path p=mCurrentPath;
+                if (!mPrevPaths.empty())
+                    p=mPrevPaths.back();
+                while(mPrevPaths.size()<mPrevLen)
+                {
+					p=movePath(mRootPath, p, "filename", PREVIOUS, DONT_RECURSE, CsortedDir::DIR);
+                    mPrevPaths.push_back(p.string());
+                }
+            }
         }
+
+		public:
+
+        Citer()
+        {
+            mNextLen=5;
+            mPrevLen=5;            
+        }
+
+		//reload all file data. call this after you've changed currentPath or other settings
+		void reloadFiles()
+		{
+			//clear lists
+			mNextFiles.clear();
+			mPrevFiles.clear();
+
+			//find first file 
+			mCurrentFile=movePath(mCurrentPath, mCurrentPath, "filename", NEXT, RECURSE, CsortedDir::ALL);
+
+			//fill the lists
+			updateLists();
+		}
+
+		//reload path and file data, call this after you exited or entered a path so that the previous/next paths need to be reloaded 
+		void reloadPaths()
+		{
+			mNextPaths.clear();
+			mPrevPaths.clear();
+			reloadFiles();
+		}
 
 		//next file
 		void next()
@@ -378,51 +434,51 @@ namespace pl
             updateLists();
 		}
 
-		void nextDir()
+		void nextPath()
 		{
-			mCurrentPath=movePath(mRootPath, mCurrentPath, "filename", NEXT, DONT_RECURSE, CsortedDir::DIR);
-			mCurrentFile=mCurrentPath;
-			next();
+            mPrevPaths.push_front(mCurrentPath);
+            mCurrentPath=mNextPaths.front();
+            mNextPaths.pop_front();
+			reloadFiles();
 		}
 
-		void previousDir()
+		void previousPath()
 		{
-			mCurrentPath=movePath(mRootPath, mCurrentPath, "filename", PREVIOUS, DONT_RECURSE, CsortedDir::DIR);
-			mCurrentFile=mCurrentPath;
-			previous();
+            mNextPaths.push_front(mCurrentPath);
+            mCurrentPath=mPrevPaths.front();
+            mPrevPaths.pop_front();
+            reloadFiles();
 		}
 
-		void exitDir()
+		void exitPath()
 		{
 			if (mCurrentPath!=mRootPath)
 			{
 				mCurrentPath=mCurrentPath.parent_path();
-				mCurrentFile=mCurrentPath;
-				next();
+				reloadPaths();
 			}
 		}
 
-		void enterDir()
+		void enterPath()
 		{
 			//find the first directory in that directory, and dont go higher:
 			mCurrentPath=movePath(mCurrentPath, mCurrentPath, "filename", NEXT, DONT_RECURSE, CsortedDir::DIR);
-			mCurrentFile=mCurrentPath;
-			next();
+			reloadPaths();
 		}
 
-		void reset()
-		{
-			mCurrentPath=mRootPath;
-			mCurrentFile=mRootPath;
-			updateLists();
-		}
 
 		void create(int id, string rootPath)
 		{
 			mId=id;
 			mRootPath=rootPath;
+
+			//find first path
+			mCurrentPath=movePath(mRootPath, mRootPath, "filename", NEXT, DONT_RECURSE, CsortedDir::DIR);
+			reloadPaths();
+
+
 			DEB("Created iterator " << id << " for path " << rootPath);
-			reset();
+			
 		}
 
 
@@ -447,6 +503,21 @@ namespace pl
                 out["prevFiles"].list().push_back(prevFile.string());
             }
     
+            BOOST_FOREACH(path nextFile, mNextFiles)
+            {
+                out["nextFiles"].list().push_back(nextFile.string());
+            }
+
+            BOOST_FOREACH(path prevPath, mPrevPaths)
+            {
+                out["prevPaths"].list().push_back(prevPath.string());
+            }
+    
+            BOOST_FOREACH(path nextPath, mNextPaths)
+            {
+                out["nextPaths"].list().push_back(nextPath.string());
+            }
+
 			out.send();
 		}
 
@@ -524,16 +595,16 @@ namespace pl
     SYNAPSE_REGISTER(module_SessionStart)
     {
         if (msg.isSet("path"))
-            iterMan.create(msg.dst, msg["path"]);
+            iterMan.create(dst, msg["path"]);
         else
-            iterMan.create(msg.dst, config["path"]);
+            iterMan.create(dst, config["path"]);
 
-        iterMan.get(msg.dst).send(0);
+        iterMan.get(dst).send(0);
     }
 
     SYNAPSE_REGISTER(module_SessionEnd)
     {
-        iterMan.destroy(msg.dst);
+        iterMan.destroy(dst);
     }
 
 	/** Create a new iterator
@@ -601,9 +672,9 @@ namespace pl
 
 	\par Replies pl_Entry:
 	 */
-	SYNAPSE_REGISTER(pl_NextDir)
+	SYNAPSE_REGISTER(pl_NextPath)
 	{
-		iterMan.get(dst).nextDir();
+		iterMan.get(dst).nextPath();
 		iterMan.get(dst).send(0);
 
 	}
@@ -614,9 +685,9 @@ namespace pl
 
 	\par Replies pl_Entry:
 	 */
-	SYNAPSE_REGISTER(pl_PreviousDir)
+	SYNAPSE_REGISTER(pl_PreviousPath)
 	{
-		iterMan.get(dst).previousDir();
+		iterMan.get(dst).previousPath();
 		iterMan.get(dst).send(0);
 	}
 
@@ -625,9 +696,9 @@ namespace pl
 
 	\par Replies pl_Entry:
 	 */
-	SYNAPSE_REGISTER(pl_EnterDir)
+	SYNAPSE_REGISTER(pl_EnterPath)
 	{
-		iterMan.get(dst).enterDir();
+		iterMan.get(dst).enterPath();
 		iterMan.get(dst).send(0);
 	}
 
@@ -636,9 +707,9 @@ namespace pl
 
 	\par Replies pl_Entry:
 	 */
-	SYNAPSE_REGISTER(pl_ExitDir)
+	SYNAPSE_REGISTER(pl_ExitPath)
 	{
-		iterMan.get(dst).exitDir();
+		iterMan.get(dst).exitPath();
 		iterMan.get(dst).send(0);
 
 	}
