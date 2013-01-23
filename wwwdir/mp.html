@@ -60,10 +60,38 @@
 
     synapse_register("pl_Entry",function(msg_src, msg_dst, msg_event, msg)
     {
-        for (key in msg)
+        var stripIndex=msg.currentPath.length;
+
+        $('.entry[key="rootPath"]').text(msg.rootPath);
+        $('.entry[key="currentPath"]').text(msg.currentPath);
+        $('.entry[key="currentFile"]').text(msg.currentFile.substr(stripIndex));
+
+        //some dom magic going on here...for more of it and a better way to do it look at my kmur2 project
+
+        //delete old clones
+        $(".entry.cloned").remove();
+
+            
+        //next files
+        var src=$('.entry[key="nextFiles"]');
+        for (nr=msg['nextFiles'].length; nr--; nr>0)
         {
-            $('.entry[key="'+key+'"]').text(msg[key]);
+            var element=$(src).clone();
+            src.after(element);
+            element.addClass("cloned");
+            $('.entry[key=nextFile]', element).text(msg.nextFiles[nr].substr(stripIndex));
         }
+
+        //prev files
+        var src=$('.entry[key="prevFiles"]');
+        for (nr=msg['prevFiles'].length; nr--; nr>0)
+        {
+            var element=$(src).clone();
+            src.before(element);
+            element.addClass("cloned");
+            $('.entry[key=prevFile]', element).text(msg['prevFiles'][nr].substr(stripIndex));
+        }
+
     });
 
     synapse_register("play_Time",function(msg_src, msg_dst, msg_event, msg)
@@ -95,6 +123,15 @@
 
 
 <body>
+
+
+
+<table>
+<tr><th colspan=2>file navigator</tr>
+<tr class="entry" key="prevFiles"><td class="entry" key="prevFile"></tr>
+<tr><td style="background-color: #ccccff" class="entry" key="currentFile"></tr>
+<tr class="entry" key="nextFiles"> ><td class="entry" key="nextFile"></tr>
+</table>
 
 
 <table>

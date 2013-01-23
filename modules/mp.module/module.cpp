@@ -119,19 +119,26 @@ namespace mp
     }
 
     //playlist switched to different path/file
+
     SYNAPSE_REGISTER(pl_Entry)
     {
+        static string currentFile;
+
         //for now we just support one playlist
         if (!plId)
             plId=msg.src;
 
+        if (currentFile==msg["currentFile"].str())
+            return;
+
+        currentFile=msg["currentFile"].str();
 
         if (msg.src==plId)
         {
             //lets play it
             Cmsg out;
             out.event="play_Open";
-            out["url"]="file://"+msg["currentFile"].str();
+            out["url"]="file://"+currentFile;
             out.dst=playerId;
             out.send();
         }

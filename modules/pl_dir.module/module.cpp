@@ -401,11 +401,16 @@ namespace pl
 			mNextFiles.clear();
 			mPrevFiles.clear();
 
-			//find first file 
-			mCurrentFile=movePath(mCurrentPath, mCurrentPath, "filename", NEXT, RECURSE, CsortedDir::ALL);
+			//current file doesnt belong to current path?
+            if (!isSubdir(mCurrentPath, mCurrentFile))
+            {
+                //find the first valid file
+                mCurrentFile=movePath(mCurrentPath, mCurrentPath, "filename", NEXT, RECURSE, CsortedDir::ALL);
+            } 
 
-			//fill the lists
-			updateLists();
+            //fill the lists
+            updateLists();
+
 		}
 
 		//reload path and file data, call this after you exited or entered a path so that the previous/next paths need to be reloaded 
@@ -459,11 +464,25 @@ namespace pl
 			}
 		}
 
+
+        //go one directory deeper, using the currentFile as reference
 		void enterPath()
 		{
-			//find the first directory in that directory, and dont go higher:
-			mCurrentPath=movePath(mCurrentPath, mCurrentPath, "filename", NEXT, DONT_RECURSE, CsortedDir::DIR);
-			reloadPaths();
+            path p;
+            p=mCurrentFile;
+            while (!p.empty())
+            {
+                if (p.parent_path()==mCurrentPath)
+                {
+                    if (is_directory(p))
+                    {
+                        mCurrentPath=p;
+                        reloadPaths();
+                        return;
+                    }
+                }
+                p=p.parent_path();
+            }
 		}
 
 
