@@ -41,10 +41,10 @@
         //translate clicks on elements that have the send-class to a synapse event:
         $(".send").click(function() 
         {
-            send(0,$(this).attr("event"));
+            send(0, $(this).attr("event"));
         });
 
-        //volume slider
+        //time slider
         $(".time").slider({ 
             min: 0,
             slide: function (event, ui)
@@ -53,7 +53,18 @@
             }
         });
 
-
+        $('.scroll-send').bind('mousewheel', function(e){
+            if(e.wheelDelta/120 > 0) 
+            {
+                //scrolled up
+                send(0, $(this).attr("up-event"))
+            }
+            else
+            {            
+                //scrolled down
+                send(0, $(this).attr("down-event"))
+            }
+        });
 
     });
 
@@ -170,16 +181,22 @@ Current path:
  
 </tr>
 <tr>
-        <td><div class="entry_clone entry" key="prevPaths"></div>
-        <td style="border-style: solid none none solid; "><div class="entry_clone entry" key="prevFiles"></div>
+        <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath">
+            <div class="entry_clone entry" key="prevPaths"></div>
+        <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next" style="border-style: solid none none solid; ">
+            <div class="entry_clone entry" key="prevFiles"></div>
 </tr>
 <tr>    
-        <td style="border-style: solid none solid none; " ><div  class="entry selectedPath" key="currentPath"></div>
-        <td><div class="entry selectedPath" key="currentFile"></div>
+        <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath" style="border-style: solid none solid none; " >
+            <div  class="entry selectedPath" key="currentPath"></div>
+        <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next">
+            <div class="entry selectedPath" key="currentFile"></div>
 </tr>
 <tr>    
-        <td><div class="entry_clone entry" key="nextPaths"></div>
-        <td style="border-style: none none solid solid; "><div class="entry_clone entry" key="nextFiles"></div>
+        <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath">
+            <div class="entry_clone entry" key="nextPaths"></div>
+        <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next" style="border-style: none none solid solid; ">
+            <div class="entry_clone entry" key="nextFiles"></div>
 </tr>
 <tr>    
         <td>
