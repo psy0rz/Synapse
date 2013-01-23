@@ -190,6 +190,12 @@ namespace pl
     enum Erecursion { RECURSE, DONT_RECURSE };
     path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype)
     {
+        DEB(
+            "currentPath=" << currentPath.string() <<
+            " sortField=" << sortField <<
+            " direction=" << direction <<
+            " recursion=" << recursion << 
+            " filetype=" << filetype);
 
         //determine the path we should get the initial listing of:
         path listPath;
@@ -290,10 +296,10 @@ namespace pl
             }
 
         }
-        while(currentPath!=startPath);
+        while(listPath!=startPath); //prevent inifinte loops if we dont find anything
 
-        //nothing found, just return currentPath
-        return(currentPath);
+        DEB("nothing found, returning " << startPath)
+        return(startPath);
     }
 
 	class Citer
