@@ -39,6 +39,8 @@ This module can dynamicly generate playlists from directory's. It also can cache
 
 #include "boost/filesystem.hpp"
 
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
 
 /** Playlist namespace
  *
@@ -99,10 +101,10 @@ namespace pl
 	class CsortedDir: public list<Cpath>
 	{
 		private:
-		path mBasePath;
 		string mSortField;
 
 		public:
+        path mBasePath;
 		enum Efiletype  { FILE, DIR, ALL };
 //		list<Cpath> mPaths;
 //		list<Cpath>::iterator iterator;
@@ -145,8 +147,6 @@ namespace pl
 				sort(compareFilename);
 			else if (sortField=="date")
 				sort(compareDate);
-			else
-				throw(synapse::runtime_error("sort mode not implemented yet!"));
 		}
 
 	};
@@ -169,6 +169,7 @@ namespace pl
         return(false);
     }
 
+
     /*
     /a/b
     /a/b/c/d
@@ -181,21 +182,22 @@ namespace pl
     -filetype determines if we're looking for a file or directory or both.
     -direction tells if you want the next or previous file or directory.
     -RECURSE: its allow to enter or exit directories to find the next of previous file.
-    
+
     returns resulting path after this movement.
     when first or last path is reached it loops.
 
     */
     enum Edirection { NEXT, PREVIOUS };
     enum Erecursion { RECURSE, DONT_RECURSE };
-    path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype)
+    path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype, int steps=1)
     {
         DEB(
             "currentPath=" << currentPath.string() <<
             " sortField=" << sortField <<
             " direction=" << direction <<
             " recursion=" << recursion << 
-            " filetype=" << filetype);
+            " filetype=" << filetype <<
+            " steps=" << steps);
 
         //determine the path we should get the initial listing of:
         path listPath;
@@ -221,66 +223,78 @@ namespace pl
                 else
                     dirI=sortedDir.end();
 
-                //currentPath not found?
-                if (dirI==sortedDir.end())
+                //as long as the listPath doesnt change, there is no need to reread the dir.
+                //(this is neccesary to make steps>1 more efficient)
+                while (listPath==sortedDir.mBasePath)
                 {
-                    //start at the first or last entry depending on direction
-                    if (direction==NEXT)
-                        dirI=sortedDir.begin();
-                    else
+                    //currentPath not found?
+                    if (dirI==sortedDir.end())
                     {
-                        dirI=sortedDir.end();
-                        dirI--;
-                    }
-                }
-                else
-                {
-                    //move one step in the correct direction
-                    if (direction==NEXT)
-                    {
-                        dirI++;
-                    }
-                    //PREVIOUS:
-                    else
-                    {
-                        if (dirI==sortedDir.begin())
-                            dirI=sortedDir.end();
+                        //start at the first or last entry depending on direction
+                        if (direction==NEXT)
+                            dirI=sortedDir.begin();
                         else
+                        {
+                            dirI=sortedDir.end();
                             dirI--;
+                        }
                     }
-                }
+                    else
+                    {
+                        //make a step in the right direction
+                        if (direction==NEXT)
+                        {
+                            dirI++;
+                        }
+                        //PREVIOUS:
+                        else
+                        {
+                            if (dirI==sortedDir.begin())
+                                dirI=sortedDir.end();
+                            else
+                                dirI--;
+                        }
+                    }
 
-                //top or bottom was reached
-                if (dirI==sortedDir.end())
-                {
-                    //can we one dir higher?
-                    if (recursion==RECURSE && listPath!=rootPath)
+                    //top or bottom was reached
+                    if (dirI==sortedDir.end())
                     {
-                        //yes, so go one dir higher and continue the loop
-                        currentPath=listPath;
-                        listPath=listPath.parent_path();
+                        //can we one dir higher?
+                        if (recursion==RECURSE && listPath!=rootPath)
+                        {
+                            //yes, so go one dir higher and continue the loop
+                            currentPath=listPath;
+                            listPath=listPath.parent_path();
+                        }
+                        else
+                        {
+                            //no, cant go higher.
+                            //clear the current path, so it just gets the first or last entry
+                            currentPath.clear();
+                        }
                     }
+                    //we found something
                     else
                     {
-                        //no, cant go higher.
-                        //clear the current path, so it just gets the first or last entry
-                        currentPath.clear();
-                    }
-                }
-                //we found something
-                else
-                {
-                    //should we recurse?
-                    if (recursion==RECURSE && is_directory(listPath/(*dirI)))
-                    {
-                        //enter it
-                        listPath=listPath/(*dirI);
-                        currentPath.clear();
-                    }
-                    else
-                    {
-                        //return the new path
-                        return (listPath/(*dirI));
+                        //should we recurse?
+                        if (recursion==RECURSE && is_directory(listPath/(*dirI)))
+                        {
+                            //enter it
+                            listPath=listPath/(*dirI);
+                            currentPath.clear();
+                        }
+                        else
+                        {
+                            //we found it
+                            steps--;
+                            if (steps<=0)
+                            {
+                                DEB("found, returning " << listPath/(*dirI));
+                                return (listPath/(*dirI));
+                            }
+                            currentPath.clear();
+                            //go on until steps is 0...
+                        }
                     }
                 }
             }
@@ -296,7 +310,7 @@ namespace pl
             }
 
         }
-        while(listPath!=startPath); //prevent inifinte loops if we dont find anything
+        while(steps>0 || listPath!=startPath); //prevent inifinte loops if we dont find anything
 
         DEB("nothing found, returning " << startPath)
         return(startPath);
@@ -319,6 +333,21 @@ namespace pl
         unsigned int mNextLen;
         unsigned int mPrevLen;
 
+        int mRandomSteps; //1 is no randomisation and skipping
+        boost::random::mt19937 mRandomGenerator;
+        string mSortField;
+
+        //this returns a random nummer between 1 and mRandomSteps
+        int randomSteps()
+        {
+            if (mRandomSteps==1)
+                return(1);
+            else
+            {
+                boost::random::uniform_int_distribution<> dist(50, mRandomSteps+50);
+                return dist(mRandomGenerator);
+            }
+        }
 	
         //make sure there are enough entries in the file and path lists
         void updateLists()
@@ -335,7 +364,7 @@ namespace pl
                     p=mNextFiles.back();
                 while(mNextFiles.size()<mNextLen)
                 {
-                    p=movePath(mCurrentPath, p, "filename", NEXT, RECURSE, CsortedDir::ALL);
+                    p=movePath(mCurrentPath, p, mSortField, NEXT, RECURSE, CsortedDir::ALL, randomSteps());
                     mNextFiles.push_back(p.string());
                 }
             }
@@ -352,7 +381,7 @@ namespace pl
                     p=mPrevFiles.back();
                 while(mPrevFiles.size()<mPrevLen)
                 {
-                    p=movePath(mCurrentPath, p, "filename", PREVIOUS, RECURSE, CsortedDir::ALL);
+                    p=movePath(mCurrentPath, p, mSortField, PREVIOUS, RECURSE, CsortedDir::ALL, randomSteps());
                     mPrevFiles.push_back(p.string());
                 }
             }
@@ -369,7 +398,7 @@ namespace pl
                     p=mNextPaths.back();
                 while(mNextPaths.size()<mNextLen)
                 {
-					p=movePath(mRootPath, p, "filename", NEXT, DONT_RECURSE, CsortedDir::DIR);
+					p=movePath(mRootPath, p, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR);
                     mNextPaths.push_back(p.string());
                 }
             }
@@ -386,7 +415,7 @@ namespace pl
                     p=mPrevPaths.back();
                 while(mPrevPaths.size()<mPrevLen)
                 {
-					p=movePath(mRootPath, p, "filename", PREVIOUS, DONT_RECURSE, CsortedDir::DIR);
+					p=movePath(mRootPath, p, mSortField, PREVIOUS, DONT_RECURSE, CsortedDir::DIR);
                     mPrevPaths.push_back(p.string());
                 }
             }
@@ -397,7 +426,10 @@ namespace pl
         Citer()
         {
             mNextLen=5;
-            mPrevLen=5;            
+            mPrevLen=5;
+
+            mRandomSteps=1;
+            mSortField="filename";
         }
 
 		//reload all file data. call this after you've changed currentPath or other settings
@@ -411,7 +443,7 @@ namespace pl
             if (!isSubdir(mCurrentPath, mCurrentFile))
             {
                 //find the first valid file
-                mCurrentFile=movePath(mCurrentPath, mCurrentPath, "filename", NEXT, RECURSE, CsortedDir::ALL);
+                mCurrentFile=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, RECURSE, CsortedDir::ALL, randomSteps());
             } 
 
             //fill the lists
@@ -426,6 +458,17 @@ namespace pl
 			mPrevPaths.clear();
 			reloadFiles();
 		}
+
+        void setMode(Cvar params)
+        {
+            if (params.isSet("randomSteps") && params["randomSteps"]>0 && params["randomSteps"]<10000)
+                mRandomSteps=params["randomSteps"];
+
+            if (params.isSet("sortField"))
+                mSortField=params["sortField"].str();
+
+            reloadPaths();
+        }
 
 		//next file
 		void next()
@@ -486,6 +529,13 @@ namespace pl
                         reloadPaths();
                         return;
                     }
+                    //the currentfile doesnt have a directory, so just use the first subdir we can find
+                    else
+                    {
+                        mCurrentPath=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR);
+                        reloadPaths();
+                        return;
+                    }
                 }
                 p=p.parent_path();
             }
@@ -498,7 +548,7 @@ namespace pl
 			mRootPath=rootPath;
 
 			//find first path
-			mCurrentPath=movePath(mRootPath, mRootPath, "filename", NEXT, DONT_RECURSE, CsortedDir::DIR);
+			mCurrentPath=movePath(mRootPath, mRootPath, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR);
 			reloadPaths();
 
 
@@ -545,6 +595,9 @@ namespace pl
             {
                 out["nextPaths"].list().push_back(nextPath.string());
             }
+
+            out["randomSteps"]=mRandomSteps;
+            out["sortField"]=mSortField;
 
 			out.send();
 		}
@@ -672,16 +725,14 @@ namespace pl
 
 
 	/** Change selection/search criteria for files. Initalise a new iterator
-		\param id Traverser id
-		\param recurse Recurse level (-1 is infinite depth)
-		\param fileOrder Order in which to traverse files (date, random, name)
-		\param dirOrder  Order in which to directorys files (date, name)
-		\param search	Search parameters for metadata or filename (details later!)
+        \param s
 
 	\par Replies pl_Entry:
 	 */
-	SYNAPSE_REGISTER(pl_Mode)
+	SYNAPSE_REGISTER(pl_SetMode)
 	{
+        iterMan.get(dst).setMode(msg);
+        iterMan.get(dst).send(0);
 
 	}
 

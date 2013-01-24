@@ -44,6 +44,24 @@
             send(0, $(this).attr("event"));
         });
 
+        $(".set_normal").click(function()
+        {
+            send(0, "pl_SetMode", {
+                "sortField":"filename",
+                "randomSteps":1
+            });
+
+        });
+
+        $(".set_random").click(function()
+        {
+            send(0, "pl_SetMode", {
+                "sortField":"none",
+                "randomSteps":100
+            });
+            
+        });
+
         //time slider
         $(".time").slider({ 
             min: 0,
@@ -210,6 +228,9 @@ Current path:
 </tr>
 </table>
 
+
+<button class="set_random">Random</button>
+<button class="set_normal">Normal</button>
 
 
 
