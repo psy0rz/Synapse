@@ -189,15 +189,14 @@ namespace pl
     */
     enum Edirection { NEXT, PREVIOUS };
     enum Erecursion { RECURSE, DONT_RECURSE };
-    path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype, int steps=1)
+    path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype)
     {
         DEB(
             "currentPath=" << currentPath.string() <<
             " sortField=" << sortField <<
             " direction=" << direction <<
             " recursion=" << recursion << 
-            " filetype=" << filetype <<
-            " steps=" << steps);
+            " filetype=" << filetype);
 
         //determine the path we should get the initial listing of:
         path listPath;
@@ -223,78 +222,67 @@ namespace pl
                 else
                     dirI=sortedDir.end();
 
-                //as long as the listPath doesnt change, there is no need to reread the dir.
-                //(this is neccesary to make steps>1 more efficient)
-                while (listPath==sortedDir.mBasePath)
+                //currentPath not found?
+                if (dirI==sortedDir.end())
                 {
-                    //currentPath not found?
-                    if (dirI==sortedDir.end())
+                    //start at the first or last entry depending on direction
+                    if (direction==NEXT)
+                        dirI=sortedDir.begin();
+                    else
                     {
-                        //start at the first or last entry depending on direction
-                        if (direction==NEXT)
-                            dirI=sortedDir.begin();
-                        else
-                        {
+                        dirI=sortedDir.end();
+                        dirI--;
+                    }
+                }
+                else
+                {
+                    //make a step in the right direction
+                    if (direction==NEXT)
+                    {
+                        dirI++;
+                    }
+                    //PREVIOUS:
+                    else
+                    {
+                        if (dirI==sortedDir.begin())
                             dirI=sortedDir.end();
+                        else
                             dirI--;
-                        }
                     }
-                    else
-                    {
-                        //make a step in the right direction
-                        if (direction==NEXT)
-                        {
-                            dirI++;
-                        }
-                        //PREVIOUS:
-                        else
-                        {
-                            if (dirI==sortedDir.begin())
-                                dirI=sortedDir.end();
-                            else
-                                dirI--;
-                        }
-                    }
+                }
 
-                    //top or bottom was reached
-                    if (dirI==sortedDir.end())
+                //top or bottom was reached
+                if (dirI==sortedDir.end())
+                {
+                    //can we one dir higher?
+                    if (recursion==RECURSE && listPath!=rootPath)
                     {
-                        //can we one dir higher?
-                        if (recursion==RECURSE && listPath!=rootPath)
-                        {
-                            //yes, so go one dir higher and continue the loop
-                            currentPath=listPath;
-                            listPath=listPath.parent_path();
-                        }
-                        else
-                        {
-                            //no, cant go higher.
-                            //clear the current path, so it just gets the first or last entry
-                            currentPath.clear();
-                        }
+                        //yes, so go one dir higher and continue the loop
+                        currentPath=listPath;
+                        listPath=listPath.parent_path();
                     }
-                    //we found something
                     else
                     {
-                        //should we recurse?
-                        if (recursion==RECURSE && is_directory(listPath/(*dirI)))
-                        {
-                            //enter it
-                            listPath=listPath/(*dirI);
-                            currentPath.clear();
-                        }
-                        else
-                        {
-                            //we found it
-                            steps--;
-                            if (steps<=0)
-                            {
-                                DEB("found, returning " << listPath/(*dirI));
-                                return (listPath/(*dirI));
-                            }
-                            currentPath.clear();
-                            //go on until steps is 0...
-                        }
+                        //no, cant go higher.
+                        //clear the current path, so it just gets the first or last entry
+                        currentPath.clear();
+                    }
+                }
+                //we found something
+                else
+                {
+                    //should we recurse?
+                    if (recursion==RECURSE && is_directory(listPath/(*dirI)))
+                    {
+                        //enter it
+                        listPath=listPath/(*dirI);
+                        currentPath.clear();
+                    }
+                    else
+                    {
+                        //we found it
+                        DEB("found, returning " << listPath/(*dirI));
+                        return (listPath/(*dirI));
                     }
                 }
             }
@@ -310,7 +298,7 @@ namespace pl
             }
 
         }
-        while(steps>0 || listPath!=startPath); //prevent inifinte loops if we dont find anything
+        while(listPath!=startPath); //prevent inifinte loops if we dont find anything
 
         DEB("nothing found, returning " << startPath)
         return(startPath);
@@ -333,56 +321,84 @@ namespace pl
         unsigned int mNextLen;
         unsigned int mPrevLen;
 
-        int mRandomSteps; //1 is no randomisation and skipping
         boost::random::mt19937 mRandomGenerator;
         string mSortField;
+        unsigned int mRandomLength; //max length of random queue, the more, the better it is, but takes more time scanning 
+        path mLastRandomFile; //last queued random path
 
-        //this returns a random nummer between 1 and mRandomSteps
-        int randomSteps()
-        {
-            if (mRandomSteps==1)
-                return(1);
-            else
-            {
-                boost::random::uniform_int_distribution<> dist(50, mRandomSteps+50);
-                return dist(mRandomGenerator);
-            }
-        }
 	
         //make sure there are enough entries in the file and path lists
         void updateLists()
         {
-            //next file list:
-            //make sure its not too long
-            while (mNextFiles.size()>mNextLen)
-                mNextFiles.pop_back();
 
-            //fill the back with newer entries until its long enough
+            //nonrandom mode:
+            if (mRandomLength==0)
             {
-                path p=mCurrentFile;
-                if (!mNextFiles.empty())
-                    p=mNextFiles.back();
-                while(mNextFiles.size()<mNextLen)
+                //next file list:
+                //make sure its not too long
+                while (mNextFiles.size()>mNextLen)
+                    mNextFiles.pop_back();
+
+                //fill the back with newer entries until its long enough
                 {
-                    p=movePath(mCurrentPath, p, mSortField, NEXT, RECURSE, CsortedDir::ALL, randomSteps());
-                    mNextFiles.push_back(p.string());
+                    path p=mCurrentFile;
+                    if (!mNextFiles.empty())
+                        p=mNextFiles.back();
+                    while(mNextFiles.size()<mNextLen)
+                    {
+                        p=movePath(mCurrentPath, p, mSortField, NEXT, RECURSE, CsortedDir::ALL);
+                        mNextFiles.push_back(p.string());
+                    }
                 }
-            }
 
-            //prev file list:
-            //make sure its not too long
-            while (mPrevFiles.size()>mPrevLen)
-                mPrevFiles.pop_back();
+                //prev file list:
+                //make sure its not too long
+                while (mPrevFiles.size()>mPrevLen)
+                    mPrevFiles.pop_back();
 
-            //fill the back older entries until its long enough
-            {
-                path p=mCurrentFile;
-                if (!mPrevFiles.empty())
-                    p=mPrevFiles.back();
-                while(mPrevFiles.size()<mPrevLen)
+                //fill the back older entries until its long enough
                 {
-                    p=movePath(mCurrentPath, p, mSortField, PREVIOUS, RECURSE, CsortedDir::ALL, randomSteps());
-                    mPrevFiles.push_back(p.string());
+                    path p=mCurrentFile;
+                    if (!mPrevFiles.empty())
+                        p=mPrevFiles.back();
+                    while(mPrevFiles.size()<mPrevLen)
+                    {
+                        p=movePath(mCurrentPath, p, mSortField, PREVIOUS, RECURSE, CsortedDir::ALL);
+                        mPrevFiles.push_back(p.string());
+                    }
+                }
+
+            }
+            //random mode
+            else
+            {
+                //make sure prevlist is not too long
+                while (mPrevFiles.size()>mRandomLength)
+                    mPrevFiles.pop_back();
+
+
+                //insert new entryes randomly in the nextlist until its long enough
+                {
+                    if (!isSubdir(mCurrentPath, mLastRandomFile))
+                        mLastRandomFile=mCurrentFile;
+
+                    while(mNextFiles.size()<mRandomLength)
+                    {
+                        mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, "none", NEXT, RECURSE, CsortedDir::ALL);
+
+                        //insert at random position:                        
+                        list<path>::iterator nextFileI;
+                        nextFileI=mNextFiles.begin();
+                        boost::random::uniform_int_distribution<> dist(0, mNextFiles.size());
+                        int rndCount=dist(mRandomGenerator);
+                        while(rndCount)
+                        {
+                            rndCount--;
+                            nextFileI++;
+                        }
+                        mNextFiles.insert(nextFileI, mLastRandomFile);
+
+                    }
                 }
             }
 
@@ -398,7 +414,7 @@ namespace pl
                     p=mNextPaths.back();
                 while(mNextPaths.size()<mNextLen)
                 {
-					p=movePath(mRootPath, p, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR);
+                    p=movePath(mRootPath, p, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR);
                     mNextPaths.push_back(p.string());
                 }
             }
@@ -428,7 +444,7 @@ namespace pl
             mNextLen=5;
             mPrevLen=5;
 
-            mRandomSteps=1;
+            mRandomLength=0;
             mSortField="filename";
         }
 
@@ -443,7 +459,7 @@ namespace pl
             if (!isSubdir(mCurrentPath, mCurrentFile))
             {
                 //find the first valid file
-                mCurrentFile=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, RECURSE, CsortedDir::ALL, randomSteps());
+                mCurrentFile=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, RECURSE, CsortedDir::ALL);
             } 
 
             //fill the lists
@@ -461,8 +477,8 @@ namespace pl
 
         void setMode(Cvar params)
         {
-            if (params.isSet("randomSteps") && params["randomSteps"]>0 && params["randomSteps"]<10000)
-                mRandomSteps=params["randomSteps"];
+            if (params.isSet("randomLength") && params["randomLength"]>0 && params["randomLength"]<10000)
+                mRandomLength=params["randomLength"];
 
             if (params.isSet("sortField"))
                 mSortField=params["sortField"].str();
@@ -576,27 +592,46 @@ namespace pl
             //to make life easier for user interfaces in a crossplatform way:
             out["parentPath"]=mCurrentPath.parent_path().string();
 
+
+            int maxItems;
+
+            maxItems=5;
             BOOST_FOREACH(path prevFile, mPrevFiles)
             {
                 out["prevFiles"].list().push_back(prevFile.string());
+                maxItems--;
+                if (maxItems==0)
+                    break;
             }
     
+            maxItems=5;
             BOOST_FOREACH(path nextFile, mNextFiles)
             {
                 out["nextFiles"].list().push_back(nextFile.string());
+                maxItems--;
+                if (maxItems==0)
+                    break;
             }
 
+            maxItems=5;
             BOOST_FOREACH(path prevPath, mPrevPaths)
             {
                 out["prevPaths"].list().push_back(prevPath.string());
+                maxItems--;
+                if (maxItems==0)
+                    break;
             }
     
+            maxItems=5;
             BOOST_FOREACH(path nextPath, mNextPaths)
             {
                 out["nextPaths"].list().push_back(nextPath.string());
+                maxItems--;
+                if (maxItems==0)
+                    break;
             }
 
-            out["randomSteps"]=mRandomSteps;
+            out["randomLength"]=mRandomLength;
             out["sortField"]=mSortField;
 
 			out.send();

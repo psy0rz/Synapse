@@ -116,6 +116,16 @@ namespace mp
             out.send();
 
         }
+        
+/*        if (msg["state"]=="playing")
+        {
+            Cmsg out;
+            out.dst=playerId;
+            out.event="play_SetTime";
+            out["time"]=25;
+            out.send();
+            
+        }*/
     }
 
     //playlist switched to different path/file
