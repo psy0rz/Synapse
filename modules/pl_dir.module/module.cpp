@@ -343,7 +343,7 @@ namespace pl
         void updateLists()
         {
 
-            //nonrandom mode:
+            //normal mode:
             if (mRandomLength==0)
             {
                 //next file list:
@@ -388,13 +388,13 @@ namespace pl
                 while (mPrevFiles.size()>mRandomLength)
                     mPrevFiles.pop_back();
 
-
                 //insert new entryes randomly in the nextlist until its long enough
                 {
                     if (!isSubdir(mCurrentPath, mLastRandomFile))
                         mLastRandomFile=mCurrentFile;
 
                     while(mNextFiles.size()<mRandomLength)
+//                    for (unsigned int i=0; i<mRandomLength; i++)
                     {
                         mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, mSortField, NEXT, RECURSE, CsortedDir::ALL);
 
@@ -411,6 +411,7 @@ namespace pl
                         mNextFiles.insert(nextFileI, mLastRandomFile);
 
                     }
+
                 }
             }
 
@@ -489,8 +490,10 @@ namespace pl
 
         void setMode(Cvar params)
         {
-            if (params.isSet("randomLength") && params["randomLength"]>0 && params["randomLength"]<10000)
+            if (params.isSet("randomLength") && params["randomLength"]>=0 && params["randomLength"]<10000)
+            {
                 mRandomLength=params["randomLength"];
+            }
 
             if (params.isSet("sortField"))
                 mSortField=params["sortField"].str();
@@ -530,6 +533,11 @@ namespace pl
             mCurrentPath=mNextPaths.front();
                 mNextPaths.pop_front();
 			reloadFiles();
+
+            //in random mode we want the first file to be random as well:
+            if (mRandomLength)
+                next();
+
 		}
 
 		void previousPath()
@@ -540,6 +548,10 @@ namespace pl
             mCurrentPath=mPrevPaths.front();
             mPrevPaths.pop_front();
             reloadFiles();
+
+            //in random mode we want the first file to be random as well:
+            if (mRandomLength)
+                next();
 		}
 
 		void exitPath()
