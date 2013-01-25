@@ -106,6 +106,7 @@ namespace pl
 		public:
         path mBasePath;
 		enum Efiletype  { FILE, DIR, ALL };
+        Efiletype mFiletype;
 //		list<Cpath> mPaths;
 //		list<Cpath>::iterator iterator;
 
@@ -120,12 +121,18 @@ namespace pl
 		}
 
 
-		CsortedDir(path basePath, string sortField, Efiletype filetype)
+		void read(path basePath, string sortField, Efiletype filetype)
 		{
+            //if nothing has changed, dont reread if its same dir
+            if (mBasePath==basePath && sortField==mSortField && filetype==mFiletype)
+                return;
+
 			mBasePath=basePath;
 			mSortField=sortField;
+            mFiletype=filetype;
+            clear();
 
-			DEB("Reading directory " << basePath.string());
+			//DEB("Reading directory " << basePath.string());
 			directory_iterator end_itr;
 			for ( directory_iterator itr( basePath );
 				itr != end_itr;
@@ -187,16 +194,19 @@ namespace pl
     when first or last path is reached it loops.
 
     */
+
+
     enum Edirection { NEXT, PREVIOUS };
     enum Erecursion { RECURSE, DONT_RECURSE };
+
     path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype)
     {
-        DEB(
-            "currentPath=" << currentPath.string() <<
-            " sortField=" << sortField <<
-            " direction=" << direction <<
-            " recursion=" << recursion << 
-            " filetype=" << filetype);
+        // DEB(
+        //     "currentPath=" << currentPath.string() <<
+        //     " sortField=" << sortField <<
+        //     " direction=" << direction <<
+        //     " recursion=" << recursion << 
+        //     " filetype=" << filetype);
 
         //determine the path we should get the initial listing of:
         path listPath;
@@ -208,10 +218,12 @@ namespace pl
         path startPath=currentPath;
         
         CsortedDir::iterator dirI;
+
         do
         {
             //get sorted directory listing
-            CsortedDir sortedDir(listPath, sortField, filetype);
+            static CsortedDir sortedDir;
+            sortedDir.read(listPath, sortField, filetype);
 
             if (!sortedDir.empty())
             {
@@ -281,7 +293,7 @@ namespace pl
                     else
                     {
                         //we found it
-                        DEB("found, returning " << listPath/(*dirI));
+                        //DEB("found, returning " << listPath/(*dirI));
                         return (listPath/(*dirI));
                     }
                 }
@@ -384,7 +396,7 @@ namespace pl
 
                     while(mNextFiles.size()<mRandomLength)
                     {
-                        mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, "none", NEXT, RECURSE, CsortedDir::ALL);
+                        mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, mSortField, NEXT, RECURSE, CsortedDir::ALL);
 
                         //insert at random position:                        
                         list<path>::iterator nextFileI;
@@ -489,6 +501,9 @@ namespace pl
 		//next file
 		void next()
 		{
+            if (mNextFiles.empty())
+                return;
+
             mPrevFiles.push_front(mCurrentFile);
             mCurrentFile=mNextFiles.front();
             mNextFiles.pop_front();
@@ -498,6 +513,9 @@ namespace pl
 		//prev file
 		void previous()
 		{
+            if (mPrevFiles.empty())
+                return;
+
             mNextFiles.push_front(mCurrentFile);
             mCurrentFile=mPrevFiles.front();
             mPrevFiles.pop_front();
@@ -506,14 +524,18 @@ namespace pl
 
 		void nextPath()
 		{
+            if (mNextPaths.empty())
+                return;
             mPrevPaths.push_front(mCurrentPath);
             mCurrentPath=mNextPaths.front();
-            mNextPaths.pop_front();
+                mNextPaths.pop_front();
 			reloadFiles();
 		}
 
 		void previousPath()
 		{
+            if (mPrevPaths.empty())
+                return;
             mNextPaths.push_front(mCurrentPath);
             mCurrentPath=mPrevPaths.front();
             mPrevPaths.pop_front();
@@ -596,6 +618,7 @@ namespace pl
             int maxItems;
 
             maxItems=5;
+            out["prevFiles"].list();
             BOOST_FOREACH(path prevFile, mPrevFiles)
             {
                 out["prevFiles"].list().push_back(prevFile.string());
@@ -605,15 +628,17 @@ namespace pl
             }
     
             maxItems=5;
+            out["nextFiles"].list();
             BOOST_FOREACH(path nextFile, mNextFiles)
             {
                 out["nextFiles"].list().push_back(nextFile.string());
                 maxItems--;
                 if (maxItems==0)
                     break;
-            }
+            } 
 
             maxItems=5;
+            out["prevPaths"].list();
             BOOST_FOREACH(path prevPath, mPrevPaths)
             {
                 out["prevPaths"].list().push_back(prevPath.string());
@@ -623,6 +648,7 @@ namespace pl
             }
     
             maxItems=5;
+            out["nextPaths"].list();
             BOOST_FOREACH(path nextPath, mNextPaths)
             {
                 out["nextPaths"].list().push_back(nextPath.string());

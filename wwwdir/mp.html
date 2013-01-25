@@ -56,7 +56,7 @@
         $(".set_random").click(function()
         {
             send(0, "pl_SetMode", {
-                "sortField":"none",
+                "sortField":"filename",
                 "randomLength":1000
             });
             
@@ -198,11 +198,11 @@ Current path:
         <td><button class="send" event="pl_Previous">^^^ Previous song ^^^</button>
  
 </tr>
-<tr>
+<tr style="vertical-align: bottom ">
         <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath">
             <div class="entry_clone entry" key="prevPaths"></div>
         <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next" style="border-style: solid none none solid; ">
-            <div class="entry_clone entry" key="prevFiles"></div>
+            <div class="entry_clone entry" style="" key="prevFiles"></div>
 </tr>
 <tr>    
         <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath" style="border-style: solid none solid none; " >
@@ -210,7 +210,7 @@ Current path:
         <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next">
             <div class="entry selectedPath" key="currentFile"></div>
 </tr>
-<tr>    
+<tr style="vertical-align: top">    
         <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath">
             <div class="entry_clone entry" key="nextPaths"></div>
         <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next" style="border-style: none none solid solid; ">
