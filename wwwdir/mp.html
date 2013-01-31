@@ -97,53 +97,55 @@
 
         //some dom magic going on here...for more of it and a better way to do it look at the kmur2 project
 
+
+        function listClone(src, list, strip, reverse)
+        {
+            var color=255;
+            var colorStep=(255-70)/(list.length-1);
+            for (nr=0; nr<list.length; nr++)
+            {
+                var element=$(src).clone();
+                
+                if (reverse)
+                    src.after(element);
+                else
+                    src.before(element);
+
+                element.addClass("cloned");
+                element.css('color', 'rgb('+color+','+color+','+color+')');
+                color=Math.round(color-colorStep);
+                element.text(list[nr].substr(strip));
+            }
+        }
+
         //delete old clones
         $(".entry.cloned").remove();
 
+
+        listClone(
+                $('.entry_clone[key="nextFiles"]'), 
+                msg.nextFiles, 
+                msg.currentPath.length,
+                false);
             
-        //next files
-        var src=$('.entry_clone[key="nextFiles"]');
-        for (nr=msg['nextFiles'].length; nr--; nr>0)
-        {
-            var element=$(src).clone();
-            src.after(element);
-            element.addClass("cloned");
-            //$('.entry[key="nextFiles"]', element).text(msg.nextFiles[nr].substr(msg.currentPath.length));
-            element.text(msg.nextFiles[nr].substr(msg.currentPath.length));
-        }
+        listClone(
+                $('.entry_clone[key="prevFiles"]'), 
+                msg.prevFiles, 
+                msg.currentPath.length,
+                true);
 
-        //prev files
-        var src=$('.entry_clone[key="prevFiles"]');
-        for (nr=msg['prevFiles'].length; nr--; nr>0)
-        {
-            var element=$(src).clone();
-            src.before(element);
-            element.addClass("cloned");
-//           $('.entry[key="prevFiles"]', element).text(msg['prevFiles'][nr].substr(msg.currentPath.length));
-            element.text(msg.prevFiles[nr].substr(msg.currentPath.length));
-        }
 
-        //next paths
-        var src=$('.entry_clone[key="nextPaths"]');
-        for (nr=msg['nextPaths'].length; nr--; nr>0)
-        {
-            var element=$(src).clone();
-            src.after(element);
-            element.addClass("cloned");
-            //$('.entry[key="nextFiles"]', element).text(msg.nextFiles[nr].substr(msg.currentPath.length));
-            element.text(msg.nextPaths[nr].substr(msg.parentPath.length));
-        }
+        listClone(
+                $('.entry_clone[key="nextPaths"]'), 
+                msg.nextPaths, 
+                msg.parentPath.length,
+                false);
 
-        //prev paths
-        var src=$('.entry_clone[key="prevPaths"]');
-        for (nr=msg['prevPaths'].length; nr--; nr>0)
-        {
-            var element=$(src).clone();
-            src.before(element);
-            element.addClass("cloned");
-            //$('.entry[key="nextFiles"]', element).text(msg.nextFiles[nr].substr(msg.currentPath.length));
-            element.text(msg.prevPaths[nr].substr(msg.parentPath.length));
-        }
+        listClone(
+                $('.entry_clone[key="prevPaths"]'), 
+                msg.prevPaths, 
+                msg.parentPath.length,
+                true);
 
 
     });
@@ -192,7 +194,9 @@
 Current path: 
 <span class="entry selectedPath" key="parentPath" style="border-style: solid none solid none; "></span>
 
-<table>
+<p>
+
+<table style="border-style: solid; border-width: 1px;">
 <tr>    
         <td><button class="send" event="pl_PreviousPath">^^^ Previous directory ^^^</button>
         <td><button class="send" event="pl_Previous">^^^ Previous song ^^^</button>
@@ -202,7 +206,7 @@ Current path:
         <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath">
             <div class="entry_clone entry" key="prevPaths"></div>
         <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next" style="border-style: solid none none solid; ">
-            <div class="entry_clone entry" style="" key="prevFiles"></div>
+            <div class="entry_clone entry" key="prevFiles"></div>
 </tr>
 <tr>    
         <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath" style="border-style: solid none solid none; " >
