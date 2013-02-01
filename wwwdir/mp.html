@@ -112,7 +112,7 @@
                     src.before(element);
 
                 element.addClass("cloned");
-                element.css('color', 'rgb('+color+','+color+','+color+')');
+                element.css('color', 'rgb('+0+','+color+','+0+')');
                 color=Math.round(color-colorStep);
                 element.text(list[nr].substr(strip));
             }
@@ -181,7 +181,8 @@
 
     .selectedPath
     {
-        background-color: #0000aa;
+        background-color: #005500;
+        color: #00ff00;
     }
 
 
@@ -192,7 +193,7 @@
 <body>
 
 Current path: 
-<span class="entry selectedPath" key="parentPath" style="border-style: solid none solid none; "></span>
+<span class="entry selectedPath" key="parentPath" style="border-style: solid none solid none; border-color: #ffffff; "></span>
 
 <p>
 

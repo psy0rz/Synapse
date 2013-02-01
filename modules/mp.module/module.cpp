@@ -117,6 +117,7 @@ namespace mp
 
         }
         
+        
 /*        if (msg["state"]=="playing")
         {
             Cmsg out;

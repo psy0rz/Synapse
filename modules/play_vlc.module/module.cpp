@@ -93,6 +93,7 @@ class CPlayer
             out=status.second;
             out.send();
         }
+
     }
 
 	void throwError(string msg)
@@ -246,6 +247,13 @@ class CPlayer
 		}
 	}
 
+	//the vlc playlist is empty (in case of streaming , m3u and pls files)
+	static void vlcEventMediaListPLayerStopped(const libvlc_event_t * event, void *player)
+	{
+		ERROR("CHUUUCH!@#!@");
+
+	}
+
 	static void vlcEventMediaStateChanged(const libvlc_event_t * event, void *player)
 	{
         lock_guard<recursive_mutex> lock(vlcMutex);
@@ -254,7 +262,8 @@ class CPlayer
 		out.src=((CPlayer *)player)->mId;
         out.event="play_State";
 
-        out["state"]="none";
+        out["state"]="wtf";
+
 
 		if (event->u.media_state_changed.new_state==libvlc_NothingSpecial)
             out["state"]="none";
@@ -277,6 +286,8 @@ class CPlayer
 
         //cache status
         ((CPlayer *)player)->mStatus[out.event]=out;
+
+        
 /**
 		//check the logs as well
 		libvlc_log_message_t logMessage;
@@ -369,7 +380,9 @@ class CPlayer
 		if (!mListPlayerEm)
 			throwError("Problem getting event manager of list player");
 
-
+		libvlc_event_attach(mListPlayerEm, libvlc_MediaListPlayerStopped, vlcEventMediaListPLayerStopped, this);
+		libvlc_event_attach(mListPlayerEm, libvlc_MediaListPlayerPlayed, vlcEventMediaListPLayerStopped, this);
+		libvlc_event_attach(mListPlayerEm, libvlc_MediaListPlayerNextItemSet, vlcEventMediaListPLayerStopped, this);
 
 		//create a player
 		DEB("Creating player");
