@@ -102,7 +102,7 @@ namespace mp
         static int lastTime=0;
 
 
-        if (msg["state"]=="ended" || msg["state"]=="error")
+        if (msg["state"]=="empty")
         {
             if (time(NULL)-lastTime<=2)
             {

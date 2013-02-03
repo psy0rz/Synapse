@@ -72,6 +72,7 @@ class CPlayer
 	libvlc_media_list_player_t* mListPlayer;
 	libvlc_event_manager_t *mListPlayerEm;
 
+    int mVlcSubitemsLeft;
 
 	int mVlcLastTime;
 	string mVlcUrl;
@@ -247,23 +248,26 @@ class CPlayer
 		}
 	}
 
-	//the vlc playlist is empty (in case of streaming , m3u and pls files)
-	static void vlcEventMediaListPLayerStopped(const libvlc_event_t * event, void *player)
-	{
-		ERROR("CHUUUCH!@#!@");
 
-	}
 
 	static void vlcEventMediaStateChanged(const libvlc_event_t * event, void *player)
 	{
         lock_guard<recursive_mutex> lock(vlcMutex);
 
+/*
+        DEB("lock");
+        DEB("get");
+        int playing=libvlc_media_player_is_playing((((CPlayer*)player)->mPlayer));
+        ERROR("is player " << playing);
+                DEB("unlock");
+
+        DEB("unlocked");
+*/
 		Cmsg out;
 		out.src=((CPlayer *)player)->mId;
         out.event="play_State";
 
-        out["state"]="wtf";
-
+        out["state"]="unknown";
 
 		if (event->u.media_state_changed.new_state==libvlc_NothingSpecial)
             out["state"]="none";
@@ -283,6 +287,18 @@ class CPlayer
 	        out["state"]="error";
 
 		out.send();
+
+        ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
+        //are we done playing the internal playlists of vlc?        
+        if (
+            (event->u.media_state_changed.new_state==libvlc_Ended && ((CPlayer*)player)->mVlcSubitemsLeft==0) ||
+            (event->u.media_state_changed.new_state==libvlc_Error)
+        )
+        {
+            out["state"]="empty";
+            out.send();
+        }
+
 
         //cache status
         ((CPlayer *)player)->mStatus[out.event]=out;
@@ -322,9 +338,21 @@ class CPlayer
 **/
 	}
 
+    static void vlcEventMediaListPlayerNextItemSet(const libvlc_event_t * event, void *player)
+    {
+        lock_guard<recursive_mutex> lock(vlcMutex);
+        ((CPlayer*)player)->mVlcSubitemsLeft--;
+        ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
+    }
+
+
 	static void vlcEventMediaSubItemAdded(const libvlc_event_t * event, void *player)
 	{
+        lock_guard<recursive_mutex> lock(vlcMutex);
 
+        ((CPlayer*)player)->mVlcSubitemsLeft++;
+        ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
+  
 		libvlc_event_manager_t *em;
 		em=libvlc_media_event_manager(event->u.media_subitem_added.new_child);
 		if (em)
@@ -380,9 +408,7 @@ class CPlayer
 		if (!mListPlayerEm)
 			throwError("Problem getting event manager of list player");
 
-		libvlc_event_attach(mListPlayerEm, libvlc_MediaListPlayerStopped, vlcEventMediaListPLayerStopped, this);
-		libvlc_event_attach(mListPlayerEm, libvlc_MediaListPlayerPlayed, vlcEventMediaListPLayerStopped, this);
-		libvlc_event_attach(mListPlayerEm, libvlc_MediaListPlayerNextItemSet, vlcEventMediaListPLayerStopped, this);
+       libvlc_event_attach(mListPlayerEm, libvlc_MediaListPlayerNextItemSet, vlcEventMediaListPlayerNextItemSet, this);
 
 		//create a player
 		DEB("Creating player");
@@ -395,8 +421,7 @@ class CPlayer
 		if (!mPlayerEm)
 			throwError("Problem getting event manager of player");
 
-		libvlc_event_attach(mPlayerEm, libvlc_MediaPlayerTimeChanged, vlcEventMediaPlayerTimeChanged, this);
-
+        libvlc_event_attach(mPlayerEm, libvlc_MediaPlayerTimeChanged, vlcEventMediaPlayerTimeChanged, this);
 
 		//create a list
 		DEB("Creating list");
@@ -457,7 +482,6 @@ class CPlayer
 	{
 		throwIfBad();
 
-
 		mVlcUrl=url;
 
 		 // Create a new media item
@@ -467,22 +491,35 @@ class CPlayer
 		if (!m)
 			throwError("Cant creating location object");
 
+
 		//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv LOCKED
 		libvlc_media_list_lock(mList);
+        DEB("remove locked");
 
 		//clear the list
 		while(libvlc_media_list_count(mList))
 		{
-            INFO("remove");
-
+            DEB("remove");
 			libvlc_media_list_remove_index(mList, 0);
+            DEB("remove done");
 		}
-
-		//add media
-		libvlc_media_list_add_media(mList, m);
 
 		libvlc_media_list_unlock(mList);
 		//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ LOCKED
+        DEB("remove unlocked");
+
+        mVlcSubitemsLeft=0;
+
+        //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv LOCKED
+        libvlc_media_list_lock(mList);
+        DEB("add locked");
+
+        //add media
+        libvlc_media_list_add_media(mList, m);
+        libvlc_media_list_unlock(mList);
+        //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ LOCKED
+        DEB("add unlocked");
+
 
 		//command the list player to play
         libvlc_media_list_player_next(mListPlayer);

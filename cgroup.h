@@ -50,6 +50,6 @@ private:
 
 };
 
-typedef shared_ptr<Cgroup> CgroupPtr;
+typedef boost::shared_ptr<Cgroup> CgroupPtr;
 }
 #endif

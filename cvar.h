@@ -98,7 +98,8 @@ namespace synapse
 		//CVAR_MAP stuff
 //		void operator=(CvarMap & value);
 		operator CvarMap & ();
-		Cvar & operator [](const string & key);
+        Cvar & operator [](const string & key);
+        Cvar & operator [](const char *);
 		bool isSet(const char * key);
 		bool isSet(const string & key);
 		CvarMap::iterator begin();

@@ -42,7 +42,9 @@ This module can dynamicly generate playlists from directory's. It also can cache
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 
-/** Playlist namespace
+#include <boost/date_time/posix_time/posix_time.hpp>
+ 
+ /** Playlist namespace
  *
  */
 namespace pl
@@ -50,6 +52,7 @@ namespace pl
 	using namespace std;
 	using namespace boost::filesystem;
 	using namespace boost;
+    using namespace boost::posix_time;
 
 
 
@@ -388,13 +391,18 @@ namespace pl
                 while (mPrevFiles.size()>mRandomLength)
                     mPrevFiles.pop_back();
 
-                //insert new entryes randomly in the nextlist until its long enough
+                //insert new entries randomly
                 {
                     if (!isSubdir(mCurrentPath, mLastRandomFile))
                         mLastRandomFile=mCurrentFile;
 
+                    //fill the list but dont take too long
+//                    ptime started=microsec_clock::local_time();
+  //                  time_duration td=(microsec_clock::local_time()-started).fractional_seconds();
+
+                    
                     while(mNextFiles.size()<mRandomLength)
-//                    for (unsigned int i=0; i<mRandomLength; i++)
+                     //&&                         time_duration(microsec_clock::local_time()-started).<100000)
                     {
                         mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, mSortField, NEXT, RECURSE, CsortedDir::ALL);
 
@@ -473,7 +481,7 @@ namespace pl
             {
                 //find the first valid file
                 mCurrentFile=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, RECURSE, CsortedDir::ALL);
-            } 
+            }
 
             //fill the lists
             updateLists();
