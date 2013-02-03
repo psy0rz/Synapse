@@ -135,7 +135,7 @@ namespace pl
             mFiletype=filetype;
             clear();
 
-			//DEB("Reading directory " << basePath.string());
+			DEB("Reading directory " << basePath.string());
 			directory_iterator end_itr;
 			for ( directory_iterator itr( basePath );
 				itr != end_itr;
@@ -341,6 +341,7 @@ namespace pl
         unsigned int mRandomLength; //max length of random queue, the more, the better it is, but takes more time scanning 
         path mLastRandomFile; //last queued random path
 
+        public:
 	
         //make sure there are enough entries in the file and path lists
         void updateLists()
@@ -396,13 +397,9 @@ namespace pl
                     if (!isSubdir(mCurrentPath, mLastRandomFile))
                         mLastRandomFile=mCurrentFile;
 
-                    //fill the list but dont take too long
-//                    ptime started=microsec_clock::local_time();
-  //                  time_duration td=(microsec_clock::local_time()-started).fractional_seconds();
-
-                    
+                    //fill the list but if it takes too long, continue later 
+                    ptime started=microsec_clock::local_time();
                     while(mNextFiles.size()<mRandomLength)
-                     //&&                         time_duration(microsec_clock::local_time()-started).<100000)
                     {
                         mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, mSortField, NEXT, RECURSE, CsortedDir::ALL);
 
@@ -418,7 +415,22 @@ namespace pl
                         }
                         mNextFiles.insert(nextFileI, mLastRandomFile);
 
+                        //we've taken our time, so send an event to continue next time:
+                        if ((microsec_clock::local_time()-started).total_milliseconds()>100)
+                        {
+                            DEB("scan-timeout, random size=" << mNextFiles.size() << " milliseconds taken=" << (microsec_clock::local_time()-started).total_milliseconds());
+                            Cmsg out;
+                            out.event="pl_UpdateLists";
+                            out.dst=mId;
+                            out.send();
+                            break;
+                        }
                     }
+
+                    // if (mNextFiles.size()<mRandomLength)
+                    // {
+                    //     ERROR("ABORT" << mNextFiles.size());
+                    // }
 
                 }
             }
@@ -458,7 +470,6 @@ namespace pl
             }
         }
 
-		public:
 
         Citer()
         {
@@ -498,7 +509,7 @@ namespace pl
 
         void setMode(Cvar params)
         {
-            if (params.isSet("randomLength") && params["randomLength"]>=0 && params["randomLength"]<10000)
+            if (params.isSet("randomLength") && params["randomLength"]>=0 && params["randomLength"]<=10000)
             {
                 mRandomLength=params["randomLength"];
             }
@@ -804,6 +815,11 @@ namespace pl
         }
 	}
 
+    //used internally 
+    SYNAPSE_REGISTER(pl_UpdateLists)
+    {
+        iterMan.get(dst).updateLists();
+    }
 
 	/** Change selection/search criteria for files. Initalise a new iterator
         \param s

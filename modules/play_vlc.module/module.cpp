@@ -288,7 +288,7 @@ class CPlayer
 
 		out.send();
 
-        ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
+//        ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
         //are we done playing the internal playlists of vlc?        
         if (
             (event->u.media_state_changed.new_state==libvlc_Ended && ((CPlayer*)player)->mVlcSubitemsLeft==0) ||
@@ -342,7 +342,7 @@ class CPlayer
     {
         lock_guard<recursive_mutex> lock(vlcMutex);
         ((CPlayer*)player)->mVlcSubitemsLeft--;
-        ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
+       // ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
     }
 
 
@@ -351,7 +351,7 @@ class CPlayer
         lock_guard<recursive_mutex> lock(vlcMutex);
 
         ((CPlayer*)player)->mVlcSubitemsLeft++;
-        ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
+      //  ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
   
 		libvlc_event_manager_t *em;
 		em=libvlc_media_event_manager(event->u.media_subitem_added.new_child);
