@@ -383,9 +383,29 @@ class CPlayer
 
 		// Create vlc instance
 		DEB("Creating vlc instance");
+
+		//NOTE: badd...dont rely on useinput for these arguments, only use the config file!
+		char argbuffer[1000];
+		unsigned int argbufferi=0;
+		char *args[100];
+		unsigned int argc=0;
 		
-		const char * args=config["vlc_args"].str().c_str();
-		mVlc=libvlc_new (1, &args );
+		FOREACH_VARLIST(param, config["vlc_args"])
+		{
+			args[argc]=&argbuffer[argbufferi];
+			argbufferi=argbufferi+param.str().length()+1;
+			if (argbufferi> (sizeof(argbuffer)/sizeof(argbuffer[0])))
+			{
+				ERROR("vlc arguments are too long, ignoring the last part.");
+				break;
+			}
+			strcpy(args[argc], param.str().c_str());
+			argc++;
+		}
+
+
+//		static const char* args[] = { "--config", "etc/synapse/vlc.conf" };
+		mVlc=libvlc_new (argc, args );
 
 
 
