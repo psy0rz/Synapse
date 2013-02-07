@@ -191,7 +191,8 @@ namespace pl
     -rootPath is the 'highest' path we can ever reach.
     -filetype determines if we're looking for a file or directory or both.
     -direction tells if you want the next or previous file or directory.
-    -RECURSE: its allow to enter or exit directories to find the next of previous file.
+    -recurse: its allow to enter or exit directories to find the next of previous file.
+    -loop: loop around if we're at end. otherwise return empty path object.
 
     returns resulting path after this movement.
     when first or last path is reached it loops.
@@ -201,8 +202,9 @@ namespace pl
 
     enum Edirection { NEXT, PREVIOUS };
     enum Erecursion { RECURSE, DONT_RECURSE };
+    enum Eloop      { LOOP, DONT_LOOP };
 
-    path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype)
+    path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype, Eloop loop=LOOP)
     {
         // DEB(
         //     "currentPath=" << currentPath.string() <<
@@ -279,8 +281,12 @@ namespace pl
                     else
                     {
                         //no, cant go higher.
-                        //clear the current path, so it just gets the first or last entry
-                        currentPath.clear();
+                        //clear the current path, so it just gets the first or last entry, when we're in loop mode
+                        if (loop==LOOP)
+                            currentPath.clear();
+                        else
+                            return(path());
+
                     }
                 }
                 //we found something
@@ -315,8 +321,8 @@ namespace pl
         }
         while(listPath!=startPath); //prevent inifinte loops if we dont find anything
 
-        DEB("nothing found, returning " << startPath)
-        return(startPath);
+        DEB("nothing found, returning empty path")
+        return(path());
     }
 
 	class Citer
@@ -377,6 +383,7 @@ namespace pl
                     path p=mCurrentFile;
                     if (!mPrevFiles.empty())
                         p=mPrevFiles.back();
+
                     while(mPrevFiles.size()<mPrevLen)
                     {
                         p=movePath(mCurrentPath, p, mSortField, PREVIOUS, RECURSE, CsortedDir::ALL);
@@ -392,16 +399,33 @@ namespace pl
                 while (mPrevFiles.size()>mRandomLength)
                     mPrevFiles.pop_back();
 
-                //insert new entries randomly
-                {
-                    if (!isSubdir(mCurrentPath, mLastRandomFile))
-                        mLastRandomFile=mCurrentFile;
 
+                //time to regenerate the random list?
+                if (mNextFiles.empty())
+                {...
+                    if (!isSubdir(mCurrentPath, mLastRandomFile))
+                    {
+                        mLastRandomFile=mCurrentFile;
+                    }
+                }
+
+                //lastrandom file gets empty as soon as we reach the end of recursive scanning with movepath
+                if (!mLastRandomFile.empty())
+                {
+                    DEB("filling random playlist");
+                    
+                    //insert new entries randomly
                     //fill the list but if it takes too long, continue later 
                     ptime started=microsec_clock::local_time();
                     while(mNextFiles.size()<mRandomLength)
                     {
-                        mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, mSortField, NEXT, RECURSE, CsortedDir::ALL);
+                        mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, mSortField, NEXT, RECURSE, CsortedDir::ALL, DONT_LOOP);
+
+                        if (mLastRandomFile.empty())
+                        {
+                            DEB("reached end of subdir scan.");
+                            break;
+                        }
 
                         //insert at random position:                        
                         list<path>::iterator nextFileI;
@@ -427,11 +451,10 @@ namespace pl
                         }
                     }
 
-                    // if (mNextFiles.size()<mRandomLength)
-                    // {
-                    //     ERROR("ABORT" << mNextFiles.size());
-                    // }
-
+                }
+                else
+                {
+                    DEB("no more files left to fill random queue. random size="<< mNextFiles.size());
                 }
             }
 
