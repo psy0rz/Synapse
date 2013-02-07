@@ -361,6 +361,17 @@ namespace pl
 
 
         public:
+
+        //state info, used to store last selected file from every currentpath
+        synapse::Cconfig mState;
+
+
+        //gets reference to state object for specified path
+        Cvar & getPathState(path p)
+        {
+            //we could hash the path as well, if performance/size gets an issue
+            return(mState["paths"][p.string()]);
+        }
 	
         //make sure there are enough entries in the file and path lists
         //when it returns true, it should be called again. (used for scanning in small increments to improve response time)
@@ -368,6 +379,7 @@ namespace pl
         {
             bool needs_more=false;
 
+                
             //normal mode:
             if (mRandomLength==0)
             {
@@ -564,19 +576,20 @@ namespace pl
             mUpdateListsAsyncFlying=false;
         }
 
+        //name of the config file that stores the state
+        string getStateFile()
+        {
+            stringstream s;
+            s << "var/pl_dir/" << hash_value(mRootPath) << ".state";
+            return (s.str());
+        }
+
 		//reload all file data. call this after you've changed currentPath or other settings
 		void reloadFiles()
 		{
 			//clear lists
 			mNextFiles.clear();
 			mPrevFiles.clear();
-
-			//current file doesnt belong to current path?
-            if (!isSubdir(mCurrentPath, mCurrentFile))
-            {
-                //find the first valid file
-                mCurrentFile=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, RECURSE, CsortedDir::ALL);
-            }
 
             //fill the lists
             updateListsAsync();
@@ -604,6 +617,49 @@ namespace pl
             reloadPaths();
         }
 
+        //use this to change mCurrentFile
+        void setCurrentFile(path p)
+        {
+            if (!p.empty() && !isSubdir(mRootPath,p))
+                throw(synapse::runtime_error("path outside rootpath"));
+
+            mCurrentFile=p;
+            getPathState(mCurrentPath)["currentFile"]=p.string();
+
+            updateListsAsync();
+
+            //TODO: do this somewhere else
+            mState.changed();
+            mState.save(getStateFile());
+
+        }
+
+        //use this to change mCurrentPath
+        void setCurrentPath(path p)
+        {
+            if (!p.empty() && !isSubdir(mRootPath,p))
+                throw(synapse::runtime_error("path outside rootpath"));
+
+            mCurrentPath=p;
+            mState["currentPath"]=p.string();
+
+            //current file doesnt belong to current path?
+            if (!isSubdir(mCurrentPath, mCurrentFile))
+            {
+                //did we store the previous file that was selected in this path?
+                if (getPathState(mCurrentPath)["currentFile"]!="")
+                    mCurrentFile=getPathState(mCurrentPath)["currentFile"].str();
+                else
+                {
+                    //find the first valid file
+                    mCurrentFile=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, RECURSE, CsortedDir::ALL);
+                }
+            }
+            
+            reloadPaths();
+
+        }
+
 		//next file
 		void next()
 		{
@@ -611,9 +667,9 @@ namespace pl
                 return;
 
             mPrevFiles.push_front(mCurrentFile);
-            mCurrentFile=mNextFiles.front();
+            path p=mNextFiles.front();
             mNextFiles.pop_front();
-            updateListsAsync();
+            setCurrentFile(p);
 		}
 
 		//prev file
@@ -623,24 +679,22 @@ namespace pl
                 return;
 
             mNextFiles.push_front(mCurrentFile);
-            mCurrentFile=mPrevFiles.front();
+            path p=mPrevFiles.front();
             mPrevFiles.pop_front();
-            updateListsAsync();
+            setCurrentFile(p);
 		}
+
 
 		void nextPath()
 		{
             if (mNextPaths.empty())
                 return;
+
             mPrevPaths.push_front(mCurrentPath);
-            mCurrentPath=mNextPaths.front();
-                mNextPaths.pop_front();
-			reloadFiles();
-
-            //in random mode we want the first file to be random as well:
-            if (mRandomLength)
-                next();
-
+            path p=mNextPaths.front();
+            mNextPaths.pop_front();
+            setCurrentPath(p);
+            
 		}
 
 		void previousPath()
@@ -648,21 +702,16 @@ namespace pl
             if (mPrevPaths.empty())
                 return;
             mNextPaths.push_front(mCurrentPath);
-            mCurrentPath=mPrevPaths.front();
+            path p=mPrevPaths.front();
             mPrevPaths.pop_front();
-            reloadFiles();
-
-            //in random mode we want the first file to be random as well:
-            if (mRandomLength)
-                next();
+            setCurrentPath(p);
 		}
 
 		void exitPath()
 		{
 			if (mCurrentPath!=mRootPath)
 			{
-				mCurrentPath=mCurrentPath.parent_path();
-				reloadPaths();
+				setCurrentPath(mCurrentPath.parent_path());
 			}
 		}
 
@@ -679,8 +728,7 @@ namespace pl
                 {
                     if (is_directory(p))
                     {
-                        mCurrentPath=p;
-                        reloadPaths();
+                        setCurrentPath(p);
                         return;
                     }
                     //the currentfile doesnt have a directory, so just use the first subdir we can find, if there is one
@@ -689,8 +737,7 @@ namespace pl
                         p=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR);
                         if (!p.empty())
                         {
-                            mCurrentPath=p;
-                            reloadPaths();
+                            setCurrentPath(p);
                         }
                         return;
                     }
@@ -705,10 +752,16 @@ namespace pl
 			mId=id;
 			mRootPath=rootPath;
 
-			//find first path
-			mCurrentPath=movePath(mRootPath, mRootPath, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR);
-			reloadPaths();
+            if (is_regular(getStateFile()))
+            {
+                mState.load(getStateFile());
+            }
 
+            
+            if (isSubdir(mRootPath, mState["currentPath"].str()))
+                setCurrentPath(mState["currentPath"].str());
+            else
+                setCurrentPath(mRootPath);
 
 			DEB("Created iterator " << id << " for path " << rootPath);
 			
