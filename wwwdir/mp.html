@@ -93,7 +93,9 @@
         $('.entry[key="rootPath"]').text(msg.rootPath);
         $('.entry[key="currentPath"]').text(msg.currentPath.substr(msg.parentPath.length));
         $('.entry[key="parentPath"]').text(msg.parentPath);
-        $('.entry[key="currentFile"]').text(msg.currentFile.substr(msg.currentPath.length));
+
+        if ('currentFile' in msg)
+            $('.entry[key="currentFile"]').text(msg.currentFile.substr(msg.currentPath.length));
 
         //some dom magic going on here...for more of it and a better way to do it look at the kmur2 project
 
