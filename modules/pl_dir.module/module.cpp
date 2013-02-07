@@ -358,11 +358,14 @@ namespace pl
         unsigned int mRandomLength; //max length of random queue, the more, the better it is, but takes more time scanning 
         path mLastRandomFile; //last queued random path
 
+
         public:
 	
         //make sure there are enough entries in the file and path lists
-        void updateLists()
+        //when it returns true, it should be called again. (used for scanning in small increments to improve response time)
+        bool updateLists()
         {
+            bool needs_more=false;
 
             //normal mode:
             if (mRandomLength==0)
@@ -459,10 +462,7 @@ namespace pl
                         if ((microsec_clock::local_time()-started).total_milliseconds()>100)
                         {
                             DEB("scan-timeout, random size=" << mNextFiles.size() << " milliseconds taken=" << (microsec_clock::local_time()-started).total_milliseconds());
-                            Cmsg out;
-                            out.event="pl_UpdateLists";
-                            out.dst=mId;
-                            out.send();
+                            needs_more=true;
                             break;
                         }
                     }
@@ -470,8 +470,9 @@ namespace pl
                 }
                 else
                 {
-                    DEB("no more files left to fill random queue. random size="<< mNextFiles.size());
+                    DEB("no more files left to fill random queue. random size");
                 }
+                DEB("random list size " <<  mNextFiles.size() );
             }
 
             //next path list:
@@ -512,8 +513,38 @@ namespace pl
                     mPrevPaths.push_back(p.string());
                 }
             }
+
+            return(needs_more);
         }
 
+
+        //updates lists asyncroniously
+        //call this with returned=false
+        bool mUpdateListsAsyncFlying;
+
+        void updateListsAsync(bool returned=false)
+        {
+
+            //this means we we're called by the actual event
+            if (returned)
+            {
+                mUpdateListsAsyncFlying=false;
+            }
+
+            //always do at least one update when its called
+            if (updateLists())
+            {
+                //more updates are needed, so send an updatelists event, if there's not already one flying. (we dont want the to queue up)
+                if (!mUpdateListsAsyncFlying)
+                {
+                    mUpdateListsAsyncFlying=true;
+                    Cmsg out;
+                    out.event="pl_UpdateLists";
+                    out.dst=mId;
+                    out.send();
+                }
+            }
+        }
 
         Citer()
         {
@@ -522,6 +553,7 @@ namespace pl
 
             mRandomLength=0;
             mSortField="filename";
+            mUpdateListsAsyncFlying=false;
         }
 
 		//reload all file data. call this after you've changed currentPath or other settings
@@ -539,7 +571,7 @@ namespace pl
             }
 
             //fill the lists
-            updateLists();
+            updateListsAsync();
 
 		}
 
@@ -573,7 +605,7 @@ namespace pl
             mPrevFiles.push_front(mCurrentFile);
             mCurrentFile=mNextFiles.front();
             mNextFiles.pop_front();
-            updateLists();
+            updateListsAsync();
 		}
 
 		//prev file
@@ -585,7 +617,7 @@ namespace pl
             mNextFiles.push_front(mCurrentFile);
             mCurrentFile=mPrevFiles.front();
             mPrevFiles.pop_front();
-            updateLists();
+            updateListsAsync();
 		}
 
 		void nextPath()
@@ -873,7 +905,7 @@ namespace pl
     //used internally 
     SYNAPSE_REGISTER(pl_UpdateLists)
     {
-        iterMan.get(dst).updateLists();
+        iterMan.get(dst).updateListsAsync(true);
     }
 
 	/** Change selection/search criteria for files. Initalise a new iterator
