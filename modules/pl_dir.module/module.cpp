@@ -356,6 +356,7 @@ namespace pl
         boost::random::mt19937 mRandomGenerator;
         string mSortField;
         unsigned int mRandomLength; //max length of random queue, the more, the better it is, but takes more time scanning 
+        path mStartRandomFile; //path where we started scanning for random file. (to prevent loops and duplicate files)
         path mLastRandomFile; //last queued random path
 
 
@@ -423,12 +424,11 @@ namespace pl
                 {
                     mLastRandomFile=mCurrentFile;
 
-                    //if this is the last file in the diretory structure, then restart with the mCurrentPath
-                    if (movePath(mCurrentPath, mLastRandomFile, mSortField, NEXT, RECURSE, CsortedDir::ALL, DONT_LOOP).empty())
-                        mLastRandomFile=mCurrentFile;
+                    //make sure we dont loop, so remember where we started scanning:
+                    mStartRandomFile=mLastRandomFile;
                 }
 
-                //lastrandom file gets empty as soon as we reach the end of recursive scanning with movepath
+                //lastrandom file gets empty as soon as we've looped
                 if (!mLastRandomFile.empty())
                 {
                     DEB("filling random playlist");
@@ -438,11 +438,19 @@ namespace pl
                     ptime started=microsec_clock::local_time();
                     while(mNextFiles.size()<mRandomLength)
                     {
-                        mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, mSortField, NEXT, RECURSE, CsortedDir::ALL, DONT_LOOP);
+                        mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, mSortField, NEXT, RECURSE, CsortedDir::ALL, LOOP);
 
                         if (mLastRandomFile.empty())
                         {
-                            DEB("reached end of subdir scan.");
+                            DEB("empty result");
+                            break;
+                        }
+
+                        //we seem to have scanned all files
+                        if (mLastRandomFile==mStartRandomFile)
+                        {
+                            DEB("scanned all files, stopping");
+                            mLastRandomFile.clear();
                             break;
                         }
 
