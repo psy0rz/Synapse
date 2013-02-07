@@ -94,6 +94,7 @@ public:
     void doShutdown(int exit);
 
    	CsessionPtr loadModule(string path, string userName);
+   	string getModulePath(string name);
     CmodulePtr getModule(string path);
 
 	mutex threadMutex;

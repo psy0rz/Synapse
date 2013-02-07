@@ -45,6 +45,7 @@ namespace play_vlc
 using namespace std;
 using namespace boost;
 
+synapse::Cconfig config;
 
 //one big mutex so that our threads and vlc threads dont collide
 recursive_mutex vlcMutex;
@@ -382,7 +383,13 @@ class CPlayer
 
 		// Create vlc instance
 		DEB("Creating vlc instance");
-		mVlc=libvlc_new (0,NULL);
+		
+		const char * args=config["vlc_args"].str().c_str();
+		mVlc=libvlc_new (1, &args );
+
+
+
+
 		if (!mVlc)
 			throwError("Problem creating new vlc instance");
 
@@ -566,6 +573,10 @@ int defaultSession;
 SYNAPSE_REGISTER(module_Init)
 {
 	Cmsg out;
+
+    //load config file
+    config.load("etc/synapse/play_vlc.conf");
+
 
 	defaultSession=dst;
 

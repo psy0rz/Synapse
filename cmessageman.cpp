@@ -540,8 +540,9 @@ void CmessageMan::checkThread()
  */
 int CmessageMan::run(string coreName, string moduleName)
 {
+
 	//load the first module as user core UNLOCKED!
-	loadModule(coreName, "core");
+	loadModule(getModulePath(coreName), "core");
 	this->firstModuleName=moduleName;
 
 	//start first thread:
@@ -598,6 +599,14 @@ int CmessageMan::run(string coreName, string moduleName)
 	return(exit);
 }
 
+
+//determines the pathname of a module by name. (module doesnt have to be loaded yet)
+string CmessageMan::getModulePath(string name)
+{
+	//TODO: make this configurable
+	string path="modules/"+name+".module/lib"+name+".so";
+	return (path);
+}
 
 
 /** Loads a module an returns a pointer to the newly created default-session for the module.

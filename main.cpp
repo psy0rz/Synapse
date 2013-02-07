@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 		synapse::CmessageMan messageMan;
 		if (argc==2)
 		{
-			return (messageMan.run("modules/core.module/libcore.so",argv[1]));
+			return (messageMan.run("core", argv[1]));
 		}
 		else
 		{

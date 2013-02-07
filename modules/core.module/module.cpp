@@ -227,7 +227,7 @@ SYNAPSE_REGISTER(module_Init)
 	//load the first application module:
 	out.clear();
 	out.event="core_LoadModule";
-	out["path"]=messageMan->firstModuleName;
+	out["name"]=messageMan->firstModuleName;
 	out.send();
 
 
@@ -283,8 +283,7 @@ SYNAPSE_REGISTER(core_LoadModule)
 		if (msg.isSet("path"))
 			path=msg["path"].str();
 		else
-			//TODO: make configurable
-			path="modules/"+msg["name"].str()+".module/lib"+msg["name"].str()+".so";
+			path=messageMan->getModulePath(msg["name"]);
 
 		module=messageMan->getModule(path);
 

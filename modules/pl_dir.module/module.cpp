@@ -402,7 +402,7 @@ namespace pl
 
                 //time to regenerate the random list?
                 if (mNextFiles.empty())
-                {...
+                {
                     if (!isSubdir(mCurrentPath, mLastRandomFile))
                     {
                         mLastRandomFile=mCurrentFile;
