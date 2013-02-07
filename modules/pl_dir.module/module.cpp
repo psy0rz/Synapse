@@ -206,12 +206,20 @@ namespace pl
 
     path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype, Eloop loop=LOOP)
     {
-        // DEB(
-        //     "currentPath=" << currentPath.string() <<
-        //     " sortField=" << sortField <<
-        //     " direction=" << direction <<
-        //     " recursion=" << recursion << 
-        //     " filetype=" << filetype);
+        DEB(" rootPath=" << rootPath.string() <<
+             " currentPath=" << currentPath.string() <<
+             " sortField=" << sortField <<
+             " direction=" << direction <<
+             " recursion=" << recursion << 
+             " filetype=" << filetype << 
+             " loop=" << loop);
+
+        if (currentPath.empty())
+        {
+            DEB("currentpath empty, returning empty as well");
+            return (path());
+        }
+
 
         //determine the path we should get the initial listing of:
         path listPath;
@@ -285,7 +293,10 @@ namespace pl
                         if (loop==LOOP)
                             currentPath.clear();
                         else
+                        {
+                            DEB("end reached, not looping, so returning empty path");
                             return(path());
+                        }
 
                     }
                 }
@@ -302,7 +313,7 @@ namespace pl
                     else
                     {
                         //we found it
-                        //DEB("found, returning " << listPath/(*dirI));
+                        DEB("found, returning " << listPath/(*dirI));
                         return (listPath/(*dirI));
                     }
                 }
@@ -369,6 +380,8 @@ namespace pl
                     while(mNextFiles.size()<mNextLen)
                     {
                         p=movePath(mCurrentPath, p, mSortField, NEXT, RECURSE, CsortedDir::ALL);
+                        if (p.empty())
+                            break;
                         mNextFiles.push_back(p.string());
                     }
                 }
@@ -387,6 +400,8 @@ namespace pl
                     while(mPrevFiles.size()<mPrevLen)
                     {
                         p=movePath(mCurrentPath, p, mSortField, PREVIOUS, RECURSE, CsortedDir::ALL);
+                        if (p.empty())
+                            break;
                         mPrevFiles.push_back(p.string());
                     }
                 }
@@ -403,10 +418,11 @@ namespace pl
                 //time to regenerate the random list?
                 if (mNextFiles.empty())
                 {
-                    if (!isSubdir(mCurrentPath, mLastRandomFile))
-                    {
+                    mLastRandomFile=mCurrentFile;
+
+                    //if this is the last file in the diretory structure, then restart with the mCurrentPath
+                    if (movePath(mCurrentPath, mLastRandomFile, mSortField, NEXT, RECURSE, CsortedDir::ALL, DONT_LOOP).empty())
                         mLastRandomFile=mCurrentFile;
-                    }
                 }
 
                 //lastrandom file gets empty as soon as we reach the end of recursive scanning with movepath
@@ -471,6 +487,9 @@ namespace pl
                 while(mNextPaths.size()<mNextLen)
                 {
                     p=movePath(mRootPath, p, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR);
+                    if (p.empty())
+                        break;
+
                     mNextPaths.push_back(p.string());
                 }
             }
@@ -488,6 +507,8 @@ namespace pl
                 while(mPrevPaths.size()<mPrevLen)
                 {
 					p=movePath(mRootPath, p, mSortField, PREVIOUS, DONT_RECURSE, CsortedDir::DIR);
+                    if (p.empty())
+                        break;
                     mPrevPaths.push_back(p.string());
                 }
             }
@@ -613,6 +634,7 @@ namespace pl
             p=mCurrentFile;
             while (!p.empty())
             {
+                //is the parent the currentpath?
                 if (p.parent_path()==mCurrentPath)
                 {
                     if (is_directory(p))
@@ -621,11 +643,15 @@ namespace pl
                         reloadPaths();
                         return;
                     }
-                    //the currentfile doesnt have a directory, so just use the first subdir we can find
+                    //the currentfile doesnt have a directory, so just use the first subdir we can find, if there is one
                     else
                     {
-                        mCurrentPath=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR);
-                        reloadPaths();
+                        p=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR);
+                        if (!p.empty())
+                        {
+                            mCurrentPath=p;
+                            reloadPaths();
+                        }
                         return;
                     }
                 }
@@ -652,7 +678,10 @@ namespace pl
 		void send(int dst)
 		{
             //there are lots of places/situations where things can go wrong, so do this extra check:
-            if (!isSubdir(mRootPath, mCurrentPath) || !isSubdir(mRootPath, mCurrentFile))
+            if (
+                    (!mCurrentPath.empty() && !isSubdir(mRootPath, mCurrentPath)) || 
+                    (!mCurrentFile.empty() && !isSubdir(mRootPath, mCurrentFile))
+                )
             {
                 ERROR("escaped rootpath: " << mRootPath << " " << mCurrentPath << " " << mCurrentFile);
                 throw(synapse::runtime_error("Program error: ended up outside rootpath. (dont use trailing slashes for rootpath)"));
@@ -662,8 +691,11 @@ namespace pl
 			out.event="pl_Entry";
 			out.dst=dst;
 			out["rootPath"]=mRootPath.string();
-			out["currentPath"]=mCurrentPath.string();
-			out["currentFile"]=mCurrentFile.string();
+            if (!mCurrentPath.empty())
+                out["currentPath"]=mCurrentPath.string();
+
+            if (!mCurrentFile.empty())
+                out["currentFile"]=mCurrentFile.string();
 
             //to make life easier for user interfaces in a crossplatform way:
             out["parentPath"]=mCurrentPath.parent_path().string();
