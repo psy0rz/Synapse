@@ -507,7 +507,7 @@ namespace pl
                     p=mNextPaths.back();
                 while(mNextPaths.size()<mNextLen)
                 {
-                    p=movePath(mRootPath, p, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR);
+                    p=movePath(mRootPath, p, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP);
                     if (p.empty())
                         break;
 
@@ -527,7 +527,7 @@ namespace pl
                     p=mPrevPaths.back();
                 while(mPrevPaths.size()<mPrevLen)
                 {
-					p=movePath(mRootPath, p, mSortField, PREVIOUS, DONT_RECURSE, CsortedDir::DIR);
+					p=movePath(mRootPath, p, mSortField, PREVIOUS, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP);
                     if (p.empty())
                         break;
                     mPrevPaths.push_back(p.string());

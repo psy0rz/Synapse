@@ -46,6 +46,7 @@ using namespace std;
 using namespace boost;
 
 synapse::Cconfig config;
+synapse::Cconfig state;
 
 //one big mutex so that our threads and vlc threads dont collide
 recursive_mutex vlcMutex;

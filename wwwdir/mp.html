@@ -118,6 +118,21 @@
                 color=Math.round(color-colorStep);
                 element.text(list[nr].substr(strip));
             }
+
+            //fill the rest to the minimum length with whitespace
+            for (nr=0; nr<(5-list.length); nr++)
+            {
+                var element=$(src).clone();
+                
+                if (reverse)
+                    src.after(element);
+                else
+                    src.before(element);
+
+                element.addClass("cloned");
+                element.html("&nbsp;");
+            }
+
         }
 
         //delete old clones
@@ -199,14 +214,14 @@ Current path:
 
 <p>
 
-<table style="border-style: solid; border-width: 1px;">
+<table style="border-style: solid; border-width: 1px; width:100%">
 <tr>    
         <td><button class="send" event="pl_PreviousPath">^^^ Previous directory ^^^</button>
-        <td><button class="send" event="pl_Previous">^^^ Previous song ^^^</button>
+        <td><button class="send" event="pl_Previous" style="float: right">^^^ Previous song ^^^</button>
  
 </tr>
-<tr style="vertical-align: bottom ">
-        <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath">
+<tr style="vertical-align: bottom;  ">
+        <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath" >
             <div class="entry_clone entry" key="prevPaths"></div>
         <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next" style="border-style: solid none none solid; ">
             <div class="entry_clone entry" key="prevFiles"></div>
@@ -230,7 +245,7 @@ Current path:
             <button class="send" event="pl_ExitPath">&lt;&lt;&lt; Exit directory</button>
             <button class="send" event="pl_EnterPath">Enter directory&gt;&gt;&gt; </button>
 
-        <td><button class="send" event="pl_Next">vvv Next song vvv</button>
+        <td><button class="send" event="pl_Next" style="float: right">vvv Next song vvv</button>
  
 </tr>
 </table>
