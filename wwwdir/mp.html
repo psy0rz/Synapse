@@ -6,6 +6,9 @@
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
 	<title>Media Zapper</title>
 
+    <link href="/css/darkness/jquery-ui-1.10.0.custom.min.css" rel="stylesheet" type="text/css"/>
+
+
 	<script type="text/javascript" src="/synapse/synapse.js"></script>
 
 	<script type="text/javascript">
@@ -116,7 +119,8 @@
                 element.addClass("cloned");
                 element.css('color', 'rgb('+0+','+color+','+0+')');
                 color=Math.round(color-colorStep);
-                element.text(list[nr].substr(strip));
+                //element.text(list[nr].substr(strip));
+                element.html("<div style='float:right;  '>"+list[nr].substr(strip)+"<div>");
             }
 
             //fill the rest to the minimum length with whitespace
@@ -207,14 +211,46 @@
 </head>
 
 
-<body>
+<body class='ui-widget; overflow: hidden '>
 
-Current path: 
+<div style="background-color: #ff0000; position:fixed;  left:0px; right: 0px; white-space: nowrap; ">
+
+    <span style="background-color: #00ff00; display:inline-block; max-width:20%">
+        <div style="overflow: hidden">
+            <div style="float:left; " > AAAAAAA aaaaaa </div>
+        </div>
+        <div style="overflow: hidden">
+            <div style="float:left; " > BBBBBBBB saflksd jlkfj sadklfasjdkljsdkl fsklj  bbbb.</div>
+        </div>
+        <div style="overflow: hidden">
+            <div style="float:left; " > CCCCC clcccccccc </div>
+        </div>
+    </span>
+    <span style="background-color: #00ffff; display:inline-block ; max-width: 80% ">
+        <div style="">
+            <button style='float: right;'>prev song</button>
+        </div>
+        <div style="overflow: hidden">
+            <div style="float:right; " > AAAAAAA safsafs fsf aaaaaa </div>
+        </div>
+        <div style="overflow: hidden">
+            <div style="float:right; " > BBBBBBBBBBB tbb bbbb.</div>
+        </div>
+        <div style="overflow: hidden">
+            <div style="float:right; " > CCCCC clsdkfjlksd ajfldk jcccccccccccc </div>
+        </div>
+    </span>
+    <div style="background-color: yellow">
+
+        <button style='position: absolute; left: 1em;'>next dir</button>
+    </div>
+</div>
+
 <span class="entry selectedPath" key="parentPath" style="border-style: solid none solid none; border-color: #ffffff; "></span>
 
 <p>
 
-<table style="border-style: solid; border-width: 1px; width:100%">
+<table style="border-style: solid; border-width: 1px; white-space: nowrap; right: 1em; left:1em; overflow: hidden;">
 <tr>    
         <td><button class="send" event="pl_PreviousPath">^^^ Previous directory ^^^</button>
         <td><button class="send" event="pl_Previous" style="float: right">^^^ Previous song ^^^</button>
@@ -223,21 +259,23 @@ Current path:
 <tr style="vertical-align: bottom;  ">
         <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath" >
             <div class="entry_clone entry" key="prevPaths"></div>
-        <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next" style="border-style: solid none none solid; ">
-            <div class="entry_clone entry" key="prevFiles"></div>
+        <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next" style="border-style: solid none none solid; overflow: hidden">
+            <div class="entry_clone entry" key="prevFiles" style="overflow:hidden;width: 100%"></div>
 </tr>
+<!--
 <tr>    
         <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath" style="border-style: solid none solid none; " >
             <div  class="entry selectedPath" key="currentPath"></div>
-        <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next">
-            <div class="entry selectedPath" key="currentFile"></div>
+        <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next" style="overflow-x: hidden" >
+            <div class="entry selectedPath" key="currentFile" style="text-align: right;overflow-x: hidden" ></div>
 </tr>
 <tr style="vertical-align: top">    
         <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath">
             <div class="entry_clone entry" key="nextPaths"></div>
-        <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next" style="border-style: none none solid solid; ">
-            <div class="entry_clone entry" key="nextFiles"></div>
+        <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next" style="border-style: none none solid solid; overflow-x: hidden">
+            <div class="entry_clone entry" key="nextFiles" style="text-align: right; overflow-x: hidden"></div>
 </tr>
+-->
 <tr>    
         <td>
             <button class="send" event="pl_NextPath">vvv Next directory vvv</button>
@@ -245,7 +283,7 @@ Current path:
             <button class="send" event="pl_ExitPath">&lt;&lt;&lt; Exit directory</button>
             <button class="send" event="pl_EnterPath">Enter directory&gt;&gt;&gt; </button>
 
-        <td><button class="send" event="pl_Next" style="float: right">vvv Next song vvv</button>
+        <td><button class="send" event="pl_Next" style="float: right"   >vvv Next song vvv</button>
  
 </tr>
 </table>
