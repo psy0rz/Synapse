@@ -43,6 +43,11 @@ This module can dynamicly generate playlists from directory's. It also can cache
 #include <boost/random/uniform_int_distribution.hpp>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
+
+#include <boost/regex.hpp> 
+
+synapse::Cconfig config;
+
  
  /** Playlist namespace
  *
@@ -55,26 +60,26 @@ namespace pl
     using namespace boost::posix_time;
 
 
-
-	class Cpath : public path
+    //we dirive from directory_entry instead of path, since directory_entry caches extra data about the filetype (status())
+	class Cdirectory_entry : public directory_entry
 	{
 		private:
 		time_t mWriteDate;
 
 		public:
-
-		Cpath(const path & p)
-		:path(p)
-		{
-			mWriteDate=0;
-		}
-
+//        Cdirectory_entry(const class path & p, file_status st, file_status symlink_st)
+  //      :directory_entry(p, st, symlink_st)
+          Cdirectory_entry(const directory_entry & e)
+          :directory_entry(e)
+        {
+            mWriteDate=0;
+        }
 
 		//get/cache modification date
 		int getDate()
 		{
-			if (!mWriteDate)
-				mWriteDate=last_write_time(*this);
+			if (!mWriteDate) 
+				mWriteDate=last_write_time(this->path());
 
 			return (mWriteDate);
 		}
@@ -82,7 +87,7 @@ namespace pl
 		//get sort filename string
 		std::string getSortName()
 		{
-			return(filename().string());
+			return(path().filename().string());
 		}
 
 
@@ -101,7 +106,7 @@ namespace pl
 		}
 	};
 
-	class CsortedDir: public list<Cpath>
+	class CsortedDir: public list<Cdirectory_entry>
 	{
 		private:
 		string mSortField;
@@ -110,29 +115,38 @@ namespace pl
         path mBasePath;
 		enum Efiletype  { FILE, DIR, ALL };
         Efiletype mFiletype;
+        regex mDirFilter;
+        regex mFileFilter;
 //		list<Cpath> mPaths;
 //		list<Cpath>::iterator iterator;
 
-		static bool compareFilename (Cpath first, Cpath second)
+		static bool compareFilename (Cdirectory_entry first, Cdirectory_entry second)
 		{
 			return (first.getSortName() < second.getSortName());
 		}
 
-		static bool compareDate (Cpath first, Cpath second)
+		static bool compareDate (Cdirectory_entry first, Cdirectory_entry second)
 		{
 			return (first.getDate() < second.getDate());
 		}
 
 
-		void read(path basePath, string sortField, Efiletype filetype)
+		void read(
+            const path & basePath, 
+            const string & sortField, 
+            Efiletype filetype, 
+            const regex  & dirFilter, 
+            const regex & fileFilter)
 		{
             //if nothing has changed, dont reread if its same dir
-            if (mBasePath==basePath && sortField==mSortField && filetype==mFiletype)
+            if (mBasePath==basePath && sortField==mSortField && filetype==mFiletype && fileFilter==mFileFilter && dirFilter == mDirFilter)
                 return;
 
 			mBasePath=basePath;
 			mSortField=sortField;
             mFiletype=filetype;
+            mFileFilter=fileFilter;
+            mDirFilter=dirFilter;
             clear();
 
 			DEB("Reading directory " << basePath.string());
@@ -141,16 +155,28 @@ namespace pl
 				itr != end_itr;
 				++itr )
 			{
-				path p;
-				p=itr->path().filename();
-				if (
-						(filetype==ALL) ||
-						(filetype==DIR && is_directory(*itr)) ||
-						(filetype==FILE && is_regular(*itr))
-				)
-				{
-					push_back(p);
-				}
+                //dir
+                if (is_directory(itr->status()))
+                {
+                    if (filetype==DIR || filetype==ALL)
+                    {
+                        if (mDirFilter.empty() || regex_search(itr->path().string(), mDirFilter , boost::match_any))
+                        {
+                            push_back(*itr);
+                        }
+                    }
+                }
+                //file
+                else
+                {
+                    if (filetype==FILE || filetype==ALL)
+                    {
+                        if (mFileFilter.empty() || regex_search(itr->path().filename().string(), mFileFilter , boost::match_any))
+                        {
+                            push_back(*itr);
+                        }
+                    }
+                }
 			}
 
 			if (sortField=="filename")
@@ -204,7 +230,17 @@ namespace pl
     enum Erecursion { RECURSE, DONT_RECURSE };
     enum Eloop      { LOOP, DONT_LOOP };
 
-    path movePath(path rootPath, path currentPath, string sortField, Edirection direction, Erecursion recursion, CsortedDir::Efiletype filetype, Eloop loop=LOOP)
+    path movePath(
+        const path & rootPath, 
+        path currentPath, 
+        const string & sortField, 
+        Edirection direction, 
+        Erecursion recursion, 
+        CsortedDir::Efiletype filetype, 
+        Eloop loop=LOOP, 
+        const regex & dirFilter=regex(),
+        const regex & fileFilter=regex()
+    )
     {
         DEB(" rootPath=" << rootPath.string() <<
              " currentPath=" << currentPath.string() <<
@@ -236,14 +272,20 @@ namespace pl
         {
             //get sorted directory listing
             static CsortedDir sortedDir;
-            sortedDir.read(listPath, sortField, filetype);
+            sortedDir.read(listPath, sortField, filetype, dirFilter, fileFilter);
 
             if (!sortedDir.empty())
             {
                 
-                //try to find the current path:
                 if (!currentPath.empty())
-                    dirI=find(sortedDir.begin(), sortedDir.end(), currentPath.filename());
+                {
+                    //try to find the current path:
+                    for (dirI=sortedDir.begin(); dirI!=sortedDir.end(); dirI++)
+                    {
+                        if (dirI->path()==currentPath)
+                            break;
+                    }
+                }
                 else
                     dirI=sortedDir.end();
 
@@ -304,17 +346,17 @@ namespace pl
                 else
                 {
                     //should we recurse?
-                    if (recursion==RECURSE && is_directory(listPath/(*dirI)))
+                    if (recursion==RECURSE && is_directory(dirI->status()))
                     {
                         //enter it
-                        listPath=listPath/(*dirI);
+                        listPath=(dirI->path());
                         currentPath.clear();
                     }
                     else
                     {
                         //we found it
-                        DEB("found, returning " << listPath/(*dirI));
-                        return (listPath/(*dirI));
+                        DEB("found, returning " << (dirI->path()));
+                        return ((dirI->path()));
                     }
                 }
             }
@@ -359,6 +401,11 @@ namespace pl
         path mStartRandomFile; //path where we started scanning for random file. (to prevent loops and duplicate files)
         path mLastRandomFile; //last queued random path
 
+        //filters
+        regex mFileFilter; 
+        regex mDirFilter; 
+
+
 
         public:
 
@@ -395,7 +442,7 @@ namespace pl
                         p=mNextFiles.back();
                     while(mNextFiles.size()<mNextLen)
                     {
-                        p=movePath(mCurrentPath, p, mSortField, NEXT, RECURSE, CsortedDir::ALL);
+                        p=movePath(mCurrentPath, p, mSortField, NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
                         if (p.empty())
                             break;
                         mNextFiles.push_back(p.string());
@@ -415,7 +462,7 @@ namespace pl
 
                     while(mPrevFiles.size()<mPrevLen)
                     {
-                        p=movePath(mCurrentPath, p, mSortField, PREVIOUS, RECURSE, CsortedDir::ALL);
+                        p=movePath(mCurrentPath, p, mSortField, PREVIOUS, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
                         if (p.empty())
                             break;
                         mPrevFiles.push_back(p.string());
@@ -450,7 +497,7 @@ namespace pl
                     ptime started=microsec_clock::local_time();
                     while(mNextFiles.size()<mRandomLength)
                     {
-                        mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, mSortField, NEXT, RECURSE, CsortedDir::ALL, LOOP);
+                        mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, mSortField, NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
 
                         if (mLastRandomFile.empty())
                         {
@@ -507,7 +554,7 @@ namespace pl
                     p=mNextPaths.back();
                 while(mNextPaths.size()<mNextLen)
                 {
-                    p=movePath(mRootPath, p, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP);
+                    p=movePath(mRootPath, p, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP, mDirFilter);
                     if (p.empty())
                         break;
 
@@ -527,7 +574,7 @@ namespace pl
                     p=mPrevPaths.back();
                 while(mPrevPaths.size()<mPrevLen)
                 {
-					p=movePath(mRootPath, p, mSortField, PREVIOUS, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP);
+					p=movePath(mRootPath, p, mSortField, PREVIOUS, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP, mDirFilter);
                     if (p.empty())
                         break;
                     mPrevPaths.push_back(p.string());
@@ -652,7 +699,7 @@ namespace pl
                 else
                 {
                     //find the first valid file
-                    mCurrentFile=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, RECURSE, CsortedDir::ALL);
+                    mCurrentFile=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
                 }
             }
             
@@ -734,7 +781,7 @@ namespace pl
                     //the currentfile doesnt have a directory, so just use the first subdir we can find, if there is one
                     else
                     {
-                        p=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR);
+                        p=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR, LOOP, mDirFilter);
                         if (!p.empty())
                         {
                             setCurrentPath(p);
@@ -746,6 +793,12 @@ namespace pl
             }
 		}
 
+        //sets regex for the pathname filter.
+        //this is combined with the filter defined in config["filter"]
+        void setFilter(string f)
+        {
+            mFileFilter.assign(config["filter"].str(), regex::icase);
+        }
 
 		void create(int id, string rootPath)
 		{
@@ -757,11 +810,13 @@ namespace pl
                 mState.load(getStateFile());
             }
 
+            setFilter("");
             
             if (isSubdir(mRootPath, mState["currentPath"].str()))
                 setCurrentPath(mState["currentPath"].str());
             else
                 setCurrentPath(mRootPath);
+
 
 			DEB("Created iterator " << id << " for path " << rootPath);
 			
@@ -882,7 +937,6 @@ namespace pl
 	};
 
 	CiterMan iterMan;
-    synapse::Cconfig config;
 
     bool shutdown;
     int defaultId=-1;
