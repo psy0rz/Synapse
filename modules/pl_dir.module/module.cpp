@@ -233,7 +233,7 @@ namespace pl
     path movePath(
         const path & rootPath, 
         path currentPath, 
-        const string & sortField, 
+        string sortField, 
         Edirection direction, 
         Erecursion recursion, 
         CsortedDir::Efiletype filetype, 
@@ -396,8 +396,8 @@ namespace pl
         unsigned int mPrevLen;
 
         boost::random::mt19937 mRandomGenerator;
-        string mSortField;
-        unsigned int mRandomLength; //max length of random queue, the more, the better it is, but takes more time scanning 
+//        string mState["sortField"];
+//        unsigned int mState["randomLength"]; //max length of random queue, the more, the better it is, but takes more time scanning 
         path mStartRandomFile; //path where we started scanning for random file. (to prevent loops and duplicate files)
         path mLastRandomFile; //last queued random path
 
@@ -428,7 +428,7 @@ namespace pl
 
                 
             //normal mode:
-            if (mRandomLength==0)
+            if ((int)mState["randomLength"]==0)
             {
                 //next file list:
                 //make sure its not too long
@@ -442,7 +442,7 @@ namespace pl
                         p=mNextFiles.back();
                     while(mNextFiles.size()<mNextLen)
                     {
-                        p=movePath(mCurrentPath, p, mSortField, NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
+                        p=movePath(mCurrentPath, p, mState["sortField"].str(), NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
                         if (p.empty())
                             break;
                         mNextFiles.push_back(p.string());
@@ -462,7 +462,7 @@ namespace pl
 
                     while(mPrevFiles.size()<mPrevLen)
                     {
-                        p=movePath(mCurrentPath, p, mSortField, PREVIOUS, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
+                        p=movePath(mCurrentPath, p, mState["sortField"], PREVIOUS, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
                         if (p.empty())
                             break;
                         mPrevFiles.push_back(p.string());
@@ -474,7 +474,7 @@ namespace pl
             else
             {
                 //make sure prevlist is not too long
-                while (mPrevFiles.size()>mRandomLength)
+                while (mPrevFiles.size()>mState["randomLength"])
                     mPrevFiles.pop_back();
 
 
@@ -495,9 +495,9 @@ namespace pl
                     //insert new entries randomly
                     //fill the list but if it takes too long, continue later 
                     ptime started=microsec_clock::local_time();
-                    while(mNextFiles.size()<mRandomLength)
+                    while(mNextFiles.size()<mState["randomLength"])
                     {
-                        mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, mSortField, NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
+                        mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, mState["sortField"], NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
 
                         if (mLastRandomFile.empty())
                         {
@@ -554,7 +554,7 @@ namespace pl
                     p=mNextPaths.back();
                 while(mNextPaths.size()<mNextLen)
                 {
-                    p=movePath(mRootPath, p, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP, mDirFilter);
+                    p=movePath(mRootPath, p, mState["sortField"], NEXT, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP, mDirFilter);
                     if (p.empty())
                         break;
 
@@ -574,7 +574,7 @@ namespace pl
                     p=mPrevPaths.back();
                 while(mPrevPaths.size()<mPrevLen)
                 {
-					p=movePath(mRootPath, p, mSortField, PREVIOUS, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP, mDirFilter);
+					p=movePath(mRootPath, p, mState["sortField"], PREVIOUS, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP, mDirFilter);
                     if (p.empty())
                         break;
                     mPrevPaths.push_back(p.string());
@@ -618,8 +618,8 @@ namespace pl
             mNextLen=5;
             mPrevLen=5;
 
-            mRandomLength=0;
-            mSortField="filename";
+            mState["randomLength"]=0;
+            mState["sortField"]="filename";
             mUpdateListsAsyncFlying=false;
         }
 
@@ -655,11 +655,13 @@ namespace pl
         {
             if (params.isSet("randomLength") && params["randomLength"]>=0 && params["randomLength"]<=10000)
             {
-                mRandomLength=params["randomLength"];
+                mState["randomLength"]=params["randomLength"];
             }
 
             if (params.isSet("sortField"))
-                mSortField=params["sortField"].str();
+            {
+                mState["sortField"]=params["sortField"].str();
+            }
 
             reloadPaths();
         }
@@ -696,7 +698,7 @@ namespace pl
                 else
                 {
                     //find the first valid file
-                    mCurrentFile=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
+                    mCurrentFile=movePath(mCurrentPath, mCurrentPath, mState["sortField"], NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
                 }
             }
             
@@ -778,7 +780,7 @@ namespace pl
                     //the currentfile doesnt have a directory, so just use the first subdir we can find, if there is one
                     else
                     {
-                        p=movePath(mCurrentPath, mCurrentPath, mSortField, NEXT, DONT_RECURSE, CsortedDir::DIR, LOOP, mDirFilter);
+                        p=movePath(mCurrentPath, mCurrentPath, mState["sortField"], NEXT, DONT_RECURSE, CsortedDir::DIR, LOOP, mDirFilter);
                         if (!p.empty())
                         {
                             setCurrentPath(p);
@@ -888,8 +890,8 @@ namespace pl
                     break;
             }
   
-            out["randomLength"]=mRandomLength;
-            out["sortField"]=mSortField;
+            out["randomLength"]=mState["randomLength"];
+            out["sortField"]=mState["sortField"];
 
 			out.send();
 		}
