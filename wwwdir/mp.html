@@ -6,9 +6,11 @@
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
 	<title>Media Zapper</title>
 
-    <link href="/css/darkness/jquery-ui-1.10.0.custom.min.css" rel="stylesheet" type="text/css"/>
-
-
+  
+    <link href="X/css/dark-hive/jquery-ui.css" rel="stylesheet" type="text/css"/>
+    <link href="/css/ui-darkness/jquery-ui.css" rel="stylesheet" type="text/css"/>
+    <link href="X/css/dot-luv/jquery-ui.css" rel="stylesheet" type="text/css"/>
+  
 	<script type="text/javascript" src="/synapse/synapse.js"></script>
 
 	<script type="text/javascript">
@@ -24,6 +26,28 @@
 			
 	synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
 	{
+        //style buttons and give them icons
+        $("button").each(function()
+        {
+            $(this).button({
+                icons: { 
+                    primary: $(this).attr("icon")
+                }
+            });
+        });
+
+
+        $(".pl_mode").buttonset();
+
+        //time slider
+        $(".time").slider({ 
+            min: 0,
+            slide: function (event, ui)
+            {
+                send(0,"play_SetTime", { 'time': ui.value } );
+            }
+        });
+
         send(1, "core_Login", { 
             username: "admin",
             password: "as"
@@ -47,47 +71,6 @@
             send(0, $(this).attr("event"));
         });
 
-
-        //make nice buttons and icons
-        $('[event="pl_PreviousPath"]').button({
-            icons: { 
-                primary: "ui-icon ui-icon-arrowthick-1-n"
-            }
-        });
-
-        $('[event="pl_NextPath"]').button({
-            icons: { 
-                primary: "ui-icon ui-icon-arrowthick-1-s"
-            }
-        });
-
-        $('[event="pl_EnterPath"]').button({
-            icons: { 
-                primary: "ui-icon ui-icon-arrowreturnthick-1-e"
-            }
-        });
-
-
-        $('[event="pl_ExitPath"]').button({
-            icons: { 
-                primary: "ui-icon ui-icon-arrowreturnthick-1-w"
-            }
-        });
-
-        $('[event="pl_Previous"]').button({
-            icons: { 
-                primary: "ui-icon ui-icon-arrowthick-1-n"
-            }
-        });
-
-        $('[event="pl_Next"]').button({
-            icons: { 
-                primary: "ui-icon ui-icon-arrowthick-1-s"
-            }
-        });
-
-
-        $(".pl_mode").buttonset();
 
         $("#pl_mode_filename").click(function()
         {
@@ -113,17 +96,6 @@
             });
         });
 
-
-
-
-        //time slider
-        $(".time").slider({ 
-            min: 0,
-            slide: function (event, ui)
-            {
-                send(0,"play_SetTime", { 'time': ui.value } );
-            }
-        });
 
         $('.scroll-send').bind('mousewheel', function(e){
             if(e.wheelDelta/120 > 0) 
@@ -279,7 +251,7 @@
 
 
 <body 
-    class="ui-widget " 
+    class="ui-widget ui-widget-content" 
     style="
         margin: 0;
         padding: 0;
@@ -329,6 +301,7 @@
         style="
             margin: 0;
             padding: 0;
+            top: 0;
             position: fixed; 
             right: 0; 
             width:50%;
@@ -367,15 +340,15 @@
         up-event="pl_Previous" 
         down-event="pl_Next"
     >
-        <div class="entry_clone" key="prevFiles" style="width: 100%;overflow: hidden; padding-left: 2em;">
+        <div class="entry_clone" key="prevFiles" style="width: 100%;overflow: hidden; padding-left: 5em;">
             <div class="entry_text" style="float:left "></div>
         </div>
 
         <div style="overflow: hidden;" class="selectedPath">
-            <div class="entry" key="currentFile" style="float:left; padding-left: 2em;" ></div>
+            <div class="entry" key="currentFile" style="float:left; padding-left: 5em;" ></div>
         </div>
 
-        <div class="entry_clone" key="nextFiles" style="overflow: hidden;padding-left: 2em;">
+        <div class="entry_clone" key="nextFiles" style="overflow: hidden;padding-left: 5em;">
             <div class="entry_text" style="float:left" ></div>
         </div>
 
@@ -390,12 +363,12 @@
             top:5em;
             margin-right: 1em"
     >
-        <button style="visibility:hidden; " class="send" event="pl_PreviousPath"></button>
-        <button class="send" event="pl_PreviousPath"></button>
+        <button style="visibility:hidden; " class="send" event="pl_PreviousPath" icon="ui-icon-arrowthick-1-n"></button>
+        <button class="send" event="pl_PreviousPath" icon="ui-icon-arrowthick-1-n"></button>
         <div>&nbsp;</div>
-        <button class="send" event="pl_ExitPath"></button>
-        <button class="send" event="pl_NextPath"></button>
-        <button class="send" event="pl_EnterPath"></button>
+        <button class="send" event="pl_ExitPath" icon="ui-icon-arrowreturnthick-1-w"></button>
+        <button class="send" event="pl_NextPath" icon="ui-icon-arrowthick-1-s"></button>
+        <button class="send" event="pl_EnterPath" icon="ui-icon-arrowreturnthick-1-e"></button>
     </div>
 
 
@@ -405,16 +378,16 @@
             left: 0;
             top: 20em;"
     >
-        <button class="send" event="pl_Previous"></button>
+        <button class="send" event="pl_Previous" icon="ui-icon-arrowthick-1-n"></button>
         <div>&nbsp;</div>
-        <button class="send" event="pl_Next"></button>
+        <button class="send" event="pl_Next" icon="ui-icon-arrowthick-1-s"></button>
 
     </div>
 
     <div 
         style="
             position: fixed;
-            left: 2em;
+            left: 5em;
             top: 12em;"
 
         class="pl_mode"
@@ -445,14 +418,14 @@
 
 
         <p>	
-        <button class="send" event="pl_Previous">&lt; &lt; Previous song</button>
-        <button class="send" event="play_Pause">Pause</button>
-        <button class="send" event="play_Stop">Stop</button>
-        <button class="send" event="pl_Next">Next song &gt; &gt; </button>
-        <b class="state"></b>
+        <button class="send" event="pl_Previous" icon="ui-icon-seek-start"></button>
+        <button class="send" event="play_Pause" icon="ui-icon-pause"></button>
+        <button class="send" event="play_Stop" icon="ui-icon-stop"></button>
+        <button class="send" event="pl_Next" icon="ui-icon-seek-end"></button>
 
         <p>
         <div  class="time"></div>
+        <b class="state"></b>
 
         <p>
 <!--
