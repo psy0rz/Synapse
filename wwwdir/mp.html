@@ -47,6 +47,40 @@
             send(0, $(this).attr("event"));
         });
 
+
+        //make nice buttons and icons
+        $('[event="pl_PreviousPath"]').button({
+            icons: { 
+                primary: "ui-icon ui-icon-arrowthick-1-n"
+            }
+        });
+
+        $('[event="pl_NextPath"]').button({
+            icons: { 
+                primary: "ui-icon ui-icon-arrowthick-1-s"
+            }
+        });
+
+        $('[event="pl_EnterPath"]').button({
+            icons: { 
+                primary: "ui-icon ui-icon-arrowthick-1-e"
+            }
+        });
+
+
+        $('[event="pl_ExitPath"]').button({
+            icons: { 
+                primary: "ui-icon ui-icon-arrowthick-1-w"
+            }
+        });
+
+
+        $("#test").click(function()
+        {
+            $('[event="pl_PreviousPath"]').click();
+        });
+
+
         $(".set_normal").click(function()
         {
             send(0, "pl_SetMode", {
@@ -101,8 +135,6 @@
             $('.entry[key="currentFile"]').text(msg.currentFile.substr(msg.currentPath.length));
 
         //some dom magic going on here...for more of it and a better way to do it look at the kmur2 project
-
-
         function listClone(src, list, strip, reverse)
         {
             var color=255;
@@ -119,8 +151,7 @@
                 element.addClass("cloned");
                 element.css('color', 'rgb('+0+','+color+','+0+')');
                 color=Math.round(color-colorStep);
-                //element.text(list[nr].substr(strip));
-                element.html("<div style='float:right;  '>"+list[nr].substr(strip)+"<div>");
+                $(".entry_text", element).text(list[nr].substr(strip));
             }
 
             //fill the rest to the minimum length with whitespace
@@ -134,13 +165,13 @@
                     src.before(element);
 
                 element.addClass("cloned");
-                element.html("&nbsp;");
+                $(".entry_text", element).html("&nbsp;");
             }
 
         }
 
         //delete old clones
-        $(".entry.cloned").remove();
+        $(".cloned").remove();
 
 
         listClone(
@@ -194,16 +225,13 @@
 
 	<style>
 
-    body
-    {
-        background-color: #000000;
-        color: #ffffff;
-    }
 
     .selectedPath
     {
         background-color: #005500;
         color: #00ff00;
+        padding-top: 1px;
+        padding-bottom: 1px;
     }
 
 
@@ -211,132 +239,169 @@
 </head>
 
 
-<body class='ui-widget; overflow: hidden '>
+<body 
+    class="ui-widget " 
+    style="
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #000000"
+>
 
-<div style="background-color: #ff0000; position:fixed;  left:0px; right: 0px; white-space: nowrap; ">
 
-    <span style="background-color: #00ff00; display:inline-block; max-width:20%">
-        <div style="overflow: hidden">
-            <div style="float:left; " > AAAAAAA aaaaaa </div>
-        </div>
-        <div style="overflow: hidden">
-            <div style="float:left; " > BBBBBBBB saflksd jlkfj sadklfasjdkljsdkl fsklj  bbbb.</div>
-        </div>
-        <div style="overflow: hidden">
-            <div style="float:left; " > CCCCC clcccccccc </div>
-        </div>
-    </span>
-    <span style="background-color: #00ffff; display:inline-block ; max-width: 80% ">
-        <div style="">
-            <button style='float: right;'>prev song</button>
-        </div>
-        <div style="overflow: hidden">
-            <div style="float:right; " > AAAAAAA safsafs fsf aaaaaa </div>
-        </div>
-        <div style="overflow: hidden">
-            <div style="float:right; " > BBBBBBBBBBB tbb bbbb.</div>
-        </div>
-        <div style="overflow: hidden">
-            <div style="float:right; " > CCCCC clsdkfjlksd ajfldk jcccccccccccc </div>
-        </div>
-    </span>
-    <div style="background-color: yellow">
 
-        <button style='position: absolute; left: 1em;'>next dir</button>
+
+
+    <div 
+        style="
+            margin: 0;
+            padding: 0;
+            position: fixed; 
+            top:0;
+            right: 50%; 
+            width:50%;
+            overflow:hidden;
+            white-space: nowrap" 
+    >
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+
+        <div>
+            <div 
+                class="entry selectedPath" 
+                key="parentPath" 
+                style="
+                    float: right;
+                "
+            >
+            </div>
+        </div>
     </div>
-</div>
-
-<span class="entry selectedPath" key="parentPath" style="border-style: solid none solid none; border-color: #ffffff; "></span>
-
-<p>
-
-<table style="border-style: solid; border-width: 1px; white-space: nowrap; right: 1em; left:1em; overflow: hidden;">
-<tr>    
-        <td><button class="send" event="pl_PreviousPath">^^^ Previous directory ^^^</button>
-        <td><button class="send" event="pl_Previous" style="float: right">^^^ Previous song ^^^</button>
- 
-</tr>
-<tr style="vertical-align: bottom;  ">
-        <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath" >
-            <div class="entry_clone entry" key="prevPaths"></div>
-        <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next" style="border-style: solid none none solid; overflow: hidden">
-            <div class="entry_clone entry" key="prevFiles" style="overflow:hidden;width: 100%"></div>
-</tr>
-<!--
-<tr>    
-        <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath" style="border-style: solid none solid none; " >
-            <div  class="entry selectedPath" key="currentPath"></div>
-        <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next" style="overflow-x: hidden" >
-            <div class="entry selectedPath" key="currentFile" style="text-align: right;overflow-x: hidden" ></div>
-</tr>
-<tr style="vertical-align: top">    
-        <td class="scroll-send" up-event="pl_PreviousPath" down-event="pl_NextPath">
-            <div class="entry_clone entry" key="nextPaths"></div>
-        <td class="scroll-send" up-event="pl_Previous" down-event="pl_Next" style="border-style: none none solid solid; overflow-x: hidden">
-            <div class="entry_clone entry" key="nextFiles" style="text-align: right; overflow-x: hidden"></div>
-</tr>
--->
-<tr>    
-        <td>
-            <button class="send" event="pl_NextPath">vvv Next directory vvv</button>
-            <br>
-            <button class="send" event="pl_ExitPath">&lt;&lt;&lt; Exit directory</button>
-            <button class="send" event="pl_EnterPath">Enter directory&gt;&gt;&gt; </button>
-
-        <td><button class="send" event="pl_Next" style="float: right"   >vvv Next song vvv</button>
- 
-</tr>
-</table>
-
-
-<button class="set_random">Random</button>
-<button class="set_normal">Normal</button>
 
 
 
-<table>
-<tr><th colspan=2>filesystem data </tr>
-<tr><th>Root dir     <td class="entry" key="rootPath"></tr>
-<tr><th>Selected dir <td class="entry" key="currentPath"></tr>
-<tr><th>File         <td class="entry" key="currentFile"></tr>
-</table>
+    <div 
+        style="
+            margin: 0;
+            padding: 0;
+            position: fixed; 
+            right: 0; 
+            width:50%;
+            white-space: nowrap" 
+        class="scroll-send" 
+        up-event="pl_PreviousPath" 
+        down-event="pl_NextPath" 
+    >
 
-<table>
-    <tr>
-            <td rowspan=2><button class="send" event="pl_ExitPath">&lt;</button>
-            <td><button class="send" event="pl_PreviousPath">^</button>  
-            <td rowspan=2><button class="send" event="pl_EnterPath">&gt;</button>     
-    </tr>
+        <div class="entry_clone" key="prevPaths" style="overflow: hidden">
+            <div class="entry_text" style="float:left"></div>
+        </div>
 
-    <tr>
-            <td><button class="send" event="pl_NextPath">v</button>
-    </tr>
-</table>
+        <div style="overflow: hidden;" class="selectedPath">
+            <span class="entry" key="currentPath" style="float:left" ></span>
+        </div>
+
+        <div class="entry_clone" key="nextPaths" style="overflow: hidden">
+            <div class="entry_text" style="float:left"></div>
+        </div>
+
+    </div>
 
 
 
 
+    <div 
+        style="
+            padding: 0;
+            margin: 0;
+            position: fixed; 
+            top: 15em; 
+            left: 2em;
+            white-space: nowrap"
+        class="scroll-send" 
+        up-event="pl_Previous" 
+        down-event="pl_Next"
+    >
+        <div class="entry_clone" key="prevFiles" style=" width: 100%;overflow: hidden; ">
+            <div class="entry_text" style="float:left "></div>
+        </div>
 
-<p>	
-<button class="send" event="pl_Previous">&lt; &lt; Previous song</button>
-<button class="send" event="play_Pause">Pause</button>
-<button class="send" event="play_Stop">Stop</button>
-<button class="send" event="pl_Next">Next song &gt; &gt; </button>
-<b class="state"></b>
+        <div style="overflow: hidden;" class="selectedPath">
+            <div class="entry" key="currentFile" style="float:left" ></div>
+        </div>
 
-<p>
-<div  class="time"></div>
+        <div class="entry_clone" key="nextFiles" style="overflow: hidden">
+            <div class="entry_text" style="float:left" ></div>
+        </div>
 
-<p>
+    </div>
 
-<table>
-<tr><th colspan=2>player metadata </tr>
-<tr><th>Title   <td class="meta" key="title"></tr>
-<tr><th>url     <td class="meta" key="url"></tr>
-<tr><th>mrl     <td class="meta" key="mrl"></tr>
-<tr><th>artist  <td class="meta" key="artist"></tr>
-</table>
 
+    <div 
+        style="
+            position: fixed;
+            right:50%;
+            top:5em;
+            margin-right: 2em"
+    >
+        <button style="visibility:hidden; " class="send" event="pl_PreviousPath"></button>
+        <button class="send" event="pl_PreviousPath"></button>
+        <div>&nbsp;</div>
+        <button class="send" event="pl_ExitPath"></button>
+        <button class="send" event="pl_NextPath"></button>
+        <button class="send" event="pl_EnterPath"></button>
+    </div>
+
+
+
+    <div 
+
+        style="
+            padding: 0;
+            margin: 0;
+            Xposition: fixed; 
+            bottom: 0; 
+            
+            "
+
+    >
+        <button class="set_random">Random</button>
+        <button class="set_normal">Normal</button>
+
+        <table>
+        <tr><th colspan=2>filesystem data </tr>
+        <tr><th>Root dir     <td class="entry" key="rootPath"></tr>
+        <tr><th>Selected dir <td class="entry" key="currentPath"></tr>
+        <tr><th>File         <td class="entry" key="currentFile"></tr>
+        </table>
+
+
+
+
+
+        <p>	
+        <button class="send" event="pl_Previous">&lt; &lt; Previous song</button>
+        <button class="send" event="play_Pause">Pause</button>
+        <button class="send" event="play_Stop">Stop</button>
+        <button class="send" event="pl_Next">Next song &gt; &gt; </button>
+        <b class="state"></b>
+
+        <p>
+        <div  class="time"></div>
+
+        <p>
+
+        <table>
+        <tr><th colspan=2>player metadata </tr>
+        <tr><th>Title   <td class="meta" key="title"></tr>
+        <tr><th>url     <td class="meta" key="url"></tr>
+        <tr><th>mrl     <td class="meta" key="mrl"></tr>
+        <tr><th>artist  <td class="meta" key="artist"></tr>
+        </table>
+    </div>
 </body>
 </html>
 

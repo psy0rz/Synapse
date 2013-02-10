@@ -579,9 +579,9 @@ namespace pl
         //name of the config file that stores the state
         string getStateFile()
         {
-            stringstream s;
-            s << "var/pl_dir/" << hash_value(mRootPath) << ".state";
-            return (s.str());
+            //stringstream s;
+            //s << mRootPath/".mp.state" << "/.mp.mState";
+            return ((mRootPath/".mp.state").string());
         }
 
 		//reload all file data. call this after you've changed currentPath or other settings
