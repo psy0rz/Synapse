@@ -141,9 +141,14 @@
     synapse_register("pl_Entry",function(msg_src, msg_dst, msg_event, msg)
     {
 
+        var strippedParentPath=msg.parentPath.substr(msg.rootPath.length);
+        if (strippedParentPath.length)
+            $('.entry[key="parentPath"]').text(strippedParentPath);
+        else
+            $('.entry[key="parentPath"]').html("&nbsp;");
+
         $('.entry[key="rootPath"]').text(msg.rootPath);
         $('.entry[key="currentPath"]').text(msg.currentPath.substr(msg.parentPath.length));
-        $('.entry[key="parentPath"]').text(msg.parentPath);
 
         if ('currentFile' in msg)
             $('.entry[key="currentFile"]').text(msg.currentFile.substr(msg.currentPath.length));
@@ -288,7 +293,10 @@
                 class="entry selectedPath" 
                 key="parentPath" 
                 style="
+                    text-align:right;
                     float: right;
+                    min-width: 5em;
+                    padding-left: 1em;
                 "
             >
             </div>
@@ -359,7 +367,7 @@
             position: fixed;
             right:50%;
             top:5em;
-            margin-right: 2em"
+            margin-right: 1em"
     >
         <button style="visibility:hidden; " class="send" event="pl_PreviousPath"></button>
         <button class="send" event="pl_PreviousPath"></button>
