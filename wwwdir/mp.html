@@ -89,7 +89,7 @@
 
         $(".pl_mode").buttonset();
 
-        $("#pl_mode_normal").click(function()
+        $("#pl_mode_filename").click(function()
         {
             send(0, "pl_SetMode", {
                 "sortField":"filename",
@@ -114,10 +114,6 @@
         });
 
 
-        synapse_register("pl_Mode",function(msg_src, msg_dst, msg_event, msg)
-        {
-
-        });
 
 
         //time slider
@@ -159,6 +155,23 @@
 
         if ('currentFile' in msg)
             $('.entry[key="currentFile"]').text(msg.currentFile.substr(msg.currentPath.length));
+
+
+        if (msg["randomLength"]!=0)
+        {
+            $("#pl_mode_random").attr('checked', true);
+        }
+        else if (msg["sortField"]=="date")
+        {
+            $("#pl_mode_date").attr('checked',true);
+        }
+        else if (msg["sortField"]=="filename")
+        {
+            $("#pl_mode_filename").attr('checked',true);
+        }
+
+        $(".pl_mode").buttonset("refresh");
+
 
         //some dom magic going on here...for more of it and a better way to do it look at the kmur2 project
         function listClone(src, list, strip, reverse)
@@ -406,8 +419,7 @@
 
         class="pl_mode"
     >
-        <label>
-        <input id="pl_mode_normal" type="radio" name="pl_mode"/><label for="pl_mode_normal">By name</label>
+        <input id="pl_mode_filename" type="radio" name="pl_mode"/><label for="pl_mode_filename">By name</label>
         <input id="pl_mode_date" type="radio" name="pl_mode"/><label for="pl_mode_date">By date</label>
         <input id="pl_mode_random" type="radio" name="pl_mode"/><label for="pl_mode_random">Random</label>
 

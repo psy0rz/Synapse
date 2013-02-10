@@ -127,7 +127,7 @@ namespace pl
 
 		static bool compareDate (Cdirectory_entry first, Cdirectory_entry second)
 		{
-			return (first.getDate() < second.getDate());
+			return (first.getDate() > second.getDate());
 		}
 
 
