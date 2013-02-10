@@ -9,6 +9,7 @@ while true; do
 		OLDSTAT=$STAT
 		killall -INT synapse
 		sleep 1
+		killall -9 synapse
 		echo "############# PROGRAM CHANGED, RESTARTING #############"
 		./synapse $ARGS &
 	fi

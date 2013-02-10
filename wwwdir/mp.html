@@ -97,6 +97,13 @@
             });
         });
 
+        $("#pl_mode_date").click(function()
+        {
+            send(0, "pl_SetMode", {
+                "sortField":"date",
+                "randomLength":0
+            });
+        });
 
         $("#pl_mode_random").click(function()
         {
@@ -401,6 +408,7 @@
     >
         <label>
         <input id="pl_mode_normal" type="radio" name="pl_mode"/><label for="pl_mode_normal">By name</label>
+        <input id="pl_mode_date" type="radio" name="pl_mode"/><label for="pl_mode_date">By date</label>
         <input id="pl_mode_random" type="radio" name="pl_mode"/><label for="pl_mode_random">Random</label>
 
     </div>
