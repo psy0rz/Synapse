@@ -63,41 +63,55 @@
 
         $('[event="pl_EnterPath"]').button({
             icons: { 
-                primary: "ui-icon ui-icon-arrowthick-1-e"
+                primary: "ui-icon ui-icon-arrowreturnthick-1-e"
             }
         });
 
 
         $('[event="pl_ExitPath"]').button({
             icons: { 
-                primary: "ui-icon ui-icon-arrowthick-1-w"
+                primary: "ui-icon ui-icon-arrowreturnthick-1-w"
+            }
+        });
+
+        $('[event="pl_Previous"]').button({
+            icons: { 
+                primary: "ui-icon ui-icon-arrowthick-1-n"
+            }
+        });
+
+        $('[event="pl_Next"]').button({
+            icons: { 
+                primary: "ui-icon ui-icon-arrowthick-1-s"
             }
         });
 
 
-        $("#test").click(function()
-        {
-            $('[event="pl_PreviousPath"]').click();
-        });
+        $(".pl_mode").buttonset();
 
-
-        $(".set_normal").click(function()
+        $("#pl_mode_normal").click(function()
         {
             send(0, "pl_SetMode", {
                 "sortField":"filename",
                 "randomLength":0
             });
-
         });
 
-        $(".set_random").click(function()
+
+        $("#pl_mode_random").click(function()
         {
             send(0, "pl_SetMode", {
                 "sortField":"filename",
                 "randomLength":10000
             });
-            
         });
+
+
+        synapse_register("pl_Mode",function(msg_src, msg_dst, msg_event, msg)
+        {
+
+        });
+
 
         //time slider
         $(".time").slider({ 
@@ -319,21 +333,21 @@
             margin: 0;
             position: fixed; 
             top: 15em; 
-            left: 2em;
+            left: 0;
             white-space: nowrap"
         class="scroll-send" 
         up-event="pl_Previous" 
         down-event="pl_Next"
     >
-        <div class="entry_clone" key="prevFiles" style=" width: 100%;overflow: hidden; ">
+        <div class="entry_clone" key="prevFiles" style="width: 100%;overflow: hidden; padding-left: 2em;">
             <div class="entry_text" style="float:left "></div>
         </div>
 
         <div style="overflow: hidden;" class="selectedPath">
-            <div class="entry" key="currentFile" style="float:left" ></div>
+            <div class="entry" key="currentFile" style="float:left; padding-left: 2em;" ></div>
         </div>
 
-        <div class="entry_clone" key="nextFiles" style="overflow: hidden">
+        <div class="entry_clone" key="nextFiles" style="overflow: hidden;padding-left: 2em;">
             <div class="entry_text" style="float:left" ></div>
         </div>
 
@@ -356,27 +370,46 @@
     </div>
 
 
+    <div 
+        style="
+            position: fixed;
+            left: 0;
+            top: 20em;"
+    >
+        <button class="send" event="pl_Previous"></button>
+        <div>&nbsp;</div>
+        <button class="send" event="pl_Next"></button>
+
+    </div>
 
     <div 
-
         style="
-            padding: 0;
-            margin: 0;
-            Xposition: fixed; 
-            bottom: 0; 
-            
+            position: fixed;
+            left: 2em;
+            top: 12em;"
+
+        class="pl_mode"
+    >
+        <label>
+        <input id="pl_mode_normal" type="radio" name="pl_mode"/><label for="pl_mode_normal">By name</label>
+        <input id="pl_mode_random" type="radio" name="pl_mode"/><label for="pl_mode_random">Random</label>
+
+    </div>
+
+
+
+
+
+
+    <div 
+        style="
+            position: fixed; 
+            left:0;
+            top:0;
             "
 
     >
-        <button class="set_random">Random</button>
-        <button class="set_normal">Normal</button>
 
-        <table>
-        <tr><th colspan=2>filesystem data </tr>
-        <tr><th>Root dir     <td class="entry" key="rootPath"></tr>
-        <tr><th>Selected dir <td class="entry" key="currentPath"></tr>
-        <tr><th>File         <td class="entry" key="currentFile"></tr>
-        </table>
 
 
 
@@ -393,14 +426,14 @@
         <div  class="time"></div>
 
         <p>
-
+<!--
         <table>
         <tr><th colspan=2>player metadata </tr>
         <tr><th>Title   <td class="meta" key="title"></tr>
         <tr><th>url     <td class="meta" key="url"></tr>
         <tr><th>mrl     <td class="meta" key="mrl"></tr>
         <tr><th>artist  <td class="meta" key="artist"></tr>
-        </table>
+        </table>-->
     </div>
 </body>
 </html>
