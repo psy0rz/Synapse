@@ -27,6 +27,14 @@ namespace mp
     int playerId;
     int plId;
 
+    string wantFile;
+    string openingFile;
+    bool opening=false;
+
+    //last received vlc state and file
+    string vlcState;
+    string vlcFile;
+
     SYNAPSE_REGISTER(module_Init)
     {
     	Cmsg out;
@@ -97,10 +105,31 @@ namespace mp
             playerId=msg.src;
     }
 
+    void sendOpen(string url)
+    {
+        Cmsg out;
+        out.event="play_Open";
+        out["url"]=url;
+        out.dst=playerId;
+        out.send();
+    }
+
+    SYNAPSE_REGISTER(play_InfoMeta)
+    {
+        if (msg.src!=playerId)
+            return;
+
+        vlcFile=msg["url"].str();
+    }
+
     SYNAPSE_REGISTER(play_State)
     {
+        if (msg.src!=playerId)
+            return;
+
         //static int lastTime=0;
 
+        vlcState=msg["state"].str();
 
         if (msg["state"]=="empty")
         {
@@ -115,7 +144,19 @@ namespace mp
             out.dst=plId;
             out.event="pl_Next";
             out.send();
+        };
 
+
+
+        if (msg["state"]!="opening" && vlcFile==openingFile)
+        {
+            openingFile="";
+            //we want a different file?
+            if (vlcFile!=wantFile)
+            {
+                openingFile=wantFile;
+                sendOpen(openingFile);
+            }
         }
         
         
@@ -134,34 +175,30 @@ namespace mp
 
     SYNAPSE_REGISTER(pl_Entry)
     {
-        static string currentFile;
 
         //for now we just support one playlist
         if (!plId)
             plId=msg.src;
 
-        if (currentFile==msg["currentFile"].str())
+        if (msg.src!=plId)
             return;
 
-        currentFile=msg["currentFile"].str();
 
-        if (msg.src==plId)
+        wantFile="file://"+msg["currentFile"].str();
+
+        //not already opening stuff?
+        if (openingFile=="")
         {
-            //lets play it
-            Cmsg out;
-            out.event="play_Open";
-            out["url"]="file://"+currentFile;
-            out.dst=playerId;
-            out.send();
+            //dont open it if vlc is already playing it
+            if (wantFile!=vlcFile)
+            {
+                openingFile=wantFile;
+                sendOpen(wantFile);
+            }
         }
     }
 
 
-
-    SYNAPSE_REGISTER(play_InfoMeta)
-    {
-
-    }
 
 
 

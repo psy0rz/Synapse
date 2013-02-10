@@ -675,9 +675,6 @@ namespace pl
 
             updateListsAsync();
 
-            //TODO: do this somewhere else
-            mState.changed();
-            mState.save(getStateFile());
 
         }
 
@@ -890,7 +887,7 @@ namespace pl
                 if (maxItems==0)
                     break;
             }
-
+  
             out["randomLength"]=mRandomLength;
             out["sortField"]=mSortField;
 
@@ -899,6 +896,8 @@ namespace pl
 
 		void destroy()
 		{
+            mState.changed();
+            mState.save(getStateFile());
 
 		}
 
