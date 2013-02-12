@@ -444,6 +444,10 @@ class CPlayer
 		if (!mPlayer)
 			throwError("Problem creating new player");
 
+        //set some options
+        libvlc_set_fullscreen(mPlayer,1);
+
+
 		//get the event manager of the player
 		mPlayerEm=libvlc_media_player_event_manager(mPlayer);
 		if (!mPlayerEm)
