@@ -242,7 +242,7 @@ namespace pl
         const regex & fileFilter=regex()
     )
     {
-        DEB(" rootPath=" << rootPath.string() <<
+        DEB("movePath rootPath=" << rootPath.string() <<
              " currentPath=" << currentPath.string() <<
              " sortField=" << sortField <<
              " direction=" << direction <<
@@ -264,15 +264,21 @@ namespace pl
         else
             listPath=currentPath.parent_path();
 
-        path startPath=listPath;
+        path startPath;
         
         CsortedDir::iterator dirI;
 
-        do
+        while(1)
         {
-            //get sorted directory listing
-            static CsortedDir sortedDir;
+            //get sorted directory listing, but cache results per path for performance
+            static map<path, CsortedDir>  sortedDirCache;
+            CsortedDir & sortedDir=sortedDirCache[listPath];
+
             sortedDir.read(listPath, sortField, filetype, dirFilter, fileFilter);
+            DEB("start of loop");
+            DEB("list path :     "  << listPath);
+            DEB("start path:     " << startPath);
+            DEB("current path:   " << currentPath);
 
             if (!sortedDir.empty())
             {
@@ -333,7 +339,9 @@ namespace pl
                         //no, cant go higher.
                         //clear the current path, so it just gets the first or last entry, when we're in loop mode
                         if (loop==LOOP)
+                        {
                             currentPath.clear();
+                        }
                         else
                         {
                             DEB("end reached, not looping, so returning empty path");
@@ -367,15 +375,25 @@ namespace pl
                 {
                     //go one dir higher and continue the loop
                     currentPath=listPath;
+
+                    //infinite loop prevention, prevent leaving this directory for the second time. (first time is ok)
+                    if (startPath.empty())
+                        startPath=listPath;
+                    else if (startPath==listPath)
+                    {
+                        DEB("came full circle without results, returing empty result");
+                        return(path());
+                    }
+
                     listPath=listPath.parent_path();
                 }
+                else
+                {
+                    DEB("empty directory, returning empty result");
+                    return(path());
+                }
             }
-
         }
-        while(listPath!=startPath); //prevent inifinte loops if we dont find anything
-
-        DEB("nothing found, returning empty path")
-        return(path());
     }
 
 	class Citer
@@ -405,6 +423,8 @@ namespace pl
         regex mFileFilter; 
         regex mDirFilter; 
 
+        //when was the last update sended?
+        ptime mLastSend;
 
 
         public:
@@ -425,6 +445,7 @@ namespace pl
         bool updateLists()
         {
             bool needs_more=false;
+            ptime started=microsec_clock::local_time();
 
                 
             //normal mode:
@@ -446,6 +467,13 @@ namespace pl
                         if (p.empty())
                             break;
                         mNextFiles.push_back(p.string());
+
+                        if ((microsec_clock::local_time()-started).total_milliseconds()>100)
+                        {
+                            needs_more=true;
+                            break;
+                        }
+
                     }
                 }
 
@@ -466,6 +494,12 @@ namespace pl
                         if (p.empty())
                             break;
                         mPrevFiles.push_back(p.string());
+
+                        if ((microsec_clock::local_time()-started).total_milliseconds()>100)
+                        {
+                            needs_more=true;
+                            break;
+                        }
                     }
                 }
 
@@ -493,8 +527,6 @@ namespace pl
                     DEB("filling random playlist");
                     
                     //insert new entries randomly
-                    //fill the list but if it takes too long, continue later 
-                    ptime started=microsec_clock::local_time();
                     while(mNextFiles.size()<mState["randomLength"])
                     {
                         mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, mState["sortField"], NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
@@ -528,7 +560,6 @@ namespace pl
                         //we've taken our time, so send an event to continue next time:
                         if ((microsec_clock::local_time()-started).total_milliseconds()>100)
                         {
-                            DEB("scan-timeout, random size=" << mNextFiles.size() << " milliseconds taken=" << (microsec_clock::local_time()-started).total_milliseconds());
                             needs_more=true;
                             break;
                         }
@@ -537,7 +568,7 @@ namespace pl
                 }
                 else
                 {
-                    DEB("no more files left to fill random queue. random size");
+                    DEB("no more files left to fill random queue.");
                 }
                 DEB("random list size " <<  mNextFiles.size() );
             }
@@ -554,7 +585,7 @@ namespace pl
                     p=mNextPaths.back();
                 while(mNextPaths.size()<mNextLen)
                 {
-                    p=movePath(mRootPath, p, mState["sortField"], NEXT, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP, mDirFilter);
+                    p=movePath(mRootPath, p, "filename", NEXT, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP, mDirFilter);
                     if (p.empty())
                         break;
 
@@ -574,7 +605,7 @@ namespace pl
                     p=mPrevPaths.back();
                 while(mPrevPaths.size()<mPrevLen)
                 {
-					p=movePath(mRootPath, p, mState["sortField"], PREVIOUS, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP, mDirFilter);
+					p=movePath(mRootPath, p, "filename", PREVIOUS, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP, mDirFilter);
                     if (p.empty())
                         break;
                     mPrevPaths.push_back(p.string());
@@ -610,6 +641,18 @@ namespace pl
                     out.dst=mId;
                     out.send();
                 }
+
+                //send the results we have so far to the user immeadialty, and after that every second
+                if (!returned || ((microsec_clock::local_time()-mLastSend).total_milliseconds()>1000))
+                {
+                    mLastSend=microsec_clock::local_time();
+                    send(0);
+                }
+            }
+            else
+            {
+                //we're done, send final complete status update
+                send(0);
             }
         }
 
@@ -845,6 +888,7 @@ namespace pl
 			Cmsg out;
 			out.event="pl_Entry";
 			out.dst=dst;
+
 			out["rootPath"]=mRootPath.string();
             if (!mCurrentPath.empty())
                 out["currentPath"]=mCurrentPath.string();
@@ -854,7 +898,6 @@ namespace pl
 
             //to make life easier for user interfaces in a crossplatform way:
             out["parentPath"]=mCurrentPath.parent_path().string();
-
 
             int maxItems;
 
@@ -900,6 +943,9 @@ namespace pl
   
             out["randomLength"]=mState["randomLength"];
             out["sortField"]=mState["sortField"];
+
+            //this means we're still scanning
+            out["updateListsAsyncFlying"]=mUpdateListsAsyncFlying;
 
 			out.send();
 		}
@@ -1040,7 +1086,6 @@ namespace pl
 	SYNAPSE_REGISTER(pl_SetMode)
 	{
         iterMan.get(dst).setMode(msg);
-        iterMan.get(dst).send(0);
 
 	}
 
@@ -1062,7 +1107,6 @@ namespace pl
 	SYNAPSE_REGISTER(pl_NextPath)
 	{
 		iterMan.get(dst).nextPath();
-		iterMan.get(dst).send(0);
 
 	}
 
@@ -1075,7 +1119,6 @@ namespace pl
 	SYNAPSE_REGISTER(pl_PreviousPath)
 	{
 		iterMan.get(dst).previousPath();
-		iterMan.get(dst).send(0);
 	}
 
 	/** Enters selected directory
@@ -1086,7 +1129,6 @@ namespace pl
 	SYNAPSE_REGISTER(pl_EnterPath)
 	{
 		iterMan.get(dst).enterPath();
-		iterMan.get(dst).send(0);
 	}
 
 	/** Exits directory, selecting directory on higher up the hierarchy
@@ -1097,7 +1139,6 @@ namespace pl
 	SYNAPSE_REGISTER(pl_ExitPath)
 	{
 		iterMan.get(dst).exitPath();
-		iterMan.get(dst).send(0);
 
 	}
 
@@ -1109,7 +1150,6 @@ namespace pl
 	SYNAPSE_REGISTER(pl_Next)
 	{
 		iterMan.get(dst).next();
-		iterMan.get(dst).send(0);
 
 	}
 
@@ -1121,13 +1161,11 @@ namespace pl
 	SYNAPSE_REGISTER(pl_Previous)
 	{
 		iterMan.get(dst).previous();
-		iterMan.get(dst).send(0);
 	}
 
     SYNAPSE_REGISTER(pl_GotoStart)
     {
         iterMan.get(dst).gotoStart();
-        iterMan.get(dst).send(0);
     }
 
 

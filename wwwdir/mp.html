@@ -115,6 +115,11 @@
 
     synapse_register("pl_Entry",function(msg_src, msg_dst, msg_event, msg)
     {
+        if (msg["updateListsAsyncFlying"])
+            $(".show_when_busy").css('visibility', 'visible');
+        else
+            $(".show_when_busy").css('visibility', 'hidden');
+
 
         var strippedParentPath=msg.parentPath.substr(msg.rootPath.length);
         if (strippedParentPath.length)
@@ -391,12 +396,19 @@
             top: 12em;"
 
     >
+        <img class="show_when_busy" style='background-color: #ffffff' src='paper/spinner.gif'/>
         <span class="pl_mode">
             <input id="pl_mode_filename" type="radio" name="pl_mode"/><label for="pl_mode_filename">By name</label>
             <input id="pl_mode_date" type="radio" name="pl_mode"/><label for="pl_mode_date">By date</label>
             <input id="pl_mode_random" type="radio" name="pl_mode"/><label for="pl_mode_random">Random</label>
         </span>
-        <button class="send" event="pl_GotoStart" icon="ui-icon-arrowthickstop-1-n">Goto first</button>
+        <button 
+            class="send" 
+            event="pl_GotoStart" 
+            icon="ui-icon-arrowthickstop-1-n"
+            title="This button will bring you to the first item in the list. Very usefull if you sort By date. (the list actually 'loops': the selected item is the first one, the item above it is the last one."
+
+        >Goto first</button>
 
     </div>
 
@@ -430,6 +442,7 @@
         <b class="state"></b>
 
         <p>
+
 <!--
         <table>
         <tr><th colspan=2>player metadata </tr>
