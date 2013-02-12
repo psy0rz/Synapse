@@ -264,7 +264,7 @@ namespace pl
         else
             listPath=currentPath.parent_path();
 
-        path startPath=currentPath;
+        path startPath=listPath;
         
         CsortedDir::iterator dirI;
 
@@ -798,11 +798,13 @@ namespace pl
             }
 		}
 
-        //sets regex for the pathname filter.
+        //sets regex for the file filter.
         //this is combined with the filter defined in config["filter"]
-        void setFilter(string f)
+        void setFileFilter(string f)
         {
-            mFileFilter.assign(config["filter"].str(), regex::icase);
+            //FIXME: now we just assume the default filter only filters extensions
+            mFileFilter.assign(f+config["filter"].str(), regex::icase);
+            mState["fileFilter"]=f;
         }
 
 		void create(int id, string rootPath)
@@ -815,7 +817,7 @@ namespace pl
                 mState.load(getStateFile());
             }
 
-            setFilter("");
+            setFileFilter(mState["fileFilter"]);
             
             if (isSubdir(mRootPath, mState["currentPath"].str()))
                 setCurrentPath(mState["currentPath"].str());
