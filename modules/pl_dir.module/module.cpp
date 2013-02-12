@@ -730,6 +730,12 @@ namespace pl
             setCurrentFile(p);
 		}
 
+        //goto start of the list (by reloading it)
+        void gotoStart()
+        {
+            setCurrentFile(movePath(mCurrentPath, mCurrentPath, mState["sortField"], NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter));
+            reloadFiles();
+        }
 
 		void nextPath()
 		{
@@ -1116,6 +1122,11 @@ namespace pl
 		iterMan.get(dst).send(0);
 	}
 
+    SYNAPSE_REGISTER(pl_GotoStart)
+    {
+        iterMan.get(dst).gotoStart();
+        iterMan.get(dst).send(0);
+    }
 
 
 

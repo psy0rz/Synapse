@@ -390,11 +390,13 @@
             left: 5em;
             top: 12em;"
 
-        class="pl_mode"
     >
-        <input id="pl_mode_filename" type="radio" name="pl_mode"/><label for="pl_mode_filename">By name</label>
-        <input id="pl_mode_date" type="radio" name="pl_mode"/><label for="pl_mode_date">By date</label>
-        <input id="pl_mode_random" type="radio" name="pl_mode"/><label for="pl_mode_random">Random</label>
+        <span class="pl_mode">
+            <input id="pl_mode_filename" type="radio" name="pl_mode"/><label for="pl_mode_filename">By name</label>
+            <input id="pl_mode_date" type="radio" name="pl_mode"/><label for="pl_mode_date">By date</label>
+            <input id="pl_mode_random" type="radio" name="pl_mode"/><label for="pl_mode_random">Random</label>
+        </span>
+        <button class="send" event="pl_GotoStart" icon="ui-icon-arrowthickstop-1-n">Goto first</button>
 
     </div>
 
