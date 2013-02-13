@@ -350,7 +350,12 @@
         <div>&nbsp;</div>
         <div style='padding-right: 1em'>
             <button style='float:right; visibility:hidden' class="send" event="pl_PreviousPath" icon="ui-icon-arrowthick-1-n"></button>
-            <button style='float:right' class="send" event="pl_PreviousPath" icon="ui-icon-arrowthick-1-n"></button>
+            <button 
+                style='float:right' 
+                class="send" 
+                event="pl_PreviousPath" 
+                icon="ui-icon-arrowthick-1-n"
+                title="Previous directory (you can also use the scrollwheel)"></button>
         </div>
         <div>&nbsp;</div>
         <div>&nbsp;</div>
@@ -371,9 +376,27 @@
         <div>&nbsp;</div>
         <div>&nbsp;</div>
         <div style='padding-right: 1em'>
-            <button style='float:right' class="send" event="pl_EnterPath" icon="ui-icon-arrowreturnthick-1-e"></button>
-            <button style='float:right' class="send" event="pl_NextPath" icon="ui-icon-arrowthick-1-s"></button>
-            <button style='float:right' class="send" event="pl_ExitPath" icon="ui-icon-arrowreturnthick-1-w"></button>
+            <button 
+                style='float:right' 
+                class="send" 
+                event="pl_EnterPath" 
+                icon="ui-icon-arrowreturnthick-1-e"
+                title="Enter directory. Go one directory deeper, based on the path of the current playing file."></button>
+            <button 
+                style='float:right' 
+                class="send" 
+                event="pl_NextPath" 
+                icon="ui-icon-arrowthick-1-s"
+                title="Next directory (you can also use the scrollwheel)"
+                ></button>
+
+            <button 
+            style='float:right' 
+            class="send" 
+            event="pl_ExitPath" 
+            icon="ui-icon-arrowreturnthick-1-w"
+            title="Exit selected directory and go one higher"></button>
+
         </div>
 
 
@@ -450,11 +473,20 @@
         <div>&nbsp;</div>
         <div>&nbsp;</div>
         <div>&nbsp;</div>
-        <button class="send" event="pl_Previous" icon="ui-icon-arrowthick-1-n"></button>
+        <button 
+            class="send" 
+            event="pl_Previous" 
+            icon="ui-icon-arrowthick-1-n"
+            title="Previous file. you can also use the scrollwheel on the list itself."></button>
         <div>&nbsp;</div>
         <div>&nbsp;</div>
         <div>&nbsp;</div>
-        <button class="send" event="pl_Next" icon="ui-icon-arrowthick-1-s"></button>
+        <button 
+            class="send" 
+            event="pl_Next" 
+            icon="ui-icon-arrowthick-1-s"
+            title="Next file. you can also use the scrollwheel on the list itself."></button>
+
 
     </div>
 
