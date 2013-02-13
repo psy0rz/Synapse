@@ -216,6 +216,39 @@
                 true);
 
 
+        //filter crap from a filename so it can be googled
+        function filter_crap(s)
+        {
+            return (
+                s.replace(/\./g, " ") //convert dots to spaces
+                    .replace(/-/g, " ") //convert - to spaces
+                    .replace(/(480|720|1080|bluray|bdrip|dvdrip|xvid).*/gi, "") //remove crap
+                    .replace(/_/g, " ") //convert underscores
+                );
+        }
+
+        if (msg["currentFile"])
+        {
+            //update google for file name
+            var searchText=msg["currentFile"]
+                .replace(/.*\//, "") //remove path
+                .replace(/\.[^.]*$/, "") //remove ext
+
+            searchText=filter_crap(searchText); 
+            $(".google_file").text("Google: "+searchText);
+            $(".google_file").attr("href", "https://www.google.com/search?q="+searchText);
+
+            //update google for path name
+            searchText=msg["currentFile"]
+                .replace(/\/[^/]*$/, "") //remove file
+                .replace(/.*\//, "") //remove path
+
+            searchText=filter_crap(searchText); 
+            $(".google_path").text("Google: "+searchText);
+            $(".google_path").attr("href", "https://www.google.com/search?q="+searchText);
+        }
+
+
     });
 
     synapse_register("play_Time",function(msg_src, msg_dst, msg_event, msg)
@@ -258,12 +291,45 @@
 <body 
     class="ui-widget ui-widget-content" 
     style="
+        font-size: 14px;
         margin: 0;
         padding: 0;
         overflow: hidden;
         background-color: #000000"
 >
 
+
+
+    <div 
+        style="
+            position: fixed; 
+            right:0;
+            left:0;
+            bottom:0;
+            border-style: solid;
+            border-width: 1px;
+            border-color: #444444;
+            "
+    >
+        <a 
+            style="
+                border-left-style: solid; 
+                padding-left:1em; 
+                padding-right: 1em" 
+            class="google_file" 
+            target='_blank' 
+            href=''></a>
+
+        <a 
+            style="
+                border-left-style: solid; 
+                padding-left: 1em; 
+                padding-right: 1em" 
+            class="google_path" 
+            target='_blank' 
+            href=''></a>
+
+    </div>
 
 
 
@@ -282,9 +348,13 @@
         <div>&nbsp;</div>
         <div>&nbsp;</div>
         <div>&nbsp;</div>
+        <div style='padding-right: 1em'>
+            <button style='float:right; visibility:hidden' class="send" event="pl_PreviousPath" icon="ui-icon-arrowthick-1-n"></button>
+            <button style='float:right' class="send" event="pl_PreviousPath" icon="ui-icon-arrowthick-1-n"></button>
+        </div>
         <div>&nbsp;</div>
         <div>&nbsp;</div>
-
+ 
         <div>
             <div 
                 class="entry selectedPath" 
@@ -298,6 +368,15 @@
             >
             </div>
         </div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div style='padding-right: 1em'>
+            <button style='float:right' class="send" event="pl_EnterPath" icon="ui-icon-arrowreturnthick-1-e"></button>
+            <button style='float:right' class="send" event="pl_NextPath" icon="ui-icon-arrowthick-1-s"></button>
+            <button style='float:right' class="send" event="pl_ExitPath" icon="ui-icon-arrowreturnthick-1-w"></button>
+        </div>
+
+
     </div>
 
 
@@ -360,30 +439,20 @@
     </div>
 
 
-    <div 
-        class=""
-        style="
-            position: fixed;
-            right:50%;
-            top:5em;
-            margin-right: 1em"
-    >
-        <button style="visibility:hidden; " class="send" event="pl_PreviousPath" icon="ui-icon-arrowthick-1-n"></button>
-        <button class="send" event="pl_PreviousPath" icon="ui-icon-arrowthick-1-n"></button>
-        <div>&nbsp;</div>
-        <button class="send" event="pl_ExitPath" icon="ui-icon-arrowreturnthick-1-w"></button>
-        <button class="send" event="pl_NextPath" icon="ui-icon-arrowthick-1-s"></button>
-        <button class="send" event="pl_EnterPath" icon="ui-icon-arrowreturnthick-1-e"></button>
-    </div>
 
 
     <div 
         style="
             position: fixed;
             left: 0;
-            top: 20em;"
+            top: 15em;"
     >
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
         <button class="send" event="pl_Previous" icon="ui-icon-arrowthick-1-n"></button>
+        <div>&nbsp;</div>
+        <div>&nbsp;</div>
         <div>&nbsp;</div>
         <button class="send" event="pl_Next" icon="ui-icon-arrowthick-1-s"></button>
 
@@ -414,35 +483,27 @@
 
 
 
-
-
-
     <div 
         style="
             position: fixed; 
             left:0;
             top:0;
+            border-style: solid;
+            border-width: 1px;
+            border-color: #444444;
             "
 
     >
 
-
-
-
-
-
-        <p>	
+        <p> 
         <button class="send" event="pl_Previous" icon="ui-icon-seek-start"></button>
         <button class="send" event="play_Pause" icon="ui-icon-pause"></button>
         <button class="send" event="play_Stop" icon="ui-icon-stop"></button>
         <button class="send" event="pl_Next" icon="ui-icon-seek-end"></button>
 
-        <p>
+        <p>            
         <div  class="time"></div>
         <b class="state"></b>
-
-        <p>
-
 <!--
         <table>
         <tr><th colspan=2>player metadata </tr>
@@ -452,6 +513,9 @@
         <tr><th>artist  <td class="meta" key="artist"></tr>
         </table>-->
     </div>
+
+
+
 </body>
 </html>
 
