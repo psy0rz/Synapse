@@ -388,6 +388,7 @@ void CmessageMan::operator()()
             //this is used in sendmessage to automagically determine the source session when its not specified.
             currentThreadDstId=callI->dst->id;
 			callI->soHandler(*(callI->msg), callI->dst->id, callI->dst->cookie);
+			currentThreadDstId=0;
 		}
 	  	catch (const ios::failure& e)
   		{

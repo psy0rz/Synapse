@@ -730,7 +730,7 @@ SYNAPSE_REGISTER(play_Stop)
 	players[dst].stop();
 }
 
-SYNAPSE_REGISTER(play_Pause)
+SYNAPSE_REGISTER(play_Pause, "{ \"recvGroup\": \"everyone\", \"sendGroup\": \"module\" }")
 {
     lock_guard<recursive_mutex> lock(vlcMutex);
 
