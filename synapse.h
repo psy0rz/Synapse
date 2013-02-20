@@ -46,7 +46,11 @@ struct synapseAutoReg
     {
     	Cvar var;
     	if (jsonStr!="")
+        {
+            //strip begin and end quotes
+            jsonStr=jsonStr.substr(1,jsonStr.length()-2);
     		var.fromJson(jsonStr);
+        }
     	var["event"]=name;
         handlers.push_back(var);
     }
@@ -66,7 +70,7 @@ list<synapse::Cvar> synapseAutoReg::handlers;
 //SYNAPSE_REGISTER(play_Pause, "{ 'recvGroup': 'everyone', 'sendGroup': 'module' }")
 
 #define SYNAPSE_REGISTER_2(name, jsonVar) \
-    synapse::synapseAutoReg BOOST_PP_CAT(synapse_autoreg_, name)(#name, jsonVar); \
+    synapse::synapseAutoReg BOOST_PP_CAT(synapse_autoreg_, name)(#name, #jsonVar); \
     SYNAPSE_HANDLER(name)
 
 //some helper macros to choose the correct version of SYNAPSE_REGISTER, depending on the number of parameters

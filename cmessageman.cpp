@@ -388,7 +388,7 @@ void CmessageMan::operator()()
             //this is used in sendmessage to automagically determine the source session when its not specified.
             currentThreadDstId=callI->dst->id;
 			callI->soHandler(*(callI->msg), callI->dst->id, callI->dst->cookie);
-			currentThreadDstId=0;
+			currentThreadDstId=1;
 		}
 	  	catch (const ios::failure& e)
   		{
@@ -635,11 +635,15 @@ CsessionPtr CmessageMan::loadModule(string path, string userName)
 			session->description="module default session.";
 
 			DEB("Init module " << module->name);
+
+            currentThreadDstId=module->defaultSessionId;
 			if (module->soInit(this ,module))
 			{
+                currentThreadDstId=1;
 				DEB("Init " << module->name << " complete");
 				return session;
 			}
+            currentThreadDstId=0;
 			userMan.delSession(module->defaultSessionId);
 			ERROR("Error while initalizing module");
 		}
