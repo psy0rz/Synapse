@@ -649,7 +649,7 @@ namespace pl
         }
     }
 */
-	class Citer
+	class Cpl
 	{
 		private:
 		path mRootPath;
@@ -916,7 +916,7 @@ namespace pl
             }
         };
 
-        Citer()
+        Cpl()
         {
             mNextLen=5;
             mPrevLen=5;
@@ -1128,7 +1128,7 @@ namespace pl
 
             setFileFilter(mState["fileFilter"]);
 
-			DEB("Created iterator " << id << " for path " << rootPath);
+			DEB("Created pl " << id << " for path " << rootPath);
 			
 		}
 
@@ -1220,39 +1220,39 @@ namespace pl
 
 	};
 
-	class CiterMan
+	class CplMan
 	{
 		private:
-		typedef map<int,Citer> CiterMap;
-		CiterMap mIterMap;
+		typedef map<int,Cpl> CplMap;
+		CplMap mPlMap;
 
 		public:
 
-		Citer & get(int id)
+		Cpl & get(int id)
 		{
-			if (mIterMap.find(id)==mIterMap.end())
+			if (mPlMap.find(id)==mPlMap.end())
 				throw(synapse::runtime_error("Playlist not found"));
-			return(mIterMap[id]);
+			return(mPlMap[id]);
 		}
 
 		void create(int id, string basePath)
 		{
-			if (mIterMap.find(id)!=mIterMap.end())
+			if (mPlMap.find(id)!=mPlMap.end())
 				throw(synapse::runtime_error("Playlist already exists"));
 
-			mIterMap[id].create(id, basePath);
+			mPlMap[id].create(id, basePath);
 		}
 
 		void destroy(int id)
 		{
 			get(id).destroy();
-			mIterMap.erase(id);
+			mPlMap.erase(id);
 		}
 
 
 	};
 
-	CiterMan iterMan;
+	CplMan plMan;
 
     bool shutdown;
     int defaultId=-1;
@@ -1286,21 +1286,21 @@ namespace pl
     SYNAPSE_REGISTER(module_SessionStart)
     {
         if (msg.isSet("path"))
-            iterMan.create(dst, msg["path"]);
+            plMan.create(dst, msg["path"]);
         else
-            iterMan.create(dst, config["path"]);
+            plMan.create(dst, config["path"]);
 
-        iterMan.get(dst).send(0);
+        plMan.get(dst).send(0);
     }
 
     SYNAPSE_REGISTER(module_SessionEnd)
     {
-        iterMan.destroy(dst);
+        plMan.destroy(dst);
     }
 
-	/** Create a new iterator
+	/** Create a new pl
 		\param id Traverser id
-		\path path Base path. Iterator can never 'escape' this directory.
+		\path path Base path. pl can never 'escape' this directory.
 
 		SECURITY WARNING: Its possible to traverse the whole filesystem for users that have permission to send pl_Create!
 
@@ -1319,7 +1319,7 @@ namespace pl
 	}
 
 
-	/** Delete specified iterator (actually ends session, so you cant destroy default iterator)
+	/** Delete specified pl (actually ends session, so you cant destroy default pl)
 		\param id Traverser id
 	*/
 	SYNAPSE_REGISTER(pl_Del)
@@ -1336,23 +1336,23 @@ namespace pl
     //used internally 
     SYNAPSE_REGISTER(pl_UpdateLists)
     {
-        iterMan.get(dst).updateListsAsync(true);
+        plMan.get(dst).updateListsAsync(true);
     }
 
-	/** Change selection/search criteria for files. Initalise a new iterator
+	/** Change selection/search criteria for files. Initalise a new pl
         \param s
 
 	\par Replies pl_Entry:
 	 */
 	SYNAPSE_REGISTER(pl_SetMode)
 	{
-        iterMan.get(dst).setMode(msg);
+        plMan.get(dst).setMode(msg);
 
 	}
 
     SYNAPSE_REGISTER(pl_SetFileFilter)
     {
-        iterMan.get(dst).setFileFilter(msg["fileFilter"]);
+        plMan.get(dst).setFileFilter(msg["fileFilter"]);
 
     }
 
@@ -1364,7 +1364,7 @@ namespace pl
 	*/
 	SYNAPSE_REGISTER(pl_GetStatus)
 	{
-		iterMan.get(dst).send(msg.src);
+		plMan.get(dst).send(msg.src);
 	}
 
 	/** Select next directory entry in list
@@ -1374,7 +1374,7 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_NextPath)
 	{
-		iterMan.get(dst).nextPath();
+		plMan.get(dst).nextPath();
 
 	}
 
@@ -1386,7 +1386,7 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_PreviousPath)
 	{
-		iterMan.get(dst).previousPath();
+		plMan.get(dst).previousPath();
 	}
 
 	/** Enters selected directory
@@ -1396,7 +1396,7 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_EnterPath)
 	{
-		iterMan.get(dst).enterPath();
+		plMan.get(dst).enterPath();
 	}
 
 	/** Exits directory, selecting directory on higher up the hierarchy
@@ -1406,7 +1406,7 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_ExitPath)
 	{
-		iterMan.get(dst).exitPath();
+		plMan.get(dst).exitPath();
 
 	}
 
@@ -1417,7 +1417,7 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_Next)
 	{
-		iterMan.get(dst).next();
+		plMan.get(dst).next();
 
 	}
 
@@ -1428,12 +1428,12 @@ namespace pl
 	 */
 	SYNAPSE_REGISTER(pl_Previous)
 	{
-		iterMan.get(dst).previous();
+		plMan.get(dst).previous();
 	}
 
     SYNAPSE_REGISTER(pl_GotoStart)
     {
-        iterMan.get(dst).gotoStart();
+        plMan.get(dst).gotoStart();
     }
 
 
