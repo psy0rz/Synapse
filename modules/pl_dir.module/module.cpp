@@ -138,7 +138,7 @@ namespace pl
             const regex  & dirFilter, 
             const regex & fileFilter)
 		{
-            //if nothing has changed, dont reread if its same dir
+            //if nothing has changed, dont reread if its same 
             if (mBasePath==basePath && sortField==mSortField && filetype==mFiletype && fileFilter==mFileFilter && dirFilter == mDirFilter)
                 return;
 
@@ -149,6 +149,7 @@ namespace pl
             mDirFilter=dirFilter;
             clear();
 
+            //TODO: caching
 			DEB("Reading directory " << basePath.string());
 			directory_iterator end_itr;
 			for ( directory_iterator itr( basePath );
@@ -203,7 +204,7 @@ namespace pl
                 return(true);
         }
         return(false);
-    }
+    };
 
 
     /*
@@ -213,15 +214,21 @@ namespace pl
 
     /*** traverses directories/files
 
-    -currentPath contains the currently 'selected' path.
     -rootPath is the 'highest' path we can ever reach.
+    -currentPath contains the currently 'selected' path. we start looking from here. we will also return the result in here
+    -endPath is used internally to prevent infinite loops. set it to empty when call movePath for the first time.
     -filetype determines if we're looking for a file or directory or both.
     -direction tells if you want the next or previous file or directory.
     -recurse: its allow to enter or exit directories to find the next of previous file.
-    -loop: loop around if we're at end. otherwise return empty path object.
+    -loop: when first or last path of the directory tree reached it roll around to the top or bottom. otherwise set currentPath to empty
 
-    returns resulting path after this movement.
-    when first or last path is reached it loops.
+    returns true if currentPath contains a valid result:
+        when it fully loops and still found no result, currentPath will become empty and we will return true.
+
+    returns false if we need to be called again:
+        this happens in case of a timeout (currently 100mS)
+        in this case we need to get called again with the same currentPath and endPath parameters.
+
 
     */
 
@@ -230,9 +237,243 @@ namespace pl
     enum Erecursion { RECURSE, DONT_RECURSE };
     enum Eloop      { LOOP, DONT_LOOP };
 
-    path movePath(
+    class Cscanner
+    {
+        public: 
+
+
+        //information that is determined by the user
+
+        //these rarely change after construction:
+        Edirection mDirection;
+        Erecursion mRecursion;
+        Eloop mLoop;
+        CsortedDir::Efiletype mFileType;
+
+        //these change all the time
+        string mSortField;
+        regex mDirFilter; //directory and file filter regexes
+        regex mFileFilter;
+
+
+        private:
+        path mRootPath; //root path, we never go higher than this directory.
+ 
+        //state information which is needed while scanning
+        path mCurrentSelectedPath; //path that is currently 'selected'.
+        path mCurrentEndPath; //stop when we encounter this path. this is used for loop detection.
+        path mCurrentListPath; //path we use to list files and directorys
+        bool mDone; //done scanning
+
+        public: 
+
+        Cscanner(Edirection direction, Erecursion recursion, Eloop loop, CsortedDir::Efiletype fileType)
+        {
+            mDirection=direction;
+            mRecursion=recursion;
+            mLoop=loop;
+            mFileType=fileType;
+            mDirFilter=regex();
+            mFileFilter=regex();            
+            mDone=true;
+        }
+
+        //reset scanner status. use this after you change something
+        void reset()
+        {
+            mDone=false;
+            mCurrentEndPath.clear();
+
+            if (mCurrentSelectedPath.empty())
+                mCurrentListPath=mRootPath;
+            else
+                mCurrentListPath=mCurrentSelectedPath.parent_path();
+        }
+
+        void setSelectedPath(path selectedPath)
+        {
+            mCurrentSelectedPath=selectedPath;
+            reset();
+        }
+
+        void setRootPath(path rootPath)
+        {
+            mCurrentSelectedPath.clear();
+            mRootPath=rootPath;
+            reset();
+        }
+
+
+        path getRootPath()
+        {
+            return (mRootPath);
+        }
+
+        path getSelectedPath()
+        {
+            return (mCurrentSelectedPath);
+        }
+
+        //returns true when scanning is complete. 
+        //this happens when:
+        //-we've completely scanned all directories and files in mRootpath when mLoop is set to LOOP
+        //-we've scanned until we reaced the bottom or top of mRootpath and mLoop is set to DONT_LOOP
+        bool isDone()
+        {
+            return (mDone);
+        }
+
+        //perform the actual scan, but not for more than the specified number of microseconds after starting
+        //if its finds something in time it returns a path, otherwise it returns an empty path.
+        //check isDone() to see if it needs more scanning or is done.
+        path scan(ptime startTime, int maxMillis)
+        {
+            //we're already done
+            if (mDone)
+                return (path());
+        
+            CsortedDir::iterator dirI;
+            CsortedDir sortedDir;
+
+            while(1)
+            {
+                //get sorted directory listing
+                sortedDir.read(mCurrentListPath, mSortField, mFileType, mDirFilter, mFileFilter);
+
+                //directory not empty
+                if (!sortedDir.empty())
+                {
+                    if (!mCurrentSelectedPath.empty())
+                    {
+                        //try to find the current path:
+                        for (dirI=sortedDir.begin(); dirI!=sortedDir.end(); dirI++)
+                        {
+                            if (dirI->path()==mCurrentSelectedPath)
+                                break;
+                        }
+                    }
+                    else
+                        dirI=sortedDir.end();
+
+                    //currentPath not found?
+                    if (dirI==sortedDir.end())
+                    {
+                        //start at the first or last entry depending on direction
+                        if (mDirection==NEXT)
+                            dirI=sortedDir.begin();
+                        else
+                        {
+                            dirI=sortedDir.end();
+                            dirI--;
+                        }
+                    }
+                    else
+                    {
+                        //current path is found.
+
+                        //make a step in the right direction
+                        if (mDirection==NEXT)
+                        {
+                            dirI++;
+                        }
+                        //PREVIOUS:
+                        else
+                        {
+                            if (dirI==sortedDir.begin())
+                                dirI=sortedDir.end(); //end means: no result
+                            else
+                                dirI--;
+                        }
+                    }
+
+                    //top or bottom was reached, or no result for some other reason
+                    if (dirI==sortedDir.end())
+                    {
+                        //can we one dir higher?
+                        if (mRecursion==RECURSE && mCurrentListPath!=mRootPath)
+                        {
+                            //yes, so go one dir higher and continue the loop
+                            mCurrentSelectedPath=mCurrentListPath;
+                            mCurrentListPath=mCurrentListPath.parent_path();
+                        }
+                        else
+                        {
+                            //no, cant go higher.
+                            //may we loop?
+                            if (mLoop==LOOP)
+                            {  
+                                mCurrentSelectedPath.clear();
+                            }
+                            else
+                            {
+                                DEB("end reached, not looping, done");
+                                mDone=true;
+                                return(path());
+                            }
+                        }
+                    }
+                    //we found something
+                    else
+                    {
+                        //should we recurse?
+                        if (mRecursion==RECURSE && is_directory(dirI->status()))
+                        {
+                            //enter it
+                            mCurrentSelectedPath.clear();
+                            mCurrentListPath=(dirI->path());
+                        }
+                        else
+                        {
+                            //we got an actual result for the user
+                            mCurrentSelectedPath=dirI->path();
+                            DEB("found, returning " << mCurrentSelectedPath);
+                            return (mCurrentSelectedPath);
+                        }
+                    }
+                }
+                //directory empty
+                else
+                {
+                    //dir is empty, our last chance is to go one dir higher, otherwise we will exit the loop:
+                    if (mRecursion==RECURSE && mCurrentListPath!=mRootPath)
+                    {
+                        //go one dir higher and continue the loop
+                        mCurrentSelectedPath=mCurrentListPath;
+
+                        //infinite loop prevention, prevent leaving this directory for the second time. (first time is ok)
+/*                        if (endPath.empty())
+                            endPath=listPath;
+                        else if (endPath==listPath)
+                        {
+                            DEB("came full circle without results, returing empty result");
+                            currentPath.clear();
+                            return(true);
+                        }*/
+
+                        mCurrentListPath=mCurrentListPath.parent_path();
+                    }
+                    else
+                    {
+                        DEB("empty directory and not recursing, done");
+                        mDone=true;
+                        return(path());
+                    }
+                }
+
+                if ((microsec_clock::local_time()-startTime).total_milliseconds()>maxMillis)
+                {
+                    //timeout, return empty result. we will continue on the next call. 
+                    return(path());
+                }
+            }
+        }
+    };
+
+/*
+    bool movePath(
         const path & rootPath, 
-        path currentPath, 
+        path & currentPath, 
+        path & endPath,
         string sortField, 
         Edirection direction, 
         Erecursion recursion, 
@@ -242,8 +483,11 @@ namespace pl
         const regex & fileFilter=regex()
     )
     {
+        ptime started=microsec_clock::local_time();
+
         DEB("movePath rootPath=" << rootPath.string() <<
              " currentPath=" << currentPath.string() <<
+             " endPath=" << endPath.string() <<
              " sortField=" << sortField <<
              " direction=" << direction <<
              " recursion=" << recursion << 
@@ -253,7 +497,7 @@ namespace pl
         if (currentPath.empty())
         {
             DEB("currentpath empty, returning empty as well");
-            return (path());
+            return (true);
         }
 
 
@@ -263,8 +507,6 @@ namespace pl
             listPath=currentPath;
         else
             listPath=currentPath.parent_path();
-
-        path startPath;
         
         CsortedDir::iterator dirI;
 
@@ -277,12 +519,12 @@ namespace pl
             sortedDir.read(listPath, sortField, filetype, dirFilter, fileFilter);
             DEB("start of loop");
             DEB("list path :     "  << listPath);
-            DEB("start path:     " << startPath);
+            DEB("end path:     " << endPath);
             DEB("current path:   " << currentPath);
 
+            //directory not empty
             if (!sortedDir.empty())
             {
-                
                 if (!currentPath.empty())
                 {
                     //try to find the current path:
@@ -337,37 +579,40 @@ namespace pl
                     else
                     {
                         //no, cant go higher.
-                        //clear the current path, so it just gets the first or last entry, when we're in loop mode
+                        //may we loop?
                         if (loop==LOOP)
-                        {
-                            currentPath.clear();
+                        {  
+                            //yes
+                            //currentPath.clear();
+                            ;
                         }
                         else
                         {
                             DEB("end reached, not looping, so returning empty path");
-                            return(path());
+                            currentPath.clear();
+                            return(true);
                         }
-
                     }
                 }
                 //we found something
                 else
                 {
+                    currentPath=(dirI->path());
                     //should we recurse?
                     if (recursion==RECURSE && is_directory(dirI->status()))
                     {
                         //enter it
                         listPath=(dirI->path());
-                        currentPath.clear();
                     }
                     else
                     {
                         //we found it
-                        DEB("found, returning " << (dirI->path()));
-                        return ((dirI->path()));
+                        DEB("found, returning " << currentPath);
+                        return (true);
                     }
                 }
             }
+            //directory empty
             else
             {
                 //list is empty, our last chance is to go one dir higher, otherwise we will exit the loop:
@@ -377,12 +622,13 @@ namespace pl
                     currentPath=listPath;
 
                     //infinite loop prevention, prevent leaving this directory for the second time. (first time is ok)
-                    if (startPath.empty())
-                        startPath=listPath;
-                    else if (startPath==listPath)
+                    if (endPath.empty())
+                        endPath=listPath;
+                    else if (endPath==listPath)
                     {
                         DEB("came full circle without results, returing empty result");
-                        return(path());
+                        currentPath.clear();
+                        return(true);
                     }
 
                     listPath=listPath.parent_path();
@@ -390,12 +636,19 @@ namespace pl
                 else
                 {
                     DEB("empty directory, returning empty result");
-                    return(path());
+                    currentPath.clear();
+                    return(true);
                 }
+            }
+
+            if ((microsec_clock::local_time()-started).total_milliseconds()>100)
+            {
+                //timeout, return false. we will continue on the next call. (if we're called with the same currentPath)
+                return(false);
             }
         }
     }
-
+*/
 	class Citer
 	{
 		private:
@@ -404,9 +657,16 @@ namespace pl
 		path mCurrentFile;
 
         list<path> mPrevFiles;
+        Cscanner mPrevFilesScanner(Edirection PREVIOUS, Erecursion RECURSE, Eloop LOOP, CsortedDir::Efiletype ALL);
+
         list<path> mNextFiles;
+        Cscanner mNextFilesScanner(Edirection NEXT, Erecursion RECURSE, Eloop LOOP, CsortedDir::Efiletype ALL);
+
         list<path> mPrevPaths;
+        Cscanner mPrevPathsScanner(Edirection PREVIOUS, Erecursion RECURSE, Eloop DONT_LOOP, CsortedDir::Efiletype DIR);
+
         list<path> mNextPaths;
+        Cscanner mNextPathsScanner(Edirection NEXT, Erecursion RECURSE, Eloop DONT_LOOP, CsortedDir::Efiletype DIR);
 
 		int mId;
 
@@ -469,7 +729,7 @@ namespace pl
                         mNextFiles.push_back(p.string());
 
                         if ((microsec_clock::local_time()-started).total_milliseconds()>100)
-                        {
+                            {
                             needs_more=true;
                             break;
                         }
@@ -654,7 +914,7 @@ namespace pl
                 //we're done, send final complete status update
                 send(0);
             }
-        }
+        };
 
         Citer()
         {
@@ -845,9 +1105,10 @@ namespace pl
         //this is combined with the filter defined in config["filter"]
         void setFileFilter(string f)
         {
-            //FIXME: now we just assume the default filter only filters extensions
+            //FIXME: now we just assume the default filter has a certain format
             mFileFilter.assign(f+config["filter"].str(), regex::icase);
             mState["fileFilter"]=f;
+            reloadFiles();
         }
 
 		void create(int id, string rootPath)
@@ -859,14 +1120,13 @@ namespace pl
             {
                 mState.load(getStateFile());
             }
-
-            setFileFilter(mState["fileFilter"]);
             
             if (isSubdir(mRootPath, mState["currentPath"].str()))
                 setCurrentPath(mState["currentPath"].str());
             else
                 setCurrentPath(mRootPath);
 
+            setFileFilter(mState["fileFilter"]);
 
 			DEB("Created iterator " << id << " for path " << rootPath);
 			
@@ -943,6 +1203,7 @@ namespace pl
   
             out["randomLength"]=mState["randomLength"];
             out["sortField"]=mState["sortField"];
+            out["fileFilter"]=mState["fileFilter"];
 
             //this means we're still scanning
             out["updateListsAsyncFlying"]=mUpdateListsAsyncFlying;
@@ -1088,6 +1349,13 @@ namespace pl
         iterMan.get(dst).setMode(msg);
 
 	}
+
+    SYNAPSE_REGISTER(pl_SetFileFilter)
+    {
+        iterMan.get(dst).setFileFilter(msg["fileFilter"]);
+
+    }
+
 
 	/** Get current directory and file
 		\param id Traverser id

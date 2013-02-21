@@ -110,6 +110,12 @@
             }
         });
 
+        $('.pl_SetFileFilter').on('keyup',function()
+        {
+            send(0, "pl_SetFileFilter", {
+                "fileFilter": $(this).val()
+            });
+        });
     });
 
 
@@ -510,6 +516,8 @@
             title="This button will bring you to the first item in the list. Very usefull if you sort By date. (the list actually 'loops': the selected item is the first one, the item above it is the last one."
 
         >Goto first</button>
+
+        <input class="pl_SetFileFilter" type="text" />
 
     </div>
 
