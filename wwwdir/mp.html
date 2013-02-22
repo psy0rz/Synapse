@@ -126,18 +126,7 @@
         else
             $(".show_when_busy").css('visibility', 'hidden');
 
-
-        var strippedParentPath=msg.parentPath.substr(msg.rootPath.length);
-        if (strippedParentPath.length)
-            $('.entry[key="parentPath"]').text(strippedParentPath);
-        else
-            $('.entry[key="parentPath"]').html("&nbsp;");
-
         $('.entry[key="rootPath"]').text(msg.rootPath);
-        $('.entry[key="currentPath"]').text(msg.currentPath.substr(msg.parentPath.length));
-
-        if ('currentFile' in msg)
-            $('.entry[key="currentFile"]').text(msg.currentFile.substr(msg.currentPath.length));
 
 
         if (msg["randomLength"]!=0)
@@ -156,71 +145,87 @@
         $(".pl_mode").buttonset("refresh");
 
 
-        //some dom magic going on here...for more of it and a better way to do it look at the kmur2 project
-        function listClone(src, list, strip, reverse)
+        if ('currentPath' in msg)
         {
-            var color=255;
-            var colorStep=(255-70)/(list.length-1);
-            for (nr=0; nr<list.length; nr++)
-            {
-                var element=$(src).clone();
-                
-                if (reverse)
-                    src.after(element);
-                else
-                    src.before(element);
 
-                element.addClass("cloned");
-                element.css('color', 'rgb('+0+','+color+','+0+')');
-                color=Math.round(color-colorStep);
-                $(".entry_text", element).text(list[nr].substr(strip));
+            var strippedParentPath=msg.parentPath.substr(msg.rootPath.length);
+            if (strippedParentPath.length)
+                $('.entry[key="parentPath"]').text(strippedParentPath);
+            else
+                $('.entry[key="parentPath"]').html("&nbsp;");
+
+
+            $('.entry[key="currentPath"]').text(msg.currentPath.substr(msg.parentPath.length));
+
+            if ('currentFile' in msg)
+                $('.entry[key="currentFile"]').text(msg.currentFile.substr(msg.currentPath.length));
+
+
+            //some dom magic going on here...for more of it and a better way to do it look at the kmur2 project
+            function listClone(src, list, strip, reverse)
+            {
+                var color=255;
+                var colorStep=(255-70)/(list.length-1);
+                for (nr=0; nr<list.length; nr++)
+                {
+                    var element=$(src).clone();
+                    
+                    if (reverse)
+                        src.after(element);
+                    else
+                        src.before(element);
+
+                    element.addClass("cloned");
+                    element.css('color', 'rgb('+0+','+color+','+0+')');
+                    color=Math.round(color-colorStep);
+                    $(".entry_text", element).text(list[nr].substr(strip));
+                }
+
+                //fill the rest to the minimum length with whitespace
+                for (nr=0; nr<(5-list.length); nr++)
+                {
+                    var element=$(src).clone();
+                    
+                    if (reverse)
+                        src.after(element);
+                    else
+                        src.before(element);
+
+                    element.addClass("cloned");
+                    $(".entry_text", element).html("&nbsp;");
+                }
+
             }
 
-            //fill the rest to the minimum length with whitespace
-            for (nr=0; nr<(5-list.length); nr++)
-            {
-                var element=$(src).clone();
+            //delete old clones
+            $(".cloned").remove();
+
+
+            listClone(
+                    $('.entry_clone[key="nextFiles"]'), 
+                    msg.nextFiles, 
+                    msg.currentPath.length,
+                    false);
                 
-                if (reverse)
-                    src.after(element);
-                else
-                    src.before(element);
+            listClone(
+                    $('.entry_clone[key="prevFiles"]'), 
+                    msg.prevFiles, 
+                    msg.currentPath.length,
+                    true);
 
-                element.addClass("cloned");
-                $(".entry_text", element).html("&nbsp;");
-            }
 
+            listClone(
+                    $('.entry_clone[key="nextPaths"]'), 
+                    msg.nextPaths, 
+                    msg.parentPath.length,
+                    false);
+
+            listClone(
+                    $('.entry_clone[key="prevPaths"]'), 
+                    msg.prevPaths, 
+                    msg.parentPath.length,
+                    true);
         }
-
-        //delete old clones
-        $(".cloned").remove();
-
-
-        listClone(
-                $('.entry_clone[key="nextFiles"]'), 
-                msg.nextFiles, 
-                msg.currentPath.length,
-                false);
-            
-        listClone(
-                $('.entry_clone[key="prevFiles"]'), 
-                msg.prevFiles, 
-                msg.currentPath.length,
-                true);
-
-
-        listClone(
-                $('.entry_clone[key="nextPaths"]'), 
-                msg.nextPaths, 
-                msg.parentPath.length,
-                false);
-
-        listClone(
-                $('.entry_clone[key="prevPaths"]'), 
-                msg.prevPaths, 
-                msg.parentPath.length,
-                true);
-
 
         //filter crap from a filename so it can be googled
         function filter_crap(s)

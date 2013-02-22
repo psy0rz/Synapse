@@ -106,10 +106,35 @@ namespace pl
 		}
 	};
 
+
+    static map<path, list<Cdirectory_entry> > gDirCache;
+
+    //reads one directory and apply appropriate filtering and sorting
 	class CsortedDir: public list<Cdirectory_entry>
 	{
 		private:
 		string mSortField;
+
+
+        //read a directory without filtering and cache the results
+        //FIXME: optimize and implement cleanup/refresh
+
+        list<Cdirectory_entry> & readCached(path p)
+        {
+            if (gDirCache.find(p) == gDirCache.end())
+            {
+                DEB("Reading directory " << p.string());
+                directory_iterator end_itr;
+                for ( directory_iterator itr( p );
+                    itr != end_itr;
+                    ++itr )
+                {
+                    gDirCache[p].push_back(*itr);
+                }
+            }
+            return gDirCache[p];
+        }
+
 
 		public:
         path mBasePath;
@@ -130,7 +155,6 @@ namespace pl
 			return (first.getDate() > second.getDate());
 		}
 
-
 		void read(
             const path & basePath, 
             const string & sortField, 
@@ -149,11 +173,10 @@ namespace pl
             mDirFilter=dirFilter;
             clear();
 
-            //TODO: caching
-			DEB("Reading directory " << basePath.string());
-			directory_iterator end_itr;
-			for ( directory_iterator itr( basePath );
-				itr != end_itr;
+            list<Cdirectory_entry> dir=readCached(basePath);
+
+			for ( list<Cdirectory_entry>::iterator itr=dir.begin();
+				itr != dir.end();
 				++itr )
 			{
                 //dir
@@ -237,19 +260,13 @@ namespace pl
     enum Erecursion { RECURSE, DONT_RECURSE };
     enum Eloop      { LOOP, DONT_LOOP };
 
+    //recursive directory scanner, using non recursive functions. applies appropriate filtering
     class Cscanner
     {
         public: 
 
 
         //information that is determined by the user
-
-        //these rarely change after construction:
-        Edirection mDirection;
-        Erecursion mRecursion;
-        Eloop mLoop;
-        CsortedDir::Efiletype mFileType;
-
         //these change all the time
         string mSortField;
         regex mDirFilter; //directory and file filter regexes
@@ -258,12 +275,21 @@ namespace pl
 
         private:
         path mRootPath; //root path, we never go higher than this directory.
+
+        //set at construction by the user, to determine the type of scanner 
+        Edirection mDirection;
+        Erecursion mRecursion;
+        Eloop mLoop;
+        CsortedDir::Efiletype mFileType;
  
         //state information which is needed while scanning
         path mCurrentSelectedPath; //path that is currently 'selected'.
         path mCurrentEndPath; //stop when we encounter this path. this is used for loop detection.
         path mCurrentListPath; //path we use to list files and directorys
         bool mDone; //done scanning
+
+        CsortedDir mSortedDir;
+
 
         public: 
 
@@ -287,7 +313,14 @@ namespace pl
             if (mCurrentSelectedPath.empty())
                 mCurrentListPath=mRootPath;
             else
-                mCurrentListPath=mCurrentSelectedPath.parent_path();
+            {
+                //dont escape rootpath
+                if (isSubdir(mRootPath, mCurrentSelectedPath.parent_path()))
+                    mCurrentListPath=mCurrentSelectedPath.parent_path();
+                else
+                    mCurrentListPath=mRootPath;
+            }
+                
         }
 
         void setSelectedPath(path selectedPath)
@@ -314,56 +347,61 @@ namespace pl
             return (mCurrentSelectedPath);
         }
 
-        //returns true when scanning is complete. 
-        //this happens when:
+        //returns true when scan() needs te be called mode
+        //this happens until:
         //-we've completely scanned all directories and files in mRootpath when mLoop is set to LOOP
         //-we've scanned until we reaced the bottom or top of mRootpath and mLoop is set to DONT_LOOP
-        bool isDone()
+        bool needsMore() 
         {
-            return (mDone);
+            return (!mDone);
         }
 
-        //perform the actual scan, but not for more than the specified number of microseconds after starting
-        //if its finds something in time it returns a path, otherwise it returns an empty path.
-        //check isDone() to see if it needs more scanning or is done.
-        path scan(ptime startTime, int maxMillis)
+        //perform the actual scan, but not for more than the specified number of microseconds after starting.
+        //if its finds something in time it returns true and getSelectedPath() will then return a path according to the search parameters
+        //if it doesnt find anything, it will return false. when you call it the nexttime, it will continue scanning where it left off.
+        bool scan(ptime startTime=microsec_clock::local_time(), int maxMillis=0)
         {
             //we're already done
             if (mDone)
-                return (path());
+                return (false);
         
             CsortedDir::iterator dirI;
-            CsortedDir sortedDir;
 
             while(1)
             {
+                if (maxMillis && (microsec_clock::local_time()-startTime).total_milliseconds()>maxMillis)
+                {
+                    //timeout, we will continue on the next call. 
+                    return(false);
+                }
+
                 //get sorted directory listing
-                sortedDir.read(mCurrentListPath, mSortField, mFileType, mDirFilter, mFileFilter);
+                mSortedDir.read(mCurrentListPath, mSortField, mFileType, mDirFilter, mFileFilter);
 
                 //directory not empty
-                if (!sortedDir.empty())
+                if (!mSortedDir.empty())
                 {
                     if (!mCurrentSelectedPath.empty())
                     {
                         //try to find the current path:
-                        for (dirI=sortedDir.begin(); dirI!=sortedDir.end(); dirI++)
+                        for (dirI=mSortedDir.begin(); dirI!=mSortedDir.end(); dirI++)
                         {
                             if (dirI->path()==mCurrentSelectedPath)
                                 break;
                         }
                     }
                     else
-                        dirI=sortedDir.end();
+                        dirI=mSortedDir.end();
 
                     //currentPath not found?
-                    if (dirI==sortedDir.end())
+                    if (dirI==mSortedDir.end())
                     {
                         //start at the first or last entry depending on direction
                         if (mDirection==NEXT)
-                            dirI=sortedDir.begin();
+                            dirI=mSortedDir.begin();
                         else
                         {
-                            dirI=sortedDir.end();
+                            dirI=mSortedDir.end();
                             dirI--;
                         }
                     }
@@ -379,15 +417,15 @@ namespace pl
                         //PREVIOUS:
                         else
                         {
-                            if (dirI==sortedDir.begin())
-                                dirI=sortedDir.end(); //end means: no result
+                            if (dirI==mSortedDir.begin())
+                                dirI=mSortedDir.end(); //end means: no result
                             else
                                 dirI--;
                         }
                     }
 
                     //top or bottom was reached, or no result for some other reason
-                    if (dirI==sortedDir.end())
+                    if (dirI==mSortedDir.end())
                     {
                         //can we one dir higher?
                         if (mRecursion==RECURSE && mCurrentListPath!=mRootPath)
@@ -408,7 +446,7 @@ namespace pl
                             {
                                 DEB("end reached, not looping, done");
                                 mDone=true;
-                                return(path());
+                                return(false);
                             }
                         }
                     }
@@ -427,7 +465,7 @@ namespace pl
                             //we got an actual result for the user
                             mCurrentSelectedPath=dirI->path();
                             DEB("found, returning " << mCurrentSelectedPath);
-                            return (mCurrentSelectedPath);
+                            return (true);
                         }
                     }
                 }
@@ -456,15 +494,10 @@ namespace pl
                     {
                         DEB("empty directory and not recursing, done");
                         mDone=true;
-                        return(path());
+                        return(false);
                     }
                 }
 
-                if ((microsec_clock::local_time()-startTime).total_milliseconds()>maxMillis)
-                {
-                    //timeout, return empty result. we will continue on the next call. 
-                    return(path());
-                }
             }
         }
     };
@@ -649,6 +682,9 @@ namespace pl
         }
     }
 */
+    
+
+    //play list 
 	class Cpl
 	{
 		private:
@@ -657,16 +693,16 @@ namespace pl
 		path mCurrentFile;
 
         list<path> mPrevFiles;
-        Cscanner mPrevFilesScanner(Edirection PREVIOUS, Erecursion RECURSE, Eloop LOOP, CsortedDir::Efiletype ALL);
+        Cscanner mPrevFilesScanner;
 
         list<path> mNextFiles;
-        Cscanner mNextFilesScanner(Edirection NEXT, Erecursion RECURSE, Eloop LOOP, CsortedDir::Efiletype ALL);
+        Cscanner mNextFilesScanner;
 
         list<path> mPrevPaths;
-        Cscanner mPrevPathsScanner(Edirection PREVIOUS, Erecursion RECURSE, Eloop DONT_LOOP, CsortedDir::Efiletype DIR);
+        Cscanner mPrevPathsScanner;
 
         list<path> mNextPaths;
-        Cscanner mNextPathsScanner(Edirection NEXT, Erecursion RECURSE, Eloop DONT_LOOP, CsortedDir::Efiletype DIR);
+        Cscanner mNextPathsScanner;
 
 		int mId;
 
@@ -693,74 +729,70 @@ namespace pl
         synapse::Cconfig mState;
 
 
-        //gets reference to state object for specified path
-        Cvar & getPathState(path p)
+        Cpl() : 
+            mPrevFilesScanner(PREVIOUS, RECURSE, LOOP, CsortedDir::ALL),
+            mNextFilesScanner(NEXT,     RECURSE, LOOP, CsortedDir::ALL),
+            mPrevPathsScanner(PREVIOUS, DONT_RECURSE, DONT_LOOP, CsortedDir::DIR),
+            mNextPathsScanner(NEXT,     DONT_RECURSE, DONT_LOOP, CsortedDir::DIR)
         {
-            //we could hash the path as well, if performance/size gets an issue
-            return(mState["paths"][p.string()]);
+            mNextLen=10;
+            mPrevLen=10;
+
+            mState["randomLength"]=0;
+            mState["sortField"]="filename";
+            mUpdateListsAsyncFlying=false;
+
+            //paths always sorted by file, for now
+            mNextPathsScanner.mSortField="filename";
+            mPrevPathsScanner.mSortField="filename";
+
         }
+
 	
         //make sure there are enough entries in the file and path lists
         //when it returns true, it should be called again. (used for scanning in small increments to improve response time)
         bool updateLists()
         {
-            bool needs_more=false;
             ptime started=microsec_clock::local_time();
 
-                
             //normal mode:
             if ((int)mState["randomLength"]==0)
             {
                 //next file list:
-                //make sure its not too long
-                while (mNextFiles.size()>mNextLen)
-                    mNextFiles.pop_back();
+                // while (mNextFiles.size()>mNextLen)
+                //     mNextFiles.pop_back();
 
-                //fill the back with newer entries until its long enough
+                while(mNextFiles.size()<mNextLen)
                 {
-                    path p=mCurrentFile;
-                    if (!mNextFiles.empty())
-                        p=mNextFiles.back();
-                    while(mNextFiles.size()<mNextLen)
+                    if (mNextFilesScanner.scan(started, 100))
                     {
-                        p=movePath(mCurrentPath, p, mState["sortField"].str(), NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
-                        if (p.empty())
-                            break;
-                        mNextFiles.push_back(p.string());
-
-                        if ((microsec_clock::local_time()-started).total_milliseconds()>100)
-                            {
-                            needs_more=true;
-                            break;
-                        }
-
+                        //if we dont have a currentFile yet, then use the first one we encounter.
+                        if (mCurrentFile.empty())
+                            mCurrentFile=mNextFilesScanner.getSelectedPath();
+                        else
+                            mNextFiles.push_back(mNextFilesScanner.getSelectedPath());
+                    }
+                    else
+                    {
+                        if (mNextFilesScanner.needsMore())
+                            return(true); //timeout
+                        else
+                            break; //scanner is done
                     }
                 }
-
+                 
                 //prev file list:
-                //make sure its not too long
-                while (mPrevFiles.size()>mPrevLen)
-                    mPrevFiles.pop_back();
+                // while (mPrevFiles.size()>mPrevLen)
+                //     mPrevFiles.pop_back();
 
-                //fill the back older entries until its long enough
+                while(mPrevFiles.size()<mPrevLen)
                 {
-                    path p=mCurrentFile;
-                    if (!mPrevFiles.empty())
-                        p=mPrevFiles.back();
-
-                    while(mPrevFiles.size()<mPrevLen)
-                    {
-                        p=movePath(mCurrentPath, p, mState["sortField"], PREVIOUS, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
-                        if (p.empty())
-                            break;
-                        mPrevFiles.push_back(p.string());
-
-                        if ((microsec_clock::local_time()-started).total_milliseconds()>100)
-                        {
-                            needs_more=true;
-                            break;
-                        }
-                    }
+                    if (mPrevFilesScanner.scan(started, 100))
+                        mPrevFiles.push_back(mPrevFilesScanner.getSelectedPath());
+                    else if (mPrevFilesScanner.needsMore())
+                        return(true); //timeout
+                    else 
+                        break; //scanner is done
                 }
 
             }
@@ -771,41 +803,17 @@ namespace pl
                 while (mPrevFiles.size()>mState["randomLength"])
                     mPrevFiles.pop_back();
 
-
                 //time to regenerate the random list?
+                //note: we restart the scanner after its empty, so we never get the same file more than once in the random list. (because thats so annoying ;)
                 if (mNextFiles.empty())
-                {
-                    mLastRandomFile=mCurrentFile;
+                    mNextFilesScanner.reset();
 
-                    //make sure we dont loop, so remember where we started scanning:
-                    mStartRandomFile=mLastRandomFile;
-                }
-
-                //lastrandom file gets empty as soon as we've looped
-                if (!mLastRandomFile.empty())
+                //insert new entries randomly
+                while(mNextFiles.size()<mState["randomLength"])
                 {
-                    DEB("filling random playlist");
-                    
-                    //insert new entries randomly
-                    while(mNextFiles.size()<mState["randomLength"])
+                    if (mNextFilesScanner.scan(started, 100))
                     {
-                        mLastRandomFile=movePath(mCurrentPath, mLastRandomFile, mState["sortField"], NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
-
-                        if (mLastRandomFile.empty())
-                        {
-                            DEB("empty result");
-                            break;
-                        }
-
-                        //we seem to have scanned all files
-                        if (mLastRandomFile==mStartRandomFile)
-                        {
-                            DEB("scanned all files, stopping");
-                            mLastRandomFile.clear();
-                            break;
-                        }
-
-                        //insert at random position:                        
+                        //insert at random position:
                         list<path>::iterator nextFileI;
                         nextFileI=mNextFiles.begin();
                         boost::random::uniform_int_distribution<> dist(0, mNextFiles.size());
@@ -815,64 +823,45 @@ namespace pl
                             rndCount--;
                             nextFileI++;
                         }
-                        mNextFiles.insert(nextFileI, mLastRandomFile);
+                        mNextFiles.insert(nextFileI, mNextFilesScanner.getSelectedPath());
 
-                        //we've taken our time, so send an event to continue next time:
-                        if ((microsec_clock::local_time()-started).total_milliseconds()>100)
-                        {
-                            needs_more=true;
-                            break;
-                        }
                     }
-
+                    else if (mNextFilesScanner.needsMore())
+                        return(true); //timeout
+                    else 
+                        break; //scanner is done
                 }
-                else
-                {
-                    DEB("no more files left to fill random queue.");
-                }
-                DEB("random list size " <<  mNextFiles.size() );
             }
 
             //next path list:
-            //make sure its not too long
             while (mNextPaths.size()>mNextLen)
                 mNextPaths.pop_back();
 
-            //fill the back with newer entries until its long enough
+            while(mNextPaths.size()<mNextLen)
             {
-                path p=mCurrentPath;
-                if (!mNextPaths.empty())
-                    p=mNextPaths.back();
-                while(mNextPaths.size()<mNextLen)
-                {
-                    p=movePath(mRootPath, p, "filename", NEXT, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP, mDirFilter);
-                    if (p.empty())
-                        break;
-
-                    mNextPaths.push_back(p.string());
-                }
+                if (mNextPathsScanner.scan(started, 100))
+                    mNextPaths.push_back(mNextPathsScanner.getSelectedPath());
+                else if (mNextPathsScanner.needsMore())
+                    return(true); //timeout
+                else
+                    break; //scanner is done
             }
-
+             
             //prev path list:
-            //make sure its not too long
             while (mPrevPaths.size()>mPrevLen)
                 mPrevPaths.pop_back();
 
-            //fill the back with newer entries until its long enough
+            while(mPrevPaths.size()<mPrevLen)
             {
-                path p=mCurrentPath;
-                if (!mPrevPaths.empty())
-                    p=mPrevPaths.back();
-                while(mPrevPaths.size()<mPrevLen)
-                {
-					p=movePath(mRootPath, p, "filename", PREVIOUS, DONT_RECURSE, CsortedDir::DIR, DONT_LOOP, mDirFilter);
-                    if (p.empty())
-                        break;
-                    mPrevPaths.push_back(p.string());
-                }
+                if (mPrevPathsScanner.scan(started, 100))
+                    mPrevPaths.push_back(mPrevPathsScanner.getSelectedPath());   
+                else if (mPrevPathsScanner.needsMore())
+                    return(true);
+                else
+                    break;
             }
 
-            return(needs_more);
+            return(false);
         }
 
 
@@ -882,48 +871,46 @@ namespace pl
 
         void updateListsAsync(bool returned=false)
         {
+            bool wantMore=false;
 
             //this means we we're called by the actual event
             if (returned)
             {
                 mUpdateListsAsyncFlying=false;
-            }
 
-            //always do at least one update when its called
-            if (updateLists())
-            {
-                //more updates are needed, so send an updatelists event, if there's not already one flying. (we dont want the to queue up)
-                if (!mUpdateListsAsyncFlying)
-                {
-                    mUpdateListsAsyncFlying=true;
-                    Cmsg out;
-                    out.event="pl_UpdateLists";
-                    out.dst=mId;
-                    out.send();
-                }
-
-                //send the results we have so far to the user immeadialty, and after that every second
-                if (!returned || ((microsec_clock::local_time()-mLastSend).total_milliseconds()>1000))
-                {
-                    mLastSend=microsec_clock::local_time();
-                    send(0);
-                }
+                wantMore=updateLists();
             }
             else
             {
-                //we're done, send final complete status update
+                wantMore=true;
+            }
+            //more updates are needed, so send an updatelists event, if there's not already one flying. (we dont want the to queue up)
+            if (wantMore && !mUpdateListsAsyncFlying)
+            {
+                mUpdateListsAsyncFlying=true;
+                Cmsg out;
+                out.event="pl_UpdateLists";
+                out.dst=mId;
+                out.send();
+            }
+
+            
+            if (
+                !returned || //send the initial state instantly after the first call
+                ((microsec_clock::local_time()-mLastSend).total_milliseconds()>1000) || //send at least one update every second
+                !wantMore //always send a final state when done
+            )
+            {
+                mLastSend=microsec_clock::local_time();
                 send(0);
             }
         };
 
-        Cpl()
+        //gets reference to state object for specified path
+        Cvar & getPathState(path p)
         {
-            mNextLen=5;
-            mPrevLen=5;
-
-            mState["randomLength"]=0;
-            mState["sortField"]="filename";
-            mUpdateListsAsyncFlying=false;
+            //we could hash the path as well, if performance/size gets an issue
+            return(mState["paths"][p.string()]);
         }
 
         //name of the config file that stores the state
@@ -939,7 +926,29 @@ namespace pl
 		{
 			//clear lists
 			mNextFiles.clear();
-			mPrevFiles.clear();
+            mPrevFiles.clear();
+
+            mNextFilesScanner.mSortField=mState["sortField"].str();
+            mPrevFilesScanner.mSortField=mState["sortField"].str();
+
+            mNextFilesScanner.setRootPath(mCurrentPath);
+            mPrevFilesScanner.setRootPath(mCurrentPath);
+
+            //currentfile is not a subdir of mCurrentPath?
+            if (!isSubdir(mCurrentPath, mCurrentFile))
+            {
+                //did we store the previous file that was selected in this path?
+                if (getPathState(mCurrentPath)["currentFile"]!="")
+                {
+                    setCurrentFile(getPathState(mCurrentPath)["currentFile"].str());
+                }
+                else
+                    setCurrentFile(path()); //let the scanners figure it out
+            }
+
+            //its allowed to setSelectedPath to an empty path:
+            mNextFilesScanner.setSelectedPath(mCurrentFile);
+            mPrevFilesScanner.setSelectedPath(mCurrentFile);
 
             //fill the lists
             updateListsAsync();
@@ -950,7 +959,23 @@ namespace pl
 		void reloadPaths()
 		{
 			mNextPaths.clear();
-			mPrevPaths.clear();
+            mPrevPaths.clear();
+
+            //this is the usual case: there is some path selected, so we set the rootPath of the directory-scanners to the parent:
+            if (isSubdir(mRootPath, mCurrentPath.parent_path()))
+            {
+                mNextPathsScanner.setRootPath(mCurrentPath.parent_path());
+                mPrevPathsScanner.setRootPath(mCurrentPath.parent_path());
+            }
+            //user probably has selected the highest path, so we cant use the parent in this case. (since we never may escape mRootPath)
+            else
+            {
+                mNextPathsScanner.setRootPath(mRootPath);
+                mPrevPathsScanner.setRootPath(mRootPath);
+            }
+
+            mNextPathsScanner.setSelectedPath(mCurrentPath);
+            mPrevPathsScanner.setSelectedPath(mCurrentPath);
 			reloadFiles();
 		}
 
@@ -966,10 +991,10 @@ namespace pl
                 mState["sortField"]=params["sortField"].str();
             }
 
-            reloadPaths();
+            reloadFiles();
         }
 
-        //use this to change mCurrentFile
+        //use this to change mCurrentFile 
         void setCurrentFile(path p)
         {
             if (!p.empty() && !isSubdir(mRootPath,p))
@@ -977,9 +1002,6 @@ namespace pl
 
             mCurrentFile=p;
             getPathState(mCurrentPath)["currentFile"]=p.string();
-
-            updateListsAsync();
-
 
         }
 
@@ -991,21 +1013,7 @@ namespace pl
 
             mCurrentPath=p;
             mState["currentPath"]=p.string();
-
-            //current file doesnt belong to current path?
-            if (!isSubdir(mCurrentPath, mCurrentFile))
-            {
-                //did we store the previous file that was selected in this path?
-                if (getPathState(mCurrentPath)["currentFile"]!="")
-                    mCurrentFile=getPathState(mCurrentPath)["currentFile"].str();
-                else
-                {
-                    //find the first valid file
-                    mCurrentFile=movePath(mCurrentPath, mCurrentPath, mState["sortField"], NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter);
-                }
-            }
             
-            reloadPaths();
 
         }
 
@@ -1016,9 +1024,9 @@ namespace pl
                 return;
 
             mPrevFiles.push_front(mCurrentFile);
-            path p=mNextFiles.front();
+            setCurrentFile(mNextFiles.front());
             mNextFiles.pop_front();
-            setCurrentFile(p);
+            updateListsAsync(); //make sure the lists stay filled
 		}
 
 		//prev file
@@ -1028,15 +1036,15 @@ namespace pl
                 return;
 
             mNextFiles.push_front(mCurrentFile);
-            path p=mPrevFiles.front();
+            setCurrentFile(mPrevFiles.front());
             mPrevFiles.pop_front();
-            setCurrentFile(p);
+            updateListsAsync(); //make sure the lists stay filled
 		}
 
-        //goto start of the list (by reloading it)
+        //goto start of the file list
         void gotoStart()
         {
-            setCurrentFile(movePath(mCurrentPath, mCurrentPath, mState["sortField"], NEXT, RECURSE, CsortedDir::ALL, LOOP, mDirFilter, mFileFilter));
+            setCurrentFile(path());
             reloadFiles();
         }
 
@@ -1046,10 +1054,9 @@ namespace pl
                 return;
 
             mPrevPaths.push_front(mCurrentPath);
-            path p=mNextPaths.front();
+            mCurrentPath=mNextPaths.front();
             mNextPaths.pop_front();
-            setCurrentPath(p);
-            
+            reloadFiles();
 		}
 
 		void previousPath()
@@ -1057,16 +1064,17 @@ namespace pl
             if (mPrevPaths.empty())
                 return;
             mNextPaths.push_front(mCurrentPath);
-            path p=mPrevPaths.front();
+            mCurrentPath=mPrevPaths.front();
             mPrevPaths.pop_front();
-            setCurrentPath(p);
+            reloadFiles();
 		}
 
 		void exitPath()
 		{
-			if (mCurrentPath!=mRootPath)
+			if (isSubdir(mRootPath, mCurrentPath.parent_path()))
 			{
 				setCurrentPath(mCurrentPath.parent_path());
+                reloadPaths();
 			}
 		}
 
@@ -1078,27 +1086,31 @@ namespace pl
             p=mCurrentFile;
             while (!p.empty())
             {
-                //is the parent the currentpath?
+                //is the parent the currentpath? 
                 if (p.parent_path()==mCurrentPath)
                 {
                     if (is_directory(p))
                     {
                         setCurrentPath(p);
+                        reloadPaths();
                         return;
                     }
-                    //the currentfile doesnt have a directory, so just use the first subdir we can find, if there is one
                     else
                     {
-                        p=movePath(mCurrentPath, mCurrentPath, mState["sortField"], NEXT, DONT_RECURSE, CsortedDir::DIR, LOOP, mDirFilter);
-                        if (!p.empty())
-                        {
-                            setCurrentPath(p);
-                        }
-                        return;
+                        break;
                     }
                 }
                 p=p.parent_path();
             }
+
+            //find the first valid directory in mCurrentPath and make that the new currentpath:
+            mNextPathsScanner.setRootPath(mCurrentPath);
+            if (mNextPathsScanner.scan())
+            {
+                //found something, set new path to it
+                setCurrentPath(mNextPathsScanner.getSelectedPath());
+            }
+            reloadPaths(); //always reload, since we've abused nextPathScanner.
 		}
 
         //sets regex for the file filter.
@@ -1106,7 +1118,11 @@ namespace pl
         void setFileFilter(string f)
         {
             //FIXME: now we just assume the default filter has a certain format
-            mFileFilter.assign(f+config["filter"].str(), regex::icase);
+            string regexStr;
+            regexStr=f+config["filter"].str();
+            DEB("Setting file regex to: " << regexStr)
+            mNextFilesScanner.mFileFilter.assign(regexStr, regex::icase);
+            mPrevFilesScanner.mFileFilter.assign(regexStr, regex::icase);
             mState["fileFilter"]=f;
             reloadFiles();
         }
@@ -1128,6 +1144,7 @@ namespace pl
 
             setFileFilter(mState["fileFilter"]);
 
+            reloadPaths();
 			DEB("Created pl " << id << " for path " << rootPath);
 			
 		}
@@ -1150,14 +1167,17 @@ namespace pl
 			out.dst=dst;
 
 			out["rootPath"]=mRootPath.string();
+    
             if (!mCurrentPath.empty())
+            {
                 out["currentPath"]=mCurrentPath.string();
+                //to make life easier for user interfaces in a crossplatform way:
+                out["parentPath"]=mCurrentPath.parent_path().string();
+            }
 
             if (!mCurrentFile.empty())
                 out["currentFile"]=mCurrentFile.string();
 
-            //to make life easier for user interfaces in a crossplatform way:
-            out["parentPath"]=mCurrentPath.parent_path().string();
 
             int maxItems;
 
