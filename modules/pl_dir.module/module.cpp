@@ -755,6 +755,35 @@ namespace pl
         {
             ptime started=microsec_clock::local_time();
 
+            //next path list:
+            while (mNextPaths.size()>mNextLen)
+                mNextPaths.pop_back();
+
+            while(mNextPaths.size()<mNextLen)
+            {
+                if (mNextPathsScanner.scan(started, 100))
+                    mNextPaths.push_back(mNextPathsScanner.getSelectedPath());
+                else if (mNextPathsScanner.needsMore())
+                    return(true); //timeout
+                else
+                    break; //scanner is done
+            }
+             
+            //prev path list:
+            while (mPrevPaths.size()>mPrevLen)
+                mPrevPaths.pop_back();
+
+            while(mPrevPaths.size()<mPrevLen)
+            {
+                if (mPrevPathsScanner.scan(started, 100))
+                    mPrevPaths.push_back(mPrevPathsScanner.getSelectedPath());   
+                else if (mPrevPathsScanner.needsMore())
+                    return(true);
+                else
+                    break;
+            }
+
+
             //normal mode:
             if ((int)mState["randomLength"]==0)
             {
@@ -833,33 +862,6 @@ namespace pl
                 }
             }
 
-            //next path list:
-            while (mNextPaths.size()>mNextLen)
-                mNextPaths.pop_back();
-
-            while(mNextPaths.size()<mNextLen)
-            {
-                if (mNextPathsScanner.scan(started, 100))
-                    mNextPaths.push_back(mNextPathsScanner.getSelectedPath());
-                else if (mNextPathsScanner.needsMore())
-                    return(true); //timeout
-                else
-                    break; //scanner is done
-            }
-             
-            //prev path list:
-            while (mPrevPaths.size()>mPrevLen)
-                mPrevPaths.pop_back();
-
-            while(mPrevPaths.size()<mPrevLen)
-            {
-                if (mPrevPathsScanner.scan(started, 100))
-                    mPrevPaths.push_back(mPrevPathsScanner.getSelectedPath());   
-                else if (mPrevPathsScanner.needsMore())
-                    return(true);
-                else
-                    break;
-            }
 
             return(false);
         }
@@ -897,7 +899,7 @@ namespace pl
             
             if (
                 !returned || //send the initial state instantly after the first call
-                ((microsec_clock::local_time()-mLastSend).total_milliseconds()>1000) || //send at least one update every second
+                ((microsec_clock::local_time()-mLastSend).total_milliseconds()>200) || //send at least one update every second
                 !wantMore //always send a final state when done
             )
             {
