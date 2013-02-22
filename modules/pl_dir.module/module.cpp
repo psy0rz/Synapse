@@ -195,7 +195,8 @@ namespace pl
                 {
                     if (filetype==FILE || filetype==ALL)
                     {
-                        if (mFileFilter.empty() || regex_search(itr->path().filename().string(), mFileFilter , boost::match_any))
+//                        if (mFileFilter.empty() || regex_search(itr->path().filename().string(), mFileFilter , boost::match_any))
+                        if (mFileFilter.empty() || regex_search(itr->path().string(), mFileFilter , boost::match_any))
                         {
                             push_back(*itr);
                         }
