@@ -173,7 +173,7 @@ namespace pl
             mDirFilter=dirFilter;
             clear();
 
-            list<Cdirectory_entry> dir=readCached(basePath);
+            list<Cdirectory_entry> & dir=readCached(basePath);
 
 			for ( list<Cdirectory_entry>::iterator itr=dir.begin();
 				itr != dir.end();
@@ -260,6 +260,8 @@ namespace pl
     enum Erecursion { RECURSE, DONT_RECURSE };
     enum Eloop      { LOOP, DONT_LOOP };
 
+    static map<path, CsortedDir> gSortedDirCache;
+
     //recursive directory scanner, using non recursive functions. applies appropriate filtering
     class Cscanner
     {
@@ -288,7 +290,7 @@ namespace pl
         path mCurrentListPath; //path we use to list files and directorys
         bool mDone; //done scanning
 
-        CsortedDir mSortedDir;
+        //CsortedDir  mSortedDir;
 
 
         public: 
@@ -376,6 +378,7 @@ namespace pl
                 }
 
                 //get sorted directory listing
+                CsortedDir & mSortedDir=gSortedDirCache[mCurrentListPath];
                 mSortedDir.read(mCurrentListPath, mSortField, mFileType, mDirFilter, mFileFilter);
 
                 //directory not empty
@@ -1121,7 +1124,10 @@ namespace pl
         {
             //FIXME: now we just assume the default filter has a certain format
             string regexStr;
-            regexStr=f+config["filter"].str();
+            if (f!="")
+                regexStr=".*"+f+".*"+config["filter"].str();
+            else
+                regexStr=config["filter"].str();
             DEB("Setting file regex to: " << regexStr)
             mNextFilesScanner.mFileFilter.assign(regexStr, regex::icase);
             mPrevFilesScanner.mFileFilter.assign(regexStr, regex::icase);
