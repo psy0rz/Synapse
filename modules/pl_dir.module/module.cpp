@@ -482,9 +482,6 @@ namespace pl
                                 }
                             }
 
-                            DEB("started "<< mStartListPath);
-                            DEB("current "<< mCurrentListPath);
-
 
                         }
                         else
@@ -506,7 +503,7 @@ namespace pl
                                 }
                             }
 
-                            DEB("found, returning " << mCurrentSelectedPath);
+//                            DEB("found, returning " << mCurrentSelectedPath);
 
                             return (true);
                         }
@@ -520,16 +517,6 @@ namespace pl
                     {
                         //go one dir higher and continue the loop
                         mCurrentSelectedPath=mCurrentListPath;
-
-                        //infinite loop prevention, prevent leaving this directory for the second time. (first time is ok)
-/*                        if (endPath.empty())
-                            endPath=listPath;
-                        else if (endPath==listPath)
-                        {
-                            DEB("came full circle without results, returing empty result");
-                            currentPath.clear();
-                            return(true);
-                        }*/
 
                         mCurrentListPath=mCurrentListPath.parent_path();
                     }
@@ -545,186 +532,6 @@ namespace pl
         }
     };
 
-/*
-    bool movePath(
-        const path & rootPath, 
-        path & currentPath, 
-        path & endPath,
-        string sortField, 
-        Edirection direction, 
-        Erecursion recursion, 
-        CsortedDir::Efiletype filetype, 
-        Eloop loop=LOOP, 
-        const regex & dirFilter=regex(),
-        const regex & fileFilter=regex()
-    )
-    {
-        ptime started=microsec_clock::local_time();
-
-        DEB("movePath rootPath=" << rootPath.string() <<
-             " currentPath=" << currentPath.string() <<
-             " endPath=" << endPath.string() <<
-             " sortField=" << sortField <<
-             " direction=" << direction <<
-             " recursion=" << recursion << 
-             " filetype=" << filetype << 
-             " loop=" << loop);
-
-        if (currentPath.empty())
-        {
-            DEB("currentpath empty, returning empty as well");
-            return (true);
-        }
-
-
-        //determine the path we should get the initial listing of:
-        path listPath;
-        if (currentPath==rootPath)
-            listPath=currentPath;
-        else
-            listPath=currentPath.parent_path();
-        
-        CsortedDir::iterator dirI;
-
-        while(1)
-        {
-            //get sorted directory listing, but cache results per path for performance
-            static map<path, CsortedDir>  sortedDirCache;
-            CsortedDir & sortedDir=sortedDirCache[listPath];
-
-            sortedDir.read(listPath, sortField, filetype, dirFilter, fileFilter);
-            DEB("start of loop");
-            DEB("list path :     "  << listPath);
-            DEB("end path:     " << endPath);
-            DEB("current path:   " << currentPath);
-
-            //directory not empty
-            if (!sortedDir.empty())
-            {
-                if (!currentPath.empty())
-                {
-                    //try to find the current path:
-                    for (dirI=sortedDir.begin(); dirI!=sortedDir.end(); dirI++)
-                    {
-                        if (dirI->path()==currentPath)
-                            break;
-                    }
-                }
-                else
-                    dirI=sortedDir.end();
-
-                //currentPath not found?
-                if (dirI==sortedDir.end())
-                {
-                    //start at the first or last entry depending on direction
-                    if (direction==NEXT)
-                        dirI=sortedDir.begin();
-                    else
-                    {
-                        dirI=sortedDir.end();
-                        dirI--;
-                    }
-                }
-                else
-                {
-                    //make a step in the right direction
-                    if (direction==NEXT)
-                    {
-                        dirI++;
-                    }
-                    //PREVIOUS:
-                    else
-                    {
-                        if (dirI==sortedDir.begin())
-                            dirI=sortedDir.end();
-                        else
-                            dirI--;
-                    }
-                }
-
-                //top or bottom was reached
-                if (dirI==sortedDir.end())
-                {
-                    //can we one dir higher?
-                    if (recursion==RECURSE && listPath!=rootPath)
-                    {
-                        //yes, so go one dir higher and continue the loop
-                        currentPath=listPath;
-                        listPath=listPath.parent_path();
-                    }
-                    else
-                    {
-                        //no, cant go higher.
-                        //may we loop?
-                        if (loop==LOOP)
-                        {  
-                            //yes
-                            //currentPath.clear();
-                            ;
-                        }
-                        else
-                        {
-                            DEB("end reached, not looping, so returning empty path");
-                            currentPath.clear();
-                            return(true);
-                        }
-                    }
-                }
-                //we found something
-                else
-                {
-                    currentPath=(dirI->path());
-                    //should we recurse?
-                    if (recursion==RECURSE && is_directory(dirI->status()))
-                    {
-                        //enter it
-                        listPath=(dirI->path());
-                    }
-                    else
-                    {
-                        //we found it
-                        DEB("found, returning " << currentPath);
-                        return (true);
-                    }
-                }
-            }
-            //directory empty
-            else
-            {
-                //list is empty, our last chance is to go one dir higher, otherwise we will exit the loop:
-                if (recursion==RECURSE && listPath!=rootPath)
-                {
-                    //go one dir higher and continue the loop
-                    currentPath=listPath;
-
-                    //infinite loop prevention, prevent leaving this directory for the second time. (first time is ok)
-                    if (endPath.empty())
-                        endPath=listPath;
-                    else if (endPath==listPath)
-                    {
-                        DEB("came full circle without results, returing empty result");
-                        currentPath.clear();
-                        return(true);
-                    }
-
-                    listPath=listPath.parent_path();
-                }
-                else
-                {
-                    DEB("empty directory, returning empty result");
-                    currentPath.clear();
-                    return(true);
-                }
-            }
-
-            if ((microsec_clock::local_time()-started).total_milliseconds()>100)
-            {
-                //timeout, return false. we will continue on the next call. (if we're called with the same currentPath)
-                return(false);
-            }
-        }
-    }
-*/
     
 
     //play list 

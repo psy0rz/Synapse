@@ -270,6 +270,9 @@
         }
 
         $('.meta[key="fileFilter"]').text(msg["fileFilter"]);
+
+        if ($(".pl_SetFileFilter:focus").length==0)
+            $(".pl_SetFileFilter").val(msg["fileFilter"]);
     });
 
     synapse_register("play_Time",function(msg_src, msg_dst, msg_event, msg)
@@ -549,17 +552,16 @@
             border-width: 1px;
             border-color: #444444;
             background-color: black;
+            font-size: 10px;
             "
     >
         <span style="
-            font-size: 10px;
             border-left-style: solid; 
             padding-left:1em; 
             padding-right: 1em" 
             class="meta" key="title"></span>
 
         <span style="
-            font-size: 10px;
             border-left-style: solid; 
             padding-left:1em; 
             padding-right: 1em" 
