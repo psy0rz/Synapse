@@ -97,8 +97,14 @@
         });
 
 
-        $('.scroll-send').bind('mousewheel', function(e){
-            if(e.originalEvent.wheelDeltaY > 0) 
+        $('.scroll-send').bind('mousewheel DOMMouseScroll', function(e){
+//            e.stopImmediatePropagation();
+    //        e.stopPropagation();
+          e.preventDefault();
+
+            var delta = parseInt(e.originalEvent.wheelDelta || -e.originalEvent.detail);
+            console.log(delta);
+            if(delta >0) 
             {
                 //scrolled up
                 send(0, $(this).attr("up-event"))
@@ -108,6 +114,8 @@
                 //scrolled down
                 send(0, $(this).attr("down-event"))
             }
+
+            return(false);
         });
 
         var lastFileFilter="";
