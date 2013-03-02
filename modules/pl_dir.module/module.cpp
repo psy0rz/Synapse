@@ -1073,6 +1073,7 @@ namespace pl
             if (mNextFiles.empty())
                 mNextFilesScanner.reset();
 
+
             updateListsAsync(); //make sure the lists stay filled
 		}
 

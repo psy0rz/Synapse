@@ -110,11 +110,16 @@
             }
         });
 
+        var lastFileFilter="";
         $('.pl_SetFileFilter').on('keyup',function()
         {
-            send(0, "pl_SetFileFilter", {
-                "fileFilter": $(this).val()
-            });
+            if (lastFileFilter!=$(this).val())
+            {
+                lastFileFilter=$(this).val();
+                send(0, "pl_SetFileFilter", {
+                    "fileFilter": lastFileFilter
+                });
+            }
         });
     });
 
@@ -259,7 +264,7 @@
             $(".google_path").attr("href", "https://www.google.com/search?q="+searchText);
         }
 
-
+        $('.meta[key="fileFilter"]').text(msg["fileFilter"]);
     });
 
     synapse_register("play_Time",function(msg_src, msg_dst, msg_event, msg)
@@ -523,6 +528,7 @@
         >Goto first</button>
 
         <input class="pl_SetFileFilter" type="text" />
+        <span class="meta" key="fileFilter"></span>
 
     </div>
 
