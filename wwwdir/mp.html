@@ -183,7 +183,12 @@
                     element.addClass("cloned");
                     element.css('color', 'rgb('+0+','+color+','+0+')');
                     color=Math.round(color-colorStep);
-                    $(".entry_text", element).text(list[nr].substr(strip));
+
+                    var t=list[nr].substr(strip);
+                    if (t=="")
+                        $(".entry_text", element).html("&nbsp;");
+                    else
+                        $(".entry_text", element).text(t);
                 }
 
                 //fill the rest to the minimum length with whitespace
@@ -269,21 +274,52 @@
 
     synapse_register("play_Time",function(msg_src, msg_dst, msg_event, msg)
     {
+        function timestr(seconds)
+        {
+            var str=Math.round(seconds/60)+":";
+
+            if (seconds%60<10)
+                str=str+"0";
+            str=str+(seconds%60);
+
+            return(str);
+        }
+
         $(".time").slider("value", msg['time']);
         $(".time").slider("option", "max", msg['length']);
+
+        $('.meta[key="time_pos"]').text(timestr(msg.time));
+
+        if (msg.length==0)
+        {
+            $('.meta[key="time_length"]').text("live");
+            $('.meta[key="time_left"]').text("live");
+        }
+        else
+        {
+            $('.meta[key="time_length"]').text(timestr(msg.length));
+            $('.meta[key="time_left"]').text(timestr(msg.length-msg.time));
+        }
+
     });
 
     synapse_register("play_State",function(msg_src, msg_dst, msg_event, msg)
     {
-        $(".state").text(msg['state']);
+        $('.meta[key="time_left"]').text(msg['state']);
+        $('.meta[key="time_length"]').text("");
+        $('.meta[key="time_pos"]').text("");
     });
 
     synapse_register("play_InfoMeta",function(msg_src, msg_dst, msg_event, msg)
     {
-        for (key in msg)
-        {
-            $('.meta[key="'+key+'"]').text(msg[key]);
-        }
+        if (msg.title==null)
+            msg.title="";
+        $('.meta[key=title]').text(msg.title);
+
+        if (msg.nowPlaying==null)
+            msg.nowPlaying="";
+        $('.meta[key=nowPlaying]').text(msg.nowPlaying);
+
     });
 
 	</script>
@@ -316,36 +352,7 @@
 
 
 
-    <div 
-        style="
-            position: fixed; 
-            right:0;
-            left:0;
-            bottom:0;
-            border-style: solid;
-            border-width: 1px;
-            border-color: #444444;
-            "
-    >
-        <a 
-            style="
-                border-left-style: solid; 
-                padding-left:1em; 
-                padding-right: 1em" 
-            class="google_file" 
-            target='_blank' 
-            href=''></a>
 
-        <a 
-            style="
-                border-left-style: solid; 
-                padding-left: 1em; 
-                padding-right: 1em" 
-            class="google_path" 
-            target='_blank' 
-            href=''></a>
-
-    </div>
 
 
 
@@ -532,37 +539,81 @@
 
     </div>
 
+    <div 
+        style="
+            position: fixed; 
+            right:0;
+            left:0;
+            bottom:0;
+            border-style: solid;
+            border-width: 1px;
+            border-color: #444444;
+            background-color: black;
+            "
+    >
+        <span style="
+            font-size: 10px;
+            border-left-style: solid; 
+            padding-left:1em; 
+            padding-right: 1em" 
+            class="meta" key="title"></span>
+
+        <span style="
+            font-size: 10px;
+            border-left-style: solid; 
+            padding-left:1em; 
+            padding-right: 1em" 
+            class="meta" key="nowPlaying"></span>
+
+        <br>
+
+        <a 
+            style="
+                border-left-style: solid; 
+                padding-left:1em; 
+                padding-right: 1em" 
+            class="google_file" 
+            target='_blank' 
+            href=''></a>
+
+        <a 
+            style="
+                border-left-style: solid; 
+                padding-left: 1em; 
+                padding-right: 1em" 
+            class="google_path" 
+            target='_blank' 
+            href=''></a>
+
+    </div>
 
 
     <div 
         style="
             position: fixed; 
-            left:0;
-            top:0;
+            right:0;
+            bottom:0;
+            padding-right:1em;
+            padding-left:1em;
+            padding-bottom: 0.5em;
             border-style: solid;
             border-width: 1px;
             border-color: #444444;
+            background-color: black;
             "
 
     >
 
         <p> 
+
+        <span style="width: 3em; display:inline-block" class="meta" key="time_pos"></span>
         <button class="send" event="pl_Previous" icon="ui-icon-seek-start"></button>
         <button class="send" event="play_Pause" icon="ui-icon-pause"></button>
         <button class="send" event="play_Stop" icon="ui-icon-stop"></button>
         <button class="send" event="pl_Next" icon="ui-icon-seek-end"></button>
+        <span style="width: 3em; display:inline-block" class="meta" key="time_left"></span>
 
-        <p>            
-        <div  class="time"></div>
-        <b class="state"></b>
-<!--
-        <table>
-        <tr><th colspan=2>player metadata </tr>
-        <tr><th>Title   <td class="meta" key="title"></tr>
-        <tr><th>url     <td class="meta" key="url"></tr>
-        <tr><th>mrl     <td class="meta" key="mrl"></tr>
-        <tr><th>artist  <td class="meta" key="artist"></tr>
-        </table>-->
+        <div class="time" ></div>
     </div>
 
 

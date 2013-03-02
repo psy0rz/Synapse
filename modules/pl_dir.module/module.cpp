@@ -925,6 +925,7 @@ namespace pl
             {
                 wantMore=true;
             }
+
             //more updates are needed, so send an updatelists event, if there's not already one flying. (we dont want the to queue up)
             if (wantMore && !mUpdateListsAsyncFlying)
             {
