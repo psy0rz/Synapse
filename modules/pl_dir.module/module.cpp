@@ -286,8 +286,9 @@ namespace pl
         CsortedDir::Efiletype mFileType;
  
         //state information which is needed while scanning
+        path mStartSelectedPath; //used for loop detection
+        path mStartListPath;
         path mCurrentSelectedPath; //path that is currently 'selected'.
-        path mCurrentEndPath; //stop when we encounter this path. this is used for loop detection.
         path mCurrentListPath; //path we use to list files and directorys
         bool mDone; //done scanning
 
@@ -311,7 +312,8 @@ namespace pl
         void reset()
         {
             mDone=false;
-            mCurrentEndPath.clear();
+            mStartSelectedPath.clear();
+            mStartListPath.clear();
 
             if (mCurrentSelectedPath.empty())
                 mCurrentListPath=mRootPath;
@@ -367,7 +369,7 @@ namespace pl
             //we're already done
             if (mDone)
                 return (false);
-        
+
             CsortedDir::iterator dirI;
 
             while(1)
@@ -434,9 +436,11 @@ namespace pl
                         //can we one dir higher?
                         if (mRecursion==RECURSE && mCurrentListPath!=mRootPath)
                         {
-                            //yes, so go one dir higher and continue the loop
+
+                            // go one dir higher and continue the loop
                             mCurrentSelectedPath=mCurrentListPath;
                             mCurrentListPath=mCurrentListPath.parent_path();
+
                         }
                         else
                         {
@@ -463,12 +467,47 @@ namespace pl
                             //enter it
                             mCurrentSelectedPath.clear();
                             mCurrentListPath=(dirI->path());
+
+                            //infinite loop detection
+                            if (mStartListPath.empty())
+                                mStartListPath=mCurrentListPath;
+                            else
+                            {
+                                if (mStartListPath==mCurrentListPath)
+                                {
+                                    //we've looped
+                                    DEB("looped all directories, we're done");
+                                    mDone=true;
+                                    return(false);
+                                }
+                            }
+
+                            DEB("started "<< mStartListPath);
+                            DEB("current "<< mCurrentListPath);
+
+
                         }
                         else
                         {
                             //we got an actual result for the user
                             mCurrentSelectedPath=dirI->path();
+
+                            //only process all entries one time, prevent infinite looping
+                            if (mStartSelectedPath.empty())
+                                mStartSelectedPath=mCurrentSelectedPath;
+                            else
+                            {
+                                if (mStartSelectedPath==mCurrentSelectedPath)
+                                {
+                                    //we've looped
+                                    DEB("processed all items, we're done");
+                                    mDone=true;
+                                    return(false);
+                                }
+                            }
+
                             DEB("found, returning " << mCurrentSelectedPath);
+
                             return (true);
                         }
                     }
@@ -836,10 +875,6 @@ namespace pl
                 while (mPrevFiles.size()>mState["randomLength"])
                     mPrevFiles.pop_back();
 
-                //time to regenerate the random list?
-                //note: we restart the scanner after its empty, so we never get the same file more than once in the random list. (because thats so annoying ;)
-                if (mNextFiles.empty())
-                    mNextFilesScanner.reset();
 
                 //insert new entries randomly
                 while(mNextFiles.size()<mState["randomLength"])
@@ -1032,6 +1067,12 @@ namespace pl
             mPrevFiles.push_front(mCurrentFile);
             setCurrentFile(mNextFiles.front());
             mNextFiles.pop_front();
+
+            //time to regenerate the random list?
+            //note: we restart the scanner after its empty, so we never get the same file more than once in the random list. (because thats so annoying ;)
+            if (mNextFiles.empty())
+                mNextFilesScanner.reset();
+
             updateListsAsync(); //make sure the lists stay filled
 		}
 
