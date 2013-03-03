@@ -179,6 +179,12 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
         else if (event.which == $.ui.keyCode.UP)
             send(0, "pl_Previous", {});
 
+        else if (event.which == $.ui.keyCode.LEFT)
+            send(0, "play_MoveTime", { "time":"-10" });
+
+        else if (event.which == $.ui.keyCode.RIGHT)
+            send(0, "play_MoveTime", { "time":"10" });
+
         else if (event.which>=48 && event.which<=57)
             send(0, "pl_LoadFavorite", { id: event.which-47 });
 
@@ -202,6 +208,15 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
 
     });
 
+    $(".play_MoveTime10r").click(function()
+    {
+        send(0, "play_MoveTime", { "time":"-10" });
+    });
+
+    $(".play_MoveTime10f").click(function()
+    {
+        send(0, "play_MoveTime", { "time":"10" });
+    });
 });
 
 synapse_register("pl_Entry",function(msg_src, msg_dst, msg_event, msg)

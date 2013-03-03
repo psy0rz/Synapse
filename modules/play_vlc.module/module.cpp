@@ -587,6 +587,11 @@ class CPlayer
         libvlc_media_player_set_time(mPlayer, time);
     }
 
+    void moveTime(int time)
+    {
+        libvlc_media_player_set_time(mPlayer, libvlc_media_player_get_time(mPlayer)+time);
+    }
+
 };
 
 typedef map<int, CPlayer> CPlayerMap;
@@ -743,6 +748,14 @@ SYNAPSE_REGISTER(play_SetTime)
     lock_guard<recursive_mutex> lock(vlcMutex);
 
     players[dst].setTime(msg["time"] * 1000);
+}
+
+
+SYNAPSE_REGISTER(play_MoveTime)
+{
+    lock_guard<recursive_mutex> lock(vlcMutex);
+
+    players[dst].moveTime(msg["time"] * 1000);
 }
 
 /** Gets status of player.
