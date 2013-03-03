@@ -1,0 +1,236 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<title>Media Zapper</title>
+
+  
+    <link href="X/css/dark-hive/jquery-ui.css" rel="stylesheet" type="text/css"/>
+    <link href="/css/ui-darkness/jquery-ui.css" rel="stylesheet" type="text/css"/>
+    <link href="X/css/dot-luv/jquery-ui.css" rel="stylesheet" type="text/css"/>
+  
+    <script type="text/javascript" src="/synapse/synapse.js"></script>
+    <script type="text/javascript" src="mp.js"></script>
+
+
+	<style>
+
+
+    .favorite
+    {
+        width: 5em;
+        min-height: 2em;
+    }
+
+    .selectedPath
+    {
+        background-color: #005500;
+        color: #00ff00;
+        padding-top: 1px;
+        padding-bottom: 1px;
+    }
+
+
+ 	</style>
+</head>
+
+
+<body 
+    class="ui-widget ui-widget-content" 
+    style="
+        font-size: 14px;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #000000"
+>
+
+    <!--- Favorites -->
+    <div style="
+            border-style: solid;
+            border-width: 1px;
+            border-color: #444444;
+            text-align: center;
+        ">
+        <button class="favorite" favorite-id="1"></button>
+        <button class="favorite" favorite-id="2"></button>
+        <button class="favorite" favorite-id="3"></button>
+        <button class="favorite" favorite-id="4"></button>
+        <button class="favorite" favorite-id="5"></button>
+        <button class="favorite" favorite-id="6"></button>
+        <button class="favorite" favorite-id="7"></button>
+        <button class="favorite" favorite-id="8"></button>
+        <button class="favorite" favorite-id="9"></button>
+        <button class="favorite" favorite-id="10"></button>
+        <button class="favorite" favorite-id="11"></button>
+        <button class="favorite" favorite-id="12"></button>
+        <button class="favorite" favorite-id="13"></button>
+        <button class="favorite" favorite-id="14"></button>
+        <button class="favorite" favorite-id="15"></button>
+        <button class="favorite" favorite-id="16"></button>
+    </div>
+
+    <!--- Player status and buttons -->
+    <div
+        style="
+            text-align: center;
+            padding-top:1em;
+            padding-bottom:1em;
+            border-style: solid;
+            border-width: 1px;
+            border-color: #444444;"
+    >
+        <span style="">
+            <span style="width: 3em; display:inline-block" class="meta" key="time_pos"></span>
+            <button class="send" event="pl_Previous" icon="ui-icon-seek-start">Previous</button>
+            <button class="send" event="play_Pause" icon="ui-icon-pause">Pause</button>
+            <button class="send" event="pl_Next" icon="ui-icon-seek-end">Next</button>
+            <span style="width: 3em; display:inline-block" class="meta" key="time_left"></span>
+        </span>
+
+        <p>
+        <div class="time" ></div>
+
+        <p>
+ 
+    </div>
+
+
+    <!--- Current file/path -->
+    <div style="        
+            border-style: solid;
+            border-width: 1px;
+            border-color: #444444;
+
+    ">
+        <div style="text-align: center;">
+            <img class="show_when_busy" style='background-color: #ffffff' src='paper/spinner.gif'/>
+            <button 
+                style='' 
+                class="send" 
+                event="pl_ExitPath" 
+                icon="ui-icon-arrowreturnthick-1-w"
+                title="Exit selected directory and go one higher">
+                Exit
+            </button>
+
+           <button 
+                style='' 
+                class="send" 
+                event="pl_PreviousPath" 
+                icon="ui-icon-arrowthick-1-n"
+                title="Previous directory (you can also use the scrollwheel)">
+                Up
+            </button>
+
+            <button 
+                style='' 
+                class="send" 
+                event="pl_NextPath" 
+                icon="ui-icon-arrowthick-1-s"
+                title="Next directory (you can also use the scrollwheel)"
+                >
+                Down
+            </button>
+
+            <button 
+                style='' 
+                class="send" 
+                event="pl_EnterPath" 
+                icon="ui-icon-arrowreturnthick-1-e"
+                title="Enter directory. Go one directory deeper, based on the path of the current playing file.">
+                Enter
+            </button>
+
+            <button 
+                class="send" 
+                event="pl_GotoStart" 
+                icon="ui-icon-arrowthickstop-1-n"
+                title="This button will bring you to the first item in the list. Very usefull if you sort By date. (the list actually 'loops': the selected item is the first one, the item above it is the last one."
+            >First</button>
+
+            <span class="meta" key="fileFilter"></span>
+
+        </div>
+
+        <div>
+            <span style=" color: #00ff00;" class="entry" key="parentPath"></span>
+            <span style="background-color: #005500; color: #00ff00;" class="entry" key="currentPath"  ></span>
+            <span style="color: #00ff00;" class="entry" key="currentFile"  ></span>
+        </div>
+    </div>
+
+
+
+    <!--- File ordering/filtering -->
+<!--    <div >
+        <img class="show_when_busy" style='background-color: #ffffff' src='paper/spinner.gif'/>
+        <div class="pl_mode">
+            <input id="pl_mode_filename" type="radio" name="pl_mode"/><label for="pl_mode_filename">By name</label>
+            <input id="pl_mode_date" type="radio" name="pl_mode"/><label for="pl_mode_date">By date</label>
+            <input id="pl_mode_random" type="radio" name="pl_mode"/><label for="pl_mode_random">Random</label>
+        </div>
+        <button 
+            class="send" 
+            event="pl_GotoStart" 
+            icon="ui-icon-arrowthickstop-1-n"
+            title="This button will bring you to the first item in the list. Very usefull if you sort By date. (the list actually 'loops': the selected item is the first one, the item above it is the last one."
+
+        >Goto first</button>
+
+        <input class="pl_SetFileFilter" type="text" />
+
+    </div>
+-->
+
+    <!--- Meta data /google links -->
+    <div 
+        style="
+            font-size: 10px;
+            padding-top: 1em;
+
+            "
+    >
+        <span style="
+            border-left-style: solid; 
+            padding-left:1em; 
+            padding-right: 1em" 
+            class="meta" key="title"></span>
+
+        <span style="
+            border-left-style: solid; 
+            padding-left:1em; 
+            padding-right: 1em" 
+            class="meta" key="nowPlaying"></span>
+
+        <br>
+
+        <a 
+            style="
+                border-left-style: solid; 
+                padding-left:1em; 
+                padding-right: 1em" 
+            class="google_file" 
+            target='_blank' 
+            href=''></a>
+
+        <a 
+            style="
+                border-left-style: solid; 
+                padding-left: 1em; 
+                padding-right: 1em" 
+            class="google_path" 
+            target='_blank' 
+            href=''></a>
+
+    </div>
+
+
+   
+
+
+</body>
+</html>
+
