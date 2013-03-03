@@ -71,7 +71,7 @@
                 class="send" 
                 event="pl_PreviousPath" 
                 icon="ui-icon-arrowthick-1-n"
-                title="Previous directory (you can also use the scrollwheel)"></button>
+                title="Previous directory (you can also use the scrollwheel) [PgUp]"></button>
         </div>
         <div>&nbsp;</div>
         <div>&nbsp;</div>
@@ -97,13 +97,13 @@
                 class="send" 
                 event="pl_EnterPath" 
                 icon="ui-icon-arrowreturnthick-1-e"
-                title="Enter directory. Go one directory deeper, based on the path of the current playing file."></button>
+                title="Enter directory. Go one directory deeper, based on the path of the current playing file. [enter]"></button>
             <button 
                 style='float:right' 
                 class="send" 
                 event="pl_NextPath" 
                 icon="ui-icon-arrowthick-1-s"
-                title="Next directory (you can also use the scrollwheel)"
+                title="Next directory (you can also use the scrollwheel) [PgDn]"
                 ></button>
 
             <button 
@@ -111,7 +111,7 @@
             class="send" 
             event="pl_ExitPath" 
             icon="ui-icon-arrowreturnthick-1-w"
-            title="Exit selected directory and go one higher"></button>
+            title="Exit selected directory and go one higher [backspace]"></button>
 
         </div>
 
@@ -132,28 +132,28 @@
 
         <table style="text-align: center;" title="These buttons are to store your favorites: Right click to save a favorite directory, left click to load it...">
             <tr>
-                <td><button class="favorite" favorite-id="1"></button>
-                <td><button class="favorite" favorite-id="2"></button>
-                <td><button class="favorite" favorite-id="3"></button>
-                <td><button class="favorite" favorite-id="4"></button>
+                <td><button title="[0]" class="favorite" favorite-id="1"></button>
+                <td><button title="[1]" class="favorite" favorite-id="2"></button>
+                <td><button title="[2]" class="favorite" favorite-id="3"></button>
+                <td><button title="[3]" class="favorite" favorite-id="4"></button>
             </tr>
             <tr>
-                <td><button class="favorite" favorite-id="5"></button>
-                <td><button class="favorite" favorite-id="6"></button>
-                <td><button class="favorite" favorite-id="7"></button>
-                <td><button class="favorite" favorite-id="8"></button>
+                <td><button title="[4]" class="favorite" favorite-id="5"></button>
+                <td><button title="[5]" class="favorite" favorite-id="6"></button>
+                <td><button title="[6]" class="favorite" favorite-id="7"></button>
+                <td><button title="[7]" class="favorite" favorite-id="8"></button>
             </tr>
             <tr>
-                <td><button class="favorite" favorite-id="9"></button>
-                <td><button class="favorite" favorite-id="10"></button>
-                <td><button class="favorite" favorite-id="11"></button>
-                <td><button class="favorite" favorite-id="12"></button>
+                <td><button title="[8]" class="favorite" favorite-id="9"></button>
+                <td><button title="[9]" class="favorite" favorite-id="10"></button>
+                <td><button title="[q]" class="favorite" favorite-id="11"></button>
+                <td><button title="[w]" class="favorite" favorite-id="12"></button>
             </tr>
             <tr>
-                <td><button class="favorite" favorite-id="13"></button>
-                <td><button class="favorite" favorite-id="14"></button>
-                <td><button class="favorite" favorite-id="15"></button>
-                <td><button class="favorite" favorite-id="16"></button>
+                <td><button title="[e]" class="favorite" favorite-id="13"></button>
+                <td><button title="[r]" class="favorite" favorite-id="14"></button>
+                <td><button title="[t]" class="favorite" favorite-id="15"></button>
+                <td><button title="[y]" class="favorite" favorite-id="16"></button>
             </tr>
             </table>
             <div id="saveFavoriteForm">
@@ -354,10 +354,10 @@
         <p> 
 
         <span style="width: 3em; display:inline-block" class="meta" key="time_pos"></span>
-        <button class="send" event="pl_Previous" icon="ui-icon-seek-start"></button>
-        <button class="send" event="play_Pause" icon="ui-icon-pause"></button>
+        <button class="send" title="Previous file [up arrow]" event="pl_Previous" icon="ui-icon-seek-start"></button>
+        <button class="send" title="Pause [space]" event="play_Pause" icon="ui-icon-pause"></button>
         <button class="send" event="play_Stop" icon="ui-icon-stop"></button>
-        <button class="send" event="pl_Next" icon="ui-icon-seek-end"></button>
+        <button class="send" title="Next file [down arrow]" event="pl_Next" icon="ui-icon-seek-end"></button>
         <span style="width: 3em; display:inline-block" class="meta" key="time_left"></span>
 
         <div class="time" ></div>
