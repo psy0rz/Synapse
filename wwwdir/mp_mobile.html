@@ -4,12 +4,15 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
 	<title>Media Zapper</title>
 
-  
-    <link href="X/css/dark-hive/jquery-ui.css" rel="stylesheet" type="text/css"/>
+    <!-- 
+    <link href="/css/dark-hive/jquery-ui.css" rel="stylesheet" type="text/css"/>
+    <link href="/css/dot-luv/jquery-ui.css" rel="stylesheet" type="text/css"/>
+    -->
     <link href="/css/ui-darkness/jquery-ui.css" rel="stylesheet" type="text/css"/>
-    <link href="X/css/dot-luv/jquery-ui.css" rel="stylesheet" type="text/css"/>
   
     <script type="text/javascript" src="/synapse/synapse.js"></script>
     <script type="text/javascript" src="mp.js"></script>
@@ -84,9 +87,9 @@
     >
         <span style="">
             <span style="width: 3em; display:inline-block" class="meta" key="time_pos"></span>
-            <button class="send" event="pl_Previous" icon="ui-icon-seek-start">Previous</button>
-            <button class="send" event="play_Pause" icon="ui-icon-pause">Pause</button>
-            <button class="send" event="pl_Next" icon="ui-icon-seek-end">Next</button>
+            <button class="send" event="pl_Previous" icon="ui-icon-seek-start">&nbsp;</button>
+            <button class="send" event="play_Pause" icon="ui-icon-pause">&nbsp;</button>
+            <button class="send" event="pl_Next" icon="ui-icon-seek-end">&nbsp;</button>
             <span style="width: 3em; display:inline-block" class="meta" key="time_left"></span>
         </span>
 
@@ -106,50 +109,63 @@
 
     ">
         <div style="text-align: center;">
-            <img class="show_when_busy" style='background-color: #ffffff' src='paper/spinner.gif'/>
-            <button 
-                style='' 
-                class="send" 
-                event="pl_ExitPath" 
-                icon="ui-icon-arrowreturnthick-1-w"
-                title="Exit selected directory and go one higher">
-                Exit
-            </button>
-
-           <button 
-                style='' 
-                class="send" 
-                event="pl_PreviousPath" 
-                icon="ui-icon-arrowthick-1-n"
-                title="Previous directory (you can also use the scrollwheel)">
-                Up
-            </button>
-
-            <button 
-                style='' 
-                class="send" 
-                event="pl_NextPath" 
-                icon="ui-icon-arrowthick-1-s"
-                title="Next directory (you can also use the scrollwheel)"
-                >
-                Down
-            </button>
-
-            <button 
-                style='' 
-                class="send" 
-                event="pl_EnterPath" 
-                icon="ui-icon-arrowreturnthick-1-e"
-                title="Enter directory. Go one directory deeper, based on the path of the current playing file.">
-                Enter
-            </button>
-
-            <button 
-                class="send" 
-                event="pl_GotoStart" 
-                icon="ui-icon-arrowthickstop-1-n"
-                title="This button will bring you to the first item in the list. Very usefull if you sort By date. (the list actually 'loops': the selected item is the first one, the item above it is the last one."
-            >First</button>
+            <table style="margin-left: auto; margin-right: auto; text-align:center">
+                <tr>
+                    <td>
+                        <img class="show_when_busy" style='background-color: #ffffff' src='paper/spinner.gif'/>
+                    <td>
+                       <button 
+                            style='' 
+                            class="send" 
+                            event="pl_PreviousPath" 
+                            icon="ui-icon-arrowthick-1-n"
+                            title="Previous directory (you can also use the scrollwheel)">
+                            Up
+                        </button>
+                    <td>
+                </tr>
+                <tr>
+                    <td>
+                        <button 
+                            style='' 
+                            class="send" 
+                            event="pl_ExitPath" 
+                            icon="ui-icon-arrowreturnthick-1-w"
+                            title="Exit selected directory and go one higher">
+                            Exit
+                        </button>
+                    <td>
+                        <button 
+                            class="send" 
+                            event="pl_GotoStart" 
+                            icon="ui-icon-arrowthickstop-1-n"
+                            title="This button will bring you to the first item in the list. Very usefull if you sort By date. (the list actually 'loops': the selected item is the first one, the item above it is the last one."
+                        >First</button>
+                    <td>
+                        <button 
+                            style='' 
+                            class="send" 
+                            event="pl_EnterPath" 
+                            icon="ui-icon-arrowreturnthick-1-e"
+                            title="Enter directory. Go one directory deeper, based on the path of the current playing file.">
+                            Enter
+                        </button>
+                </tr>
+                <tr>
+                    <td>
+                    <td>
+                        <button 
+                            style='' 
+                            class="send" 
+                            event="pl_NextPath" 
+                            icon="ui-icon-arrowthick-1-s"
+                            title="Next directory (you can also use the scrollwheel)"
+                            >
+                            Down
+                        </button>
+                    <td>
+                </tr>
+            </table>
 
             <span class="meta" key="fileFilter"></span>
 
@@ -190,7 +206,7 @@
         style="
             font-size: 10px;
             padding-top: 1em;
-
+            text-align: center;
             "
     >
         <span style="
@@ -224,7 +240,13 @@
             class="google_path" 
             target='_blank' 
             href=''></a>
+        <p>
 
+        <a style="
+                border-left-style: solid; 
+                padding-left: 1em; 
+                padding-right: 1em" 
+                href="mp.html" >Goto desktop interface</a>
     </div>
 
 
