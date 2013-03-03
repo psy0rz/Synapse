@@ -606,9 +606,6 @@ namespace pl
             ptime started=microsec_clock::local_time();
 
             //next path list:
-            while (mNextPaths.size()>mNextLen)
-                mNextPaths.pop_back();
-
             while(mNextPaths.size()<mNextLen)
             {
                 if (mNextPathsScanner.scan(started, 100))
@@ -620,9 +617,6 @@ namespace pl
             }
              
             //prev path list:
-            while (mPrevPaths.size()>mPrevLen)
-                mPrevPaths.pop_back();
-
             while(mPrevPaths.size()<mPrevLen)
             {
                 if (mPrevPathsScanner.scan(started, 100))
@@ -1009,6 +1003,37 @@ namespace pl
 		}
 
 
+        /* store current 'situation' as a favorite */
+        void saveFavorite(string id, string desc)
+        {
+            Cvar favorite;
+            favorite["currentPath"]=mCurrentPath.string();
+            favorite["fileFilter"]=mState["fileFilter"];
+            favorite["randomLength"]=mState["randomLength"];
+            favorite["sortField"]=mState["sortField"];
+            favorite["desc"]=desc;
+
+            mState["favorites"][id]=favorite;
+            mState.changed();
+            mState.save();
+            send(0);
+        }
+
+        void loadFavorite(string id)
+        {
+            if (mState["favorites"].isSet(id))
+            {
+                Cvar favorite=mState["favorites"][id];
+                setCurrentPath(favorite["currentPath"].str());
+                setMode(favorite);
+                setFileFilter(favorite["fileFilter"]);
+                reloadPaths();
+
+                if (favorite["gotoStart"])
+                    gotoStart();
+            }
+        }
+
 		void send(int dst)
 		{
             //there are lots of places/situations where things can go wrong, so do this extra check:
@@ -1086,6 +1111,11 @@ namespace pl
 
             //this means we're still scanning
             out["updateListsAsyncFlying"]=mUpdateListsAsyncFlying;
+
+            FOREACH_VARMAP(favorite, mState["favorites"])
+            {
+                out["favorites"][favorite.first]=favorite.second["desc"];
+            }
 
 			out.send();
 		}
@@ -1233,6 +1263,16 @@ namespace pl
     {
         plMan.get(dst).setFileFilter(msg["fileFilter"]);
 
+    }
+
+    SYNAPSE_REGISTER(pl_SaveFavorite)
+    {
+        plMan.get(dst).saveFavorite(msg["id"], msg["desc"]);
+    }
+
+    SYNAPSE_REGISTER(pl_LoadFavorite)
+    {
+        plMan.get(dst).loadFavorite(msg["id"]);
     }
 
 

@@ -128,9 +128,47 @@
                     "fileFilter": lastFileFilter
                 });
             }
-        });
-    });
+            });
 
+        $( "#saveFavoriteForm" ).dialog({
+            autoOpen: false,
+            modal: true,
+            buttons: {
+                "Save favorite": function() {
+                    send(0, "pl_SaveFavorite", {
+                        "id": $("#saveFavoriteId").val(),
+                        "desc": $("#saveFavoriteDesc").val()
+                    });
+                    $(this).dialog("close");
+                },
+                "Cancel":function()
+                {
+                    $(this).dialog("close");
+                }
+            },
+            close: function(){
+                    $(".favorite").removeClass("ui-state-highlight");
+            }
+        });
+
+        $(".favorite").on('click', function(event)
+        {
+
+            send(0, "pl_LoadFavorite", {
+                "id": $(this).attr("favorite-id")
+            });
+        });
+
+        $(".favorite").on('contextmenu', function(event)
+        {
+            $(this).addClass("ui-state-highlight");
+            $("#saveFavoriteDesc").val($(this).text());
+            $("#saveFavoriteId").val($(this).attr("favorite-id"));
+            $("#saveFavoriteForm").dialog("open");
+            return(false);
+        });
+
+    });
 
     synapse_register("pl_Entry",function(msg_src, msg_dst, msg_event, msg)
     {
@@ -144,15 +182,15 @@
 
         if (msg["randomLength"]!=0)
         {
-            $("#pl_mode_random").attr('checked', true);
+            $("#pl_mode_random").prop('checked', true);
         }
         else if (msg["sortField"]=="date")
         {
-            $("#pl_mode_date").attr('checked',true);
+            $("#pl_mode_date").prop('checked',true);
         }
         else if (msg["sortField"]=="filename")
         {
-            $("#pl_mode_filename").attr('checked',true);
+            $("#pl_mode_filename").prop('checked',true);
         }
 
         $(".pl_mode").buttonset("refresh");
@@ -243,6 +281,12 @@
                     msg.prevPaths, 
                     msg.parentPath.length,
                     true);
+
+            for (key in msg.favorites)
+            {
+                $('.favorite[favorite-id="'+key+'"]').text(msg.favorites[key]);
+            }
+
         }
 
         //filter crap from a filename so it can be googled
@@ -338,6 +382,13 @@
 	<style>
 
 
+    .favorite
+    {
+        width: 100%;
+        min-width: 5em;
+        min-height: 2em;
+    }
+
     .selectedPath
     {
         background-color: #005500;
@@ -363,11 +414,7 @@
 
 
 
-
-
-
-
-
+    <!--- Directory arrows -->
     <div 
         style="
             margin: 0;
@@ -437,7 +484,53 @@
     </div>
 
 
+    <!--- Favorites -->
+    <div 
+        style="
+            margin: 0;
+            padding: 0;
+            position: fixed; 
+            top:1em;
+            left: 1em;
+            background-color: #000000;" 
+    >
 
+        <table style="text-align: center;">
+            <tr>
+                <td><button class="favorite" favorite-id="1"></button>
+                <td><button class="favorite" favorite-id="2"></button>
+                <td><button class="favorite" favorite-id="3"></button>
+                <td><button class="favorite" favorite-id="4"></button>
+            </tr>
+            <tr>
+                <td><button class="favorite" favorite-id="5"></button>
+                <td><button class="favorite" favorite-id="6"></button>
+                <td><button class="favorite" favorite-id="7"></button>
+                <td><button class="favorite" favorite-id="8"></button>
+            </tr>
+            <tr>
+                <td><button class="favorite" favorite-id="9"></button>
+                <td><button class="favorite" favorite-id="10"></button>
+                <td><button class="favorite" favorite-id="11"></button>
+                <td><button class="favorite" favorite-id="12"></button>
+            </tr>
+            <tr>
+                <td><button class="favorite" favorite-id="13"></button>
+                <td><button class="favorite" favorite-id="14"></button>
+                <td><button class="favorite" favorite-id="15"></button>
+                <td><button class="favorite" favorite-id="16"></button>
+            </tr>
+            </table>
+            <div id="saveFavoriteForm">
+                Saving current location and settings to favorite button.<p>
+                <input type='hidden' id="saveFavoriteId">
+                Description: <input type='text' id="saveFavoriteDesc">
+            </div>
+
+    </div>
+
+
+    <!--- Directory lists -->
     <div 
         style="
             margin: 0;
@@ -468,7 +561,7 @@
 
 
 
-
+    <!--- File lists -->
     <div 
         style="
             padding: 0;
@@ -498,6 +591,7 @@
 
 
 
+    <!--- File arrows -->
     <div 
         style="
             position: fixed;
@@ -520,10 +614,10 @@
             event="pl_Next" 
             icon="ui-icon-arrowthick-1-s"
             title="Next file. you can also use the scrollwheel on the list itself."></button>
-
-
     </div>
 
+
+    <!--- File ordering/filtering -->
     <div 
         style="
             position: fixed;
@@ -546,10 +640,12 @@
         >Goto first</button>
 
         <input class="pl_SetFileFilter" type="text" />
-        <span class="meta" key="fileFilter"></span>
+        <!--<span class="meta" key="fileFilter"></span>-->
 
     </div>
 
+
+    <!--- Meta data /google links -->
     <div 
         style="
             position: fixed; 
@@ -598,6 +694,7 @@
     </div>
 
 
+    <!--- Player status and buttons -->
     <div 
         style="
             position: fixed; 
