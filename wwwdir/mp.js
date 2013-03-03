@@ -158,6 +158,9 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
 
     $(document).on('keydown', function(event)
     {
+        if (event.altKey || event.shiftKey || event.ctrlKey || event.metaKey)
+            return;
+
         if (event.which == $.ui.keyCode.SPACE)
             send(0, "play_Pause", {});
 
@@ -188,23 +191,26 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
         else if (event.which>=48 && event.which<=57)
             send(0, "pl_LoadFavorite", { id: event.which-47 });
 
-       else if (event.which==81) //q
+        else if (event.which==81) //q
             send(0, "pl_LoadFavorite", { id: 11 });
 
-       else if (event.which==87) //w
+        else if (event.which==87) //w
             send(0, "pl_LoadFavorite", { id: 12 });
 
-       else if (event.which==69) //e
+        else if (event.which==69) //e
             send(0, "pl_LoadFavorite", { id: 13 });
 
-       else if (event.which==82) //r
+        else if (event.which==82) //r
             send(0, "pl_LoadFavorite", { id: 14 });
 
-       else if (event.which==84) //t
+        else if (event.which==84) //t
             send(0, "pl_LoadFavorite", { id: 15 });
 
-       else if (event.which==89) //y
+        else if (event.which==89) //y
             send(0, "pl_LoadFavorite", { id: 16 });
+
+
+        console.log(event);
 
     });
 
@@ -217,6 +223,8 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
     {
         send(0, "play_MoveTime", { "time":"10" });
     });
+
+    console.log(event);
 });
 
 synapse_register("pl_Entry",function(msg_src, msg_dst, msg_event, msg)
