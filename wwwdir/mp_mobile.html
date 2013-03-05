@@ -76,6 +76,13 @@
         <button class="favorite" favorite-id="16"></button>
     </div>
 
+    <div id="deleteForm">
+        Move the current playing file to trash?
+        <p>
+        (it will rename the current file to filename.deleted)
+    </div>
+
+
     <!--- Player status and buttons -->
     <div
         style="
@@ -87,18 +94,19 @@
             border-color: #444444;"
     >
         <span style="">
-            <span style="width: 3em; display:inline-block" class="meta" key="time_pos"></span>
             <button class="send" event="pl_Previous" icon="ui-icon-seek-start">&nbsp;</button>
             <button class="send" event="play_Pause" icon="ui-icon-pause">&nbsp;</button>
             <button class="send" event="pl_Next" icon="ui-icon-seek-end">&nbsp;</button>
-            <span style="width: 3em; display:inline-block" class="meta" key="time_left"></span>
         </span>
 
         <p>
-        <div class="time" ></div>
-        <p>
+
+        <span style="width: 3em; display:inline-block" class="meta" key="time_pos"></span>
         <button class="play_MoveTime10r" icon="ui-icon-seek-prev">&nbsp;</button>
         <button class="play_MoveTime10f" icon="ui-icon-seek-next">&nbsp;</button>
+        <span style="width: 3em; display:inline-block" class="meta" key="time_left"></span>
+        <div class="time" ></div>
+        <p>
 
         <p>
  
@@ -110,7 +118,6 @@
             border-style: solid;
             border-width: 1px;
             border-color: #444444;
-
     ">
         <div style="text-align: center;">
             <table style="margin-left: auto; margin-right: auto; text-align:center">
@@ -179,6 +186,10 @@
             <span style=" color: #00ff00;" class="entry" key="parentPath"></span>
             <span style="background-color: #005500; color: #00ff00;" class="entry" key="currentPath"  ></span>
             <span style="color: #00ff00;" class="entry" key="currentFile"  ></span>
+        </div>
+        <div style="text-align:center">
+
+            <button class="pl_DeleteFile" title="Move to trash [del]" icon="ui-icon-trash">Delete</button>
         </div>
     </div>
 
