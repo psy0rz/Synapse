@@ -156,12 +156,19 @@
                 <td><button title="[y]" class="favorite" favorite-id="16"></button>
             </tr>
             </table>
-            <div id="saveFavoriteForm">
+
+            <div id="saveFavoriteForm" class="noHotkeys">
                 Saving current location and settings to favorite button.<p>
                 <input type='hidden' id="saveFavoriteId">
                 Description: <input type='text' id="saveFavoriteDesc">
             </div>
 
+    </div>
+
+    <div id="deleteForm">
+        Move the current playing file to trash?
+        <p>
+        (it will rename the current file to filename.deleted)
     </div>
 
 
@@ -355,14 +362,16 @@
 
         <span style="width: 3em; display:inline-block" class="meta" key="time_pos"></span>
         <button class="send" title="Previous file [up arrow]" event="pl_Previous" icon="ui-icon-seek-start"></button>
-        <button class="play_MoveTime10r" title="Rewind 10 seconds [left]" icon="ui-icon-seek-prev"></button>
         <button class="send" title="Pause [space]" event="play_Pause" icon="ui-icon-pause"></button>
         <button class="send" event="play_Stop" icon="ui-icon-stop"></button>
-        <button class="play_MoveTime10f" title="Forward 10 seconds [right]" icon="ui-icon-seek-next"></button>
         <button class="send" title="Next file [down arrow]" event="pl_Next" icon="ui-icon-seek-end"></button>
         <span style="width: 3em; display:inline-block" class="meta" key="time_left"></span>
 
         <div class="time" ></div>
+
+        <button class="play_MoveTime10r" title="Rewind 10 seconds [left]" icon="ui-icon-seek-prev"></button>
+        <button class="play_MoveTime10f" title="Forward 10 seconds [right]" icon="ui-icon-seek-next"></button>
+        <button class="pl_DeleteFile" title="Move to trash [del]" icon="ui-icon-trash"></button>
     </div>
 
 

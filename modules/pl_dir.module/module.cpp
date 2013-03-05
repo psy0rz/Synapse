@@ -1003,6 +1003,16 @@ namespace pl
 		}
 
 
+        void deleteFile()
+        {
+            path p=mCurrentFile;
+            next();
+            rename(p, p.string()+".deleted");
+            gDirCache.clear();
+            gSortedDirCache.clear();
+            reloadFiles();
+        }
+
         /* store current 'situation' as a favorite */
         void saveFavorite(string id, string desc)
         {
@@ -1355,11 +1365,13 @@ namespace pl
         plMan.get(dst).gotoStart();
     }
 
-
-
-	SYNAPSE_REGISTER(module_Shutdown)
+    SYNAPSE_REGISTER(module_Shutdown)
 	{
 		shutdown=true;
 	}
 
+    SYNAPSE_REGISTER(pl_DeleteFile)
+    {
+        plMan.get(dst).deleteFile();
+    }
 }
