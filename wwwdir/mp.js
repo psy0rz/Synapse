@@ -250,12 +250,12 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
 
     $(".play_MoveTime10r").click(function()
     {
-        send(0, "play_MoveTime", { "time":"-10" });
+        send(0, "play_MoveTime", { "time":"-30" });
     });
 
     $(".play_MoveTime10f").click(function()
     {
-        send(0, "play_MoveTime", { "time":"10" });
+        send(0, "play_MoveTime", { "time":"30" });
     });
 
 
