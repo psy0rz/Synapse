@@ -113,10 +113,35 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
         return (false);
     }); 
 
-    $(':input').on('keydown',function(event)
+/*    $(':input').on('keydown',function(event)
     {
         event.stopPropagation();
     });
+*/
+
+    $( "#deleteForm" ).dialog({
+        autoOpen: false,
+        modal: true,
+        buttons: {
+            "Delete": function() {
+                send(0, "pl_DeleteFile", {});
+                $(this).dialog("close");
+            },
+            "Cancel":function()
+            {
+                $(this).dialog("close");
+            }
+        },
+        close: function(){
+                $(".favorite").removeClass("ui-state-highlight");
+        }
+    });
+
+    $(".pl_DeleteFile").on('click', function(event)
+    {
+        $("#deleteForm").dialog("open");
+    });
+
 
     $( "#saveFavoriteForm" ).dialog({
         autoOpen: false,
@@ -139,6 +164,7 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
         }
     });
 
+
     $(".favorite").on('click', function(event)
     {
 
@@ -156,9 +182,14 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
         return(false);
     });
 
+
+
     $(document).on('keydown', function(event)
     {
         if (event.altKey || event.shiftKey || event.ctrlKey || event.metaKey)
+            return;
+
+        if ($(event.target).is("button, input"))
             return;
 
         if (event.which == $.ui.keyCode.SPACE)
@@ -183,10 +214,10 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
             send(0, "pl_Previous", {});
 
         else if (event.which == $.ui.keyCode.LEFT)
-            send(0, "play_MoveTime", { "time":"-10" });
+            send(0, "play_MoveTime", { "time":"-30" });
 
         else if (event.which == $.ui.keyCode.RIGHT)
-            send(0, "play_MoveTime", { "time":"10" });
+            send(0, "play_MoveTime", { "time":"30" });
 
         else if (event.which>=48 && event.which<=57)
             send(0, "pl_LoadFavorite", { id: event.which-47 });
@@ -209,6 +240,9 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
         else if (event.which==89) //y
             send(0, "pl_LoadFavorite", { id: 16 });
 
+        else if (event.which==$.ui.keyCode.DELETE) 
+            $("#deleteForm").dialog("open");
+
 
         console.log(event);
 
@@ -216,13 +250,15 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
 
     $(".play_MoveTime10r").click(function()
     {
-        send(0, "play_MoveTime", { "time":"-10" });
+        send(0, "play_MoveTime", { "time":"-30" });
     });
 
     $(".play_MoveTime10f").click(function()
     {
-        send(0, "play_MoveTime", { "time":"10" });
+        send(0, "play_MoveTime", { "time":"30" });
     });
+
+
 
     console.log(event);
 });
