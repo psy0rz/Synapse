@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 2.6)
 
+#To build a release use:
+# cmake -DCMAKE_BUILD_TYPE=Release .
+SET(CMAKE_BUILD_TYPE Debug CACHE STRING "Specifies wether or not create a Debug build")
+
 PROJECT(synapse)
 
+MESSAGE(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 
 
@@ -11,10 +16,6 @@ PROJECT(synapse)
 # SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fPIC"  )
 # ENDIF("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
-
-#uncomment this for releases or debugs
-#SET(CMAKE_BUILD_TYPE Release)
-SET(CMAKE_BUILD_TYPE Debug)
 
 SET(CMAKE_COLOR_MAKEFILE ON)
 
