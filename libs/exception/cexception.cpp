@@ -9,7 +9,7 @@ namespace synapse
 	runtime_error::runtime_error(const std::string &err )
 	:std::runtime_error(err)
 	{
-		#ifdef true
+		#ifdef NDEBUG
 			mTrace="Please enable debugging to get exception stack traces.";
 		#else
 				int j, nptrs;
