@@ -357,6 +357,11 @@ Cvar & Cvar::operator[] (const string & key)
 	return (((CvarMap&)(*this))[key]);
 }
 
+Cvar & Cvar::operator[] (const char * key)
+{
+    return (((CvarMap&)(*this))[key]);
+}
+
 CvarMap::iterator Cvar::begin()
 {
 	return ((CvarMap &)(*this)).begin();

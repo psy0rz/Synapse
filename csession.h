@@ -31,6 +31,7 @@
 #define CSESSION_H
 
 #include <boost/shared_ptr.hpp>
+    
 namespace synapse
 {
 	using namespace boost;

@@ -49,6 +49,7 @@
 
 namespace synapse
 {
+__thread int currentThreadDstId; 
 
 //keep this many threads left, even though we dont need them right away.
 //This is to prevent useless thread destruction/creation.
@@ -58,7 +59,9 @@ using namespace boost;
 
 CmessageMan::CmessageMan()
 {
-
+    //pretent like the current thread is handling a call that was send to session id 1, 
+    //so that msg.src automaticly get 1 when the core call send with msg.src=0 
+    currentThreadDstId=1; 
 	logSends=true;
 	logReceives=true;
 //	defaultOwner=userMan.getUser("module");
@@ -91,18 +94,20 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 	// -msg is set by the user and only containts direct objects, and NO pointers. it cant be trusted yet!
 	// -our job is to verify if everything is ok and populate the call queue
 	// -internally the core only works with smartpointers, so most stuff thats not in msg will be a smartpointer.
+    // -cookie is checked against the session cookie. if it doesnt match an error is thrown. (this makes creating network modules easier)
 
 //edwin: why?
 //	if (shutdown)
 //		throw(runtime_error("Shutting down, ignored message"));
 
-	//no src session specified means use default session of module:
+	//no src session specified means we use the session the original message was send to.
+    //we do this be using the global currentThreadDstId which is thread-local storage and contains the dst-session of the current call.
 	//NOTE: this is the only case where modify the actual msg object.
 	if (!msg->src)
 	{
 		if (module->defaultSessionId!=SESSION_DISABLED)
 		{
-			msg->src=module->defaultSessionId;
+			msg->src=currentThreadDstId;
 		}
 		else
 		{
@@ -380,7 +385,10 @@ void CmessageMan::operator()()
 		//handle call
 		try
 		{
+            //this is used in sendmessage to automagically determine the source session when its not specified.
+            currentThreadDstId=callI->dst->id;
 			callI->soHandler(*(callI->msg), callI->dst->id, callI->dst->cookie);
+			currentThreadDstId=1;
 		}
 	  	catch (const ios::failure& e)
   		{
@@ -533,8 +541,9 @@ void CmessageMan::checkThread()
  */
 int CmessageMan::run(string coreName, string moduleName)
 {
+
 	//load the first module as user core UNLOCKED!
-	loadModule(coreName, "core");
+	loadModule(getModulePath(coreName), "core");
 	this->firstModuleName=moduleName;
 
 	//start first thread:
@@ -592,6 +601,14 @@ int CmessageMan::run(string coreName, string moduleName)
 }
 
 
+//determines the pathname of a module by name. (module doesnt have to be loaded yet)
+string CmessageMan::getModulePath(string name)
+{
+	//TODO: make this configurable
+	string path="modules/"+name+".module/lib"+name+".so";
+	return (path);
+}
+
 
 /** Loads a module an returns a pointer to the newly created default-session for the module.
  * Only call this once!
@@ -618,11 +635,15 @@ CsessionPtr CmessageMan::loadModule(string path, string userName)
 			session->description="module default session.";
 
 			DEB("Init module " << module->name);
+
+            currentThreadDstId=module->defaultSessionId;
 			if (module->soInit(this ,module))
 			{
+                currentThreadDstId=1;
 				DEB("Init " << module->name << " complete");
 				return session;
 			}
+            currentThreadDstId=0;
 			userMan.delSession(module->defaultSessionId);
 			ERROR("Error while initalizing module");
 		}

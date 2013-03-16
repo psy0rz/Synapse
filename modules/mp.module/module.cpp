@@ -25,12 +25,22 @@ namespace mp
     using namespace std;
 
     int playerId;
+    int plId;
+
+    string wantFile;
+    string openingFile;
+    bool opening=false;
+
+    //last received vlc state and file
+    string vlcState;
+    string vlcFile;
 
     SYNAPSE_REGISTER(module_Init)
     {
     	Cmsg out;
 
         playerId=0;
+        plId=0;
 
     	out.clear();
     	out.event="core_ChangeModule";
@@ -65,10 +75,6 @@ namespace mp
         out["name"]="http_json";
         out.send();
 
-        out.clear();
-        out.event="pl_Create";
-        out["id"]="/home/psy/pl";
-        out.send();
 
     }
 
@@ -99,12 +105,100 @@ namespace mp
             playerId=msg.src;
     }
 
-
+    void sendOpen(string url)
+    {
+        Cmsg out;
+        out.event="play_Open";
+        out["url"]=url;
+        out.dst=playerId;
+        out.send();
+    }
 
     SYNAPSE_REGISTER(play_InfoMeta)
     {
+        if (msg.src!=playerId)
+            return;
 
+        vlcFile=msg["url"].str();
     }
+
+    SYNAPSE_REGISTER(play_State)
+    {
+        if (msg.src!=playerId)
+            return;
+
+        //static int lastTime=0;
+
+        vlcState=msg["state"].str();
+
+        if (msg["state"]=="empty")
+        {
+            /*
+            if (time(NULL)-lastTime<=2)
+            {
+                sleep(1);
+            }
+            lastTime=time(NULL);
+*/
+            Cmsg out;
+            out.dst=plId;
+            out.event="pl_Next";
+            out.send();
+        };
+
+
+
+        if (msg["state"]!="opening" && vlcFile==openingFile)
+        {
+            openingFile="";
+            //we want a different file?
+            if (vlcFile!=wantFile)
+            {
+                openingFile=wantFile;
+                sendOpen(openingFile);
+            }
+        }
+        
+        
+/*        if (msg["state"]=="playing")
+        {
+            Cmsg out;
+            out.dst=playerId;
+            out.event="play_SetTime";
+            out["time"]=25;
+            out.send();
+            
+        }*/
+    }
+
+    //playlist switched to different path/file
+
+    SYNAPSE_REGISTER(pl_Entry)
+    {
+
+        //for now we just support one playlist
+        if (!plId)
+            plId=msg.src;
+
+        if (msg.src!=plId)
+            return;
+
+
+        wantFile="file://"+msg["currentFile"].str();
+
+        //not already opening stuff?
+        if (openingFile=="")
+        {
+            //dont open it if vlc is already playing it
+            if (wantFile!=vlcFile)
+            {
+                openingFile=wantFile;
+                sendOpen(wantFile);
+            }
+        }
+    }
+
+
 
 
 

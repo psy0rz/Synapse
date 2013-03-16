@@ -33,6 +33,8 @@ This module can play urls and local files.
 
 #include "boost/bind.hpp"
 #include <functional>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/recursive_mutex.hpp>
 
 /** VLC player namespace
  *
@@ -41,7 +43,13 @@ namespace play_vlc
 {
 
 using namespace std;
+using namespace boost;
 
+synapse::Cconfig config;
+synapse::Cconfig state;
+
+//one big mutex so that our threads and vlc threads dont collide
+recursive_mutex vlcMutex;
 
 //A player instance
 //Consists of a libvlc player, list-player and and media-list (play queue)
@@ -66,13 +74,30 @@ class CPlayer
 	libvlc_media_list_player_t* mListPlayer;
 	libvlc_event_manager_t *mListPlayerEm;
 
+    int mVlcSubitemsLeft;
 
-	//WARNING: only access these variables from call back functions, or when player is stopped, to prevent mutex problems!
 	int mVlcLastTime;
 	string mVlcUrl;
 
+    Cvar mStatus;
+
 	public:
 	string description;
+
+    //send all cached status events to specified destination
+    void sendStatus(int dst)
+    {
+        Cmsg out;
+        out.src=mId;
+        out.dst=dst;
+        FOREACH_VARMAP(status, mStatus)
+        {
+            out.event=status.first;
+            out=status.second;
+            out.send();
+        }
+
+    }
 
 	void throwError(string msg)
 	{
@@ -104,14 +129,19 @@ class CPlayer
 
 	static void vlcEventGeneric(const libvlc_event_t * event, void *player)
 	{
+        lock_guard<recursive_mutex> lock(vlcMutex);
+
 		Cmsg out;
 		out.src=((CPlayer *)player)->mId;
+
 		out.event=string("play_Event")+string(libvlc_event_type_name(event->type));
 		out.send();
 	}
 
 	static void vlcEventMediaPlayerTimeChanged(const libvlc_event_t * event, void *player)
 	{
+        lock_guard<recursive_mutex> lock(vlcMutex);
+
 		int newTime=event->u.media_player_time_changed.new_time/1000;
 
 		//NOTE: this is called from another thread...watch out with accessing other variables
@@ -126,10 +156,13 @@ class CPlayer
 		out["time"]=newTime;
 		out["length"]=(libvlc_media_player_get_length((libvlc_media_player_t*)event->p_obj))/1000;
 		out.send();
+
+        //cache status
+        ((CPlayer *)player)->mStatus[out.event]=out;
 	}
 
 	//converts metadata from a mediaobject into a var
-    	static void vlcMeta2Var(libvlc_media_t * m, Cvar & var)
+	static void vlcMeta2Var(libvlc_media_t * m, Cvar & var)
 	{
 		char * s;
 
@@ -192,6 +225,8 @@ class CPlayer
 
 	static void vlcEventMediaMetaChanged(const libvlc_event_t * event, void *player)
 	{
+        lock_guard<recursive_mutex> lock(vlcMutex);
+
 		static Cmsg prevMsg;
 
 		Cmsg out;
@@ -208,33 +243,69 @@ class CPlayer
 		{
 			out.send();
 			prevMsg=out;
+
+            //cache status
+            ((CPlayer *)player)->mStatus[out.event]=out;
+
 		}
 	}
 
+
+
 	static void vlcEventMediaStateChanged(const libvlc_event_t * event, void *player)
 	{
+        lock_guard<recursive_mutex> lock(vlcMutex);
+
+/*
+        DEB("lock");
+        DEB("get");
+        int playing=libvlc_media_player_is_playing((((CPlayer*)player)->mPlayer));
+        ERROR("is player " << playing);
+                DEB("unlock");
+
+        DEB("unlocked");
+*/
 		Cmsg out;
 		out.src=((CPlayer *)player)->mId;
+        out.event="play_State";
+
+        out["state"]="unknown";
 
 		if (event->u.media_state_changed.new_state==libvlc_NothingSpecial)
-			out.event="play_StateNone";
+            out["state"]="none";
 		else if (event->u.media_state_changed.new_state==libvlc_Opening)
-			out.event="play_StateOpening";
+            out["state"]="opening";
 		else if (event->u.media_state_changed.new_state==libvlc_Buffering)
-			out.event="play_StateBuffering";
+	        out["state"]="buffering";
 		else if (event->u.media_state_changed.new_state==libvlc_Playing)
-			out.event="play_StatePlaying";
+            out["state"]="playing";
 		else if (event->u.media_state_changed.new_state==libvlc_Paused)
-			out.event="play_StatePaused";
+            out["state"]="paused";
 		else if (event->u.media_state_changed.new_state==libvlc_Stopped)
-			out.event="play_StateStopped";
+	        out["state"]="stopped";
 		else if (event->u.media_state_changed.new_state==libvlc_Ended)
-			out.event="play_StateEnded";
+            out["state"]="ended";
 		else if (event->u.media_state_changed.new_state==libvlc_Error)
-			out.event="play_StateError";
+	        out["state"]="error";
 
 		out.send();
 
+//        ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
+        //are we done playing the internal playlists of vlc?        
+        if (
+            (event->u.media_state_changed.new_state==libvlc_Ended && ((CPlayer*)player)->mVlcSubitemsLeft==0) ||
+            (event->u.media_state_changed.new_state==libvlc_Error)
+        )
+        {
+            out["state"]="empty";
+            out.send();
+        }
+
+
+        //cache status
+        ((CPlayer *)player)->mStatus[out.event]=out;
+
+        
 /**
 		//check the logs as well
 		libvlc_log_message_t logMessage;
@@ -269,8 +340,21 @@ class CPlayer
 **/
 	}
 
+    static void vlcEventMediaListPlayerNextItemSet(const libvlc_event_t * event, void *player)
+    {
+        lock_guard<recursive_mutex> lock(vlcMutex);
+        ((CPlayer*)player)->mVlcSubitemsLeft--;
+       // ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
+    }
+
+
 	static void vlcEventMediaSubItemAdded(const libvlc_event_t * event, void *player)
 	{
+        lock_guard<recursive_mutex> lock(vlcMutex);
+
+        ((CPlayer*)player)->mVlcSubitemsLeft++;
+      //  ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
+  
 		libvlc_event_manager_t *em;
 		em=libvlc_media_event_manager(event->u.media_subitem_added.new_child);
 		if (em)
@@ -300,7 +384,33 @@ class CPlayer
 
 		// Create vlc instance
 		DEB("Creating vlc instance");
-		mVlc=libvlc_new (0,NULL);
+
+		//NOTE: badd...dont rely on useinput for these arguments, only use the config file!
+		char argbuffer[1000];
+		unsigned int argbufferi=0;
+		char *args[100];
+		unsigned int argc=0;
+		
+		FOREACH_VARLIST(param, config["vlc_args"])
+		{
+			args[argc]=&argbuffer[argbufferi];
+			argbufferi=argbufferi+param.str().length()+1;
+			if (argbufferi> (sizeof(argbuffer)/sizeof(argbuffer[0])))
+			{
+				ERROR("vlc arguments are too long, ignoring the last part.");
+				break;
+			}
+			strcpy(args[argc], param.str().c_str());
+			argc++;
+		}
+
+
+//		static const char* args[] = { "--config", "etc/synapse/vlc.conf" };
+		mVlc=libvlc_new (argc, args );
+
+
+
+
 		if (!mVlc)
 			throwError("Problem creating new vlc instance");
 
@@ -326,7 +436,7 @@ class CPlayer
 		if (!mListPlayerEm)
 			throwError("Problem getting event manager of list player");
 
-
+       libvlc_event_attach(mListPlayerEm, libvlc_MediaListPlayerNextItemSet, vlcEventMediaListPlayerNextItemSet, this);
 
 		//create a player
 		DEB("Creating player");
@@ -334,13 +444,16 @@ class CPlayer
 		if (!mPlayer)
 			throwError("Problem creating new player");
 
+        //set some options
+        libvlc_set_fullscreen(mPlayer,1);
+
+
 		//get the event manager of the player
 		mPlayerEm=libvlc_media_player_event_manager(mPlayer);
 		if (!mPlayerEm)
 			throwError("Problem getting event manager of player");
 
-		libvlc_event_attach(mPlayerEm, libvlc_MediaPlayerTimeChanged, vlcEventMediaPlayerTimeChanged, this);
-
+        libvlc_event_attach(mPlayerEm, libvlc_MediaPlayerTimeChanged, vlcEventMediaPlayerTimeChanged, this);
 
 		//create a list
 		DEB("Creating list");
@@ -401,8 +514,6 @@ class CPlayer
 	{
 		throwIfBad();
 
-		stop();
-
 		mVlcUrl=url;
 
 		 // Create a new media item
@@ -412,22 +523,38 @@ class CPlayer
 		if (!m)
 			throwError("Cant creating location object");
 
+
 		//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv LOCKED
 		libvlc_media_list_lock(mList);
+        DEB("remove locked");
 
 		//clear the list
 		while(libvlc_media_list_count(mList))
 		{
+            DEB("remove");
 			libvlc_media_list_remove_index(mList, 0);
+            DEB("remove done");
 		}
-
-		//add media
-		libvlc_media_list_add_media(mList, m);
 
 		libvlc_media_list_unlock(mList);
 		//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ LOCKED
+        DEB("remove unlocked");
+
+        mVlcSubitemsLeft=0;
+
+        //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv LOCKED
+        libvlc_media_list_lock(mList);
+        DEB("add locked");
+
+        //add media
+        libvlc_media_list_add_media(mList, m);
+        libvlc_media_list_unlock(mList);
+        //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ LOCKED
+        DEB("add unlocked");
+
 
 		//command the list player to play
+        libvlc_media_list_player_next(mListPlayer);
 		libvlc_media_list_player_play(mListPlayer);
 
 		libvlc_media_release(m);
@@ -450,6 +577,21 @@ class CPlayer
 		}
 	}
 
+    void pause()
+    {
+        libvlc_media_player_pause(mPlayer);
+    }
+
+    void setTime(int time)
+    {
+        libvlc_media_player_set_time(mPlayer, time);
+    }
+
+    void moveTime(int time)
+    {
+        libvlc_media_player_set_time(mPlayer, libvlc_media_player_get_time(mPlayer)+time);
+    }
+
 };
 
 typedef map<int, CPlayer> CPlayerMap;
@@ -462,10 +604,13 @@ SYNAPSE_REGISTER(module_Init)
 {
 	Cmsg out;
 
+    //load config file
+    config.load("etc/synapse/play_vlc.conf");
+
+
 	defaultSession=dst;
 
 	//this module is single threaded, since libvlc manages its own threads
-
 
 	out.clear();
 	out.event="core_Ready";
@@ -479,38 +624,42 @@ SYNAPSE_REGISTER(module_Shutdown)
 
 SYNAPSE_REGISTER(module_SessionStart)
 {
+    lock_guard<recursive_mutex> lock(vlcMutex);
+
 	players[dst].init(dst);
 
 	//inform everyone there's a new player in town ;)
 	Cmsg out;
 	out=msg;
 	out.event="play_Player";
-	out.src=dst;
 	out.dst=0;
+    out.src=msg.dst;
 	out.send();
 }
 
 SYNAPSE_REGISTER(module_SessionEnd)
 {
+    lock_guard<recursive_mutex> lock(vlcMutex);
+
 	players[dst].destroy();
 	players.erase(dst);
 }
 
 /** Get a list of players
- * Returns a play_Players event with a list of available player ids
+ * \REPLY play_Player
+ *   For every player.
  *
  */
 SYNAPSE_REGISTER(play_GetPlayers)
 {
 	Cmsg out;
-	out.event="play_Players";
+	out.event="play_Player";
 	out.dst=msg.src;
 
 	for(CPlayerMap::iterator I=players.begin(); I!=players.end(); I++)
 	{
-		stringstream s;
-		s << I->first;
-		out["players"][s.str()]=I->second.description;
+        out.src=I->first;
+        out.send();
 	}
 	out.send();
 }
@@ -524,7 +673,6 @@ SYNAPSE_REGISTER(play_DelPlayer)
 		throw(synapse::runtime_error("Cant delete default player"));
 
 	Cmsg out;
-	out.src=dst;
 	out.event="core_DelSession";
 	out.send();
 }
@@ -547,30 +695,18 @@ SYNAPSE_REGISTER(play_NewPlayer)
 \BROADCAST play_InfoMeta: 
     Metadata for the current url. (can also be sended while playing, for streams for example)
 
-\BROADCAST play_StateNone:
-    Player has no status.
-
-\BROADCAST play_StateOpening:
-    Player is opening an url
-
-\BROADCAST play_StateBuffering:
-    Player is buffering data
-
-\BROADCAST play_StatePlaying:
-    Player is playing.
-
-\BROADCAST play_StatePaused:
-    Player is paused
-
-\BROADCAST play_StateStopped:
-    Player has stopped
-
-\BROADCAST play_StateEnded:
-    Media has ended
-
-\BROADCAST play_StateError:
-    An error has occured.
-    TOOD: need to fix logging, to show what actually went wrong.
+\BROADCAST play_State:
+    Current status. 
+    \param state:
+        none:       no status yet
+        opening:    Player is opening an url
+        buffering:  Player is buffering data
+        playing:    Player is playing something
+        paused:     Player is pausing
+        stopped:    Player is stopped
+        ended:      Media has ended
+        error:      an error occured. 
+        TOOD: need to fix logging, to show what actually went wrong.    
 
 \BROADCAST play_Time:
     Sended every second with time and position info.
@@ -580,6 +716,8 @@ SYNAPSE_REGISTER(play_NewPlayer)
  */
 SYNAPSE_REGISTER(play_Open)
 {
+    //lock_guard<recursive_mutex> lock(vlcMutex);
+
 	INFO("vlc opening " << msg["url"].str());
 
 	players[dst].open(msg["url"]);
@@ -592,10 +730,45 @@ SYNAPSE_REGISTER(play_Open)
 */
 SYNAPSE_REGISTER(play_Stop)
 {
+    lock_guard<recursive_mutex> lock(vlcMutex);
+
 	players[dst].stop();
 }
 
+SYNAPSE_REGISTER(play_Pause, '{ "recvGroup": "everyone", "sendGroup": "modules" }')
+{
+    lock_guard<recursive_mutex> lock(vlcMutex);
 
+    players[dst].pause();
+}
+
+
+SYNAPSE_REGISTER(play_SetTime)
+{
+    lock_guard<recursive_mutex> lock(vlcMutex);
+
+    players[dst].setTime(msg["time"] * 1000);
+}
+
+
+SYNAPSE_REGISTER(play_MoveTime)
+{
+    lock_guard<recursive_mutex> lock(vlcMutex);
+
+    players[dst].moveTime(msg["time"] * 1000);
+}
+
+/** Gets status of player.
+ * This is just to allow new clients to get the latest events. 
+ *
+ * Usually play_InfoMeta and stuff.
+ *
+ */
+SYNAPSE_REGISTER(play_GetStatus)
+{
+    lock_guard<recursive_mutex> lock(vlcMutex);
+    players[dst].sendStatus(msg.src);
+}
 
 
 //end namespace
