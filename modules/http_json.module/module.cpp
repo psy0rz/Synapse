@@ -16,7 +16,9 @@
     along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
 
 //remove this to enable debugging in this module:
+#ifndef NDEBUG
 #define NDEBUG
+#endif
 
 #include "cnetman.h"
 #include "synapse.h"
