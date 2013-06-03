@@ -707,7 +707,7 @@ bool Cvar::selfTest()
 
 		DEB("test: use invalid string as boolean");
 		e="blah";
-		TESTTHROW(if (e););
+		TESTTHROW(if (e) DEB("woops"););
 		TEST(e=="blah");
 
 		DEB("test: string construct from const char");

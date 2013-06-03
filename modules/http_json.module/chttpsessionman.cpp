@@ -229,8 +229,8 @@ string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonLines
 	Cmsg msg;
 
 	//multiple json messages can be send seperated by newlines.
-	unsigned int nextPos=0;
-	unsigned int pos=0;
+	unsigned long int nextPos=0;
+	unsigned long int pos=0;
 	while(pos<jsonLines.length())
 	{
 		bool failed=false;

@@ -211,14 +211,22 @@ class Ccurl
 
 			//set curl options, as long as there are no errors
 			curl_easy_reset(mCurl);
-			(err=curl_easy_setopt(mCurl, CURLOPT_NOSIGNAL, 1))==0 &&
-			(err=curl_easy_setopt(mCurl, CURLOPT_WRITEFUNCTION, curl_write_callback))==0 &&
-			(err=curl_easy_setopt(mCurl, CURLOPT_WRITEDATA, this))==0 &&
-			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGFUNCTION, curl_debug_callback))==0 &&
-			(err=curl_easy_setopt(mCurl, CURLOPT_DEBUGDATA, this))==0 &&
-			(err=curl_easy_setopt(mCurl, CURLOPT_ERRORBUFFER , &mError))==0 &&
-			(err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mMsg)["url"].str().c_str() ))==0 &&
-			(err=curl_easy_setopt(mCurl, CURLOPT_VERBOSE, (int)config["verbose"]))==0;
+			err=curl_easy_setopt(mCurl, CURLOPT_NOSIGNAL, 1);
+			
+			if (err==0)
+				err=curl_easy_setopt(mCurl, CURLOPT_WRITEFUNCTION, curl_write_callback);
+			if (err==0)
+				err=curl_easy_setopt(mCurl, CURLOPT_WRITEDATA, this);
+			if (err==0)
+				err=curl_easy_setopt(mCurl, CURLOPT_DEBUGFUNCTION, curl_debug_callback);
+			if (err==0)
+				err=curl_easy_setopt(mCurl, CURLOPT_DEBUGDATA, this);
+			if (err==0)
+				err=curl_easy_setopt(mCurl, CURLOPT_ERRORBUFFER , &mError);
+			if (err==0)
+				err=curl_easy_setopt(mCurl, CURLOPT_URL, (*mMsg)["url"].str().c_str());
+			if (err==0)
+				err=curl_easy_setopt(mCurl, CURLOPT_VERBOSE, (int)config["verbose"]);
 
 			//authorisation
 			if (err==0 && mMsg->isSet("username"))
@@ -248,9 +256,13 @@ class Ccurl
 
 			if (err==0 && mMsg->isSet("post"))
 			{
-				(err=curl_easy_setopt(mCurl, CURLOPT_POST, 1))==0 &&
-				(err=curl_easy_setopt(mCurl, CURLOPT_POSTFIELDS, ((*mMsg)["post"].str().c_str())))==0 &&
-				(err=curl_easy_setopt(mCurl, CURLOPT_POSTFIELDSIZE, ((*mMsg)["post"].str().length())))==0;
+				err=curl_easy_setopt(mCurl, CURLOPT_POST, 1);
+				
+				if (err==0)
+					err=curl_easy_setopt(mCurl, CURLOPT_POSTFIELDS, ((*mMsg)["post"].str().c_str()));
+					
+				if (err==0)
+					err=curl_easy_setopt(mCurl, CURLOPT_POSTFIELDSIZE, ((*mMsg)["post"].str().length()));
 			}
 
 #ifdef OAUTH
