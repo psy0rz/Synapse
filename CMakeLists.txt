@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 2.6)
 
+#To build a release use:
+# cmake -DCMAKE_BUILD_TYPE=Release .
+SET(CMAKE_BUILD_TYPE Debug CACHE STRING "Specifies wether or not create a Debug build")
+
 PROJECT(synapse)
 
+MESSAGE(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 
 
@@ -12,10 +17,6 @@ PROJECT(synapse)
 # ENDIF("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
 
-#uncomment this for releases or debugs
-#SET(CMAKE_BUILD_TYPE Release)
-SET(CMAKE_BUILD_TYPE Debug)
-
 SET(CMAKE_COLOR_MAKEFILE ON)
 
 #if you don't want the full compiler output, remove the following line
@@ -23,9 +24,9 @@ SET(CMAKE_COLOR_MAKEFILE ON)
 
 #add definitions, compiler switches, etc.
 if(${CMAKE_BUILD_TYPE} STREQUAL Debug)
-	ADD_DEFINITIONS(-Wall -O0 -pthread -Werror -fno-strict-aliasing)
+	ADD_DEFINITIONS(-Wall -O0 -pthread -Werror -fno-strict-aliasing -rdynamic -fexceptions)
 else(${CMAKE_BUILD_TYPE} STREQUAL Debug)
-	ADD_DEFINITIONS(-Wall -O3 -pthread -Werror -fno-strict-aliasing)
+	ADD_DEFINITIONS(-Wall -O3 -pthread -Werror -fno-strict-aliasing -rdynamic -fexceptions)
 endif(${CMAKE_BUILD_TYPE} STREQUAL Debug)
 
 #list all source files here

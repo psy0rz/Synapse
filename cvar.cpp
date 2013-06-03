@@ -600,7 +600,7 @@ bool Cvar::selfTest()
 			catch (const synapse::runtime_error& e) \
 			{ \
 				ok=true; \
-				DEB("exception: " << e.what()); \
+				DEB("test catched exception: " << e.what()); \
 			} \
 			catch(...) \
 			{ \
@@ -613,10 +613,14 @@ bool Cvar::selfTest()
 
 
 	{
+		DEB("test: Selftesting basic exception handler");
+		Cvar e;
+		TESTTHROW(e.castError("exception test"));
+		
+	
 		DEB("test: Selftesting CVAR_LONG_DOUBLE");
 
 		DEB("test: empty long value");
-		Cvar e;
 		TEST((int)e==0);
 
 		DEB("test: use long as boolean");
