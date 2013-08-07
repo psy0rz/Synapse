@@ -20,6 +20,16 @@
 #include "cconfig.h"
 #include "clog.h"
 
+
+#include <boost/function_output_iterator.hpp>
+#include <boost/bind.hpp>
+#include <algorithm>
+#include <sstream>
+#include <iostream>
+#include <iterator>
+#include <iomanip>
+
+
 namespace mp
 {
     using namespace std;
@@ -171,8 +181,18 @@ namespace mp
         }*/
     }
 
-    //playlist switched to different path/file
+    //url encode stuff, borrowed from http://stackoverflow.com/questions/3589936/c-urlencode-library-unicode-capable
+    std::string encimpl(std::string::value_type v) {
+        if (isalnum(v))
+          return std::string()+v;
 
+        std::ostringstream enc;
+        enc << '%' << std::setw(2) << std::setfill('0') << std::hex << std::uppercase << int(static_cast<unsigned char>(v));
+        return enc.str();
+    }
+
+
+    //playlist switched to different path/file
     SYNAPSE_REGISTER(pl_Entry)
     {
 
@@ -183,8 +203,13 @@ namespace mp
         if (msg.src!=plId)
             return;
 
+        string filename=msg["currentFile"].str();
+        string encodedFilename;
+        std::transform(filename.begin(), filename.end(),
+            boost::make_function_output_iterator(boost::bind(static_cast<std::string& (std::string::*)(const std::string&)>(&std::string::append),&encodedFilename,_1)),
+            encimpl);
 
-        wantFile="file://"+msg["currentFile"].str();
+        wantFile="file://"+encodedFilename;
 
         //not already opening stuff?
         if (openingFile=="")
