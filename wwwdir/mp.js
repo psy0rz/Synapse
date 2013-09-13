@@ -1,4 +1,4 @@
-var playerIds=[];
+var player_ids=[];
 
 
 synapse_register("error",function(errortxt)
@@ -27,7 +27,7 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
         min: 0,
         slide: function (event, ui)
         {
-            send(0,"play_SetTime", { 'time': ui.value } );
+            send(0,"play_SetTime", { 'time': ui.value, 'ids': player_ids } );
         }
     });
 
@@ -57,7 +57,9 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
     //translate clicks on elements that have the send-class to a synapse event:
     $(".send").click(function() 
     {
-        send(0, $(this).attr("event"));
+        send(0, $(this).attr("event"), {
+            'ids': player_ids
+        });
     });
 
 
@@ -201,7 +203,7 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
             return;
 
         if (event.which == $.ui.keyCode.SPACE)
-            send(0, "play_Pause", {});
+            send(0, "play_Pause", { 'ids': player_ids });
 
         else if (event.which == $.ui.keyCode.ENTER)
             send(0, "pl_EnterPath", {});
@@ -222,10 +224,10 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
             send(0, "pl_Previous", {});
 
         else if (event.which == $.ui.keyCode.LEFT)
-            send(0, "play_MoveTime", { "time":"-30" });
+            send(0, "play_MoveTime", { "time":"-30", 'ids': player_ids });
 
         else if (event.which == $.ui.keyCode.RIGHT)
-            send(0, "play_MoveTime", { "time":"30" });
+            send(0, "play_MoveTime", { "time":"30", 'ids': player_ids });
 
         else if (event.which>=48 && event.which<=57)
             send(0, "pl_LoadFavorite", { id: event.which-47 });
@@ -258,12 +260,12 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
 
     $(".play_MoveTime10r").click(function()
     {
-        send(0, "play_MoveTime", { "time":"-30" });
+        send(0, "play_MoveTime", { "time":"-30",'ids': player_ids });
     });
 
     $(".play_MoveTime10f").click(function()
     {
-        send(0, "play_MoveTime", { "time":"30" });
+        send(0, "play_MoveTime", { "time":"30",'ids': player_ids });
     });
 
 
@@ -273,7 +275,7 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
 
 synapse_register("play_Player",function(msg_src, msg_dst, msg_event, msg)
 {
-    playerIds.push(msg["id"]);
+    player_ids.push(msg["id"]);
 });
 
 

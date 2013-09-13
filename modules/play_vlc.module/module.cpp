@@ -658,7 +658,6 @@ SYNAPSE_REGISTER(play_GetPlayers)
 		out["id"]=I->first;
         out.send();
 	}
-	out.send();
 }
 
 /** Delete the player instance. 
