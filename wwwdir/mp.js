@@ -1,3 +1,5 @@
+var playerIds=[];
+
 
 synapse_register("error",function(errortxt)
 {
@@ -38,8 +40,14 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 
 synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
 {
-    //get status from player
+    //get list of players
+    send(0, "play_GetPlayers", {
+
+    });
+
+    //get status from master player
     send(0, "play_GetStatus", { 
+        "id": "master"
     });
 
     //get status from playlist
@@ -263,6 +271,12 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
     console.log(event);
 });
 
+synapse_register("play_Player",function(msg_src, msg_dst, msg_event, msg)
+{
+    playerIds.push(msg["id"]);
+});
+
+
 synapse_register("pl_Entry",function(msg_src, msg_dst, msg_event, msg)
 {
     if (msg["updateListsAsyncFlying"])
@@ -422,6 +436,9 @@ synapse_register("pl_Entry",function(msg_src, msg_dst, msg_event, msg)
 
 synapse_register("play_Time",function(msg_src, msg_dst, msg_event, msg)
 {
+    if (msg["id"]!="master")
+        return;
+
     function timestr(seconds)
     {
         var str=Math.round(seconds/60)+":";
@@ -453,6 +470,9 @@ synapse_register("play_Time",function(msg_src, msg_dst, msg_event, msg)
 
 synapse_register("play_State",function(msg_src, msg_dst, msg_event, msg)
 {
+    if (msg["id"]!="master")
+        return;
+
     $('.meta[key="time_left"]').text(msg['state']);
     $('.meta[key="time_length"]').text("");
     $('.meta[key="time_pos"]').text("");
@@ -460,6 +480,9 @@ synapse_register("play_State",function(msg_src, msg_dst, msg_event, msg)
 
 synapse_register("play_InfoMeta",function(msg_src, msg_dst, msg_event, msg)
 {
+    if (msg["id"]!="master")
+        return;
+
     if (msg.title==null)
         msg.title="";
     $('.meta[key=title]').text(msg.title);

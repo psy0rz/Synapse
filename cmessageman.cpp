@@ -49,7 +49,7 @@
 
 namespace synapse
 {
-__thread int currentThreadDstId; 
+__thread int currentThreadDstId=0; 
 
 //keep this many threads left, even though we dont need them right away.
 //This is to prevent useless thread destruction/creation.
@@ -105,14 +105,14 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 	//NOTE: this is the only case where modify the actual msg object.
 	if (!msg->src)
 	{
-		if (module->defaultSessionId!=SESSION_DISABLED)
+		if (currentThreadDstId!=0)
 		{
 			msg->src=currentThreadDstId;
 		}
 		else
 		{
 			stringstream s;
-			s << "send: module " << module->name << " want to send " << msg->event << " from its default session, but is doesnt have one.";
+			s << "send: module " << module->name << " want to send " << msg->event << " with msg.src=0 from an unknown thread. (specify msg.src to prevent this)";
 			throw(synapse::runtime_error(s.str().c_str()));
 		}
 	}
@@ -124,7 +124,15 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 	src=userMan.getSession(msg->src);
 	if (!src)
 	{
-		//not found. we cant send an error back yet, so just return false
+		//not found
+
+		//during shutdown all sessions are gone, we dont want exceptions anymore.
+		if (shutdown)
+		{
+			DEB("send: ignored message " << msg->event << " from module " << module->name << " because we're shutting down and session has already been deleted.");
+			return;
+		}
+
 		stringstream s;
 		s << "send: module " << module->name << " want to send " << msg->event << " from non-existing session " << msg->src;
 		throw(synapse::runtime_error(s.str().c_str()));
@@ -133,7 +141,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 	//source session belongs to this module?
 	if (src->module!=module)
 	{
-		//module is not the session owner. we cant send an error back yet, so just return false
+		//module is not the session owner. 
 		stringstream s;
 		s << "send: module " << module->name << " wants to send " << msg->event << " from session " << msg->src << ", but isnt the owner of this session.";
 		throw(synapse::runtime_error(s.str().c_str()));

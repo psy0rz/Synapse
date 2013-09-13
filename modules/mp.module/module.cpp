@@ -34,7 +34,7 @@ namespace mp
 {
     using namespace std;
 
-    int playerId;
+    //int playerId;
     int plId;
 
     string wantFile;
@@ -45,12 +45,18 @@ namespace mp
     string vlcState;
     string vlcFile;
 
+    //config file
+    synapse::Cconfig config;
+    CvarList playerIds;
+
+
     SYNAPSE_REGISTER(module_Init)
     {
     	Cmsg out;
 
-        playerId=0;
         plId=0;
+
+        config.load("etc/synapse/mp.conf");
 
     	out.clear();
     	out.event="core_ChangeModule";
@@ -71,6 +77,17 @@ namespace mp
 
     SYNAPSE_REGISTER(play_vlc_Ready)
     {
+
+        //create players
+        FOREACH_VARLIST(player, config["players"])
+        {
+            Cmsg out;
+            out.event="play_NewPlayer";
+            out=player;
+            out.send();
+        }
+
+
         Cmsg out;
         out.event="core_LoadModule";
         out["name"]="pl_dir";
@@ -97,36 +114,32 @@ namespace mp
         out.send();
     }
 
-    // SYNAPSE_REGISTER(play_vlc_Ready)
-    // {
-    // 	playUrl="http://listen.di.fm/public3/chilloutdreams.pls";
-    // 	Cmsg out;
-    // 	out.dst=msg["session"];
-    // 	out.event="play_NewPlayer";
-    // 	out["description"]="second player instance";
-    // 	out.send();
-    // }
 
     //a new player has emerged
     SYNAPSE_REGISTER(play_Player)
     {
-        //for now we just support one player
-        if (!playerId)
-            playerId=msg.src;
+        playerIds.push_back(msg["id"]);
+
+        //open the current wanted file right away
+        Cmsg out;
+        out.event="play_Open";
+        out["ids"].list().push_back(msg["id"]);
+        out["url"]=wantFile;
+        out.send();
     }
 
     void sendOpen(string url)
     {
         Cmsg out;
         out.event="play_Open";
+        out["ids"].list()=playerIds;
         out["url"]=url;
-        out.dst=playerId;
         out.send();
     }
 
     SYNAPSE_REGISTER(play_InfoMeta)
     {
-        if (msg.src!=playerId)
+        if (msg["id"]!="master")
             return;
 
         vlcFile=msg["url"].str();
@@ -134,7 +147,7 @@ namespace mp
 
     SYNAPSE_REGISTER(play_State)
     {
-        if (msg.src!=playerId)
+        if (msg["id"]!="master")
             return;
 
         //static int lastTime=0;

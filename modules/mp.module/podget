@@ -12,13 +12,16 @@ args=parser.parse_args()
 import feedparser
 feed=feedparser.parse( args.feed )
 
+import os.path
 for entry in feed['entries']:
 	for link in entry['links']:
 		if link['rel'] == 'enclosure':
-			print (entry['title'] + " -> " + link['href'])
-			with open(entry['title'] + ".strm", 'w') as f:
-				f.write(link['href'] + "\n")
-			break
+			strm_file=entry['title'] + ".strm"
+			if not os.path.isfile(strm_file):
+				print (entry['title'] + " -> " + link['href'])
+				with open(strm_file, 'w') as f:
+					f.write(link['href'] + "\n")
+				break
 
 
 

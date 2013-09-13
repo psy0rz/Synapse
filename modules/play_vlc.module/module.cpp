@@ -36,6 +36,9 @@ This module can play urls and local files.
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/recursive_mutex.hpp>
 
+
+int defaultSession;
+
 /** VLC player namespace
  *
  */
@@ -45,8 +48,8 @@ namespace play_vlc
 using namespace std;
 using namespace boost;
 
-synapse::Cconfig config;
-synapse::Cconfig state;
+//synapse::Cconfig config;
+//synapse::Cconfig state;
 
 //one big mutex so that our threads and vlc threads dont collide
 recursive_mutex vlcMutex;
@@ -57,7 +60,6 @@ recursive_mutex vlcMutex;
 class CPlayer
 {
 	private:
-	int mId;
 
 	//pointers to vlc objects and event managers
 	libvlc_instance_t * mVlc;
@@ -83,12 +85,14 @@ class CPlayer
 
 	public:
 	string description;
+	string mId;
 
     //send all cached status events to specified destination
     void sendStatus(int dst)
     {
         Cmsg out;
-        out.src=mId;
+        out["id"]=mId;
+        out.src=defaultSession;
         out.dst=dst;
         FOREACH_VARMAP(status, mStatus)
         {
@@ -132,8 +136,8 @@ class CPlayer
         lock_guard<recursive_mutex> lock(vlcMutex);
 
 		Cmsg out;
-		out.src=((CPlayer *)player)->mId;
-
+		out["id"]=((CPlayer *)player)->mId;
+		out.src=defaultSession;
 		out.event=string("play_Event")+string(libvlc_event_type_name(event->type));
 		out.send();
 	}
@@ -151,8 +155,9 @@ class CPlayer
 		((CPlayer *)player)->mVlcLastTime=newTime;
 
 		Cmsg out;
-		out.src=((CPlayer *)player)->mId;
+		out["id"]=((CPlayer *)player)->mId;
 		out.event="play_Time";
+		out.src=defaultSession;
 		out["time"]=newTime;
 		out["length"]=(libvlc_media_player_get_length((libvlc_media_player_t*)event->p_obj))/1000;
 		out.send();
@@ -230,7 +235,7 @@ class CPlayer
 		static Cmsg prevMsg;
 
 		Cmsg out;
-		out.src=((CPlayer *)player)->mId;
+		out["id"]=((CPlayer *)player)->mId;
 		out.event="play_InfoMeta";
 
 		//its no use to look at event->u.media_meta_changed.meta_type, since that seems to give unrelated values.
@@ -241,6 +246,7 @@ class CPlayer
 
 		if (out!=prevMsg)
 		{
+			out.src=defaultSession;
 			out.send();
 			prevMsg=out;
 
@@ -266,7 +272,7 @@ class CPlayer
         DEB("unlocked");
 */
 		Cmsg out;
-		out.src=((CPlayer *)player)->mId;
+		out["id"]=(((CPlayer *)player)->mId);
         out.event="play_State";
 
         out["state"]="unknown";
@@ -288,6 +294,7 @@ class CPlayer
 		else if (event->u.media_state_changed.new_state==libvlc_Error)
 	        out["state"]="error";
 
+		out.src=defaultSession;
 		out.send();
 
 //        ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
@@ -377,13 +384,12 @@ class CPlayer
 		libvlc_clearerr();
 	}
 
-	void init(int id)
+	void init(Cvar var)
 	{
-		this->mId=id;
-
+		this->mId=var["id"].str();
 
 		// Create vlc instance
-		DEB("Creating vlc instance");
+		DEB("Creating vlc instance " << mId );
 
 		//NOTE: badd...dont rely on useinput for these arguments, only use the config file!
 		char argbuffer[1000];
@@ -391,7 +397,7 @@ class CPlayer
 		char *args[100];
 		unsigned int argc=0;
 		
-		FOREACH_VARLIST(param, config["vlc_args"])
+		FOREACH_VARLIST(param, var["args"])
 		{
 			args[argc]=&argbuffer[argbufferi];
 			argbufferi=argbufferi+param.str().length()+1;
@@ -484,6 +490,8 @@ class CPlayer
 
 	void destroy()
 	{
+		DEB("Destroying vlc instance " << mId);
+
 		if (mPlayer)
 		{
 
@@ -594,9 +602,8 @@ class CPlayer
 
 };
 
-typedef map<int, CPlayer> CPlayerMap;
+typedef map<string, CPlayer> CPlayerMap;
 CPlayerMap players;
-int defaultSession;
 
 
 
@@ -605,7 +612,7 @@ SYNAPSE_REGISTER(module_Init)
 	Cmsg out;
 
     //load config file
-    config.load("etc/synapse/play_vlc.conf");
+//    config.load("etc/synapse/play_vlc.conf");
 
 
 	defaultSession=dst;
@@ -620,34 +627,24 @@ SYNAPSE_REGISTER(module_Init)
 
 SYNAPSE_REGISTER(module_Shutdown)
 {
+	for(CPlayerMap::iterator I=players.begin(); I!=players.end(); I++)
+	{
+	    lock_guard<recursive_mutex> lock(vlcMutex);
+		I->second.destroy();
+	}
 }
 
 SYNAPSE_REGISTER(module_SessionStart)
 {
-    lock_guard<recursive_mutex> lock(vlcMutex);
-
-	players[dst].init(dst);
-
-	//inform everyone there's a new player in town ;)
-	Cmsg out;
-	out=msg;
-	out.event="play_Player";
-	out.dst=0;
-    out.src=msg.dst;
-	out.send();
 }
 
 SYNAPSE_REGISTER(module_SessionEnd)
 {
-    lock_guard<recursive_mutex> lock(vlcMutex);
-
-	players[dst].destroy();
-	players.erase(dst);
 }
 
 /** Get a list of players
  * \REPLY play_Player
- *   For every player.
+ *   
  *
  */
 SYNAPSE_REGISTER(play_GetPlayers)
@@ -658,35 +655,43 @@ SYNAPSE_REGISTER(play_GetPlayers)
 
 	for(CPlayerMap::iterator I=players.begin(); I!=players.end(); I++)
 	{
-        out.src=I->first;
+		out["id"]=I->first;
         out.send();
 	}
 	out.send();
 }
 
-/** Delete the player instance. (You cant delete the default player)
+/** Delete the player instance. 
  *
  */
 SYNAPSE_REGISTER(play_DelPlayer)
 {
-	if (dst==defaultSession)
-		throw(synapse::runtime_error("Cant delete default player"));
 
-	Cmsg out;
-	out.event="core_DelSession";
-	out.send();
+    lock_guard<recursive_mutex> lock(vlcMutex);
+
+	players[msg["id"]].destroy();
+	players.erase(msg["id"]);
+
 }
 
-/** Delete the player instance. (You cant delete the default player)
+/** Create the player instance. args should be a list of vlc arguments 
  *
  */
 SYNAPSE_REGISTER(play_NewPlayer)
 {
+
+    lock_guard<recursive_mutex> lock(vlcMutex);
+
+	players[msg["id"]].init(msg);
+
+	//inform everyone there's a new player in town ;)
 	Cmsg out;
-	out.event="core_NewSession";
-	out["description"]=msg["description"];
-	out["src"]=msg.src;
+	out=msg;
+	out.event="play_Player";
+	out.dst=0;
+    out.src=msg.dst;
 	out.send();
+
 }
 
 /** Opens and starts playing an url
@@ -716,11 +721,15 @@ SYNAPSE_REGISTER(play_NewPlayer)
  */
 SYNAPSE_REGISTER(play_Open)
 {
+	//niet?? waaroim niet
     //lock_guard<recursive_mutex> lock(vlcMutex);
 
-	INFO("vlc opening " << msg["url"].str());
 
-	players[dst].open(msg["url"]);
+	FOREACH_VARLIST(id, msg["ids"])
+	{
+		INFO("vlc player '" << id.str() << "' opening url " << msg["url"].str());
+		players[id].open(msg["url"]);
+	}
 
 }
 
@@ -732,14 +741,20 @@ SYNAPSE_REGISTER(play_Stop)
 {
     lock_guard<recursive_mutex> lock(vlcMutex);
 
-	players[dst].stop();
+	FOREACH_VARLIST(id, msg["ids"])
+	{
+		players[id].stop();
+	}
 }
 
 SYNAPSE_REGISTER(play_Pause, '{ "recvGroup": "everyone", "sendGroup": "modules" }')
 {
     lock_guard<recursive_mutex> lock(vlcMutex);
 
-    players[dst].pause();
+	FOREACH_VARLIST(id, msg["ids"])
+	{
+	    players[id].pause();
+	}
 }
 
 
@@ -747,7 +762,10 @@ SYNAPSE_REGISTER(play_SetTime)
 {
     lock_guard<recursive_mutex> lock(vlcMutex);
 
-    players[dst].setTime(msg["time"] * 1000);
+	FOREACH_VARLIST(id, msg["ids"])
+	{
+	    players[id].setTime(msg["time"] * 1000);
+	}
 }
 
 
@@ -755,7 +773,10 @@ SYNAPSE_REGISTER(play_MoveTime)
 {
     lock_guard<recursive_mutex> lock(vlcMutex);
 
-    players[dst].moveTime(msg["time"] * 1000);
+	FOREACH_VARLIST(id, msg["ids"])
+	{
+	    players[id].moveTime(msg["time"] * 1000);
+	}
 }
 
 /** Gets status of player.
@@ -767,7 +788,11 @@ SYNAPSE_REGISTER(play_MoveTime)
 SYNAPSE_REGISTER(play_GetStatus)
 {
     lock_guard<recursive_mutex> lock(vlcMutex);
-    players[dst].sendStatus(msg.src);
+	FOREACH_VARLIST(id, msg["ids"])
+	{
+	    players[id].sendStatus(msg.src);
+
+	}
 }
 
 
