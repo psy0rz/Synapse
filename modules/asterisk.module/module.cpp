@@ -98,8 +98,8 @@ namespace asterisk
  	struct drand48_data randomBuffer;
 
 
- 	//authentication cookies are saved to disk per device so that users dont have to re-login when the connection to asterisk is lost or synapse is restarted.
- 	synapse::Cconfig authDb;
+ 	//authentication cookies and recent call history are saved to disk
+ 	synapse::Cconfig stateDb;
 
 
 	SYNAPSE_REGISTER(module_Init)
@@ -107,7 +107,7 @@ namespace asterisk
 		Cmsg out;
 
 
-		authDb.load("var/asterisk/auth_db.conf");
+		stateDb.load("var/asterisk/state_db.conf");
 
 
 		//FIXME: unsafe randomiser?
@@ -230,13 +230,13 @@ namespace asterisk
 		string id;
 		bool changed;
 		CgroupPtr groupPtr;	
-		TauthCookie authCookie;
+		//TauthCookie authCookie;
 	
 		public:
 
 		Cdevice()
 		{
-			mrand48_r(&randomBuffer, &authCookie);
+			
 
 			changed=true;
 			online=true;
@@ -268,7 +268,17 @@ namespace asterisk
 
 		TauthCookie getAuthCookie()
 		{
-			return (authCookie);
+			string authKey=groupPtr->getId()+"."+id;
+			//create new cookie?
+			if (!stateDb["cookies"].isSet(authKey))
+			{
+				TauthCookie authCookie;
+				mrand48_r(&randomBuffer, &authCookie);
+				stateDb["cookies"][authKey]=authCookie;
+				stateDb.changed();
+			}
+				
+			return(stateDb["cookies"][authKey]);
 		}
 
 
@@ -925,6 +935,10 @@ namespace asterisk
 		{
 			I->second.sendChanges();
 		}
+
+		//save state db if its changed
+		stateDb.save();
+
 	
 	}
 	
