@@ -12,6 +12,7 @@ MESSAGE(STATUS "Module name of ${CMAKE_CURRENT_BINARY_DIR} is: '${module_name}'"
 INCLUDE(FindPkgConfig)
 pkg_check_modules (VLC libvlc>=1.1.0)
 IF(VLC_FOUND)
+	MESSAGE(STATUS "building with vlc support")
 
 
 	#add definitions, compiler switches, etc.

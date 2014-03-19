@@ -81,8 +81,25 @@ namespace asterisk
 	using namespace std;
 	using namespace boost;
 
+	CsessionMap sessionMap;
+
+	CgroupMap groupMap;
+
+	typedef shared_ptr<class Cdevice> CdevicePtr;
+	typedef map<string, CdevicePtr> CdeviceMap;
+
+	typedef shared_ptr<class Cchannel> CchannelPtr;
+	typedef map<string, CchannelPtr> CchannelMap;
+
+	typedef map<int, class Cserver> CserverMap;
+	CserverMap serverMap;
+
 	typedef long int TauthCookie;
  	struct drand48_data randomBuffer;
+
+
+ 	//authentication cookies are saved to disk per device so that users dont have to re-login when the connection to asterisk is lost or synapse is restarted.
+ 	synapse::Cconfig authDb;
 
 
 	SYNAPSE_REGISTER(module_Init)
@@ -90,8 +107,13 @@ namespace asterisk
 		Cmsg out;
 
 
+		authDb.load("var/asterisk/auth_db.conf");
+
+
 		//FIXME: unsafe randomiser?
 		srand48_r(time(NULL), &randomBuffer);
+
+
 	
 		out.clear();
 		out.event="core_ChangeModule";
@@ -194,27 +216,6 @@ namespace asterisk
 			return (what[1]);
 		}
 	}
-
-	CsessionMap sessionMap;
-
-	CgroupMap groupMap;
-
-	typedef shared_ptr<class Cdevice> CdevicePtr;
-	typedef map<string, CdevicePtr> CdeviceMap;
-
-	typedef shared_ptr<class Cchannel> CchannelPtr;
-	typedef map<string, CchannelPtr> CchannelMap;
-
-	typedef map<int, class Cserver> CserverMap;
-	CserverMap serverMap;
-
-
-
-
-	
-
-
-
 
 	//devices: these can be sip devices, misdn, local channels, agent-stuff etc
 	//every device points to a corresponding Cgroup. 
@@ -1536,7 +1537,7 @@ namespace asterisk
 				//device exists?
 				if (devicePtr!=NULL)
 				{
-					//autoCookie checks out?
+					//authCookie checks out?
 					if (devicePtr->getAuthCookie()==msg["authCookie"])
 					{
 
