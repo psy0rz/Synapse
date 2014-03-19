@@ -1330,17 +1330,26 @@ namespace asterisk
 		// ''     : other (uninteresting) states
 
 		//device is ringing
-		if (msg["State"].str()=="Ringing")
+		string state;
+		if (msg.isSet("State")) // 1.4
+			state=msg["State"].str();
+
+		if (msg.isSet("ChannelStateDesc")) // 1.8
+			state=msg["ChannelStateDesc"].str();
+
+
+
+		if (state=="Ringing")
 		{
 			channelPtr->setState("ringing");
 		}
 		//device is dialing (ringing other side)
-		else if (msg["State"].str()=="Ring")
+		else if (state=="Ring")
 		{
 			channelPtr->setState("out");
 		}
 		//device is connected with other side
-		else if (msg["State"].str()=="Up")
+		else if (state=="Up")
 		{
 			if (channelPtr->getState()=="ringing")
 			{
@@ -1383,6 +1392,15 @@ namespace asterisk
 				channelPtr->setCallerIdName(msg["CallerIDName"]);
 		}
 	
+		if (msg.isSet("Exten")) //1.8
+		{
+			if (channelPtr->getFirstExtension()=="")
+			{
+				channelPtr->setFirstExtension(msg["Exten"]);
+			}
+		}
+
+
 //		devicePtr->sendChanges();
 		channelPtr->sendDebug(msg, msg.dst);
 	
@@ -1421,6 +1439,23 @@ namespace asterisk
         |Privilege = Call (string)
         |State = Rsrvd (string)
         |Uniqueid = 1352387005.54 (string)
+
+
+		1.8 meetme call. new channels always specify Exten
+		Newchannel
+		AccountCode:
+		CallerIDName:links
+		CallerIDNum:100
+		Channel:SIP/100-00000035
+		ChannelState:0
+		ChannelStateDesc:Down
+		Context:from-internal
+		Exten:600
+		Privilege:call,all
+		State:
+		Uniqueid:1395247002.54
+		deviceId:SIP/100
+
 
 
         */
@@ -1774,6 +1809,13 @@ namespace asterisk
 		else
 			channelPtr1->setCallerIdName(msg["CallerIDName"]);
 	
+
+		//in 1.8 we can use ConnectedLineName and Num to set the callerid of the other channel:
+		if (msg.isSet("ConnectedLineName")) //1.8
+			channelPtr2->setCallerIdName(msg["ConnectedLineName"]);
+
+		if (msg.isSet("ConnectedLineNum")) //1.8
+			channelPtr2->setCallerId(msg["ConnectedLineNum"]);
 	
 	
 		channelPtr1->sendDebug(msg, msg.dst);
@@ -1795,11 +1837,21 @@ namespace asterisk
 	
 	SYNAPSE_REGISTER(ami_Event_Rename)
 	{
+		//1.4:
 		// Event: Rename
 		// Privilege: call,all
 		// Oldname: SIP/604-00000044
 		// Newname: SIP/605-00000043
 		// Uniqueid: 1269956933.94
+
+		//1.8:
+		// Event: Rename
+		// Channel:SIP/100-00000057
+		// Newname:SIP/101-00000059
+		// Privilege:call,all
+		// Uniqueid:1395248644.92
+		// deviceId:SIP/101
+
 		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
 		CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(
 			getDeviceIdFromChannel(msg["Newname"])
@@ -1827,6 +1879,39 @@ namespace asterisk
 		channelPtr->sendDebug(msg, msg.dst);
 	}
 	
+
+	void newCallerId(Cmsg & msg)
+	{
+
+		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+
+		if (msg.isSet("CallerID"))//1.4
+		{
+			if (msg["CallerID"].str() == "<Unknown>")
+				;//channelPtr->setCallerId("");
+			else
+				channelPtr->setCallerId(msg["CallerID"]);
+		}
+	
+		if (msg.isSet("CallerIDName"))//1.4
+		{
+			if (msg["CallerIDName"].str() == "<Unknown>")
+				;//channelPtr->setCallerId("");
+			else
+				channelPtr->setCallerId(msg["CallerIDName"]);
+		}
+
+
+		if (msg["CallerIDName"].str() == "<Unknown>")
+			channelPtr->setCallerIdName("");
+		else
+			channelPtr->setCallerIdName(msg["CallerIDName"]);
+		
+		channelPtr->sendDebug(msg, msg.dst);
+	}
+
+
+	//1.4
 	SYNAPSE_REGISTER(ami_Event_Newcallerid)
 	{
 	// 	Event: Newcallerid
@@ -1853,22 +1938,22 @@ namespace asterisk
 	// Uniqueid: 1269866267.57
 	// CID-CallingPres: 0 (Presentation Allowed, Not Screened)
 	
-		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
-	
-		if (msg["CallerID"].str() == "<Unknown>")
-			;//channelPtr->setCallerId("");
-		else
-			channelPtr->setCallerId(msg["CallerID"]);
-	
-		if (msg["CallerIDName"].str() == "<Unknown>")
-			channelPtr->setCallerIdName("");
-		else
-			channelPtr->setCallerIdName(msg["CallerIDName"]);
-		
-		channelPtr->sendDebug(msg, msg.dst);
-	
+		newCallerId(msg);
 	}
 	
+	//1.8
+	SYNAPSE_REGISTER(ami_Event_NewCallerid)
+	{
+		// |CallerIDName = hoofdlijn+31622588835 (string)
+		// |CallerIDNum = +31622588835 (string)
+		// |Channel = SIP/111-CDS_Datux-0000006f (string)
+		// |Event = NewCallerid (string)
+		// |Privilege = call,all (string)
+		// |Uniqueid = 1395249879.117 (string)
+
+		newCallerId(msg);
+
+	}
 	
 
 	SYNAPSE_REGISTER(ami_Event_CEL)
