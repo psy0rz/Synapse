@@ -291,26 +291,14 @@ namespace asterisk
 				{
 					callerId=id;
 				}
-
-				//now we determine the corresponding group from the device Id string:
-				size_t pos=id.find("-");
-				string groupId;
-
-				if (pos!=string::npos)
-					groupId=id.substr(pos+1);
-
-				if (groupId=="")
-					groupId="default";
-
-				if (groupMap.find(groupId) == groupMap.end())
-				{
-					groupMap[groupId]=CgroupPtr(new Cgroup());
-					groupMap[groupId]->setId(groupId);
-				}
-				groupPtr=groupMap[groupId];
-
 				changed=true;
 			}
+		}
+
+		void setGroupPtr(CgroupPtr groupPtr)
+		{
+			this->groupPtr=groupPtr;
+			changed=true;
 		}
 
 		string getId()
@@ -697,10 +685,20 @@ namespace asterisk
 
 		string getStatus(string prefix)
 		{
-			return (
-				prefix + "Channel " + id + ":\n" +
-				devicePtr->getStatus(prefix+" ")
-			);
+			if (devicePtr!=NULL)
+			{
+				return (
+					prefix + "Channel " + id + ":\n" +
+					devicePtr->getStatus(prefix+" ")
+				);
+			}
+			else
+			{
+				return (
+					prefix + "Channel " + id + " (no devices)\n"
+				);
+
+			}
 		}
 
 		~Cchannel()
@@ -745,6 +743,8 @@ namespace asterisk
 		string password;
 		string host;
 		string port;
+		string group_regex;
+		string group_default;
 
 		int sessionId;
 
@@ -756,12 +756,37 @@ namespace asterisk
 	
 		CdevicePtr getDevicePtr(string deviceId, bool autoCreate=true)
 		{
+			if (deviceId=="")
+				throw(synapse::runtime_error("Specified empty deviceId"));
+
 			if (deviceMap.find(deviceId)==deviceMap.end())
 			{
 				if (autoCreate)
 				{
 					deviceMap[deviceId]=CdevicePtr(new Cdevice());
 					deviceMap[deviceId]->setId(deviceId);
+
+					//determine the group
+					string groupId=this->group_default;
+					smatch what;
+					if (this->group_regex!="" && regex_search(
+						deviceId,
+						what, 
+						boost::regex(this->group_regex)
+					))
+					{
+						groupId=what[1];
+					}
+
+					if (groupMap.find(groupId) == groupMap.end())
+					{
+						//create new group
+						groupMap[groupId]=CgroupPtr(new Cgroup());
+						groupMap[groupId]->setId(groupId);
+					}
+
+					deviceMap[deviceId]->setGroupPtr(groupMap[groupId]);					
+
 					DEB("created device " << deviceId);
 				}
 				else
@@ -805,6 +830,9 @@ namespace asterisk
 	
 		CchannelPtr getChannelPtr(string channelId)
 		{
+			if (channelId=="")
+				throw(synapse::runtime_error("Specified empty channelId"));
+
 			if (channelMap[channelId]==NULL)
 			{
 				channelMap[channelId]=CchannelPtr(new Cchannel());
@@ -995,7 +1023,9 @@ namespace asterisk
 				serverI->second.username!=config[serverI->second.id]["username"].str() ||
 				serverI->second.password!=config[serverI->second.id]["password"].str() ||
 				serverI->second.host!=config[serverI->second.id]["host"].str() ||
-				serverI->second.port!=config[serverI->second.id]["port"].str()
+				serverI->second.port!=config[serverI->second.id]["port"].str() ||
+				serverI->second.host!=config[serverI->second.id]["group_default"].str() ||
+				serverI->second.port!=config[serverI->second.id]["group_regex"].str()
 			)
 			{
 				//delete server and connection by ending session
@@ -1037,6 +1067,8 @@ namespace asterisk
 			serverMap[msg.dst].password=msg["server"]["password"].str();
 			serverMap[msg.dst].host=msg["server"]["host"].str();
 			serverMap[msg.dst].port=msg["server"]["port"].str();
+			serverMap[msg.dst].group_default=msg["server"]["group_default"].str();
+			serverMap[msg.dst].group_regex=msg["server"]["group_regex"].str();
 	
 			//instruct ami to connect to the server
 			Cmsg out;
@@ -1670,6 +1702,7 @@ namespace asterisk
 	
 	SYNAPSE_REGISTER(ami_Event_Dial)
 	{
+	//1.4:
 	// 	Event: Dial
 	// 	Privilege: call,all
 	// 	Source: SIP/604-0000002f
@@ -1688,21 +1721,53 @@ namespace asterisk
 	// 	SrcUniqueID: 1269866267.57
 	// 	DestUniqueID: 1269866267.58
 	
-	
+	//1.8:
+	 // |CallerIDName = links (string)
+	 // |CallerIDNum = 100 (string)
+	 // |Channel = SIP/100-0000000e (string)
+	 // |ConnectedLineName = rechts (string)
+	 // |ConnectedLineNum = 101 (string)
+	 // |DestUniqueID = 1395235453.15 (string)
+	 // |Destination = SIP/101-0000000f (string)
+	 // |Dialstring = 101 (string)
+	 // |Event = Dial (string)
+	 // |Privilege = call,all (string)
+	 // |SubEvent = Begin (string)
+	 // |UniqueID = 1395235453.14 (string)
+	 //
+	 // cancelling a dial in progress:
+	 // |Channel = SIP/101-0000001e (string)
+	 // |DialStatus = CANCEL (string)
+	 // |Event = Dial (string)
+	 // |Privilege = call,all (string)
+	 // |SubEvent = End (string)
+	 // |UniqueID = 1395236996.30 (string)
+
 		//NOTE: a "link" for us, is something different then a link for asterisk.
-		CchannelPtr channelPtr1=serverMap[msg.dst].getChannelPtr(msg["SrcUniqueID"]);
+		CchannelPtr channelPtr1;
+		if (msg.isSet("SrcUniqueID")) //1.4
+			channelPtr1=serverMap[msg.dst].getChannelPtr(msg["SrcUniqueID"]);
+		else //1.8
+			channelPtr1=serverMap[msg.dst].getChannelPtr(msg["UniqueID"]);
+
 		CchannelPtr channelPtr2=serverMap[msg.dst].getChannelPtr(msg["DestUniqueID"]);
 		channelPtr1->setLinkPtr(channelPtr2);
 		channelPtr2->setLinkPtr(channelPtr1);
 	
-/*		channelPtr1->setInitiator(true);
-		channelPtr2->setInitiator(false);*/
 		
-		//in case of followme and other situation its important we use the Dial callerId as well, for SrcUniqueID:
-		if (msg["CallerID"].str() == "<unknown>")
-			;//channelPtr->setCallerId("");
-		else
-			channelPtr1->setCallerId(msg["CallerID"]);
+		//in case of followme and other situation its important we use the Dial callerId as well, on the originating channel (SrcUniqueID/UniqueID)
+		if (msg.isSet("CallerID")) //1.4
+		{
+			if (msg["CallerID"].str() == "<unknown>")
+				;//channelPtr->setCallerId("");
+			else
+				channelPtr1->setCallerId(msg["CallerID"]);
+		}
+
+		if (msg.isSet("CallerIDNum")) //1.8
+		{
+			channelPtr1->setCallerId(msg["CallerIDNum"]);
+		}
 	
 		if (msg["CallerIDName"].str() == "<unknown>")
 			channelPtr1->setCallerIdName("");
@@ -1711,7 +1776,6 @@ namespace asterisk
 	
 	
 	
-		//this will automagically send updates to BOTH channels, sinces they're linked now:
 		channelPtr1->sendDebug(msg, msg.dst);
 		channelPtr2->sendDebug(msg, msg.dst);
 	
@@ -1806,12 +1870,11 @@ namespace asterisk
 	}
 	
 	
-	// 
-	// 
-	// SYNAPSE_REGISTER(ami_Event_PeerStatus)
-	// {
+
+	SYNAPSE_REGISTER(ami_Event_CEL)
+	{
+		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["UniqueID"]);
+		channelPtr->sendDebug(msg, msg.dst);
 	
-	// 
-	// }
-	
+	}
 }
