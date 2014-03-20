@@ -255,8 +255,8 @@ namespace asterisk
 			// 	return (true);
 
 			//dont show anything thats not sip (for now)
-			// if (id.substr(0,3)!="SIP")
-			// 	return (true);
+			if (id.substr(0,3)!="SIP")
+				return (true);
 
 			return(false);
 		}
@@ -1499,8 +1499,25 @@ namespace asterisk
         |State = Rsrvd (string)
         |Uniqueid = 1352387096.56 (string)
 	
+		1.8 normal channel with meetme	
+ 		 |Accountcode =  (string)
+		 |CallerIDName = rechts (string)
+		 |CallerIDNum = 101 (string)
+		 |Channel = SIP/101-0000009a (string)
+		 |ChannelState = 6 (string)
+		 |ChannelStateDesc = Up (string)
+		 |ConnectedLineName = <unknown> (string)
+		 |ConnectedLineNum = <unknown> (string)
+		 |Context = from-internal (string)
+		 |Event = Status (string)
+		 |Extension = STARTMEETME (string)
+		 |Priority = 4 (string)
+		 |Privilege = Call (string)
+		 |Seconds = 7 (string)
+		 |Uniqueid = 1395315196.165 (string)
+
+*/
 		channelStatus(msg);
-*/	
 	}
 	
 	// channel status is changing
