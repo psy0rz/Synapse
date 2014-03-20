@@ -202,6 +202,7 @@
 				newChannelHtml+="<div class='channelInfo'></div>";
 				newChannelHtml+="</div>";
 				$(escapeId(msg["deviceId"])+' .channelList').append(newChannelHtml);
+				$(escapeId(msg["deviceId"])).addClass("ui-state-error");
 			}
 
 			//set caller info
@@ -285,6 +286,12 @@
 			$(".device "+escapeClass(msg["id"])).slideUp("",function() {
 			    $(this).remove();
 			});
+
+			//if device is now free, remove the highlight
+			if ($(".device .channel").length==0)
+			{
+				$(escapeId(msg["deviceId"])).removeClass("ui-state-error");
+			}
  			
 			//hide it from the call list with a nice effect 
 			$("#activeCallList "+escapeClass(msg["id"])).slideUp("",function() {
