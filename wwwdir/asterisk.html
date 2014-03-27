@@ -172,6 +172,23 @@
 		});
 
 
+ 		var blink_status=false;
+ 		function blinker()
+ 		{
+			setTimeout(blinker, 125);
+			blink_status=!blink_status;
+			if (blink_status)
+ 				$('.device .channel[state="ringing"]').addClass("ring-blinker");
+ 			else
+ 				$('.ring-blinker').removeClass("ring-blinker");
+ 			// if (blinks.length==0)
+ 			// 	return;
+ 			// else
+ 			// {
+ 				;
+ 			// }
+ 		}
+ 		blinker();
 
 
  		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
@@ -202,8 +219,19 @@
 				newChannelHtml+="<div class='channelInfo'></div>";
 				newChannelHtml+="</div>";
 				$(escapeId(msg["deviceId"])+' .channelList').append(newChannelHtml);
-				$(escapeId(msg["deviceId"])).addClass("ui-state-error");
 			}
+
+			if (msg["state"]=="ring")
+			{
+				$(escapeId(msg["deviceId"])).addClass("blink");
+			}
+			else
+			{
+				$(escapeId(msg["deviceId"])).removeClass("blink");
+				//$(escapeId(msg["deviceId"])).addClass("ui-state-error");
+			}
+			$(escapeId(msg["deviceId"])).addClass("blink");
+
 
 			//set caller info
 			var callerInfo="";
@@ -275,7 +303,7 @@
 
 			///////////////////// Stuff for all channels
 			$(escapeClass(msg["id"])).attr('state', msg["state"]);
-			$(escapeClass(msg["id"])+":hidden").slideDown();
+			$(escapeClass(msg["id"])+":hidden").slideDown(); //show the channel (default is hidden)
 
 		});
 
@@ -285,13 +313,14 @@
 			//remove channel from device
 			$(".device "+escapeClass(msg["id"])).slideUp("",function() {
 			    $(this).remove();
+    			//if device is now free, remove the highlight
+				if ($(escapeId(msg["deviceId"])+" .channel").length==0)
+				{
+					$(escapeId(msg["deviceId"])).removeClass("ui-state-error");
+				}
+
 			});
 
-			//if device is now free, remove the highlight
-			if ($(".device .channel").length==0)
-			{
-				$(escapeId(msg["deviceId"])).removeClass("ui-state-error");
-			}
  			
 			//hide it from the call list with a nice effect 
 			$("#activeCallList "+escapeClass(msg["id"])).slideUp("",function() {
@@ -418,7 +447,7 @@
 		#statusMsg .error
 		{
 			color: red;
-			font-weigth: bold;
+			font-weight: bold;
 		}
 	
 		#statusLoginUser
@@ -440,7 +469,7 @@
 
 		.deviceInfo
 		{
-
+			text-align: center;
 		}
 
 		.channelList
@@ -463,6 +492,8 @@
 			background-position: left !important;
 			background-image:url('asterisk/channel_idle.png') !important;
 			position:relative;
+			font-weight: normal;
+
 		}
 
 		.channel[state="in"] 
@@ -478,6 +509,11 @@
 		.channel[state="ringing"] 
 		{
 			background-image:url('asterisk/channel_ring.png') !important;
+		}
+
+		.ring-blinker
+		{
+			color: #ff9999;
 		}
 
 		.deleted
@@ -496,6 +532,7 @@
 		{
 			display:none;
 		}
+
 
 	</style>
 

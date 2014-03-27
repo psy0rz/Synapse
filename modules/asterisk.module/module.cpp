@@ -701,8 +701,11 @@ namespace asterisk
 			}
 		}
 
-		~Cchannel()
+		//delete channel
+		void del()
 		{
+			//delete the link, to prevent "hanging" shared_ptrs
+			delLink();
 
 			if (devicePtr!=NULL && devicePtr->getGroupPtr()!=NULL)
 			{
@@ -845,8 +848,7 @@ namespace asterisk
 		void delChannel(string channelId)
 		{
 			CchannelPtr channelPtr=getChannelPtr(channelId);
-			//delete the link, to prevent "hanging" shared_ptrs
-			channelPtr->delLink();
+			channelPtr->del();
 			channelMap.erase(channelId);
 			DEB("deleted channel from map: " << channelId);
 
