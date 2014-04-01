@@ -158,6 +158,9 @@ namespace asterisk
 		out["event"]=		"asterisk_refresh";
 		out.send();
 
+		out["event"]=		"asterisk_Dial";
+		out.send();
+
 		//receive by anonymous only:
 		out.event="core_ChangeEvent";
 		out["modifyGroup"]=	"modules";
@@ -230,6 +233,7 @@ namespace asterisk
 		string id;
 		bool changed;
 		CgroupPtr groupPtr;	
+		string exten; //extension this device can be called on
 		//TauthCookie authCookie;
 	
 		public:
@@ -350,7 +354,10 @@ namespace asterisk
 			}
 		}
 
-
+		void setExten(string exten)
+		{
+			this->exten=exten;
+		}
 	
 
 		bool sendUpdate(int forceDst=0)
@@ -371,6 +378,7 @@ namespace asterisk
 				out["callerIdName"]=callerIdName;
 				out["online"]=online;
 				out["trunk"]=trunk;
+				out["exten"]=exten;
 				out["groupId"]=groupPtr->getId();
 				groupPtr->send(sessionMap,out);
 			}
@@ -908,69 +916,6 @@ namespace asterisk
 
 	};
 
-	SYNAPSE_REGISTER(asterisk_GetStatus)
-	{
-		Cmsg out;
-		out.event="asterisk_Status";
-		out.dst=msg.src;
-		out["status"]="";
-
-		out["status"].str()+="Sessions:\n";
-		for (CsessionMap::iterator I=sessionMap.begin(); I!=sessionMap.end(); I++)
-		{
-			stringstream id;
-			id << I->first;
-			out["status"].str()+=I->second->getStatus(" ")+"\n";
-		}
-
-
-		out["status"].str()+="Groups:\n";
-		for (CgroupMap::iterator I=groupMap.begin(); I!=groupMap.end(); I++)
-		{
-			out["status"].str()+=I->second->getStatus(" ")+"\n";
-		}
-
-		out["status"].str()+="Servers:\n";
-		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
-		{
-			out["status"].str()+= I->second.getStatus(" ");
-		}
-
-
-		out.send();
-	}
-	
-	SYNAPSE_REGISTER(timer_Ready)
-	{
-		Cmsg out;
-		out.clear();
-		out.event="timer_Set";
-		out["seconds"]=1;
-		out["repeat"]=-1;
-		out["dst"]=dst;
-		out["event"]="asterisk_SendChanges";
-		out.send();
-	}
-	
-	
-
-	
-	SYNAPSE_REGISTER(asterisk_SendChanges)
-	{
-		CserverMap::iterator I;
-//		I->second.sendChanges();
-
-		//let all servers send their changes 
-		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
-		{
-			I->second.sendChanges();
-		}
-
-		//save state db if its changed
-		stateDb.save();
-
-	
-	}
 	
 	
 	SYNAPSE_REGISTER(ami_Ready)
@@ -986,76 +931,7 @@ namespace asterisk
 		out.send();
 	}
 	
-	/** Connects to specified asterisk server
-		\param host Hostname of the asterisk server.
-		\param port AMI port (normally 5038)
-		\param username Asterisk manager username
-		\param password Asterisk manager password
-	
-	*/
 
-// replaced by asterisk_Config for now, which lo
-//	SYNAPSE_REGISTER(asterisk_Connect)
-//	{
-//		//ami connections are src-session based, so we need a new session for every connection.
-//		Cmsg out;
-//		out.event="core_NewSession";
-//		out["server"]["username"]=msg["username"];
-//		out["server"]["password"]=msg["password"];
-//		out["server"]["port"]=msg["port"];
-//		out["server"]["host"]=msg["host"];
-//		out.send();
-//	}
-
-	/** Loads asterisk.conf and connects to specified servers.
-	 * It will also handle server deletes/changes.
-	 */
-	SYNAPSE_REGISTER(asterisk_Config)
-	{
-		using synapse::Cconfig;
-		Cconfig config;
-		config.load("etc/synapse/asterisk.conf");
-
-		//delete servers that have been changed or removed from the config
-		for (CserverMap::iterator serverI=serverMap.begin(); serverI!=serverMap.end(); serverI++)
-		{
-			//server config removed or changed?
-			if (
-				!config.isSet(serverI->second.id) ||
-				serverI->second.username!=config[serverI->second.id]["username"].str() ||
-				serverI->second.password!=config[serverI->second.id]["password"].str() ||
-				serverI->second.host!=config[serverI->second.id]["host"].str() ||
-				serverI->second.port!=config[serverI->second.id]["port"].str() ||
-				serverI->second.host!=config[serverI->second.id]["group_default"].str() ||
-				serverI->second.port!=config[serverI->second.id]["group_regex"].str()
-			)
-			{
-				//delete server and connection by ending session
-				//the rest will get cleaned up automaticly by the module_SessionEnd(ed) events.
-				Cmsg out;
-				out.src=serverI->first;
-				out.event="core_DelSession";
-				out.send();
-			}
-			else
-			{
-				//nothing changed, deleted it from config-object
-				config.map().erase(serverI->second.id);
-			}
-		}
-
-		//the remaining config entries need to be (re)created and (re)connected.
-		for (Cconfig::iterator configI=config.begin(); configI!=config.end(); configI++)
-		{
-			//start a new session for every new connection, and supply the config info
-			Cmsg out;
-			out.event="core_NewSession";
-			out["server"]=configI->second;
-			out["server"]["id"]=configI->first;
-			out["description"]="asterisk-ami connection session.";
-			out.send();
-		}
-	}
 	
 
 	SYNAPSE_REGISTER(module_SessionStart)
@@ -1130,6 +1006,7 @@ namespace asterisk
 		{
 			string deviceId=msg["Channeltype"].str()+"/"+msg["ObjectName"].str();
 			CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(deviceId);
+			devicePtr->setExten(msg["ObjectName"]);
 	
 			//NOTE: we handle Unmonitored sip peers as online, while we dont actually know if its online or not.		
 			if (msg["Status"].str().find("OK")==0 || msg["Status"].str().find("Unmonitored")==0 )//||  msg["Status"].str().find("UNKNOWN")==0)
@@ -1234,20 +1111,6 @@ namespace asterisk
 	
 	
 	
-	SYNAPSE_REGISTER(asterisk_refresh)
-	{
-		//indicate start of a refresh, deletes all known state-info in client
-		Cmsg out;
-		out.event="asterisk_reset";
-		out.dst=msg.src; 
-		out.send();
-	
-		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
-		{
-			I->second.sendRefresh(msg.src);
-		}
-	
-	}
 	
 	
 	//we got a response to our SIPPeers/IAXpeers request.
@@ -1608,74 +1471,6 @@ namespace asterisk
 	}
 	
 
-	/** Requests authentication for \c src 
-	
-	\par Replys \c asterisk_authCall
-		The session should authenticate by dialing a special crafted  number. After this asterisk knows to which device the client belongs, and can determine to which group the user belongs.
-			\arg \c number The number the client should call to authenticate.
-
-	\par Replys \c asterisk_authOk
-		After the user called the specified number.
-			\arg \c deviceId The deviceId the user was calling from.
-	
-	*/
-	SYNAPSE_REGISTER(asterisk_authReq)
-	{
-		//create a Csession object for the src session?
-		if (sessionMap.find(msg.src) == sessionMap.end())
-		{
-			sessionMap[msg.src]=CsessionPtr(new Csession(msg.src));
-		}
-
-		//deviceId + correct authCookie ?
-		if (msg.isSet("deviceId") && msg.isSet("authCookie"))
-		{
-			//traverse all the servers and find the device
-			for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
-			{
-				CdevicePtr devicePtr=I->second.getDevicePtr(msg["deviceId"],false);
-				//device exists?
-				if (devicePtr!=NULL)
-				{
-					//authCookie checks out?
-					if (devicePtr->getAuthCookie()==msg["authCookie"])
-					{
-
-						//session is now authenticated, set corresponding group
-						sessionMap[msg.src]->setGroupPtr(devicePtr->getGroupPtr());
-
-						//session is re-authenticated, by authCookie
-						Cmsg out;
-						out.event="asterisk_authOk";
-						out.dst=msg.src;
-						out["deviceId"]=msg["deviceId"].str();
-						out["authCookie"]=msg["authCookie"].str();
-						out.send();
-						return;
-					}
-				}
-			}
-		}
-		else
-		{
-			//de-authenticate the user (e.g. logout)
-			sessionMap[msg.src]->setGroupPtr(CgroupPtr());
-		}
-
-		//tell the client which number to call, to authenticate
-		stringstream number;
-		number << ASTERISK_AUTH << msg.src;
-
-		Cmsg out;
-		out.event="asterisk_reset"; //since we're logged out again, make sure the screen is cleared.
-		out.dst=msg.src;
-		out.send();
-
-		out.event="asterisk_authCall";
-		out["number"]=number.str();
-		out.send();
-	}
-
 	
 	SYNAPSE_REGISTER(ami_Event_Newexten)
 	{
@@ -1981,4 +1776,245 @@ namespace asterisk
 		channelPtr->sendDebug(msg, msg.dst);
 	
 	}
+
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////// events to control this module, usually sent by webinterface to us.
+	//////////////////////////////////////////////////////////////////////////////////////////
+
+	/** Loads asterisk.conf and connects to specified servers.
+	 * It will also handle server deletes/changes.
+	 */
+	SYNAPSE_REGISTER(asterisk_Config)
+	{
+		using synapse::Cconfig;
+		Cconfig config;
+		config.load("etc/synapse/asterisk.conf");
+
+		//delete servers that have been changed or removed from the config
+		for (CserverMap::iterator serverI=serverMap.begin(); serverI!=serverMap.end(); serverI++)
+		{
+			//server config removed or changed?
+			if (
+				!config.isSet(serverI->second.id) ||
+				serverI->second.username!=config[serverI->second.id]["username"].str() ||
+				serverI->second.password!=config[serverI->second.id]["password"].str() ||
+				serverI->second.host!=config[serverI->second.id]["host"].str() ||
+				serverI->second.port!=config[serverI->second.id]["port"].str() ||
+				serverI->second.host!=config[serverI->second.id]["group_default"].str() ||
+				serverI->second.port!=config[serverI->second.id]["group_regex"].str()
+			)
+			{
+				//delete server and connection by ending session
+				//the rest will get cleaned up automaticly by the module_SessionEnd(ed) events.
+				Cmsg out;
+				out.src=serverI->first;
+				out.event="core_DelSession";
+				out.send();
+			}
+			else
+			{
+				//nothing changed, deleted it from config-object
+				config.map().erase(serverI->second.id);
+			}
+		}
+
+		//the remaining config entries need to be (re)created and (re)connected.
+		for (Cconfig::iterator configI=config.begin(); configI!=config.end(); configI++)
+		{
+			//start a new session for every new connection, and supply the config info
+			Cmsg out;
+			out.event="core_NewSession";
+			out["server"]=configI->second;
+			out["server"]["id"]=configI->first;
+			out["description"]="asterisk-ami connection session.";
+			out.send();
+		}
+	}
+
+	SYNAPSE_REGISTER(asterisk_GetStatus)
+	{
+		Cmsg out;
+		out.event="asterisk_Status";
+		out.dst=msg.src;
+		out["status"]="";
+
+		out["status"].str()+="Sessions:\n";
+		for (CsessionMap::iterator I=sessionMap.begin(); I!=sessionMap.end(); I++)
+		{
+			stringstream id;
+			id << I->first;
+			out["status"].str()+=I->second->getStatus(" ")+"\n";
+		}
+
+
+		out["status"].str()+="Groups:\n";
+		for (CgroupMap::iterator I=groupMap.begin(); I!=groupMap.end(); I++)
+		{
+			out["status"].str()+=I->second->getStatus(" ")+"\n";
+		}
+
+		out["status"].str()+="Servers:\n";
+		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+		{
+			out["status"].str()+= I->second.getStatus(" ");
+		}
+
+
+		out.send();
+	}
+	
+	SYNAPSE_REGISTER(timer_Ready)
+	{
+		Cmsg out;
+		out.clear();
+		out.event="timer_Set";
+		out["seconds"]=1;
+		out["repeat"]=-1;
+		out["dst"]=dst;
+		out["event"]="asterisk_SendChanges";
+		out.send();
+	}
+	
+	
+
+	
+	SYNAPSE_REGISTER(asterisk_SendChanges)
+	{
+		CserverMap::iterator I;
+//		I->second.sendChanges();
+
+		//let all servers send their changes 
+		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+		{
+			I->second.sendChanges();
+		}
+
+		//save state db if its changed
+		stateDb.save();
+
+	
+	}
+
+	SYNAPSE_REGISTER(asterisk_refresh)
+	{
+		//indicate start of a refresh, deletes all known state-info in client
+		Cmsg out;
+		out.event="asterisk_reset";
+		out.dst=msg.src; 
+		out.send();
+	
+		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+		{
+			I->second.sendRefresh(msg.src);
+		}
+	
+	}
+
+
+	/** Requests authentication for \c src 
+	
+	\par Replys \c asterisk_authCall
+		The session should authenticate by dialing a special crafted  number. After this asterisk knows to which device the client belongs, and can determine to which group the user belongs.
+			\arg \c number The number the client should call to authenticate.
+
+	\par Replys \c asterisk_authOk
+		After the user called the specified number.
+			\arg \c deviceId The deviceId the user was calling from.
+	
+	*/
+	SYNAPSE_REGISTER(asterisk_authReq)
+	{
+		//create a Csession object for the src session?
+		if (sessionMap.find(msg.src) == sessionMap.end())
+		{
+			sessionMap[msg.src]=CsessionPtr(new Csession(msg.src));
+		}
+
+		//deviceId + correct authCookie ?
+		if (msg["deviceId"]!="" && msg["authCookie"]!="")
+		{
+			//traverse all the servers and find the device
+			for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+			{
+				CdevicePtr devicePtr=I->second.getDevicePtr(msg["deviceId"],false);
+				//device exists?
+				if (devicePtr!=NULL)
+				{
+					//authCookie checks out?
+					if (devicePtr->getAuthCookie()==msg["authCookie"])
+					{
+
+						//session is now authenticated, set corresponding group
+						sessionMap[msg.src]->setGroupPtr(devicePtr->getGroupPtr());
+
+						//session is re-authenticated, by authCookie
+						Cmsg out;
+						out.event="asterisk_authOk";
+						out.dst=msg.src;
+						out["deviceId"]=msg["deviceId"].str();
+						out["authCookie"]=msg["authCookie"].str();
+						out.send();
+						return;
+					}
+				}
+			}
+		}
+		else
+		{
+			//de-authenticate the user (e.g. logout)
+			sessionMap[msg.src]->setGroupPtr(CgroupPtr());
+		}
+
+		//tell the client which number to call, to authenticate
+		stringstream number;
+		number << ASTERISK_AUTH << msg.src;
+
+		Cmsg out;
+		out.event="asterisk_reset"; //since we're logged out again, make sure the screen is cleared.
+		out.dst=msg.src;
+		out.send();
+
+		out.event="asterisk_authCall";
+		out["number"]=number.str();
+		out.send();
+	}
+
+	
+	SYNAPSE_REGISTER(asterisk_Dial)
+	{
+		// Action: Originate
+		// Channel: SIP/101test
+		// Context: default
+		// Exten: 8135551212
+		// Priority: 1
+		// Callerid: 3125551212
+		// Timeout: 30000
+		// Variable: var1=23|var2=24|var3=25
+		// ActionID: ABC45678901234567890
+		Cmsg out;
+		out.clear();
+		out.src=6;
+		out.event="ami_Action";
+		out["Action"]="Originate";
+		out["Context"]="from-internal";
+		out["Priority"]="1";
+		out["Channel"]="SIP/100";
+		out["Exten"]="101";
+		out["Async"]="1";
+		out.send();
+	}
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
