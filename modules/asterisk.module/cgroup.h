@@ -16,25 +16,19 @@
     along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-/*
- * cgroup.h
- *
- *  Created on: Jul 14, 2010
-
- */
 
 #ifndef CGROUP_H_
 #define CGROUP_H_
 
 #include <boost/shared_ptr.hpp>
-#include <string>
-#include "cmsg.h"
 
 namespace asterisk
 {
 	using namespace boost;
 	using namespace std;
-	using namespace asterisk;
+
+	typedef shared_ptr<class Cgroup> CgroupPtr;
+
 }
 
 #include "csession.h"
@@ -43,11 +37,10 @@ namespace asterisk
 {
 	using namespace boost;
 	using namespace std;
-	using namespace asterisk;
 
 	//groups: most times a tennant is considered a group.
-	//After authenticating, a session points to a group.'
-	//All devices of a specific tennant also point to this group
+	//After authenticating, a session points to a device
+	//All devices of a specific tennant also point a group
 	//events are only sent to Csessions that are member of the same group as the corresponding device.
 	class Cgroup
 	{
@@ -58,11 +51,10 @@ namespace asterisk
 		Cgroup();
 		void setId(string id);
 		string getId();
-		void send(CsessionMap & sessionMap, Cmsg & msg);
+		void send(Cmsg & msg);
 		string getStatus(string prefix);
 	};
 
-	typedef shared_ptr<class Cgroup> CgroupPtr;
 
 }
 

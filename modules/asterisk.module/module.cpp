@@ -47,24 +47,7 @@ To setup a fake server replaying this:
 
 */
 
-/*
-    Data structure overview:
 
-    groupMap->groupPtr------------------>Cgroup
-                                            ^
-                                            |
-    serverMap->serverPtr->Cserver:          |
-        channelMap->channelPtr->Cchannel:   |
-            devicePtr--->-------\           |
-                                 v          |
-        deviceMap->devicePtr->Cdevice:      |
-            groupPtr--->--------------------
-                					 \
-    sessionMan->sessionPtr->Csession: |     
-        devicePtr------>--------------|
-
-
-*/
 
 #include "synapse.h"
 #include <boost/regex.hpp>
@@ -773,7 +756,7 @@ namespace asterisk
 		|Privilege = call,all (string)
 		|Uniqueid = 1269866053.55 (string)*/
 	
-		//somebody dialed the special authnumber?
+		//somebody dialed the special authentication number?
 		if (msg["Extension"].str().find(ASTERISK_AUTH)==0)
 		{
 			//determine specified session number
@@ -783,19 +766,20 @@ namespace asterisk
 			if (serverMan.sessionExists(sessionId))
 			{
 				CsessionPtr sessionPtr=serverMan.getSessionPtr(sessionId);
-				//session is not yet authenticated?
-				if (!sessionPtr->isAuthenticated())
+				//session is not yet authorized?
+				if (!sessionPtr->isAuthorized())
 				{
-					//get the server and device ptrs
+					//autenticate the session
 					CserverPtr serverPtr=serverMan.getServerPtr(msg.dst);
 					CdevicePtr devicePtr=serverPtr->getDevicePtr(getDeviceIdFromChannel(msg["Channel"]));
-					sessionPtr->authenticate(serverPtr, devicePtr);
+					sessionPtr->authorize(serverPtr, devicePtr);
 
 					Cmsg out;
 					out.event="asterisk_authOk";
 					out.dst=sessionId;
-					out["deviceId"]=getDeviceIdFromChannel(msg["Channel"]);
-					out["authCookie"]=serverMap[msg.dst].getDevicePtr(out["deviceId"])->getAuthCookie();
+					out["deviceId"]=devicePtr->getId();
+					out["serverId"]=serverPtr->id;
+					out["authCookie"]=serverMan.getAuthCookie(serverPtr->id, devicePtr->getId());
 					out.send();
 	
 					//hang up
@@ -1211,40 +1195,29 @@ namespace asterisk
 			sessionMap[msg.src]=CsessionPtr(new Csession(msg.src));
 		}
 
-		//deviceId + correct authCookie ?
-		if (msg["deviceId"]!="" && msg["authCookie"]!="")
+		//try to reauthenticate with authcookie?
+		if (msg["authCookie"]!="" && msg["deviceId"]!="" && msg["serverId"]!="")
 		{
-			//traverse all the servers and find the device
-			for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+			//correct authcookie?
+			if (serverMan.getAuthCookie(msg["deviceId"], msg["serverId"])==msg["authCookie"].str())
 			{
-				CdevicePtr devicePtr=I->second.getDevicePtr(msg["deviceId"],false);
-				//device exists?
-				if (devicePtr!=NULL)
-				{
-					//authCookie checks out?
-					if (devicePtr->getAuthCookie()==msg["authCookie"])
-					{
+				//authenticate session
+				serverMan.getSessionPtr(msg.src)->authorize(msg["deviceId"], msg["serverId"]);
 
-						//session is now authenticated, set corresponding group
-						sessionMap[msg.src]->setGroupPtr(devicePtr->getGroupPtr());
-
-						//session is re-authenticated, by authCookie
-						Cmsg out;
-						out.event="asterisk_authOk";
-						out.dst=msg.src;
-						out["deviceId"]=msg["deviceId"].str();
-						out["authCookie"]=msg["authCookie"].str();
-						out.send();
-						return;
-					}
-				}
+				//session is re-authenticated, by authCookie
+				Cmsg out;
+				out.event="asterisk_authOk";
+				out.dst=msg.src;
+				out["deviceId"]=msg["deviceId"].str();
+				out["serverId"]=msg["serverId"].str();
+				out["authCookie"]=msg["authCookie"].str();
+				out.send();
+				return;
 			}
 		}
-		else
-		{
-			//de-authenticate the user (e.g. logout)
-			sessionMap[msg.src]->setGroupPtr(CgroupPtr());
-		}
+
+		//de-authenticate the user (e.g. logout)
+		serverMan.getSessionPtr(msg.src)->deauthorize();
 
 		//tell the client which number to call, to authenticate
 		stringstream number;

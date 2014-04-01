@@ -2,10 +2,12 @@
 #define CDEVICE_H_
 
 #include "cgroup.h"
+#include <string>
 
 namespace asterisk
 {
 
+	using namespace std;
 
 
 	
@@ -47,6 +49,8 @@ namespace asterisk
 		~Cdevice();
 		
 	};
+
+	typedef shared_ptr<class Cdevice> CdevicePtr;
 
 }
 

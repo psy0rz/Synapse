@@ -48,7 +48,7 @@ namespace asterisk
 	//sends msg after applying filtering.
 	//message will only be sended or broadcasted to sessions that belong to this group.
 	//some channels like locals and trunks will also be filtered, depending on session-specific preferences
-	void Cgroup::send(CsessionMap & sessionMap, Cmsg & msg)
+	void Cgroup::send(Cmsg & msg)
 	{
 		//broadcast?
 		if (msg.dst==0)

@@ -26,6 +26,14 @@
 #ifndef CSESSION_H_
 #define CSESSION_H_
 
+
+namespace asterisk
+{
+	using namespace std;
+	using namespace boost;
+	typedef shared_ptr<class Csession> CsessionPtr;
+}
+
 #include "cdevice.h"
 #include "cserver.h"
 
@@ -33,9 +41,7 @@ namespace asterisk
 {
 	using namespace std;
 	using namespace boost;
-	using namespace asterisk;
 
-	typedef shared_ptr<class Csession> CsessionPtr;
 
 	//sessions: every synapse session has a corresponding session object here
 	class Csession
@@ -45,13 +51,14 @@ namespace asterisk
 		CdevicePtr devicePtr;
 		CserverPtr serverPtr;
 		bool admin;
-		bool authenticated;
+		bool authorized;
 
 		public:
 
 		Csession(int id);
-		void authenticate(CserverPtr serverPtr, CdevicePtr devicePtr);
-		bool isAuthenticated();
+		void authorize(CserverPtr serverPtr, CdevicePtr devicePtr);
+		void deauthorize();
+		bool isAuthorized();
 		CdevicePtr getDevicePtr();
 		CserverPtr getServerPtr();
 		string getStatus(string prefix);

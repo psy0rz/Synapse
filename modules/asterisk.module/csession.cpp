@@ -33,20 +33,27 @@ namespace asterisk
 	{
 		this->id=id;
 		admin=false;
-		authenticated=false;
+		authorized=false;
 
 	}
 
-	void Csession::authenticate(CserverPtr serverPtr, CdevicePtr devicePtr)
+	void Csession::authorize(CserverPtr serverPtr, CdevicePtr devicePtr)
 	{
 		this->devicePtr=devicePtr;
 		this->serverPtr=serverPtr;
-		this->authenticated=true;
+		this->authorized=true;
 	}
 
-	bool Csession::isAuthenticated()
+	void Csession::deauthorize()
 	{
-		return(authenticated);
+		this->devicePtr=CdevicePtr();
+		this->serverPtr=CserverPtr();
+		this->authorized=false;
+	}
+
+	bool Csession::isAuthorized()
+	{
+		return(authorized);
 	}
 
 	CdevicePtr Csession::getDevicePtr()

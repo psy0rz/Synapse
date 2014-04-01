@@ -1,5 +1,6 @@
 #include "cgroup.h"
 #include "cdevice.h"
+#include "cmsg.h"
 
 namespace asterisk
 {

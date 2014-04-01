@@ -1,6 +1,40 @@
 #ifndef CSERVER_H_
 #define CSERVER_H_
 
+
+/*
+    Data structure overview:
+
+	serverMan
+		groupMap
+			groupPtr
+				group
+
+		serverMap
+			serverPtr
+				server
+					deviceMap
+						devicePtr
+							device
+								groupPtr
+									...
+					channelMap
+						channelPtr
+							channel
+								devicePtr
+									...
+
+		sessionMap
+			sessionPtr
+				session
+					devicePtr
+						...
+					serverPtr
+						...
+
+
+*/
+
 #include "./cdevice.h"
 #include "./cchannel.h"
 #include "./cconfig.h"
@@ -11,8 +45,7 @@ namespace asterisk
 {
 
 
-	typedef shared_ptr<class Cchannel> CchannelPtr;
-	typedef shared_ptr<class Cdevice> CdevicePtr;
+	typedef shared_ptr<class Cserver> CserverPtr;
 
 	//physical asterisk servers. every server has its own device and channel map
 	class Cserver
@@ -60,7 +93,7 @@ namespace asterisk
 	class CserverMan
 	{
 		private:
-		typedef map<int, class Cserver> CserverMap;
+		typedef map<int, CserverPtr> CserverMap;
 		CserverMap serverMap;
 
 		typedef map<int, CsessionPtr> CsessionMap;
@@ -83,12 +116,8 @@ namespace asterisk
 		//user sessions (http)
 		CsessionPtr getSessionPtr(int id);
 		void delSession(int id);
-		bool sessionExists(id);
+		bool sessionExists(int id);
 	};
-
-
-	};
-
 };
 
 #endif
