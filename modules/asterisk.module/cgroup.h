@@ -35,8 +35,6 @@ namespace asterisk
 	using namespace boost;
 	using namespace std;
 	using namespace asterisk;
-	typedef shared_ptr<class Cgroup> CgroupPtr;
-	typedef map<string, CgroupPtr> CgroupMap;
 }
 
 #include "csession.h"
@@ -64,6 +62,7 @@ namespace asterisk
 		string getStatus(string prefix);
 	};
 
+	typedef shared_ptr<class Cgroup> CgroupPtr;
 
 }
 

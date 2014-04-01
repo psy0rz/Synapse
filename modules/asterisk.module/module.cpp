@@ -70,11 +70,7 @@ To setup a fake server replaying this:
 #include <boost/regex.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
-#include "./csession.h"
-#include "cconfig.h"
-//#include "./cgroup.h"
-//#include "./csession_types.h"
-//#include "./cgroup_types.h"
+#include "cserver.h"
 
 #define ASTERISK_AUTH "9999"
 
@@ -83,15 +79,7 @@ namespace asterisk
 	using namespace std;
 	using namespace boost;
 
-	CsessionMap sessionMap;
-
-	CgroupMap groupMap;
-
-
-	
-
-
-
+	CserverMan serverMan("var/asterisk/state_db.conf");
 
 
 	SYNAPSE_REGISTER(module_Init)
@@ -99,11 +87,6 @@ namespace asterisk
 		Cmsg out;
 
 
-		stateDb.load("var/asterisk/state_db.conf");
-
-
-		//FIXME: unsafe randomiser?
-		srand48_r(time(NULL), &randomBuffer);
 
 
 	
@@ -240,7 +223,7 @@ namespace asterisk
 		{
 			//setup a new server object
 			serverMan.getServerPtr(msg["server"]["id"]);
-			
+
 			serverMap[msg.dst].id=msg["server"]["id"].str();
 			serverMap[msg.dst].username=msg["server"]["username"].str();
 			serverMap[msg.dst].password=msg["server"]["password"].str();
@@ -795,17 +778,18 @@ namespace asterisk
 		{
 			//determine specified session number
 			int sessionId=lexical_cast<int>(msg["Extension"].str().substr(strlen(ASTERISK_AUTH)));
-			//do we know the specified session?
-			if (sessionMap.find(sessionId) != sessionMap.end())
-			{
-				//session is not yet authenticated?
-				if (sessionMap[sessionId]->getGroupPtr() == NULL)
-				{
-					//get the device
-					CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(getDeviceIdFromChannel(msg["Channel"]));
 
-					//session is now authenticated, set corresponding group
-					sessionMap[sessionId]->setGroupPtr(devicePtr->getGroupPtr());
+			//do we know the specified session?
+			if (serverMan.sessionExists(sessionId))
+			{
+				CsessionPtr sessionPtr=serverMan.getSessionPtr(sessionId);
+				//session is not yet authenticated?
+				if (!sessionPtr->isAuthenticated())
+				{
+					//get the server and device ptrs
+					CserverPtr serverPtr=serverMan.getServerPtr(msg.dst);
+					CdevicePtr devicePtr=serverPtr->getDevicePtr(getDeviceIdFromChannel(msg["Channel"]));
+					sessionPtr->authenticate(serverPtr, devicePtr);
 
 					Cmsg out;
 					out.event="asterisk_authOk";

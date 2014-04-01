@@ -1,3 +1,4 @@
+
 namespace asterisk
 {
 
@@ -155,6 +156,18 @@ namespace asterisk
 
 
 	//server manager
+	CserverMan::CserverMan(string  stateFileName);
+	{
+		//load state database
+		stateDb.load(stateFileName);
+
+		//initialize randomizer
+		//FIXME: unsafe randomiser?
+		srand48_r(time(NULL), &randomBuffer);
+
+	}
+
+	//get server by session id
 	CserverPtr CserverMan::getServerPtr(int sessionId)
 	{
 		if (serverMap.find(sessionId==serverMap.end())
@@ -166,7 +179,18 @@ namespace asterisk
 		return (serverMap[sessionId]);
 	}
 
-	void CserverMan::delServer(int sessionId
+	//get server by server id
+	CserverPtr CserverMan::getServerPtr(string id)
+	{
+		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+		{
+			if (I->second->id == id)
+				return (I->second);
+		}
+		return(NULL);
+	}
+
+	void CserverMan::delServer(int sessionId)
 	{
 		if (serverMap.find(sessionId) != serverMap.end())
 		{
@@ -174,6 +198,49 @@ namespace asterisk
 			serverMap.erase(sessionId);
 		}
 	}
+
+	TauthCookie CserverMan::getAuthCookie(string serverId, string deviceId)
+	{
+		//create new cookie?
+		if (!stateDb[serverId][deviceId]["authCookie"])
+		{
+			TauthCookie authCookie;
+			mrand48_r(&randomBuffer, &authCookie);
+			stateDb[serverId][deviceId]["authCookie"]=authCookie;
+			stateDb.changed();
+			stateDb.save();
+		}
+			
+		return(stateDb[serverId][deviceId]["authCookie"]);
+	}
+
+
+	CsessionPtr CserverMan::getSessionPtr(int id)
+	{
+		if (sessionMap.find(id)==sessionMap.end())
+		{
+			//create new
+			DEB("Creating session object" << id);
+			sessionMap[id]=CsessionPtr(new Csession(id));
+		}
+		return (sessionMap[id]);
+	}
+
+	bool CserverMan::sessionExists(id)
+	{
+		return(sessionMap.find(id)!=sessionMap.end());
+	}
+
+	void CserverMan::delSession(int id)
+	{
+		if (sessionMap.find(id) != sessionMap.end())
+		{
+			//remove the session. we use smartpointers , so it should be safe.
+			DEB("Removing session object " << id);
+			sessionMap.erase(id);
+		}
+	}
+
 
 
 }

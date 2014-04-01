@@ -35,20 +35,6 @@ namespace asterisk
 		return (groupPtr);
 	}
 
-	TauthCookie Cdevice::getAuthCookie()
-	{
-		string authKey=groupPtr->getId()+"."+id;
-		//create new cookie?
-		if (!stateDb["cookies"].isSet(authKey))
-		{
-			TauthCookie authCookie;
-			mrand48_r(&randomBuffer, &authCookie);
-			stateDb["cookies"][authKey]=authCookie;
-			stateDb.changed();
-		}
-			
-		return(stateDb["cookies"][authKey]);
-	}
 
 
 	void Cdevice::setId(string id)

@@ -27,6 +27,7 @@
 #define CSESSION_H_
 
 #include "cdevice.h"
+#include "cserver.h"
 
 namespace asterisk
 {
@@ -42,27 +43,21 @@ namespace asterisk
 		private:
 		int id;
 		CdevicePtr devicePtr;
+		CserverPtr serverPtr;
+		bool admin;
+		bool authenticated;
 
 		public:
-		bool isAdmin;
 
 		Csession(int id);
-		void setDevicePtr(CdevicePtr devicePtr);
+		void authenticate(CserverPtr serverPtr, CdevicePtr devicePtr);
+		bool isAuthenticated();
 		CdevicePtr getDevicePtr();
+		CserverPtr getServerPtr();
 		string getStatus(string prefix);
 	};
 
-	//session manager
-	class CsessionMan
-	{
-		private:
-		typedef map<int, CsessionPtr> CsessionMap;
-		CsessionMap sessionMap;
-
-		public:
-		CsessionPtr getSessionPtr(int id);
-		void delSession(int id)
-	};
 
 };
+
 #endif /* CSESSION_H_ */

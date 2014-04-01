@@ -32,18 +32,31 @@ namespace asterisk
 	Csession::Csession(int id)
 	{
 		this->id=id;
-		isAdmin=false;
+		admin=false;
+		authenticated=false;
 
 	}
 
-	void Csession::setDevicePtr(CdevicePtr devicePtr)
+	void Csession::authenticate(CserverPtr serverPtr, CdevicePtr devicePtr)
 	{
 		this->devicePtr=devicePtr;
+		this->serverPtr=serverPtr;
+		this->authenticated=true;
+	}
+
+	bool Csession::isAuthenticated()
+	{
+		return(authenticated);
 	}
 
 	CdevicePtr Csession::getDevicePtr()
 	{
 		return (devicePtr);
+	}
+
+	CserverPtr Csession::getServerPtr()
+	{
+		return (serverPtr);
 	}
 
 	string Csession::getStatus(string prefix)
@@ -58,27 +71,6 @@ namespace asterisk
 
 
 
-	//session manager
-	CsessionPtr CsessionMan::getSessionPtr(int id)
-	{
-		if (sessionMap.find(id)==sessionMap.end())
-		{
-			//create new
-			DEB("Creating session object" << id);
-			sessionMap[id]=CsessionPtr(new Csession(id));
-		}
-		return (sessionMap[deviceId]);
-	}
-
-	void CsessionMan::delSession(int id)
-	{
-		if (sessionMap.find(id) != sessionMap.end())
-		{
-			//remove the session. we use smartpointers , so it should be safe.
-			DEB("Removing session object " << id);
-			sessionMap.erase(id);
-		}
-	}
 
 
 }

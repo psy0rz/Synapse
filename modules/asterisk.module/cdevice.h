@@ -2,18 +2,13 @@
 #define CDEVICE_H_
 
 #include "cgroup.h"
-#include "cconfig.h"
 
 namespace asterisk
 {
- 	//authentication cookies and recent call history are saved to disk
- 	synapse::Cconfig stateDb;
-
- 	struct drand48_data randomBuffer;
-
-	typedef long int TauthCookie;
 
 
+
+	
 	//devices: these can be sip devices, misdn, local channels, agent-stuff etc
 	//every device points to a corresponding Cgroup. 
 	class Cdevice
@@ -35,7 +30,6 @@ namespace asterisk
 		Cdevice();
 		bool isFiltered();
 		CgroupPtr getGroupPtr();
-		TauthCookie getAuthCookie();
 		void setId(string id);
 		void setGroupPtr(CgroupPtr groupPtr);
 		string getId();
