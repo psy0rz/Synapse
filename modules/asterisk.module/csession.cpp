@@ -22,7 +22,9 @@
  *  Created on: Jul 14, 2010
 
  */
-#include "cgroup.h"
+
+
+#include "cdevice.h"
 namespace asterisk
 {
 
@@ -34,25 +36,49 @@ namespace asterisk
 
 	}
 
-
-	void Csession::setGroupPtr(CgroupPtr groupPtr)
+	void Csession::setDevicePtr(CdevicePtr devicePtr)
 	{
-		this->groupPtr=groupPtr;
+		this->devicePtr=devicePtr;
 	}
 
-	CgroupPtr Csession::getGroupPtr()
+	CdevicePtr Csession::getDevicePtr()
 	{
-		return (groupPtr);
+		return (devicePtr);
 	}
 
 	string Csession::getStatus(string prefix)
 	{
 		stringstream s;
-		if (groupPtr)
-			s << prefix <<  "Session " << id << ":\n" << groupPtr->getStatus(prefix+" ");
+		if (devicePtr)
+			s << prefix <<  "Session " << id << ":\n" << devicePtr->getStatus(prefix+" ");
 		else
 			s << prefix <<  "Session " << id << "\n" << prefix << "(not logged in)\n";
 		return(s.str());
 	}
+
+
+
+	//session manager
+	CsessionPtr CsessionMan::getSessionPtr(int id)
+	{
+		if (sessionMap.find(id)==sessionMap.end())
+		{
+			//create new
+			DEB("Creating session object" << id);
+			sessionMap[id]=CsessionPtr(new Csession(id));
+		}
+		return (sessionMap[deviceId]);
+	}
+
+	void CsessionMan::delSession(int id)
+	{
+		if (sessionMap.find(id) != sessionMap.end())
+		{
+			//remove the session. we use smartpointers , so it should be safe.
+			DEB("Removing session object " << id);
+			sessionMap.erase(id);
+		}
+	}
+
 
 }

@@ -26,40 +26,43 @@
 #ifndef CSESSION_H_
 #define CSESSION_H_
 
-//#include "cgroup_types.h"
+#include "cdevice.h"
 
 namespace asterisk
 {
 	using namespace std;
 	using namespace boost;
 	using namespace asterisk;
+
 	typedef shared_ptr<class Csession> CsessionPtr;
-	typedef map<int, CsessionPtr> CsessionMap;
-}
-
-#include "cgroup.h"
-
-namespace asterisk
-{
-	using namespace std;
-	using namespace boost;
-	using namespace asterisk;
 
 	//sessions: every synapse session has a corresponding session object here
 	class Csession
 	{
 		private:
 		int id;
-		CgroupPtr groupPtr;
+		CdevicePtr devicePtr;
 
 		public:
 		bool isAdmin;
 
 		Csession(int id);
-		void setGroupPtr(CgroupPtr groupPtr);
-		CgroupPtr getGroupPtr();
+		void setDevicePtr(CdevicePtr devicePtr);
+		CdevicePtr getDevicePtr();
 		string getStatus(string prefix);
 	};
 
-}
+	//session manager
+	class CsessionMan
+	{
+		private:
+		typedef map<int, CsessionPtr> CsessionMap;
+		CsessionMap sessionMap;
+
+		public:
+		CsessionPtr getSessionPtr(int id);
+		void delSession(int id)
+	};
+
+};
 #endif /* CSESSION_H_ */
