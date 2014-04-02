@@ -344,4 +344,56 @@ namespace asterisk
 			}
 		}
 	}
+
+	string CserverMan::getStatus()
+	{
+		string ret;
+		ret+="Sessions:\n";
+		for (CsessionMap::iterator I=sessionMap.begin(); I!=sessionMap.end(); I++)
+		{
+			stringstream id;
+			id << I->first;
+			ret+=I->second->getStatus(" ")+"\n";
+		}
+
+
+		ret+="Groups:\n";
+		for (CgroupMap::iterator I=groupMap.begin(); I!=groupMap.end(); I++)
+		{
+			ret+=I->second->getStatus(" ")+"\n";
+		}
+
+		ret+="Servers:\n";
+		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+		{
+			ret+= I->second->getStatus(" ");
+		}
+
+		return(ret);
+
+	}
+
+	void CserverMan::sendChanges()
+	{
+		//let all servers send their changes 
+		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+		{
+			I->second->sendChanges();
+		}		
+	}
+
+	void CserverMan::sendRefresh(int dst)
+	{
+		//indicate start of a refresh, deletes all known state-info in client
+		Cmsg out;
+		out.event="asterisk_reset";
+		out.dst=dst; 
+		out.send();
+	
+		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+		{
+			I->second->sendRefresh(dst);
+		}
+	}
+
 }

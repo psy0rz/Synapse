@@ -123,6 +123,9 @@ namespace asterisk
 		bool sessionExists(int id);
 
 
+		string getStatus();
+		void sendChanges();
+		void sendRefresh(int dst);
 
 	};
 };

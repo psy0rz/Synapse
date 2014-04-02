@@ -22,8 +22,7 @@
 
 #include "typedefs.h"
 #include <boost/shared_ptr.hpp>
-#include "synapse.h"
-
+#include "cmsg.h"
 
 
 namespace asterisk

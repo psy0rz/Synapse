@@ -54,6 +54,9 @@ To setup a fake server replaying this:
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include "cserver.h"
+#include "cdevice.h"
+#include "cchannel.h"
+#include "csession.h"
 
 #define ASTERISK_AUTH "9999"
 
@@ -191,6 +194,7 @@ namespace asterisk
 		out.event="core_Ready";
 		out.send();
 
+		//load config, which in turn connects servers
 		out.clear();
 		out.event="asterisk_Config";
 		out.send();
@@ -266,7 +270,7 @@ namespace asterisk
 		if (msg["ActionID"].str()=="SIPshowPeer")
 		{
 			string deviceId=msg["Channeltype"].str()+"/"+msg["ObjectName"].str();
-			CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(deviceId);
+			CdevicePtr devicePtr=serverMan.getServerPtr(msg.dst)->getDevicePtr(deviceId);
 			devicePtr->setExten(msg["ObjectName"]);
 	
 			//NOTE: we handle Unmonitored sip peers as online, while we dont actually know if its online or not.		
@@ -308,7 +312,7 @@ namespace asterisk
 		//login response
 		else if (msg["ActionID"].str()=="Login")
 		{
-			serverMap[msg.dst].status=Cserver::AUTHENTICATED;
+			serverMan.getServerPtr(msg.dst)->status=Cserver::AUTHENTICATED;
             Cmsg out;
 
 			//learn all SIP peers as soon as we login
@@ -364,8 +368,8 @@ namespace asterisk
 	SYNAPSE_REGISTER(ami_Disconnected)
 	{
 		//since we're disconnected, clear all devices/channels
-		serverMap[msg.dst].clear();
-		serverMap[msg.dst].status=Cserver::CONNECTING;
+		serverMan.getServerPtr(msg.dst)->clear();
+		serverMan.getServerPtr(msg.dst)->status=Cserver::CONNECTING;
 		
 		//ami reconnects automaticly
 	}
@@ -405,7 +409,7 @@ namespace asterisk
     */
 	SYNAPSE_REGISTER(ami_Event_PeerEntry)
 	{
-		serverMap[msg.dst].getDevicePtr(msg["Channeltype"].str()+"/"+msg["ObjectName"].str());
+		serverMan.getServerPtr(msg.dst)->getDevicePtr(msg["Channeltype"].str()+"/"+msg["ObjectName"].str());
 	
 		//request additional device info for this SIP peer
 		//example: "SIP/604"
@@ -442,8 +446,8 @@ namespace asterisk
 
 	void channelStatus(Cmsg & msg)
 	{
-		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
-		CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(
+		CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid"]);
+		CdevicePtr devicePtr=serverMan.getServerPtr(msg.dst)->getDevicePtr(
 			getDeviceIdFromChannel(msg["Channel"])
 		);
 	
@@ -664,9 +668,9 @@ namespace asterisk
 	
 	SYNAPSE_REGISTER(ami_Event_Hangup)
 	{
-		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+		CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid"]);
 		channelPtr->sendDebug(msg, msg.dst);
-		serverMap[msg.dst].delChannel(msg["Uniqueid"]);
+		serverMan.getServerPtr(msg.dst)->delChannel(msg["Uniqueid"]);
 	//	serverMap[msg.dst].getDevicePtr(getDeviceId(msg["Channel"]))->sendStatus();
 	//	INFO("\n" << serverMap[msg.dst].getStatusStr());
 	
@@ -675,7 +679,7 @@ namespace asterisk
 	SYNAPSE_REGISTER(ami_Event_PeerStatus)
 	{
 		
-		CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(msg["Peer"]);
+		CdevicePtr devicePtr=serverMan.getServerPtr(msg.dst)->getDevicePtr(msg["Peer"]);
 		if (msg["PeerStatus"].str()=="Reachable" || msg["PeerStatus"].str()=="Registered" )
 			devicePtr->setOnline(true);
 		else
@@ -697,8 +701,8 @@ namespace asterisk
 		Uniqueid2: 1269864649.43
 		CallerID1: 604
 		CallerID2: 605*/
-		CchannelPtr channelPtr1=serverMap[msg.dst].getChannelPtr(msg["Uniqueid1"]);
-		CchannelPtr channelPtr2=serverMap[msg.dst].getChannelPtr(msg["Uniqueid2"]);
+		CchannelPtr channelPtr1=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid1"]);
+		CchannelPtr channelPtr2=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid2"]);
 	
 		channelPtr1->setLinkPtr(channelPtr2);
 		channelPtr2->setLinkPtr(channelPtr1);
@@ -719,11 +723,11 @@ namespace asterisk
 		Uniqueid2: 1269864479.41
 		CallerID1: 604
 		CallerID2: 605*/
-		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid1"]);
+		CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid1"]);
 		channelPtr->delLink();
 		channelPtr->sendDebug(msg, msg.dst);
 	
-		channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid2"]);
+		channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid2"]);
 		channelPtr->delLink();
 		channelPtr->sendDebug(msg, msg.dst);
 	
@@ -795,7 +799,7 @@ namespace asterisk
 			}
 		}
 	
-		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+		CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid"]);
 		if (channelPtr->getFirstExtension()=="")
 		{
 			channelPtr->setFirstExtension(msg["Extension"]);
@@ -858,11 +862,11 @@ namespace asterisk
 		//NOTE: a "link" for us, is something different then a link for asterisk.
 		CchannelPtr channelPtr1;
 		if (msg.isSet("SrcUniqueID")) //1.4
-			channelPtr1=serverMap[msg.dst].getChannelPtr(msg["SrcUniqueID"]);
+			channelPtr1=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["SrcUniqueID"]);
 		else //1.8
-			channelPtr1=serverMap[msg.dst].getChannelPtr(msg["UniqueID"]);
+			channelPtr1=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["UniqueID"]);
 
-		CchannelPtr channelPtr2=serverMap[msg.dst].getChannelPtr(msg["DestUniqueID"]);
+		CchannelPtr channelPtr2=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["DestUniqueID"]);
 		channelPtr1->setLinkPtr(channelPtr2);
 		channelPtr2->setLinkPtr(channelPtr1);
 	
@@ -929,8 +933,8 @@ namespace asterisk
 		// Uniqueid:1395248644.92
 		// deviceId:SIP/101
 
-		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
-		CdevicePtr devicePtr=serverMap[msg.dst].getDevicePtr(
+		CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid"]);
+		CdevicePtr devicePtr=serverMan.getServerPtr(msg.dst)->getDevicePtr(
 			getDeviceIdFromChannel(msg["Newname"])
 		);
 	
@@ -960,7 +964,7 @@ namespace asterisk
 	void newCallerId(Cmsg & msg)
 	{
 
-		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Uniqueid"]);
+		CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid"]);
 
 		if (msg.isSet("CallerID"))//1.4
 		{
@@ -1035,7 +1039,7 @@ namespace asterisk
 
 	SYNAPSE_REGISTER(ami_Event_CEL)
 	{
-		CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["UniqueID"]);
+		CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["UniqueID"]);
 		channelPtr->sendDebug(msg, msg.dst);
 	
 	}
@@ -1058,30 +1062,7 @@ namespace asterisk
 		Cmsg out;
 		out.event="asterisk_Status";
 		out.dst=msg.src;
-		out["status"]="";
-
-		out["status"].str()+="Sessions:\n";
-		for (CsessionMap::iterator I=sessionMap.begin(); I!=sessionMap.end(); I++)
-		{
-			stringstream id;
-			id << I->first;
-			out["status"].str()+=I->second->getStatus(" ")+"\n";
-		}
-
-
-		out["status"].str()+="Groups:\n";
-		for (CgroupMap::iterator I=groupMap.begin(); I!=groupMap.end(); I++)
-		{
-			out["status"].str()+=I->second->getStatus(" ")+"\n";
-		}
-
-		out["status"].str()+="Servers:\n";
-		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
-		{
-			out["status"].str()+= I->second.getStatus(" ");
-		}
-
-
+		out["status"]=serverMan.getStatus();
 		out.send();
 	}
 	
@@ -1102,33 +1083,13 @@ namespace asterisk
 	
 	SYNAPSE_REGISTER(asterisk_SendChanges)
 	{
-		CserverMap::iterator I;
-//		I->second.sendChanges();
-
-		//let all servers send their changes 
-		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
-		{
-			I->second.sendChanges();
-		}
-
-		//save state db if its changed
-		stateDb.save();
-
+		serverMan.sendChanges();
 	
 	}
 
 	SYNAPSE_REGISTER(asterisk_refresh)
 	{
-		//indicate start of a refresh, deletes all known state-info in client
-		Cmsg out;
-		out.event="asterisk_reset";
-		out.dst=msg.src; 
-		out.send();
-	
-		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
-		{
-			I->second.sendRefresh(msg.src);
-		}
+		serverMan.sendRefresh(msg.src);
 	
 	}
 
@@ -1146,20 +1107,16 @@ namespace asterisk
 	*/
 	SYNAPSE_REGISTER(asterisk_authReq)
 	{
-		//create a Csession object for the src session?
-		if (sessionMap.find(msg.src) == sessionMap.end())
-		{
-			sessionMap[msg.src]=CsessionPtr(new Csession(msg.src));
-		}
 
 		//try to reauthenticate with authcookie?
 		if (msg["authCookie"]!="" && msg["deviceId"]!="" && msg["serverId"]!="")
 		{
 			//correct authcookie?
-			if (serverMan.getAuthCookie(msg["deviceId"], msg["serverId"])==msg["authCookie"].str())
+			if (serverMan.getAuthCookie(msg["deviceId"], msg["serverId"])==msg["authCookie"])
 			{
 				//authenticate session
-				serverMan.getSessionPtr(msg.src)->authorize(msg["deviceId"], msg["serverId"]);
+				CserverPtr serverPtr=serverMan.getServerPtr(msg["serverId"].str());
+				serverMan.getSessionPtr(msg.src)->authorize(serverPtr, serverPtr->getDevicePtr(msg["deviceId"]));
 
 				//session is re-authenticated, by authCookie
 				Cmsg out;
@@ -1167,7 +1124,7 @@ namespace asterisk
 				out.dst=msg.src;
 				out["deviceId"]=msg["deviceId"].str();
 				out["serverId"]=msg["serverId"].str();
-				out["authCookie"]=msg["authCookie"].str();
+				out["authCookie"]=msg["authCookie"];
 				out.send();
 				return;
 			}
