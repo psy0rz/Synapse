@@ -21,6 +21,7 @@
 #define CGROUP_H_
 
 #include <boost/shared_ptr.hpp>
+#include "synapse.h"
 
 namespace asterisk
 {
@@ -46,13 +47,16 @@ namespace asterisk
 	{
 		private:
 		string id;
+		CserverMan * serverManPtr;
 
 		public:
-		Cgroup();
+		Cgroup(CserverMan * serverManPtr);
 		void setId(string id);
 		string getId();
-		void send(Cmsg & msg);
 		string getStatus(string prefix);
+
+		void send(Cmsg & msg);
+
 	};
 
 

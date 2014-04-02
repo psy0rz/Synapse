@@ -205,7 +205,7 @@ namespace asterisk
 		if (msg.isSet("server"))
 		{
 			//setup a new server object
-			serverMan.getServerPtr(msg["server"]["id"]);
+			serverMan.getServerPtr(msg["server"]["id"].str());
 
 			serverMap[msg.dst].id=msg["server"]["id"].str();
 			serverMap[msg.dst].username=msg["server"]["username"].str();
@@ -1051,49 +1051,7 @@ namespace asterisk
 	 */
 	SYNAPSE_REGISTER(asterisk_Config)
 	{
-		using synapse::Cconfig;
-		Cconfig config;
-		config.load("etc/synapse/asterisk.conf");
-
-		//delete servers that have been changed or removed from the config
-		for (CserverMap::iterator serverI=serverMap.begin(); serverI!=serverMap.end(); serverI++)
-		{
-			//server config removed or changed?
-			if (
-				!config.isSet(serverI->second.id) ||
-				serverI->second.username!=config[serverI->second.id]["username"].str() ||
-				serverI->second.password!=config[serverI->second.id]["password"].str() ||
-				serverI->second.host!=config[serverI->second.id]["host"].str() ||
-				serverI->second.port!=config[serverI->second.id]["port"].str() ||
-				serverI->second.host!=config[serverI->second.id]["group_default"].str() ||
-				serverI->second.port!=config[serverI->second.id]["group_regex"].str()
-			)
-			{
-				//delete server and connection by ending session
-				//the rest will get cleaned up automaticly by the module_SessionEnd(ed) events.
-				Cmsg out;
-				out.src=serverI->first;
-				out.event="core_DelSession";
-				out.send();
-			}
-			else
-			{
-				//nothing changed, deleted it from config-object
-				config.map().erase(serverI->second.id);
-			}
-		}
-
-		//the remaining config entries need to be (re)created and (re)connected.
-		for (Cconfig::iterator configI=config.begin(); configI!=config.end(); configI++)
-		{
-			//start a new session for every new connection, and supply the config info
-			Cmsg out;
-			out.event="core_NewSession";
-			out["server"]=configI->second;
-			out["server"]["id"]=configI->first;
-			out["description"]="asterisk-ami connection session.";
-			out.send();
-		}
+		serverMan.reload("etc/synapse/asterisk.conf");
 	}
 
 	SYNAPSE_REGISTER(asterisk_GetStatus)

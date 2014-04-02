@@ -1,9 +1,16 @@
 #ifndef CDEVICE_H_
 #define CDEVICE_H_
 
+#include <boost/shared_ptr.hpp>
+namespace asterisk
+{
+	using namespace boost;
+
+}
+
+
 #include "cgroup.h"
 #include <string>
-
 namespace asterisk
 {
 
@@ -50,7 +57,6 @@ namespace asterisk
 		
 	};
 
-	typedef shared_ptr<class Cdevice> CdevicePtr;
 
 }
 

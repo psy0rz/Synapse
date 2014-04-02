@@ -1,3 +1,5 @@
+#include "cchannel.h"
+
 namespace asterisk
 {
 
@@ -23,7 +25,7 @@ namespace asterisk
 		msg.dst=0;
 		msg.src=0;
 
-		devicePtr->getGroupPtr()->send(sessionMap,msg);
+		devicePtr->getGroupPtr()->send(msg);
 		return (true);
 	}
 
@@ -82,7 +84,7 @@ namespace asterisk
 					{
 						out["deviceId"]=this->devicePtr->getId();
 					}
-					this->devicePtr->getGroupPtr()->send(sessionMap,out);
+					this->devicePtr->getGroupPtr()->send(out);
 				}
 			}
 
@@ -235,7 +237,7 @@ namespace asterisk
 
 		out["firstExtension"]=firstExtension;
 
-		devicePtr->getGroupPtr()->send(sessionMap,out);
+		devicePtr->getGroupPtr()->send(out);
 
 		return (true);
 	}
@@ -279,7 +281,7 @@ namespace asterisk
 			{
 				out["deviceId"]=devicePtr->getId();
 			}
-			devicePtr->getGroupPtr()->send(sessionMap,out);
+			devicePtr->getGroupPtr()->send(out);
 		}
 	};
 

@@ -132,7 +132,7 @@ namespace asterisk
 			out["trunk"]=trunk;
 			out["exten"]=exten;
 			out["groupId"]=groupPtr->getId();
-			groupPtr->send(sessionMap,out);
+			groupPtr->send(out);
 		}
 
 		return(true);
@@ -172,6 +172,6 @@ namespace asterisk
 		out["id"]=id;
 
 		if (groupPtr!=NULL)
-			groupPtr->send(sessionMap,out);
+			groupPtr->send(out);
 	}
 };

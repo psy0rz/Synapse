@@ -31,7 +31,6 @@ namespace asterisk
 {
 	using namespace std;
 	using namespace boost;
-	typedef shared_ptr<class Csession> CsessionPtr;
 }
 
 #include "cdevice.h"
@@ -59,6 +58,7 @@ namespace asterisk
 		void authorize(CserverPtr serverPtr, CdevicePtr devicePtr);
 		void deauthorize();
 		bool isAuthorized();
+		bool isAdmin();
 		CdevicePtr getDevicePtr();
 		CserverPtr getServerPtr();
 		string getStatus(string prefix);

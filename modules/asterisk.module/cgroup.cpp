@@ -26,13 +26,14 @@
 #include "cgroup.h"
 #include <string.h>
 //groups: most times a tennant is considered a group.
-//After authenticating, a session points to a group.'
+//After authenticating, a session points to a device which in turn points to a group.'
 //All devices of a specific tennant also point to this group
 //events are only sent to Csessions that are member of the same group as the corresponding device.
 namespace asterisk
 {
-	Cgroup::Cgroup()
+	Cgroup::Cgroup(CserverMan * serverManPtr)
 	{
+		this->serverManPtr=serverManPtr;
 	}
 
 	void Cgroup::setId(string id)
@@ -45,52 +46,9 @@ namespace asterisk
 		return(id);
 	}
 
-	//sends msg after applying filtering.
-	//message will only be sended or broadcasted to sessions that belong to this group.
-	//some channels like locals and trunks will also be filtered, depending on session-specific preferences
 	void Cgroup::send(Cmsg & msg)
 	{
-		//broadcast?
-		if (msg.dst==0)
-		{
-			//we cant simply broadcast it, we need to check group membership session by session
-			for (CsessionMap::iterator I=sessionMap.begin(); I!=sessionMap.end(); I++)
-			{
-				if (I->second->isAdmin || I->second->getGroupPtr().get()==this)
-				{
-					msg.dst=I->first;
-					try
-					{
-						msg.send();
-					}
-					catch(const std::exception& e)
-					{
-						WARNING("asterisk delivering broadcast to " << msg.dst << " failed: " << e.what());
-					}
-
-				}
-			}
-			//restore dst value:
-			msg.dst=0;
-		}
-		else
-		{
-			CsessionMap::iterator I=sessionMap.find(msg.dst);
-			if (I!=sessionMap.end())
-			{
-				if (I->second->isAdmin || I->second->getGroupPtr().get()==this)
-				{
-					try
-					{
-						msg.send();
-					}
-					catch(const std::exception& e)
-					{
-						WARNING("asterisk send to " << msg.dst << " failed: " << e.what());
-					}
-				}
-			}
-		}
+		serverManPtr->send(id, msg);
 
 	}
 

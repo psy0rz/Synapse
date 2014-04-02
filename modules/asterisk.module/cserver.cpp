@@ -1,15 +1,23 @@
 
+#include "typedefs.h"
+#include "cserver.h"
+#include "cdevice.h"
+#include "cchannel.h"
+#include <boost/regex.hpp>
+
+
 namespace asterisk
 {
-
-	Cserver::Cserver(int sessionId)
+	//////////////////////////////////////////////////////////
+	Cserver::Cserver(int sessionId, CserverMan * serverManPtr)
 	{
 		status=CONNECTING;
 		this->sessionId=sessionId;
+		this->serverManPtr=serverManPtr;
 	}
 
 
-	CdevicePtr Cserver::getDevicePtr(string deviceId, bool autoCreate=true)
+	CdevicePtr Cserver::getDevicePtr(string deviceId, bool autoCreate)
 	{
 		if (deviceId=="")
 			throw(synapse::runtime_error("Specified empty deviceId"));
@@ -33,14 +41,14 @@ namespace asterisk
 					groupId=what[1];
 				}
 
-				if (groupMap.find(groupId) == groupMap.end())
+				if (serverManPtr->groupMap.find(groupId) == serverManPtr->groupMap.end())
 				{
 					//create new group
-					groupMap[groupId]=CgroupPtr(new Cgroup());
-					groupMap[groupId]->setId(groupId);
+					serverManPtr->groupMap[groupId]=CgroupPtr(new Cgroup(serverManPtr));
+					serverManPtr->groupMap[groupId]->setId(groupId);
 				}
 
-				deviceMap[deviceId]->setGroupPtr(groupMap[groupId]);					
+				deviceMap[deviceId]->setGroupPtr(serverManPtr->groupMap[groupId]);
 
 				DEB("created device " << deviceId);
 			}
@@ -154,9 +162,10 @@ namespace asterisk
 	}
 
 
-
+	////////////////////////////////////////////////////////////////////////
 	//server manager
-	CserverMan::CserverMan(string  stateFileName);
+	////////////////////////////////////////////////////////////////////////
+	CserverMan::CserverMan(string stateFileName)
 	{
 		//load state database
 		stateDb.load(stateFileName);
@@ -167,14 +176,61 @@ namespace asterisk
 
 	}
 
+	void CserverMan::reload(string filename)
+	{
+		synapse::Cconfig config;
+		config.load(filename);
+
+		//delete servers that have been changed or removed from the config
+		for (CserverMap::iterator serverI=serverMap.begin(); serverI!=serverMap.end(); serverI++)
+		{
+			//server config removed or changed?
+			if (
+				!config.isSet(serverI->second->id) ||
+				serverI->second->username!=config[serverI->second->id]["username"].str() ||
+				serverI->second->password!=config[serverI->second->id]["password"].str() ||
+				serverI->second->host!=config[serverI->second->id]["host"].str() ||
+				serverI->second->port!=config[serverI->second->id]["port"].str() ||
+				serverI->second->host!=config[serverI->second->id]["group_default"].str() ||
+				serverI->second->port!=config[serverI->second->id]["group_regex"].str()
+			)
+			{
+				//delete server and connection by ending session
+				//the rest will get cleaned up automaticly by the module_SessionEnd(ed) events.
+				Cmsg out;
+				out.src=serverI->first;
+				out.event="core_DelSession";
+				out.send();
+			}
+			else
+			{
+				//nothing changed, deleted it from config-object
+				config.map().erase(serverI->second->id);
+			}
+		}
+
+		//the remaining config entries need to be (re)created and (re)connected.
+		for (Cconfig::iterator configI=config.begin(); configI!=config.end(); configI++)
+		{
+			//start a new session for every new connection, and supply the config info
+			Cmsg out;
+			out.event="core_NewSession";
+			out["server"]=configI->second;
+			out["server"]["id"]=configI->first;
+			out["description"]="asterisk-ami connection session.";
+			out.send();
+		}
+
+	}
+
 	//get server by session id
 	CserverPtr CserverMan::getServerPtr(int sessionId)
 	{
-		if (serverMap.find(sessionId==serverMap.end())
+		if (serverMap.find(sessionId)==serverMap.end())
 		{
 			//create new
-			DEB("Creating server object" << sessionId;
-			serverMap[sessionId]=CserverPtr(new Cserver(sessionId));
+			DEB("Creating server object" << sessionId);
+			serverMap[sessionId]=CserverPtr(new Cserver(sessionId, this));
 		}
 		return (serverMap[sessionId]);
 	}
@@ -187,7 +243,7 @@ namespace asterisk
 			if (I->second->id == id)
 				return (I->second);
 		}
-		return(NULL);
+		return(CserverPtr());
 	}
 
 	void CserverMan::delServer(int sessionId)
@@ -226,7 +282,7 @@ namespace asterisk
 		return (sessionMap[id]);
 	}
 
-	bool CserverMan::sessionExists(id)
+	bool CserverMan::sessionExists(int id)
 	{
 		return(sessionMap.find(id)!=sessionMap.end());
 	}
@@ -241,6 +297,49 @@ namespace asterisk
 		}
 	}
 
+	void CserverMan::send(string groupId, Cmsg & msg)
+	{
+		//broadcast?
+		if (msg.dst==0)
+		{
+			//we cant simply broadcast it, we need to check group membership session by session
+			for (CsessionMap::iterator I=sessionMap.begin(); I!=sessionMap.end(); I++)
+			{
+				if (I->second->isAdmin() || I->second->getDevicePtr()->getGroupPtr()->getId()==groupId)
+				{
+					//send it to that session only
+					msg.dst=I->first;
+					try
+					{
+						msg.send();
+					}
+					catch(const std::exception& e)
+					{
+						WARNING("asterisk: delivering broadcast to " << msg.dst << " failed: " << e.what());
+					}
 
-
+				}
+			}
+			//restore dst value:
+			msg.dst=0;
+		}
+		else
+		{
+			CsessionMap::iterator I=sessionMap.find(msg.dst);
+			if (I!=sessionMap.end())
+			{
+				if (I->second->isAdmin() || I->second->getDevicePtr()->getGroupPtr()->getId()==groupId)
+				{
+					try
+					{
+						msg.send();
+					}
+					catch(const std::exception& e)
+					{
+						WARNING("asterisk: send to " << msg.dst << " failed: " << e.what());
+					}
+				}
+			}
+		}
+	}
 }

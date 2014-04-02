@@ -9,6 +9,8 @@
 		groupMap
 			groupPtr
 				group
+					serverManPtr
+						...
 
 		serverMap
 			serverPtr
@@ -35,26 +37,21 @@
 
 */
 
-#include "./cdevice.h"
-#include "./cchannel.h"
-#include "./cconfig.h"
-#include "./cgroup.h"
-#include "./csession.h"
+#include "./typedefs.h"
+#include "cconfig.h"
+#include "cmsg.h"
 
 namespace asterisk
 {
 
+	class CserverMan;
 
-	typedef shared_ptr<class Cserver> CserverPtr;
 
 	//physical asterisk servers. every server has its own device and channel map
 	class Cserver
 	{
 		private:
-		typedef map<string, CchannelPtr> CchannelMap;
 		CchannelMap channelMap;
-
-		typedef map<string, CdevicePtr> CdeviceMap;
 		CdeviceMap deviceMap;
 
 		enum Estatus
@@ -66,6 +63,12 @@ namespace asterisk
 
 		Estatus status;
 
+
+		CserverMan * serverManPtr;
+
+		int sessionId; //synapse sessionID of the ami-connection.
+
+		public:
 		string id;
 		string username;
 		string password;
@@ -74,9 +77,8 @@ namespace asterisk
 		string group_regex;
 		string group_default;
 
-		int sessionId; //synapse sessionID of the ami-connection.
 
-		Cserver(int sessionId);
+		Cserver(int sessionId, CserverMan * serverManPtr);
 		CdevicePtr getDevicePtr(string deviceId, bool autoCreate=true);
 		void sendRefresh(int dst);
 		void sendChanges();
@@ -87,36 +89,41 @@ namespace asterisk
 
 	};
 
-	typedef long int TauthCookie;
 
 	//main object that contains all the others (sessions, devices, channels ,groups)
 	class CserverMan
 	{
 		private:
-		typedef map<int, CserverPtr> CserverMap;
 		CserverMap serverMap;
-
-		typedef map<int, CsessionPtr> CsessionMap;
 		CsessionMap sessionMap;
-
-		typedef map<string, CgroupPtr> CgroupMap;
-		CgroupMap groupMap;
-
 	 	synapse::Cconfig stateDb;
 	 	struct drand48_data randomBuffer;
 
 
 		public:
+
+		CgroupMap groupMap; //managed from Cserver.
+
+		void reload(string filename);
+
 		CserverMan(string stateFileName);
 		CserverPtr getServerPtr(int sessionId); //server ami connection session
 		CserverPtr getServerPtr(string id);
 		void delServer(int sessionId);
 		TauthCookie getAuthCookie(string serverId, string deviceId);
 
+		//sends msg after applying filtering.
+		//message will only be sended or broadcasted to sessions that belong to this group.
+		//some channels like locals and trunks will also be filtered, depending on session-specific preferences
+		void send(string groupId, Cmsg & msg);
+
 		//user sessions (http)
 		CsessionPtr getSessionPtr(int id);
 		void delSession(int id);
 		bool sessionExists(int id);
+
+
+
 	};
 };
 

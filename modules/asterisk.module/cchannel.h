@@ -1,14 +1,18 @@
 #ifndef CCHANNEL_H_
 #define CCHANNEL_H_
 
+#include <boost/shared_ptr.hpp>
+namespace asterisk
+{
+	using namespace boost;
+
+}
+
 #include "cdevice.h"
 #include "cmsg.h"
-
 namespace asterisk
 {
 	using namespace synapse;
-
-	typedef shared_ptr<class Cchannel> CchannelPtr;
 
 	//asterisk channels. these always point to a corresponding Cdevice
 	//they can also point to a 'linked' channel. (when asterisk links two channels together)
