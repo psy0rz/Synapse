@@ -22,6 +22,10 @@
 #endif
 
 #include "cmessageman.h"
+#include <string>
+#include <list>
+
+using namespace std;
 
 int main(int argc, char *argv[])
 {
@@ -36,13 +40,20 @@ int main(int argc, char *argv[])
 	{
 
 		synapse::CmessageMan messageMan;
-		if (argc==2)
+
+		if (argc>=2)
 		{
-			return (messageMan.run("core", argv[1]));
+			list<string> moduleNames;
+
+			for (int i=1; i<argc; i++)
+			{
+				moduleNames.push_back(argv[i]);
+			}
+			return (messageMan.run("core", moduleNames));
 		}
 		else
 		{
-			INFO("Usage: ./synapse <initialmodule.so>\n");
+			INFO("Usage: ./synapse <module> [ <module2>, <...> ]\n");
 			return (1);
 		}
 	}

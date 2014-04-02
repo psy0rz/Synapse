@@ -547,12 +547,12 @@ void CmessageMan::checkThread()
 /*!
     \fn CmessageMan::run()
  */
-int CmessageMan::run(string coreName, string moduleName)
+int CmessageMan::run(string coreName, list<string> moduleNames)
 {
 
 	//load the first module as user core UNLOCKED!
 	loadModule(getModulePath(coreName), "core");
-	this->firstModuleName=moduleName;
+	this->firstModuleNames=moduleNames;
 
 	//start first thread:
 	checkThread();

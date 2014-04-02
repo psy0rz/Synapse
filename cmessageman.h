@@ -81,7 +81,7 @@ public:
 
 	//these 2 are 'the' threads, and do their own locking:
 	void operator()();
-	int run(string coreName,string moduleName);
+	int run(string coreName,list<string> moduleNames);
 
 	//the rest is not thread safe, so callers are responsible for locking:
 	void sendMappedMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg,int cookie);
@@ -104,8 +104,8 @@ public:
 	bool logSends;
 	bool logReceives;
 
-	//initial module that user want to start, after the coremodule is started:
-	string firstModuleName;
+	//initial modules that user want to start, after the coremodule is started:
+	list<string> firstModuleNames;
 
 	//for administrator/debugging
 	void getStatus(Cvar & var);
