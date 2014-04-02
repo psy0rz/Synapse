@@ -119,13 +119,19 @@ namespace asterisk
 	//on a disconnect this is called to remove all channels/devices.
 	void Cserver::clear()
 	{
-		//unlink all channels to prevent dangling shared_ptrs
 		for (CchannelMap::iterator I=channelMap.begin(); I!=channelMap.end(); I++)
 		{
+			//unlink all channels to prevent dangling shared_ptrs
 			I->second->delLink();
+			I->second->del();
 		}
 
-		//this should send out automated delChannel/delDevice events, on destruction of the objects
+
+		//delete all chans 
+		for (CdeviceMap::iterator I=deviceMap.begin(); I!=deviceMap.end(); I++)
+			I->second->del();
+
+
 		deviceMap.clear();
 		channelMap.clear();
 	}
@@ -331,7 +337,9 @@ namespace asterisk
 			CsessionMap::iterator I=sessionMap.find(msg.dst);
 			if (I!=sessionMap.end())
 			{
-				if (I->second->isAdmin() || I->second->getDevicePtr()->getGroupPtr()->getId()==groupId)
+				if (I->second->isAdmin() || 
+					( (I->second->getDevicePtr()!=NULL) && I->second->getDevicePtr()->getGroupPtr()->getId()==groupId )
+					)
 				{
 					try
 					{

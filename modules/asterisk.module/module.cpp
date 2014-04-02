@@ -1116,7 +1116,7 @@ namespace asterisk
 		if (msg["authCookie"]!="" && msg["deviceId"]!="" && msg["serverId"]!="")
 		{
 			//correct authcookie?
-			if (serverMan.getAuthCookie(msg["deviceId"], msg["serverId"])==msg["authCookie"])
+			if (serverMan.getAuthCookie(msg["serverId"], msg["deviceId"])==msg["authCookie"])
 			{
 				//authenticate session
 				CserverPtr serverPtr=serverMan.getServerPtrByName(msg["serverId"]);

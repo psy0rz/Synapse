@@ -43,7 +43,8 @@
 			$('#statusMsg').html("Requesting login...");
 			send(0,"asterisk_authReq", { 
 				authCookie: $.readCookie('asterisk_authCookie'),
-				deviceId:   $.readCookie('asterisk_deviceId')
+				deviceId:   $.readCookie('asterisk_deviceId'),
+				serverId:   $.readCookie('asterisk_serverId')
 			});
 
 		});
@@ -61,6 +62,7 @@
 			//store the device and authcookie in a browser cookie, so the user doesnt have to relogin everytime.
 			$.setCookie('asterisk_authCookie',msg["authCookie"], {duration:365, path:"/"});
 			$.setCookie('asterisk_deviceId',msg["deviceId"], {duration:365, path:"/"});
+			$.setCookie('asterisk_serverId',msg["serverId"], {duration:365, path:"/"});
 
 			//request a refresh, to learn about all objects
 			send(0,"asterisk_refresh", { 

@@ -164,7 +164,8 @@ namespace asterisk
 	}
 
 
-	Cdevice::~Cdevice()
+
+	void Cdevice::del()
 	{
 		Cmsg out;
 		out.event="asterisk_delDevice";

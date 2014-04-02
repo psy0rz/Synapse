@@ -46,7 +46,7 @@ namespace asterisk
 		void sendChanges();
 		void sendRefresh(int dst);
 		string getStatus(string prefix);
-		~Cdevice();
+		void del();
 		
 	};
 
