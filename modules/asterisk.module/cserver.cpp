@@ -1,8 +1,9 @@
 
-#include "typedefs.h"
 #include "cserver.h"
 #include "cdevice.h"
 #include "cchannel.h"
+#include "cgroup.h"
+#include "csession.h"
 #include <boost/regex.hpp>
 
 
@@ -251,6 +252,7 @@ namespace asterisk
 		if (serverMap.find(sessionId) != serverMap.end())
 		{
 			DEB("Removing server object " << sessionId);
+			serverMap[sessionId]->clear();
 			serverMap.erase(sessionId);
 		}
 	}

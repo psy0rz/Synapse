@@ -10,6 +10,8 @@ namespace asterisk
 	using namespace boost;
 	using namespace std;
 
+	class CserverMan;
+
 	typedef shared_ptr<class Cserver> CserverPtr;
 	typedef map<int, CserverPtr> CserverMap;
 

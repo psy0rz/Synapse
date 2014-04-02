@@ -25,16 +25,7 @@
 
 #ifndef CSESSION_H_
 #define CSESSION_H_
-
-
-namespace asterisk
-{
-	using namespace std;
-	using namespace boost;
-}
-
-#include "cdevice.h"
-#include "cserver.h"
+#include "typedefs.h"
 
 namespace asterisk
 {

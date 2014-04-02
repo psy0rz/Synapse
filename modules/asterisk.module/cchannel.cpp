@@ -1,4 +1,6 @@
 #include "cchannel.h"
+#include "cgroup.h"
+#include "cdevice.h"
 
 namespace asterisk
 {

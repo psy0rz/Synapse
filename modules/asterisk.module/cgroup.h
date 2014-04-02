@@ -20,19 +20,11 @@
 #ifndef CGROUP_H_
 #define CGROUP_H_
 
+#include "typedefs.h"
 #include <boost/shared_ptr.hpp>
 #include "synapse.h"
 
-namespace asterisk
-{
-	using namespace boost;
-	using namespace std;
 
-	typedef shared_ptr<class Cgroup> CgroupPtr;
-
-}
-
-#include "csession.h"
 
 namespace asterisk
 {

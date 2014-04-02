@@ -1,15 +1,8 @@
 #ifndef CDEVICE_H_
 #define CDEVICE_H_
 
+#include "typedefs.h"
 #include <boost/shared_ptr.hpp>
-namespace asterisk
-{
-	using namespace boost;
-
-}
-
-
-#include "cgroup.h"
 #include <string>
 namespace asterisk
 {

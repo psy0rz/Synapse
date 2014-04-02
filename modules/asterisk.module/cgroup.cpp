@@ -24,7 +24,9 @@
  */
 
 #include "cgroup.h"
+#include "cserver.h"
 #include <string.h>
+ 
 //groups: most times a tennant is considered a group.
 //After authenticating, a session points to a device which in turn points to a group.'
 //All devices of a specific tennant also point to this group

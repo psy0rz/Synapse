@@ -24,7 +24,10 @@
  */
 
 
+#include "csession.h"
 #include "cdevice.h"
+#include <sstream>
+
 namespace asterisk
 {
 

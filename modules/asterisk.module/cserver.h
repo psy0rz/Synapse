@@ -37,7 +37,7 @@
 
 */
 
-#include "./typedefs.h"
+#include "typedefs.h"
 #include "cconfig.h"
 #include "cmsg.h"
 
@@ -54,14 +54,7 @@ namespace asterisk
 		CchannelMap channelMap;
 		CdeviceMap deviceMap;
 
-		enum Estatus
-		{
-			CONNECTING,
-			AUTHENTICATING,
-			AUTHENTICATED,
-		};
 
-		Estatus status;
 
 
 		CserverMan * serverManPtr;
@@ -77,6 +70,13 @@ namespace asterisk
 		string group_regex;
 		string group_default;
 
+		enum Estatus
+		{
+			CONNECTING,
+			AUTHENTICATING,
+			AUTHENTICATED,
+		};
+		Estatus status;
 
 		Cserver(int sessionId, CserverMan * serverManPtr);
 		CdevicePtr getDevicePtr(string deviceId, bool autoCreate=true);

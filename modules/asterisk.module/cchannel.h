@@ -1,15 +1,10 @@
 #ifndef CCHANNEL_H_
 #define CCHANNEL_H_
 
+#include "typedefs.h"
 #include <boost/shared_ptr.hpp>
-namespace asterisk
-{
-	using namespace boost;
-
-}
-
-#include "cdevice.h"
 #include "cmsg.h"
+
 namespace asterisk
 {
 	using namespace synapse;

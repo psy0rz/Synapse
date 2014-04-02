@@ -205,15 +205,15 @@ namespace asterisk
 		if (msg.isSet("server"))
 		{
 			//setup a new server object
-			serverMan.getServerPtr(msg["server"]["id"].str());
+			CserverPtr serverPtr=serverMan.getServerPtr(msg["server"]["id"].str());
 
-			serverMap[msg.dst].id=msg["server"]["id"].str();
-			serverMap[msg.dst].username=msg["server"]["username"].str();
-			serverMap[msg.dst].password=msg["server"]["password"].str();
-			serverMap[msg.dst].host=msg["server"]["host"].str();
-			serverMap[msg.dst].port=msg["server"]["port"].str();
-			serverMap[msg.dst].group_default=msg["server"]["group_default"].str();
-			serverMap[msg.dst].group_regex=msg["server"]["group_regex"].str();
+			serverPtr->id=msg["server"]["id"].str();
+			serverPtr->username=msg["server"]["username"].str();
+			serverPtr->password=msg["server"]["password"].str();
+			serverPtr->host=msg["server"]["host"].str();
+			serverPtr->port=msg["server"]["port"].str();
+			serverPtr->group_default=msg["server"]["group_default"].str();
+			serverPtr->group_regex=msg["server"]["group_regex"].str();
 	
 			//instruct ami to connect to the server
 			Cmsg out;
@@ -230,14 +230,13 @@ namespace asterisk
 	SYNAPSE_REGISTER(module_SessionEnd)
 	{
 		//since the ami module also sees a module_SessionEnded, it will automaticly disconnect the server
-		serverMap[msg.dst].clear();
-		serverMap.erase(msg.dst);
+		serverMan.delServer(msg.dst);
 	}
 
 	//a session owned by another module ended. check if we created local stuff that we need to delete.
 	SYNAPSE_REGISTER(module_SessionEnded)
 	{
-		sessionMan.delSession(msg["session"]);
+		serverMan.delSession(msg["session"]);
 	}
 
 	
@@ -249,13 +248,13 @@ namespace asterisk
 		out.src=msg.dst;
 		out.event="ami_Action";
 		out["Action"]="Login";
-		out["UserName"]=serverMap[msg.dst].username;
-		out["Secret"]=serverMap[msg.dst].password;
+		out["UserName"]=serverMan.getServerPtr(msg.dst)->username;
+		out["Secret"]=serverMan.getServerPtr(msg.dst)->password;
 		out["ActionID"]="Login";
 		out["Events"]="on";
 		out.send();
 
-		serverMap[msg.dst].status=Cserver::AUTHENTICATING;
+		serverMan.getServerPtr(msg.dst)->status=Cserver::AUTHENTICATING;
 	
 	}
 	
