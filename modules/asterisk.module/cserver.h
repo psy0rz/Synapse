@@ -108,7 +108,7 @@ namespace asterisk
 
 		CserverMan(string stateFileName);
 		CserverPtr getServerPtr(int sessionId); //server ami connection session
-		CserverPtr getServerPtr(string id);
+		CserverPtr getServerPtrByName(string id);
 		void delServer(int sessionId);
 		TauthCookie getAuthCookie(string serverId, string deviceId);
 

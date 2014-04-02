@@ -224,11 +224,15 @@ SYNAPSE_REGISTER(module_Init)
 	// END OF PERMISSIONS
 
 	//we're done with our stuff,
-	//load the first application module:
-	out.clear();
-	out.event="core_LoadModule";
-	out["name"]=messageMan->firstModuleName;
-	out.send();
+	//load the first application modules:
+
+	BOOST_FOREACH(string moduleName, messageMan->firstModuleNames)
+	{
+		out.clear();
+		out.event="core_LoadModule";
+		out["name"]=moduleName;
+		out.send();
+	}
 
 
 	DEB("Core init complete");

@@ -209,7 +209,7 @@ namespace asterisk
 		if (msg.isSet("server"))
 		{
 			//setup a new server object
-			CserverPtr serverPtr=serverMan.getServerPtr(msg["server"]["id"].str());
+			CserverPtr serverPtr=serverMan.getServerPtr(msg.dst);
 
 			serverPtr->id=msg["server"]["id"].str();
 			serverPtr->username=msg["server"]["username"].str();
@@ -1044,6 +1044,10 @@ namespace asterisk
 	
 	}
 
+	SYNAPSE_REGISTER(ami_Event_VarSet)
+	{
+		;
+	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////// events to control this module, usually sent by webinterface to us.
@@ -1115,7 +1119,7 @@ namespace asterisk
 			if (serverMan.getAuthCookie(msg["deviceId"], msg["serverId"])==msg["authCookie"])
 			{
 				//authenticate session
-				CserverPtr serverPtr=serverMan.getServerPtr(msg["serverId"].str());
+				CserverPtr serverPtr=serverMan.getServerPtrByName(msg["serverId"]);
 				serverMan.getSessionPtr(msg.src)->authorize(serverPtr, serverPtr->getDevicePtr(msg["deviceId"]));
 
 				//session is re-authenticated, by authCookie

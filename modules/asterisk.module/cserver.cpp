@@ -55,7 +55,7 @@ namespace asterisk
 			}
 			else
 			{
-				return (CdevicePtr());
+				throw(synapse::runtime_error("deviceId not found"));
 			}
 		}
 		return (deviceMap[deviceId]);
@@ -237,14 +237,14 @@ namespace asterisk
 	}
 
 	//get server by server id
-	CserverPtr CserverMan::getServerPtr(string id)
+	CserverPtr CserverMan::getServerPtrByName(string id)
 	{
 		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
 		{
 			if (I->second->id == id)
 				return (I->second);
 		}
-		return(CserverPtr());
+		throw(synapse::runtime_error("server-name not found"));
 	}
 
 	void CserverMan::delServer(int sessionId)
@@ -307,7 +307,9 @@ namespace asterisk
 			//we cant simply broadcast it, we need to check group membership session by session
 			for (CsessionMap::iterator I=sessionMap.begin(); I!=sessionMap.end(); I++)
 			{
-				if (I->second->isAdmin() || I->second->getDevicePtr()->getGroupPtr()->getId()==groupId)
+				if (I->second->isAdmin() || 
+					( (I->second->getDevicePtr()!=NULL) && I->second->getDevicePtr()->getGroupPtr()->getId()==groupId )
+					)
 				{
 					//send it to that session only
 					msg.dst=I->first;
@@ -319,7 +321,6 @@ namespace asterisk
 					{
 						WARNING("asterisk: delivering broadcast to " << msg.dst << " failed: " << e.what());
 					}
-
 				}
 			}
 			//restore dst value:
