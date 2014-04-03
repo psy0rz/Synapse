@@ -374,16 +374,6 @@
 		} 
 
 
-		#statusUser
-		{
-			margin:0;
-			padding:0;
-			position:	absolute;
-			height: 	10em;
-			left: 		0em;
-			width: 		21em;
-		}
-
 		#statusBar
 		{
 			margin:0;
@@ -391,7 +381,17 @@
 			position:	absolute;
 			height: 	10em;
 			right: 		0em;
-			left: 		21em;
+			width: 		21em;
+		}
+
+		#statusUser
+		{
+			margin:0;
+			padding:0;
+			position:	absolute;
+			height: 	10em;
+			left: 		0em;
+			right: 		21em;
 			
 		}
 
@@ -400,7 +400,7 @@
 			margin:0;
 			padding:0;
 			position:	absolute;
-			left: 		0em;
+			right: 		0em;
 			width: 		21em;
 			overflow: auto;
 			top:		30em;
@@ -412,7 +412,7 @@
 			margin:0;
 			padding:0;
 			position:	absolute;
-			left: 		0em;
+			right: 		0em;
 			width: 		21em;
 			top:		10em;
 			height:		20em;
@@ -425,9 +425,9 @@
 			margin:0;
 			padding:0;
 			position:	absolute;
-			right: 		0em;
+			left: 		0em;
 			top:		10em;
-			left: 		21em;
+			right: 		21em;
 			bottom:		0em;
 			overflow: auto;
 		}
@@ -545,8 +545,6 @@
 	<div class='ui-widget-content' id='statusUser'>
 		<div class='ui-widget-header'>My phone:</div>
 			
-		<input id='login' type='submit' value='Change...'>
-		<input id='loginUser' type='submit' value='Admin login...'>
 	</div>
 
 	<div class='ui-widget-content' id='statusBar'>
@@ -554,6 +552,8 @@
 		<div id='statusMsg'>
 			Loading...
 		</div>
+		<input id='login' type='submit' value='Change...'>
+		<input id='loginUser' type='submit' value='Admin login...'>
 
 <!--  	<script type="text/javascript"
 		  src="http://jqueryui.com/themeroller/themeswitchertool/">

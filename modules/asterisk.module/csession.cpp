@@ -64,6 +64,11 @@ namespace asterisk
 		return(admin);
 	}
 
+	int Csession::getId()
+	{
+		return(id);
+	}
+
 	CdevicePtr Csession::getDevicePtr()
 	{
 		return (devicePtr);

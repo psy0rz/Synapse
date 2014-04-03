@@ -86,6 +86,7 @@ namespace asterisk
 		void delChannel(string channelId);
 		void clear();
 		string getStatus(string prefix);
+		int getSessionId();
 
 	};
 

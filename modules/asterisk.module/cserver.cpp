@@ -168,6 +168,10 @@ namespace asterisk
 		return (s);
 	}
 
+	int Cserver::getSessionId()
+	{
+		return(sessionId);
+	}
 
 	////////////////////////////////////////////////////////////////////////
 	//server manager

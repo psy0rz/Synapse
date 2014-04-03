@@ -50,6 +50,7 @@ namespace asterisk
 		void deauthorize();
 		bool isAuthorized();
 		bool isAdmin();
+		int getId();
 		CdevicePtr getDevicePtr();
 		CserverPtr getServerPtr();
 		string getStatus(string prefix);

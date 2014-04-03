@@ -122,6 +122,9 @@ namespace asterisk
 		out["event"]=		"asterisk_Dial";
 		out.send();
 
+		out["event"]=		"asterisk_Test";
+		out.send();
+
 		//receive by anonymous only:
 		out.event="core_ChangeEvent";
 		out["modifyGroup"]=	"modules";
@@ -1163,18 +1166,41 @@ namespace asterisk
 		// Timeout: 30000
 		// Variable: var1=23|var2=24|var3=25
 		// ActionID: ABC45678901234567890
+
+		CsessionPtr sessionPtr=serverMan.getSessionPtr(msg.src);
+
+
+
 		Cmsg out;
 		out.clear();
-		out.src=6;
+		out.src=sessionPtr->getServerPtr()->getSessionId();
 		out.event="ami_Action";
 		out["Action"]="Originate";
 		out["Context"]="from-internal";
 		out["Priority"]="1";
-		out["Channel"]="SIP/100";
+		out["Channel"]=msg["channel"];
 		out["Exten"]="101";
 		out["Async"]="1";
 		out.send();
 	}
+
+
+
+	//test raw commands
+	//FIXME: remove, insecure
+	SYNAPSE_REGISTER(asterisk_Test)
+	{
+
+		CsessionPtr sessionPtr=serverMan.getSessionPtr(msg.src);
+
+		Cmsg out;
+		out.clear();
+		out=msg;
+		out.src=sessionPtr->getServerPtr()->getSessionId();
+		out.event="ami_Action";
+		out.send();
+	}
+
 
 }
 
