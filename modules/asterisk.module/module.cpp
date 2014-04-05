@@ -455,6 +455,7 @@ namespace asterisk
 		);
 	
 		channelPtr->setDevicePtr(devicePtr);
+		channelPtr->setChannelName(msg["Channel"]);
 
 		//States:
 		// ringing: somebody is calling the device
@@ -715,6 +716,33 @@ namespace asterisk
 		channelPtr2->sendDebug(msg, msg.dst);
 	}
 	
+
+
+	SYNAPSE_REGISTER(ami_Event_Bridge)
+	{
+		// 0x103fc30 SEND ami_Event_Bridge FROM 3:module@ami TO 6:module@asterisk (map:)
+		//  |Bridgestate = Link (string)
+		//  |Bridgetype = core (string)
+		//  |CallerID1 = 100 (string)
+		//  |CallerID2 = 101 (string)
+		//  |Channel1 = SIP/100-00000034 (string)
+		//  |Channel2 = SIP/101-00000035 (string)
+		//  |Event = Bridge (string)
+		//  |Privilege = call,all (string)
+		//  |Uniqueid1 = 1396706816.59 (string)
+		//  |Uniqueid2 = 1396706816.60 (string)		
+		CchannelPtr channelPtr1=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid1"]);
+		CchannelPtr channelPtr2=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid2"]);
+	
+		channelPtr1->setLinkPtr(channelPtr2);
+		channelPtr2->setLinkPtr(channelPtr1);
+	
+	
+		channelPtr1->sendDebug(msg, msg.dst);
+		channelPtr2->sendDebug(msg, msg.dst);
+	}
+	
+
 	
 	SYNAPSE_REGISTER(ami_Event_Unlink)
 	{
@@ -941,6 +969,8 @@ namespace asterisk
 			getDeviceIdFromChannel(msg["Newname"])
 		);
 	
+		channelPtr->setChannelName(msg["Newname"]);
+
 		//we assume a rename only is possible for channels that are already up?
 		if (channelPtr->getState()=="ringing")
 		{
@@ -1047,10 +1077,10 @@ namespace asterisk
 	
 	}
 
-	SYNAPSE_REGISTER(ami_Event_VarSet)
-	{
-		;
-	}
+	// SYNAPSE_REGISTER(ami_Event_VarSet)
+	// {
+	// 	;
+	// }
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////// events to control this module, usually sent by webinterface to us.

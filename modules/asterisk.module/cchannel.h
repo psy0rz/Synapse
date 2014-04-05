@@ -26,6 +26,7 @@ namespace asterisk
 		string firstExtension;
 //		bool initiator;
 		CdevicePtr devicePtr;
+		string channelName;
 
 		int changesSent;		
 
@@ -48,6 +49,8 @@ namespace asterisk
 		string getCallerId();
 		string getCallerIdName();
 		string getState();
+		void setChannelName(string channelName);
+		string getChannelName();
 		void setState(string state);
 		void sendChanges();
 		bool sendUpdate(int forceDst=0);

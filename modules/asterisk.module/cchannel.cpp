@@ -197,6 +197,20 @@ namespace asterisk
 		}
 	}
 
+	void Cchannel::setChannelName(string channelName)
+	{
+		if (channelName!=this->channelName)
+		{
+			this->channelName=channelName;
+			changes++;
+		}
+	}
+
+	string Cchannel::getChannelName()
+	{
+		return(this->channelName=channelName);
+	}
+
 	void Cchannel::sendChanges()
 	{
 
@@ -238,6 +252,8 @@ namespace asterisk
 		out["linkCallerIdName"]=linkCallerIdName;
 
 		out["firstExtension"]=firstExtension;
+
+		out["channelName"]=this->channelName;
 
 		devicePtr->getGroupPtr()->send(out);
 
