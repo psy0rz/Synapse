@@ -105,6 +105,15 @@ namespace asterisk
 		}
 	}
 
+	void Cchannel::setOwnerPtr(CdevicePtr devicePtr)
+	{
+		if (devicePtr!=this->ownerPtr)
+		{
+			this->ownerPtr=devicePtr;
+			changes++;
+		}
+	}
+
 	void Cchannel::setLinkPtr(CchannelPtr channelPtr)
 	{
 		if (channelPtr!=this->linkChannelPtr)
@@ -254,6 +263,14 @@ namespace asterisk
 		out["firstExtension"]=firstExtension;
 
 		out["channelName"]=this->channelName;
+
+		if (ownerPtr!=CdevicePtr())
+			out["ownerDeviceId"]=this->ownerPtr->getId();
+
+
+		if (linkChannelPtr!=CchannelPtr())
+			out["linkChannelName"]=linkChannelPtr->getChannelName();
+
 
 		devicePtr->getGroupPtr()->send(out);
 

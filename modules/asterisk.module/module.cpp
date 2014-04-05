@@ -1082,6 +1082,35 @@ namespace asterisk
 	// 	;
 	// }
 
+	SYNAPSE_REGISTER(ami_Event_ParkedCall)
+	{
+		;
+	}
+
+	SYNAPSE_REGISTER(ami_Event_ExtensionStatus)
+	{
+		;
+	}
+
+	SYNAPSE_REGISTER(ami_Event_UserEvent)
+	{		
+		// 0x7f4ee4001be0 RECV ami_Event_UserEvent FROM 3 BY 6:module@asterisk (map:)
+		//  |Uniqueid = 1396725358.0 (string)
+		//  |Event = UserEvent (string)
+		//  |Owner = SIP/101 (string)
+		//  |Privilege = user,all (string)
+		//  |UserEvent = synapse_Parked (string)		
+		if (msg["UserEvent"]=="synapse_Parked")
+		{
+			CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid"]);
+			CdevicePtr devicePtr=serverMan.getServerPtr(msg.dst)->getDevicePtr(msg["Owner"]);
+			channelPtr->setOwnerPtr(devicePtr);
+			channelPtr->sendDebug(msg, msg.dst);
+
+		}
+	}
+
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////// events to control this module, usually sent by webinterface to us.
 	//////////////////////////////////////////////////////////////////////////////////////////

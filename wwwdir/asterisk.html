@@ -223,6 +223,9 @@
 				$(escapeId(msg["deviceId"])+' .channelList').append(newChannelHtml);
 			}
 
+			//store all the info as data in the channel dom object:
+			$(".device "+escapeClass(msg["id"])).data("channel", msg);
+
 			if (msg["state"]=="ring")
 			{
 				$(escapeId(msg["deviceId"])).addClass("blink");
@@ -341,7 +344,6 @@
  		{
 		});
 
-
 		/// JAVA SCRIPT EVENT HANDLERS
 		$(document).ready(function(){
 
@@ -357,6 +359,69 @@
 			{
 				synapse_login();
 			});
+
+			$("#deviceList").on("click", ".channel", function()
+			{
+				console.log("Clicked channel", $(this).data("channel"));
+
+				//redirct channel naar freepbx parking, hangt andere op
+				// send(0, "asterisk_Test", {
+				// 	"Action"	: "Redirect",
+				// 	"Channel"	: $(this).data("channel")["channelName"],
+				// 	"Context"	: "from-internal",
+				// 	"Exten"		: "70",
+				// 	"Priority"	: "1"
+				// });
+
+				// //parkeert 1 call, hangt andere op:
+				// send(0, "asterisk_Test", {
+				// 	"Action"	: "Park",
+				// 	"Channel"	: $(this).data("channel")["channelName"],
+				// 	"Channel2"	: $(this).data("channel")["linkChannelName"],
+				// 	"Timeout"	: 2000
+				// });
+
+				// //wil niet?
+				// send(0, "asterisk_Test", {
+				// 	"Action"	: "MessageSend",
+				// 	"To"		: "SIP/101",
+				// 	"From"		: '"edwin" 100',
+				// 	"Body"		: "dit is een test"
+				// });
+
+
+
+				send(0, "asterisk_Test", {
+					"Action"	: "SetVar",
+					"Channel"	: $(this).data("channel")["linkChannelName"],
+					"Variable"	: "__SYNAPSE_OWNER",
+					"Value"		: $(this).data("channel")["deviceId"],
+
+				});
+				send(0, "asterisk_Test", {
+					"Action"	: "SetVar",
+					"Channel"	: $(this).data("channel")["channelName"],
+					"Variable"	: "__SYNAPSE_OWNER",
+					"Value"		: $(this).data("channel")["deviceId"],
+				});
+
+				send(0, "asterisk_Test", {
+					"Action"	: "Redirect",
+					"ActionId"	: "chuche",
+//					"Channel"	: $(this).data("channel")["channelName"],
+					"Channel"	: $(this).data("channel")["linkChannelName"],
+					"Context"	: "from-synapse",
+					"Exten"		: "901",
+					"Priority"	: "1",
+					// "ExtraChannel"	: $(this).data("channel")["linkChannelName"],
+					"ExtraChannel"	: $(this).data("channel")["channelName"],
+					"ExtraContext"	: "from-synapse",
+					"ExtraExten"		: "901",
+					"ExtraPriority"	: "1"
+				});
+
+
+			})
 		});
 
 

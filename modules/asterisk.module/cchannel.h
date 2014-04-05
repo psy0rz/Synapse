@@ -26,6 +26,7 @@ namespace asterisk
 		string firstExtension;
 //		bool initiator;
 		CdevicePtr devicePtr;
+		CdevicePtr ownerPtr;
 		string channelName;
 
 		int changesSent;		
@@ -38,6 +39,7 @@ namespace asterisk
 		void setFirstExtension(string firstExtension);
 		string getFirstExtension();
 		void setDevicePtr(CdevicePtr devicePtr);
+		void setOwnerPtr(CdevicePtr devicePtr);  //"owner" of the channel, when doing parks (only owner can unpark)
 		void setId(string id);
 		void setLinkPtr(CchannelPtr channelPtr);
 		void delLink();
