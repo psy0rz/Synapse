@@ -397,6 +397,22 @@
 			{
 				console.log("Clicked channel", $(this).data("channel"));
 
+
+				var reuseChannelId=undefined;
+
+				var firstChannel=$(escapeId(loginDeviceId)+" .channel:first").data("channel");
+				if (firstChannel!=undefined)
+					reuseChannelId=firstChannel["id"];
+
+				send(0, "asterisk_Bridge", 
+				{
+					"channel1": reuseChannelId,
+					"channel2": $(this).data("channel")["id"]
+				});
+
+
+				return(false);
+
 				//redirct channel naar freepbx parking, hangt andere op
 				// send(0, "asterisk_Test", {
 				// 	"Action"	: "Redirect",

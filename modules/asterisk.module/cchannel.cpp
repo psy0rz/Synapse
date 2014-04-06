@@ -135,7 +135,10 @@ namespace asterisk
 
 	void Cchannel::delLink()
 	{
-		//unset our link
+		//unset link on the other side
+		if (linkChannelPtr!=CchannelPtr())
+			linkChannelPtr->setLinkPtr(CchannelPtr());
+
 		setLinkPtr(CchannelPtr());
 	}
 

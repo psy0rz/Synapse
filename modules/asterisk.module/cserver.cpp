@@ -181,18 +181,20 @@ namespace asterisk
 	}
 
 
-	void Cserver::amiCall(CdevicePtr fromDevice, CchannelPtr reuseChannelPtr, string exten)
+	void Cserver::amiCall(CdevicePtr fromDevicePtr, CchannelPtr reuseChannelPtr, string exten)
 	{
 		
 		Cmsg out;
 		out.src=sessionId;
 		out.event="ami_Action";
 
+		if (fromDevicePtr==CdevicePtr())
+			throw(synapse::runtime_error("device not specified"));
 
 		//reuse channel by doing a redirect
 		if (reuseChannelPtr!=CchannelPtr())
 		{
-			if (reuseChannelPtr->getDevicePtr()!=fromDevice)
+			if (reuseChannelPtr->getDevicePtr()!=fromDevicePtr)
 				throw(synapse::runtime_error("specified channel does not belong to this device"));
 
 			out["Action"]="Redirect";
@@ -223,10 +225,51 @@ namespace asterisk
 			out["Context"]="from-internal";
 			out["Priority"]=1;
 			out["Exten"]=exten;
-			out["Channel"]=fromDevice->getId();
-			out["Callerid"]="Calling "+exten;
+			out["Channel"]=fromDevicePtr->getId();
+			out["Callerid"]="Call to "+exten;
+			out["Async"]="true";
 			out.send();
 		}
+	}
+
+
+	void Cserver::amiBridge(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, CchannelPtr channel2Ptr)
+	{
+		Cmsg out;
+		out.src=sessionId;
+		out.event="ami_Action";
+
+		if (fromDevicePtr==CdevicePtr())
+			throw(synapse::runtime_error("device not specified"));
+
+		if (channel2Ptr==CchannelPtr())
+			throw(synapse::runtime_error("channel2 not specified"));
+
+		//bridge 2 channels
+		if (channel1Ptr!=CchannelPtr())
+		{
+			if (channel1Ptr->getDevicePtr()!=fromDevicePtr)
+				throw(synapse::runtime_error("specified channel1 does not belong to this device"));
+
+			out["Action"]="Bridge";
+			out["Channel1"]=channel1Ptr->getChannelName();
+			out["Channel2"]=channel2Ptr->getChannelName();
+			out["Tone"]="yes";
+			out.send();
+
+		}
+		//create new channel and bridge it to channel2
+		else
+		{
+			out["Action"]="Originate";
+			out["Application"]="Bridge";
+			out["Channel"]=fromDevicePtr->getId();
+			// out["Callerid"]="Connecting "+channel2Ptr->getCallerIdName();
+			out["Data"]=channel2Ptr->getChannelName()+",p";
+			out.send();
+		}
+
+
 	}
 
 

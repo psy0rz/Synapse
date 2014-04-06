@@ -122,6 +122,9 @@ namespace asterisk
 		out["event"]=		"asterisk_Call";
 		out.send();
 
+		out["event"]=		"asterisk_Bridge";
+		out.send();
+
 		out["event"]=		"asterisk_Test";
 		out.send();
 
@@ -1227,6 +1230,22 @@ namespace asterisk
 
 	}
 
+	SYNAPSE_REGISTER(asterisk_Bridge)
+	{
+
+		CsessionPtr sessionPtr=serverMan.getSessionPtr(msg.src);
+		CchannelPtr channel1Ptr;
+		CchannelPtr channel2Ptr;
+
+		if (msg.isSet("channel1"))
+			channel1Ptr=sessionPtr->getServerPtr()->getChannelPtr(msg["channel1"], false);
+		
+		if (msg.isSet("channel2"))
+			channel2Ptr=sessionPtr->getServerPtr()->getChannelPtr(msg["channel2"], false);
+
+		sessionPtr->getServerPtr()->amiBridge(sessionPtr->getDevicePtr(), channel1Ptr, channel2Ptr);
+
+	}
 
 
 	//test raw commands
