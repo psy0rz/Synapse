@@ -96,6 +96,11 @@ namespace asterisk
 		}
 	}
 
+	CdevicePtr Cchannel::getDevicePtr()
+	{
+		return(devicePtr);
+	}
+
 	void Cchannel::setId(string id)
 	{
 		if (id!=this->id)
@@ -282,22 +287,31 @@ namespace asterisk
 		sendUpdate(dst);
 	}
 
+	string Cchannel::getId()
+	{
+		return(id);
+	}
+
 	string Cchannel::getStatus(string prefix)
 	{
+		string ret;
 		if (devicePtr!=NULL)
 		{
-			return (
+			ret=
 				prefix + "Channel " + id + ":\n" +
-				devicePtr->getStatus(prefix+" ")
-			);
+				devicePtr->getStatus(prefix+" ");
 		}
 		else
 		{
-			return (
-				prefix + "Channel " + id + " (no devices)\n"
-			);
-
+			ret=prefix + "Channel " + id + " (no devices)\n";
 		}
+
+		if (linkChannelPtr!=CchannelPtr())
+			ret=ret+"\n"+prefix+"Link channel: "+linkChannelPtr->getId();
+
+		return(ret);
+
+
 	}
 
 	//delete channel

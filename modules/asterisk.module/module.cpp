@@ -119,7 +119,7 @@ namespace asterisk
 		out["event"]=		"asterisk_refresh";
 		out.send();
 
-		out["event"]=		"asterisk_Dial";
+		out["event"]=		"asterisk_Call";
 		out.send();
 
 		out["event"]=		"asterisk_Test";
@@ -1214,33 +1214,17 @@ namespace asterisk
 	}
 
 	
-	SYNAPSE_REGISTER(asterisk_Dial)
+	SYNAPSE_REGISTER(asterisk_Call)
 	{
-		// Action: Originate
-		// Channel: SIP/101test
-		// Context: default
-		// Exten: 8135551212
-		// Priority: 1
-		// Callerid: 3125551212
-		// Timeout: 30000
-		// Variable: var1=23|var2=24|var3=25
-		// ActionID: ABC45678901234567890
 
 		CsessionPtr sessionPtr=serverMan.getSessionPtr(msg.src);
+		CchannelPtr channelPtr;
 
+		if (msg.isSet("reuseChannelId"))
+			channelPtr=sessionPtr->getServerPtr()->getChannelPtr(msg["reuseChannelId"], false);
 
+		sessionPtr->getServerPtr()->amiCall(sessionPtr->getDevicePtr(), channelPtr, msg["exten"]);
 
-		Cmsg out;
-		out.clear();
-		out.src=sessionPtr->getServerPtr()->getSessionId();
-		out.event="ami_Action";
-		out["Action"]="Originate";
-		out["Context"]="from-internal";
-		out["Priority"]="1";
-		out["Channel"]=msg["channel"];
-		out["Exten"]="101";
-		out["Async"]="1";
-		out.send();
 	}
 
 

@@ -82,11 +82,16 @@ namespace asterisk
 		CdevicePtr getDevicePtr(string deviceId, bool autoCreate=true);
 		void sendRefresh(int dst);
 		void sendChanges();
-		CchannelPtr getChannelPtr(string channelId);
+		CchannelPtr getChannelPtr(string channelId, bool autoCreate=true);
 		void delChannel(string channelId);
 		void clear();
 		string getStatus(string prefix);
 		int getSessionId();
+
+		//Make a call from specified device to extention
+		//Tries to be reuse the specified channel (parking the otherside of the call)
+		//Otherwise originates a new call on device.
+		void amiCall(CdevicePtr fromDevice, CchannelPtr reuseChannelPtr, string exten);
 
 	};
 

@@ -92,16 +92,23 @@ namespace asterisk
 		}
 	}
 
-	CchannelPtr Cserver::getChannelPtr(string channelId)
+	CchannelPtr Cserver::getChannelPtr(string channelId, bool autoCreate)
 	{
 		if (channelId=="")
 			throw(synapse::runtime_error("Specified empty channelId"));
 
 		if (channelMap[channelId]==NULL)
 		{
-			channelMap[channelId]=CchannelPtr(new Cchannel());
-			channelMap[channelId]->setId(channelId);
-			DEB("created channel " << channelId);
+			if (autoCreate)
+			{
+				channelMap[channelId]=CchannelPtr(new Cchannel());
+				channelMap[channelId]->setId(channelId);
+				DEB("created channel " << channelId);
+			}
+			else
+			{
+				throw(synapse::runtime_error("channelId not found"));
+			}
 		}
 		return (channelMap[channelId]);
 	}
@@ -172,6 +179,59 @@ namespace asterisk
 	{
 		return(sessionId);
 	}
+
+
+	void Cserver::amiCall(CdevicePtr fromDevice, CchannelPtr reuseChannelPtr, string exten)
+	{
+		
+		Cmsg out;
+		out.src=sessionId;
+		out.event="ami_Action";
+
+
+		//reuse channel by doing a redirect
+		if (reuseChannelPtr!=CchannelPtr())
+		{
+			if (reuseChannelPtr->getDevicePtr()!=fromDevice)
+				throw(synapse::runtime_error("specified channel does not belong to this device"));
+
+			out["Action"]="Redirect";
+			out["Channel"]=reuseChannelPtr->getChannelName();
+			out["Context"]="from-internal";
+			out["Priority"]=1;
+			out["Exten"]=exten;
+
+
+			CchannelPtr linkedChannelPtr=reuseChannelPtr->getLinkPtr();
+
+			//"park" the linked channel
+			if (linkedChannelPtr!=CchannelPtr())
+			{
+				out["ExtraChannel"]=linkedChannelPtr->getChannelName();
+				out["ExtraContext"]="from-synapse";
+				out["ExtraPriority"]=1;
+				out["ExtraExten"]="901";
+			}
+
+			out.send();
+
+		}
+		//create new channel by doing a originate
+		else
+		{
+			out["Action"]="Originate";
+			out["Context"]="from-internal";
+			out["Priority"]=1;
+			out["Exten"]=exten;
+			out["Channel"]=fromDevice->getId();
+			out["Callerid"]="Calling "+exten;
+			out.send();
+		}
+	}
+
+
+
+
 
 	////////////////////////////////////////////////////////////////////////
 	//server manager

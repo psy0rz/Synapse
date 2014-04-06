@@ -115,6 +115,9 @@
 			}
 
 
+			//store all the info as data in the device dom object:
+			$(escapeId(msg["id"])).data("device", msg);
+
 			//update the device caller id:
 //			$(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]+"<br> tennant="+msg["groupId"]+" ("+msg["id"]+")");
 			$(escapeId(msg["id"])+" .deviceInfo").html(prettyCallerId(msg["callerId"], msg["callerIdName"]));
@@ -360,6 +363,36 @@
 				synapse_login();
 			});
 
+			$('#test1').on('click', function()
+			{
+				send(0, "asterisk_Test", {
+					"Action"	: "Originate",
+					"Channel"	: "SIP/100",
+					"Context"	: "from-synapse",
+					"Priority"	: 1,
+					"Exten"		: 901,
+				});
+
+			});
+
+			$("#deviceList").on("click", ".device", function()
+			{
+				console.log("Clicked device", $(this).data("device"));
+
+				var reuseChannelId=undefined;
+
+				var firstChannel=$(escapeId(loginDeviceId)+" .channel:first").data("channel");
+				if (firstChannel!=undefined)
+					reuseChannelId=firstChannel["id"];
+
+				send(0, "asterisk_Call", 
+				{
+					"exten": $(this).data("device")["exten"],
+					"reuseChannelId": reuseChannelId
+				});
+			});
+
+
 			$("#deviceList").on("click", ".channel", function()
 			{
 				console.log("Clicked channel", $(this).data("channel"));
@@ -390,7 +423,8 @@
 				// });
 
 
-
+				//////////////////////////////////
+				//prepare and park both
 				send(0, "asterisk_Test", {
 					"Action"	: "SetVar",
 					"Channel"	: $(this).data("channel")["linkChannelName"],
@@ -408,18 +442,29 @@
 				send(0, "asterisk_Test", {
 					"Action"	: "Redirect",
 					"ActionId"	: "chuche",
-//					"Channel"	: $(this).data("channel")["channelName"],
-					"Channel"	: $(this).data("channel")["linkChannelName"],
+					"Channel"	: $(this).data("channel")["channelName"],
+					// "Channel"	: $(this).data("channel")["linkChannelName"],
 					"Context"	: "from-synapse",
 					"Exten"		: "901",
 					"Priority"	: "1",
-					// "ExtraChannel"	: $(this).data("channel")["linkChannelName"],
-					"ExtraChannel"	: $(this).data("channel")["channelName"],
+					"ExtraChannel"	: $(this).data("channel")["linkChannelName"],
+					// "ExtraChannel"	: $(this).data("channel")["channelName"],
 					"ExtraContext"	: "from-synapse",
 					"ExtraExten"		: "901",
 					"ExtraPriority"	: "1"
 				});
 
+		// Action: Originate
+		// Channel: SIP/101test
+		// Context: default
+		// Exten: 8135551212
+		// Priority: 1
+		// Callerid: 3125551212
+		// Timeout: 30000
+		// Variable: var1=23|var2=24|var3=25
+		// ActionID: ABC45678901234567890
+
+				return(false);
 
 			})
 		});
@@ -609,7 +654,7 @@
 <body class='ui-widget' style='font-size:1em'>
 	<div class='ui-widget-content' id='statusUser'>
 		<div class='ui-widget-header'>My phone:</div>
-			
+		<button id='test1'>Test1</button>			
 	</div>
 
 	<div class='ui-widget-content' id='statusBar'>

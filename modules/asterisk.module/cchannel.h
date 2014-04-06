@@ -39,8 +39,10 @@ namespace asterisk
 		void setFirstExtension(string firstExtension);
 		string getFirstExtension();
 		void setDevicePtr(CdevicePtr devicePtr);
+		CdevicePtr getDevicePtr();
 		void setOwnerPtr(CdevicePtr devicePtr);  //"owner" of the channel, when doing parks (only owner can unpark)
 		void setId(string id);
+		string getId();
 		void setLinkPtr(CchannelPtr channelPtr);
 		void delLink();
 		CchannelPtr getLinkPtr();
