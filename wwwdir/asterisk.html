@@ -365,13 +365,13 @@
 
 			$('#test1').on('click', function()
 			{
-				send(0, "asterisk_Test", {
-					"Action"	: "Originate",
-					"Channel"	: "SIP/100",
-					"Context"	: "from-synapse",
-					"Priority"	: 1,
-					"Exten"		: 901,
-				});
+				// send(0, "asterisk_Test", {
+				// 	"Action"	: "Originate",
+				// 	"Channel"	: "SIP/100",
+				// 	"Context"	: "from-synapse",
+				// 	"Priority"	: 1,
+				// 	"Exten"		: 901,
+				// });
 
 			});
 
@@ -393,10 +393,9 @@
 			});
 
 
-			$("#deviceList").on("click", ".channel", function()
+			$("#statusUser").on("click", ".channel", function()
 			{
-				console.log("Clicked channel", $(this).data("channel"));
-
+				console.log("Clicked my channel", $(this).data("channel"));
 
 				var reuseChannelId=undefined;
 
@@ -407,8 +406,44 @@
 				send(0, "asterisk_Bridge", 
 				{
 					"channel1": reuseChannelId,
-					"channel2": $(this).data("channel")["id"]
+					"channel2": $(this).data("channel")["linkId"],
+					"parkLinked1": true,
+					"parkLinked2": true
 				});
+
+
+
+
+				return(false);
+
+			});
+
+
+			$("#deviceList").on("click", ".channel", function()
+			{
+				console.log("Clicked others channel", $(this).data("channel"));
+
+
+				var reuseChannelId=undefined;
+
+				var firstChannel=$(escapeId(loginDeviceId)+" .channel:first").data("channel");
+				if (firstChannel!=undefined)
+					reuseChannelId=firstChannel["id"];
+
+				// send(0, "asterisk_Test", {
+				// 	"Action"	: "Setvar",
+				// 	"Channel"	: $(this).data("channel")["linkChannelName"],
+				// 	"Variable"	: "CONNECTEDLINE(name)",
+				// 	"Value"	: "name2",
+				// });
+
+				// send(0, "asterisk_Test", {
+				// 	"Action"	: "Setvar",
+				// 	"Channel"	: $(this).data("channel")["linkChannelName"],
+				// 	"Variable"	: "CONNECTEDLINE(num)",
+				// 	"Value"	: "num2",
+				// });
+
 
 
 				return(false);

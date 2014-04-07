@@ -1243,7 +1243,7 @@ namespace asterisk
 		if (msg.isSet("channel2"))
 			channel2Ptr=sessionPtr->getServerPtr()->getChannelPtr(msg["channel2"], false);
 
-		sessionPtr->getServerPtr()->amiBridge(sessionPtr->getDevicePtr(), channel1Ptr, channel2Ptr);
+		sessionPtr->getServerPtr()->amiBridge(sessionPtr->getDevicePtr(), channel1Ptr, channel2Ptr, msg["parkLinked1"], msg["parkLinked2"]);
 
 	}
 

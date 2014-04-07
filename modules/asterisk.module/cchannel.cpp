@@ -277,7 +277,10 @@ namespace asterisk
 
 
 		if (linkChannelPtr!=CchannelPtr())
+		{
 			out["linkChannelName"]=linkChannelPtr->getChannelName();
+			out["linkId"]=linkChannelPtr->getId();
+		}
 
 
 		devicePtr->getGroupPtr()->send(out);

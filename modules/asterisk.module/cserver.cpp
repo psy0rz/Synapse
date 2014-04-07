@@ -97,7 +97,7 @@ namespace asterisk
 		if (channelId=="")
 			throw(synapse::runtime_error("Specified empty channelId"));
 
-		if (channelMap[channelId]==NULL)
+		if (channelMap.find(channelId)==channelMap.end())
 		{
 			if (autoCreate)
 			{
@@ -233,7 +233,7 @@ namespace asterisk
 	}
 
 
-	void Cserver::amiBridge(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, CchannelPtr channel2Ptr)
+	void Cserver::amiBridge(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, CchannelPtr channel2Ptr, bool parkLinked1, bool parkLinked2)
 	{
 		Cmsg out;
 		out.src=sessionId;
@@ -251,6 +251,49 @@ namespace asterisk
 			if (channel1Ptr->getDevicePtr()!=fromDevicePtr)
 				throw(synapse::runtime_error("specified channel1 does not belong to this device"));
 
+			//park linkedChannel1?
+			if (parkLinked1 && channel1Ptr->getLinkPtr()!=CchannelPtr())
+			{
+				//park channel1 and its linked partner:				
+				out.clear();
+				out["Action"]="Redirect";
+
+				out["Channel"]=channel1Ptr->getChannelName();
+				out["Context"]="from-synapse";
+				out["Priority"]=1;
+				out["Exten"]="901";
+
+				out["ExtraChannel"]=channel1Ptr->getLinkPtr()->getChannelName();
+				out["ExtraContext"]="from-synapse";
+				out["ExtraPriority"]=1;
+				out["ExtraExten"]="901";
+
+				out.send();
+
+			}
+
+			//park linkedChannel2?
+			if (parkLinked2 && channel2Ptr->getLinkPtr()!=CchannelPtr())
+			{
+				//park channel2 and its linked partner:				
+				out.clear();
+				out["Action"]="Redirect";
+
+				out["Channel"]=channel2Ptr->getChannelName();
+				out["Context"]="from-synapse";
+				out["Priority"]=1;
+				out["Exten"]="901";
+
+				out["ExtraChannel"]=channel2Ptr->getLinkPtr()->getChannelName();
+				out["ExtraContext"]="from-synapse";
+				out["ExtraPriority"]=1;
+				out["ExtraExten"]="901";
+
+				out.send();
+
+			}
+
+			out.clear();
 			out["Action"]="Bridge";
 			out["Channel1"]=channel1Ptr->getChannelName();
 			out["Channel2"]=channel2Ptr->getChannelName();
@@ -261,11 +304,34 @@ namespace asterisk
 		//create new channel and bridge it to channel2
 		else
 		{
+			//park linkedChannel2?
+			if (parkLinked2 && channel2Ptr->getLinkPtr()!=CchannelPtr())
+			{
+				//park channel2 and its linked partner:				
+				out.clear();
+				out["Action"]="Redirect";
+
+				out["Channel"]=channel2Ptr->getChannelName();
+				out["Context"]="from-synapse";
+				out["Priority"]=1;
+				out["Exten"]="901";
+
+				out["ExtraChannel"]=channel2Ptr->getLinkPtr()->getChannelName();
+				out["ExtraContext"]="from-synapse";
+				out["ExtraPriority"]=1;
+				out["ExtraExten"]="901";
+
+				out.send();
+
+			}
+
+			out.clear();
 			out["Action"]="Originate";
 			out["Application"]="Bridge";
 			out["Channel"]=fromDevicePtr->getId();
 			// out["Callerid"]="Connecting "+channel2Ptr->getCallerIdName();
 			out["Data"]=channel2Ptr->getChannelName()+",p";
+			out["Async"]=true;
 			out.send();
 		}
 

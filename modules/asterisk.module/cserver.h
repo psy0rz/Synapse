@@ -95,7 +95,9 @@ namespace asterisk
 
 		//Bridge 2 channels together.
 		//If channelA is not specified, it will originate a new call and then do the bridging to channelB via the bridge app.
-		void amiBridge(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, CchannelPtr channel2Ptr);
+		//set parkLinked to true if you want to park any linked channels. (that are currently bridged)
+
+		void amiBridge(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, CchannelPtr channel2Ptr, bool parkLinked1, bool parkLinked2);
 	};
 
 
