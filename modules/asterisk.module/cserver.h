@@ -88,6 +88,25 @@ namespace asterisk
 		string getStatus(string prefix);
 		int getSessionId();
 
+		//sets a asterisk variable on a channel
+		void amiSetVar(CchannelPtr channelPtr, string variable, string value);
+
+		//redirect one or two channels to another context and extention. 
+		void amiRedirect(CchannelPtr channel1Ptr, string context1, string exten1, CchannelPtr channel2Ptr=CchannelPtr(), string context2="", string exten2="");
+
+		//update the caller id or number of a channel in realtime. 
+		//you need to enable sendrpid on the extension and have a supported phone (like a cisco spa)
+		void amiUpdateCallerIdName(CchannelPtr channelPtr, string name);
+		void amiUpdateCallerIdNum(CchannelPtr channelPtr, string num);
+
+		//sets SYNAPSE_OWNER so that the owner can be traced back once the channel gets a new uniqueId (horrible but asterisk is hackish like that)
+		//also calls amiUpdateCallerId to indicate to the channel that its parked
+		void amiPreparePark(CchannelPtr channelPtr);
+
+		//park one or 2 calls. calls preparepark first
+		void amiPark(CchannelPtr channel1Ptr, CchannelPtr channel2Ptr);
+
+
 		//Make a call from specified device to extention
 		//Tries to be reuse the specified channel (parking the otherside of the call)
 		//Otherwise originates a new call on device.
@@ -96,8 +115,7 @@ namespace asterisk
 		//Bridge 2 channels together.
 		//If channelA is not specified, it will originate a new call and then do the bridging to channelB via the bridge app.
 		//set parkLinked to true if you want to park any linked channels. (that are currently bridged)
-
-		void amiBridge(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, CchannelPtr channel2Ptr, bool parkLinked1, bool parkLinked2);
+		void amiBridge(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, CchannelPtr channel2Ptr, bool parkLinked1);
 	};
 
 

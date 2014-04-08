@@ -15,7 +15,17 @@ namespace asterisk
 	{
 		private:
 
-		string id;
+		//the channel uniqueId, e.g.: 1396987163.599
+		string id; 
+		//the channel name, e.g.: SIP/100-00000053
+		string channelName;
+		//NOTE: the channelName of a 'real' channel can sometimes change temporary. for exampling when bridging it can become SIP/100-00000053<MASQ>. 
+		//To circumvent this, the asterisk developers created the uniqueId: this will stay the same for a channel.
+		//Altough for many simple things channels are deleted and recreated as well, making things even more difficult.
+		//All in all asterisk seems like a big kludge...its like the Sendmail of opensource PBX-es: it has all the features but is one big mess. 
+		//When it has a good GUI that suports all the features, i'm sure we will migrate away from asterisk to Freeswitch.
+
+
 		int changes;
 		string state;
 		CchannelPtr linkChannelPtr;
@@ -27,9 +37,8 @@ namespace asterisk
 //		bool initiator;
 		CdevicePtr devicePtr;
 		CdevicePtr ownerPtr;
-		string channelName;
 
-		int changesSent;		
+		int changesSent;
 
 		public:
 

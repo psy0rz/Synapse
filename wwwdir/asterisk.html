@@ -446,6 +446,16 @@
 
 
 
+				send(0, "asterisk_Bridge", 
+				{
+					"channel1": reuseChannelId,
+					"channel2": $(this).data("channel")["id"],
+					"parkLinked1": true,
+					"parkLinked2": true
+
+				});
+
+
 				return(false);
 
 				//redirct channel naar freepbx parking, hangt andere op

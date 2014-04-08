@@ -181,12 +181,47 @@ namespace asterisk
 	}
 
 
-	void Cserver::amiCall(CdevicePtr fromDevicePtr, CchannelPtr reuseChannelPtr, string exten)
+
+	void Cserver::amiSetVar(CchannelPtr channelPtr, string variable, string value)
 	{
-		
 		Cmsg out;
 		out.src=sessionId;
 		out.event="ami_Action";
+		out["Action"]="Setvar";
+		out["Channel"]=channelPtr->getChannelName();
+		out["Variable"]=variable;
+		out["Value"]=value;
+		out.send();
+	}
+
+
+
+	void Cserver::amiRedirect(CchannelPtr channel1Ptr, string context1, string exten1, CchannelPtr channel2Ptr, string context2, string exten2)
+	{
+		Cmsg out;
+		out.src=sessionId;
+		out.event="ami_Action";
+
+		out["Action"]="Redirect";
+
+		out["Channel"]=channel1Ptr->getChannelName();
+		out["Context"]=context1;
+		out["Priority"]=1;
+		out["Exten"]=exten1;
+
+		if (channel2Ptr!=CchannelPtr())
+		{
+			out["ExtraChannel"]=channel2Ptr->getChannelName();
+			out["ExtraContext"]=context2;
+			out["ExtraPriority"]=1;
+			out["ExtraExten"]=exten2;
+		}
+		out.send();
+	}
+
+	void Cserver::amiCall(CdevicePtr fromDevicePtr, CchannelPtr reuseChannelPtr, string exten)
+	{
+		
 
 		if (fromDevicePtr==CdevicePtr())
 			throw(synapse::runtime_error("device not specified"));
@@ -197,30 +232,17 @@ namespace asterisk
 			if (reuseChannelPtr->getDevicePtr()!=fromDevicePtr)
 				throw(synapse::runtime_error("specified channel does not belong to this device"));
 
-			out["Action"]="Redirect";
-			out["Channel"]=reuseChannelPtr->getChannelName();
-			out["Context"]="from-internal";
-			out["Priority"]=1;
-			out["Exten"]=exten;
-
-
 			CchannelPtr linkedChannelPtr=reuseChannelPtr->getLinkPtr();
-
-			//"park" the linked channel
-			if (linkedChannelPtr!=CchannelPtr())
-			{
-				out["ExtraChannel"]=linkedChannelPtr->getChannelName();
-				out["ExtraContext"]="from-synapse";
-				out["ExtraPriority"]=1;
-				out["ExtraExten"]="901";
-			}
-
-			out.send();
-
+			amiRedirect(reuseChannelPtr, "from-internal", exten, 
+						linkedChannelPtr, "from-synapse", "901");
 		}
 		//create new channel by doing a originate
 		else
 		{
+			Cmsg out;
+			out.src=sessionId;
+			out.event="ami_Action";
+
 			out["Action"]="Originate";
 			out["Context"]="from-internal";
 			out["Priority"]=1;
@@ -232,8 +254,37 @@ namespace asterisk
 		}
 	}
 
+	void Cserver::amiUpdateCallerIdName(CchannelPtr channelPtr, string name)
+	{
+		amiSetVar(channelPtr, "CONNECTEDLINE(name)", name);
+	}
 
-	void Cserver::amiBridge(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, CchannelPtr channel2Ptr, bool parkLinked1, bool parkLinked2)
+	void Cserver::amiUpdateCallerIdNum(CchannelPtr channelPtr, string num)
+	{
+		amiSetVar(channelPtr, "CONNECTEDLINE(num)", num);
+	}
+
+
+	void Cserver::amiPreparePark(CchannelPtr channelPtr)
+	{
+		amiUpdateCallerIdName(channelPtr, "[parked] "+channelPtr->getCallerIdName());
+		amiSetVar(channelPtr, "__SYNAPSE_OWNER", channelPtr->getDevicePtr()->getId());
+	}
+
+
+	void Cserver::amiPark(CchannelPtr channel1Ptr, CchannelPtr channel2Ptr)
+	{
+		amiPreparePark(channel1Ptr);
+		if (channel2Ptr!=CchannelPtr())
+			amiPreparePark(channel2Ptr);
+
+
+		amiRedirect(channel1Ptr, "from-synapse", "901",
+				channel2Ptr, "from-synapse", "901");
+
+	}
+
+	void Cserver::amiBridge(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, CchannelPtr channel2Ptr, bool parkLinked1)
 	{
 		Cmsg out;
 		out.src=sessionId;
@@ -245,93 +296,62 @@ namespace asterisk
 		if (channel2Ptr==CchannelPtr())
 			throw(synapse::runtime_error("channel2 not specified"));
 
-		//bridge 2 channels
+		//bridge 2 existing channels
 		if (channel1Ptr!=CchannelPtr())
 		{
 			if (channel1Ptr->getDevicePtr()!=fromDevicePtr)
 				throw(synapse::runtime_error("specified channel1 does not belong to this device"));
 
+			// //park linkedChannel1?
+			// if (parkLinked1 && channel1Ptr->getLinkPtr()!=CchannelPtr())
+			// {
+			// 	//we HAVE to park both the channel and the linkedChannel, otherwise we lose the call:
+			// 	amiPark(channel1Ptr, channel1Ptr->getLinkPtr());
+			// }
+
+			// //park linkedChannel2?
+			// if (parkLinked2 && channel2Ptr->getLinkPtr()!=CchannelPtr())
+			// {
+			// 	//we HAVE to park both the channel and the linkedChannel, otherwise we lose the call:
+			// 	amiPark(channel2Ptr, channel2Ptr->getLinkPtr());
+			// }
+
+			//now bridge the channels together
+			// out.clear();
+			// out["Action"]="Bridge";
+			// out["Channel1"]=channel1Ptr->getChannelName();
+			// out["Channel2"]=channel2Ptr->getChannelName();
+			// out["Tone"]="yes";
+			// out.send();
+
 			//park linkedChannel1?
 			if (parkLinked1 && channel1Ptr->getLinkPtr()!=CchannelPtr())
 			{
-				//park channel1 and its linked partner:				
-				out.clear();
-				out["Action"]="Redirect";
-
-				out["Channel"]=channel1Ptr->getChannelName();
-				out["Context"]="from-synapse";
-				out["Priority"]=1;
-				out["Exten"]="901";
-
-				out["ExtraChannel"]=channel1Ptr->getLinkPtr()->getChannelName();
-				out["ExtraContext"]="from-synapse";
-				out["ExtraPriority"]=1;
-				out["ExtraExten"]="901";
-
-				out.send();
-
+				//park the linked channel and redirect this channel to channel2
+				//anything linked to channel2 
+				amiSetVar(channel1Ptr, "__SYNAPSE_BRIDGE", channel2Ptr->getChannelName());
+				amiRedirect(channel1Ptr, "from-synapse", "902",
+							channel1Ptr->getLinkPtr(), "from-synapse", "901");
 			}
-
-			//park linkedChannel2?
-			if (parkLinked2 && channel2Ptr->getLinkPtr()!=CchannelPtr())
+			else
 			{
-				//park channel2 and its linked partner:				
-				out.clear();
-				out["Action"]="Redirect";
-
-				out["Channel"]=channel2Ptr->getChannelName();
-				out["Context"]="from-synapse";
-				out["Priority"]=1;
-				out["Exten"]="901";
-
-				out["ExtraChannel"]=channel2Ptr->getLinkPtr()->getChannelName();
-				out["ExtraContext"]="from-synapse";
-				out["ExtraPriority"]=1;
-				out["ExtraExten"]="901";
-
-				out.send();
-
+				//just bridge it to the channel
+				amiSetVar(channel1Ptr, "__SYNAPSE_BRIDGE", channel2Ptr->getChannelName());
+				amiRedirect(channel1Ptr, "from-synapse", "902");
 			}
 
-			out.clear();
-			out["Action"]="Bridge";
-			out["Channel1"]=channel1Ptr->getChannelName();
-			out["Channel2"]=channel2Ptr->getChannelName();
-			out["Tone"]="yes";
-			out.send();
 
 		}
 		//create new channel and bridge it to channel2
 		else
 		{
-			//park linkedChannel2?
-			if (parkLinked2 && channel2Ptr->getLinkPtr()!=CchannelPtr())
-			{
-				//park channel2 and its linked partner:				
-				out.clear();
-				out["Action"]="Redirect";
-
-				out["Channel"]=channel2Ptr->getChannelName();
-				out["Context"]="from-synapse";
-				out["Priority"]=1;
-				out["Exten"]="901";
-
-				out["ExtraChannel"]=channel2Ptr->getLinkPtr()->getChannelName();
-				out["ExtraContext"]="from-synapse";
-				out["ExtraPriority"]=1;
-				out["ExtraExten"]="901";
-
-				out.send();
-
-			}
-
 			out.clear();
 			out["Action"]="Originate";
 			out["Application"]="Bridge";
 			out["Channel"]=fromDevicePtr->getId();
 			// out["Callerid"]="Connecting "+channel2Ptr->getCallerIdName();
 			out["Data"]=channel2Ptr->getChannelName()+",p";
-			out["Async"]=true;
+			out["Async"]="true";
 			out.send();
 		}
 
