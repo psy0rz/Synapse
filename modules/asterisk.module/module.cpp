@@ -1075,23 +1075,34 @@ namespace asterisk
 
 	SYNAPSE_REGISTER(ami_Event_CEL)
 	{
-		CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["UniqueID"]);
-		channelPtr->sendDebug(msg, msg.dst);
+		// CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["UniqueID"]);
+		// channelPtr->sendDebug(msg, msg.dst);
 	
 	}
 
-	// SYNAPSE_REGISTER(ami_Event_VarSet)
-	// {
-	// 	;
-	// }
+	SYNAPSE_REGISTER(ami_Event_VarSet)
+	{
+		// CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid"]);
+		// channelPtr->sendDebug(msg, msg.dst);
+		;
+	}
 
 	SYNAPSE_REGISTER(ami_Event_ParkedCall)
 	{
 		;
 	}
 
+	// 0xdbfc30 SEND ami_Event_ExtensionStatus FROM 3:module@ami TO 6:module@asterisk (map:)
+	//  |Context = ext-local (string)
+	//  |Event = ExtensionStatus (string)
+	//  |Exten = 100 (string)
+	//  |Hint = SIP/100&Custom:DND100 (string)
+	//  |Privilege = call,all (string)
+	//  |Status = 1 (string)	
 	SYNAPSE_REGISTER(ami_Event_ExtensionStatus)
 	{
+		// CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["UniqueID"]);
+		// channelPtr->sendDebug(msg, msg.dst);
 		;
 	}
 

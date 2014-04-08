@@ -265,24 +265,24 @@ namespace asterisk
 	}
 
 
-	void Cserver::amiPreparePark(CchannelPtr channelPtr)
-	{
-		amiUpdateCallerIdName(channelPtr, "[parked] "+channelPtr->getCallerIdName());
-		amiSetVar(channelPtr, "__SYNAPSE_OWNER", channelPtr->getDevicePtr()->getId());
-	}
+	// void Cserver::amiPreparePark(CchannelPtr channelPtr)
+	// {
+	// 	amiUpdateCallerIdName(channelPtr, "[parked] "+channelPtr->getCallerIdName());
+	// 	amiSetVar(channelPtr, "__SYNAPSE_OWNER", channelPtr->getDevicePtr()->getId());
+	// }
 
 
-	void Cserver::amiPark(CchannelPtr channel1Ptr, CchannelPtr channel2Ptr)
-	{
-		amiPreparePark(channel1Ptr);
-		if (channel2Ptr!=CchannelPtr())
-			amiPreparePark(channel2Ptr);
+	// void Cserver::amiPark(CchannelPtr channel1Ptr, CchannelPtr channel2Ptr)
+	// {
+	// 	amiPreparePark(channel1Ptr);
+	// 	if (channel2Ptr!=CchannelPtr())
+	// 		amiPreparePark(channel2Ptr);
 
 
-		amiRedirect(channel1Ptr, "from-synapse", "901",
-				channel2Ptr, "from-synapse", "901");
+	// 	amiRedirect(channel1Ptr, "from-synapse", "901",
+	// 			channel2Ptr, "from-synapse", "901");
 
-	}
+	// }
 
 	void Cserver::amiBridge(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, CchannelPtr channel2Ptr, bool parkLinked1)
 	{
@@ -329,6 +329,7 @@ namespace asterisk
 			{
 				//park the linked channel and redirect this channel to channel2
 				//anything linked to channel2 
+				amiUpdateCallerIdName(channel1Ptr->getLinkPtr(), "[parked] "+channel1Ptr->getLinkPtr()->getCallerIdName());
 				amiSetVar(channel1Ptr, "__SYNAPSE_BRIDGE", channel2Ptr->getChannelName());
 				amiRedirect(channel1Ptr, "from-synapse", "902",
 							channel1Ptr->getLinkPtr(), "from-synapse", "901");
