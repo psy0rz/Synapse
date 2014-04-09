@@ -39,6 +39,7 @@ namespace asterisk
 		string getCallerId();
 		void setCallerIdName(string callerIdName);
 		string getCallerIdName();
+		string getCallerIdAll();
 		void setTrunk(bool trunk);
 		void setOnline(bool online);
 		void setExten(string exten);
@@ -47,6 +48,7 @@ namespace asterisk
 		void sendRefresh(int dst);
 		string getStatus(string prefix);
 		void del();
+
 		
 	};
 

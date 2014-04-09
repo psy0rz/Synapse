@@ -97,7 +97,8 @@ namespace asterisk
 		//update the caller id or number of a channel in realtime. 
 		//you need to enable sendrpid on the extension and have a supported phone (like a cisco spa)
 		void amiUpdateCallerIdName(CchannelPtr channelPtr, string name);
-		void amiUpdateCallerIdNum(CchannelPtr channelPtr, string num);
+		void amiUpdateCallerId(CchannelPtr channelPtr, string num);
+		void amiUpdateCallerIdAll(CchannelPtr channelPtr, string all);
 
 		// //sets SYNAPSE_OWNER so that the owner can be traced back once the channel gets a new uniqueId (horrible but asterisk is hackish like that)
 		// //also calls amiUpdateCallerId to indicate to the channel that its parked

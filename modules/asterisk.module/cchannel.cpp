@@ -179,6 +179,11 @@ namespace asterisk
 		}
 	}
 
+	string Cchannel::getLinkCallerId()
+	{
+		return(linkCallerId);
+	}
+
 	void Cchannel::setLinkCallerIdName(string callerIdName)
 	{
 		if (callerIdName!=this->linkCallerIdName)
@@ -188,10 +193,20 @@ namespace asterisk
 		}
 	}
 
+	string  Cchannel::getLinkCallerIdName()
+	{
+		return(linkCallerIdName);
+	}
+
 
 	string Cchannel::getCallerId()
 	{
 		return (callerId);
+	}
+
+	string Cchannel::getCallerIdAll()
+	{
+		return(callerIdName+" <"+callerId+">");
 	}
 
 	string Cchannel::getCallerIdName()

@@ -91,6 +91,13 @@ namespace asterisk
 	}
 
 
+	string Cdevice::getCallerIdAll()
+	{
+		return(callerIdName+" <"+callerId+">");
+	}
+
+
+
 	void Cdevice::setTrunk(bool trunk)
 	{
 		this->trunk=trunk;

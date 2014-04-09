@@ -194,6 +194,22 @@ namespace asterisk
 		out.send();
 	}
 
+	void Cserver::amiUpdateCallerIdAll(CchannelPtr channelPtr, string all)
+	{
+		amiSetVar(channelPtr, "CONNECTEDLINE(all)", all);
+	}
+
+
+	void Cserver::amiUpdateCallerIdName(CchannelPtr channelPtr, string name)
+	{
+		amiSetVar(channelPtr, "CONNECTEDLINE(name)", name);
+	}
+
+	void Cserver::amiUpdateCallerId(CchannelPtr channelPtr, string num)
+	{
+		amiSetVar(channelPtr, "CONNECTEDLINE(num)", num);
+	}
+
 
 
 	void Cserver::amiRedirect(CchannelPtr channel1Ptr, string context1, string exten1, CchannelPtr channel2Ptr, string context2, string exten2)
@@ -248,20 +264,10 @@ namespace asterisk
 			out["Priority"]=1;
 			out["Exten"]=exten;
 			out["Channel"]=fromDevicePtr->getId();
-			out["Callerid"]="Call to "+exten;
+			out["Callerid"]=fromDevicePtr->getCallerIdAll();
 			out["Async"]="true";
 			out.send();
 		}
-	}
-
-	void Cserver::amiUpdateCallerIdName(CchannelPtr channelPtr, string name)
-	{
-		amiSetVar(channelPtr, "CONNECTEDLINE(name)", name);
-	}
-
-	void Cserver::amiUpdateCallerIdNum(CchannelPtr channelPtr, string num)
-	{
-		amiSetVar(channelPtr, "CONNECTEDLINE(num)", num);
 	}
 
 
@@ -327,9 +333,19 @@ namespace asterisk
 			//park linkedChannel1?
 			if (parkLinked1 && channel1Ptr->getLinkPtr()!=CchannelPtr())
 			{
+
+				//tell the channel1 linked channel its parked by the person at channel1
+				amiUpdateCallerIdName(channel1Ptr->getLinkPtr(), "[parked] "+fromDevicePtr->getCallerIdName());
+				amiUpdateCallerId(channel1Ptr->getLinkPtr(), fromDevicePtr->getCallerId());
+
+				//tell the channel1 its redirected to channel2
+				amiUpdateCallerIdAll(channel1Ptr, channel2Ptr->getCallerIdAll());
+
+				//tell the target channel its redirected to channel1.
+				amiUpdateCallerIdName(channel2Ptr, channel1Ptr->getCallerIdAll());
+
 				//park the linked channel and redirect this channel to channel2
-				//anything linked to channel2 
-				amiUpdateCallerIdName(channel1Ptr->getLinkPtr(), "[parked] "+channel1Ptr->getLinkPtr()->getCallerIdName());
+				//anything linked to channel2 is dropped
 				amiSetVar(channel1Ptr, "__SYNAPSE_BRIDGE", channel2Ptr->getChannelName());
 				amiRedirect(channel1Ptr, "from-synapse", "902",
 							channel1Ptr->getLinkPtr(), "from-synapse", "901");
@@ -348,11 +364,13 @@ namespace asterisk
 		{
 			out.clear();
 			out["Action"]="Originate";
-			out["Application"]="Bridge";
 			out["Channel"]=fromDevicePtr->getId();
-			// out["Callerid"]="Connecting "+channel2Ptr->getCallerIdName();
-			out["Data"]=channel2Ptr->getChannelName()+",p";
+			out["Callerid"]=fromDevicePtr->getCallerIdAll();
+			out["Context"]="from-synapse";
+			out["Priority"]=1;
+			out["Exten"]="902";
 			out["Async"]="true";
+			out["Variable"]="__SYNAPSE_BRIDGE="+channel2Ptr->getChannelName();
 			out.send();
 		}
 

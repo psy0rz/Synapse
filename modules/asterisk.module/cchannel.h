@@ -58,9 +58,12 @@ namespace asterisk
 		void setCallerId(string callerId);
 		void setCallerIdName(string callerIdName);
 		void setLinkCallerId(string callerId);
+		string getLinkCallerId();
 		void setLinkCallerIdName(string callerIdName);
+		string getLinkCallerIdName();
 		string getCallerId();
 		string getCallerIdName();
+		string getCallerIdAll(); //name <number>
 		string getState();
 		void setChannelName(string channelName);
 		string getChannelName();

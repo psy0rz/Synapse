@@ -1015,14 +1015,16 @@ namespace asterisk
 			if (msg["CallerIDName"].str() == "<Unknown>")
 				;//channelPtr->setCallerId("");
 			else
-				channelPtr->setCallerId(msg["CallerIDName"]);
+				channelPtr->setCallerIdName(msg["CallerIDName"]);
 		}
 
-
-		if (msg["CallerIDName"].str() == "<Unknown>")
-			channelPtr->setCallerIdName("");
-		else
-			channelPtr->setCallerIdName(msg["CallerIDName"]);
+		if (msg.isSet("CallerIDNum")) //1.8
+		{
+			if (msg["CallerIDNum"].str() == "<Unknown>")
+				;//channelPtr->setCallerIdNum("");
+			else
+				channelPtr->setCallerId(msg["CallerIDNum"]);
+		}
 		
 		channelPtr->sendDebug(msg, msg.dst);
 	}
