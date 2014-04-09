@@ -248,7 +248,12 @@ namespace asterisk
 			if (reuseChannelPtr->getDevicePtr()!=fromDevicePtr)
 				throw(synapse::runtime_error("specified channel does not belong to this device"));
 
+			//park the other channel and make the call
 			CchannelPtr linkedChannelPtr=reuseChannelPtr->getLinkPtr();
+
+			if (linkedChannelPtr!=CchannelPtr())
+				amiSetVar(linkedChannelPtr, "__SYNAPSE_OWNER", fromDevicePtr->getId());
+
 			amiRedirect(reuseChannelPtr, "from-internal", exten, 
 						linkedChannelPtr, "from-synapse", "901");
 		}
@@ -335,8 +340,7 @@ namespace asterisk
 			{
 
 				//tell the channel1 linked channel its parked by the person at channel1
-				amiUpdateCallerIdName(channel1Ptr->getLinkPtr(), "[parked] "+fromDevicePtr->getCallerIdName());
-				amiUpdateCallerId(channel1Ptr->getLinkPtr(), fromDevicePtr->getCallerId());
+				amiUpdateCallerIdAll(channel1Ptr->getLinkPtr(), "[parked] "+fromDevicePtr->getCallerIdAll());
 
 				//tell the channel1 its redirected to channel2
 				amiUpdateCallerIdAll(channel1Ptr, channel2Ptr->getCallerIdAll());
@@ -347,6 +351,7 @@ namespace asterisk
 				//park the linked channel and redirect this channel to channel2
 				//anything linked to channel2 is dropped
 				amiSetVar(channel1Ptr, "__SYNAPSE_BRIDGE", channel2Ptr->getChannelName());
+				amiSetVar(channel1Ptr->getLinkPtr(), "__SYNAPSE_OWNER", fromDevicePtr->getId());
 				amiRedirect(channel1Ptr, "from-synapse", "902",
 							channel1Ptr->getLinkPtr(), "from-synapse", "901");
 			}

@@ -244,19 +244,27 @@
 			//set caller info
 			var callerInfo="";
 
-			//we know who's connected:
-			if (msg["linkCallerId"] != '')
+			//channel is parked?
+			if (msg["ownerDeviceId"])
 			{
-				callerInfo+=prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);
+				callerInfo="[ON HOLD]";
 			}
-			//we dont know whos connected yet
 			else
 			{
-				//show who's being dialed, or show caller id if its an incoming call:
-				if (msg["state"]=="out")
-					callerInfo+="Calling "+msg["firstExtension"];
+				//we know who's connected:
+				if (msg["linkCallerId"] != '')
+				{
+					callerInfo+=prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);
+				}
+				//we dont know whos connected yet
 				else
-					callerInfo+=prettyCallerId(msg["callerId"], msg["callerIdName"]);
+				{
+					//show who's being dialed, or show caller id if its an incoming call:
+					if (msg["state"]=="out")
+						callerInfo+="Calling "+msg["firstExtension"];
+					else
+						callerInfo+=prettyCallerId(msg["callerId"], msg["callerIdName"]);
+				}
 			}
 
 			$(".device "+escapeClass(msg["id"])+" .channelInfo").html(callerInfo);

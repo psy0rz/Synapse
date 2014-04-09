@@ -843,12 +843,6 @@ namespace asterisk
 	}
 	
 	
-	// 
-	// SYNAPSE_REGISTER(ami_Event_ExtensionStatus)
-	// {
-	
-	// }
-	// 
 	
 	SYNAPSE_REGISTER(ami_Event_Dial)
 	{
