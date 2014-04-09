@@ -96,9 +96,43 @@ function synapse_callHandlers(event)
 
 function synapse_handleReceiveError(request, status, e)
 {
-	errorTxt="Recieve error: " + request.responseText;
-	console.error(errorTxt);
-	synapse_callHandlers("error", errorTxt);
+ 	errorTxt="Recieve error: " + request.responseText;
+ 	console.error(errorTxt);
+
+	//show reconnect dialog
+	html='\
+		<div id="synapse_reconnect" title="Please wait">\
+			<div class="ui-widget">\
+				<div class="ui-state-error ui-corner-all" style="padding: 0 .7em;">\
+					<p>\
+					<span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>\
+					<span class="description">Connection problem, will try to reconnect in 10 seconds...</span>\
+					</p>\
+				</div>\
+			</div>\
+		</div>\
+	';
+	$('body').append(html);
+	$('#synapse_reconnect').dialog({ 
+		buttons:
+		{
+		},
+		'close': function ()
+		{ 
+			$('#synapse_reconnect').remove(); 
+		},
+		'modal': true
+	});
+
+
+	setTimeout(function()
+	{
+		//we might have lost some data, so just forget the authcookie and start all over (e.g. we will get a new module_SessionStart which should handle the rest)
+		synapse_authCookie=0;
+		$('#synapse_reconnect').dialog("close");
+		synapse_receive();
+	}, 10000);
+
 }
 
 //handles long poll results, which contain incoming messages
