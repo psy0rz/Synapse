@@ -47,6 +47,7 @@ Cmodule::Cmodule()
 	defaultSessionId=SESSION_DISABLED;
 	soDefaultHandler=NULL;
 	readySession=SESSION_DISABLED;	
+	soInit=NULL;
 }
 
 

@@ -97,7 +97,6 @@ CuserPtr CuserMan::getUser(const string & userName)
 		}
 	}
 	throw(synapse::runtime_error("User not found"));
-	return (CuserPtr());
 }
 
 

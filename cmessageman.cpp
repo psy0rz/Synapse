@@ -78,6 +78,7 @@ CmessageMan::CmessageMan()
 	wantCurrentThreads=1;
 	maxThreads=1000;
 	shutdown=false;
+	exit=0;
 }
 
 

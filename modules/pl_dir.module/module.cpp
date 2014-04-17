@@ -96,7 +96,6 @@ namespace pl
 		std::string getMeta(std::string key)
 		{
 			throw(synapse::runtime_error("not implemented yet!"));
-			return("error");
 		}
 
 		void setMeta(std::string key, std::string value)

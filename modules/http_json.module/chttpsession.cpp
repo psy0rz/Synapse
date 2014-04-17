@@ -27,7 +27,9 @@ ChttpSession::ChttpSession()
 	netInformed=false;
 	lastTime=time(NULL);
 	expired=false;
+    mAuthCookie=0;
 }
+
 
 void ChttpSession::getStatus(Cvar & var)
 {	

@@ -43,6 +43,13 @@ namespace synapse
 
 		public:
 
+		CsharedObject()
+		{
+			lastLeave=time(NULL);
+			id=0;
+
+		}
+
 		//send a message to all clients of the object
 		void sendAll(Cmsg & msg)
 		{

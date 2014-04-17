@@ -37,6 +37,7 @@ Ccall::~Ccall()
 Ccall::Ccall()
 {
 	started=false;
+    soHandler=NULL;
 }
 
 Ccall::Ccall(const CmsgPtr & msg,const CsessionPtr & dst, FsoHandler soHandler)
