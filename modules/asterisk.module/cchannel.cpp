@@ -9,7 +9,22 @@ namespace asterisk
 	{
 		changes=1;
 		changesSent=0;
+		onHold=false;
 //			initiator=true;
+	}
+
+	void Cchannel::setOnHold(bool onHold)
+	{
+		if (this->onHold!=onHold)
+		{
+			changes++;
+			this->onHold=onHold;
+		}
+	}
+
+	bool Cchannel::getOnHold()
+	{
+		return(onHold);
 	}
 
 	bool Cchannel::sendDebug(Cmsg msg, int serverId)
@@ -268,7 +283,12 @@ namespace asterisk
 		out.event="asterisk_updateChannel";
 		out.dst=forceDst;
 		out["id"]=id;
-		out["state"]=state;
+
+		if (onHold)
+			out["state"]="hold";
+		else
+			out["state"]=state;
+
 //			out["initiator"]=initiator;
 		out["callerId"]=callerId;
 		out["callerIdName"]=callerIdName;

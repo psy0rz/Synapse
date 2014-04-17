@@ -1120,6 +1120,18 @@ namespace asterisk
 		}
 	}
 
+	// 0x7f6168000900 SEND ami_Event_Hold FROM 3:module@ami TO 6:module@asterisk (map:)
+	//  |Channel = SIP/101-0000002e (string)
+	//  |Event = Hold (string)
+	//  |Privilege = call,all (string)
+	//  |Status = On (string)
+	//  |Uniqueid = 1397749689.46 (string)
+	SYNAPSE_REGISTER(ami_Event_Hold)
+	{		
+		CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid"]);
+		channelPtr->setOnHold(msg["Status"]=="On");
+		channelPtr->sendDebug(msg, msg.dst);
+	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	/////////////////////// events to control this module, usually sent by webinterface to us.

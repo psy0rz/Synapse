@@ -39,6 +39,7 @@ namespace asterisk
 		CdevicePtr ownerPtr;
 
 		int changesSent;
+		bool onHold;
 
 		public:
 
@@ -73,6 +74,9 @@ namespace asterisk
 		void sendRefresh(int dst);
 		string getStatus(string prefix);
 		void del();
+		void setOnHold(bool setOnHold);
+		bool getOnHold();
+
 
 	};
 
