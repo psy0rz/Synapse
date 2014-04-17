@@ -345,7 +345,7 @@
 				{
 					//add a new parked channel object
 					var newChannelHtml="";
-					newChannelHtml+="<div class='channel "+msg["id"]+"_parked'>";
+					newChannelHtml+="<div class='channel parked_channel "+msg["id"]+"_parked'>";
 					newChannelHtml+="<div class='channelInfo'></div>";
 					newChannelHtml+="</div>";
 					$(escapeId(loginDeviceId)+' .channelList').append(newChannelHtml);
@@ -355,6 +355,9 @@
 
 				//update called id of the parked channel
 				$(escapeClass(msg["id"])+"_parked .channelInfo").html(prettyCallerId(msg["callerId"], msg["callerIdName"]));
+				//store all data 
+				$(escapeClass(msg["id"])+"_parked").data("channel", msg);
+
 
 			}
 			//its not parked (by us), so remove it from our list
@@ -445,7 +448,7 @@
 				channels.each(function(index, channel)
 				{
 					var data=$(channel).data("channel");
-					if (data!=undefined && data["state"]!="hold")
+					if (!$(channel).hasClass("parked_channel") && data["state"]!="hold")
 					{
 						channelName=data["id"];
 						return(false);
@@ -468,18 +471,36 @@
 			});
 
 
+
 			$("#statusUser").on("click", ".channel", function()
 			{
 				console.log("Clicked my channel", $(this).data("channel"));
 
-				var reuseChannelId=getActiveChannel();
-				send(0, "asterisk_Bridge", 
-				{
-					"channel1": reuseChannelId,
-					"channel2": $(this).data("channel")["linkId"],
-					"parkLinked1": true,
-				});
 
+				//parked channel
+				if ($(this).hasClass("parked_channel"))
+				{
+					var reuseChannelId=getActiveChannel();
+					console.error(reuseChannelId);
+					send(0, "asterisk_Bridge", 
+					{
+						"channel1": reuseChannelId,
+						"channel2": $(this).data("channel")["id"],
+						"parkLinked1": true,
+					});
+
+				}
+				//normal channel:
+				else
+				{
+					var reuseChannelId=getActiveChannel();
+					send(0, "asterisk_Bridge", 
+					{
+						"channel1": reuseChannelId,
+						"channel2": $(this).data("channel")["linkId"],
+						"parkLinked1": true,
+					});
+				}
 
 
 
@@ -488,111 +509,41 @@
 			});
 
 
-			$("#deviceList").on("click", ".channel", function()
-			{
-				console.log("Clicked others channel", $(this).data("channel"));
+			// $("#deviceList").on("click", ".channel", function()
+			// {
+			// 	console.log("Clicked others channel", $(this).data("channel"));
 
 
-				var reuseChannelId=getActiveChannel();
+			// 	var reuseChannelId=getActiveChannel();
 
-				// send(0, "asterisk_Test", {
-				// 	"Action"	: "Setvar",
-				// 	"Channel"	: $(this).data("channel")["linkChannelName"],
-				// 	"Variable"	: "CONNECTEDLINE(name)",
-				// 	"Value"	: "name2",
-				// });
+			// 	// send(0, "asterisk_Test", {
+			// 	// 	"Action"	: "Setvar",
+			// 	// 	"Channel"	: $(this).data("channel")["linkChannelName"],
+			// 	// 	"Variable"	: "CONNECTEDLINE(name)",
+			// 	// 	"Value"	: "name2",
+			// 	// });
 
-				// send(0, "asterisk_Test", {
-				// 	"Action"	: "Setvar",
-				// 	"Channel"	: $(this).data("channel")["linkChannelName"],
-				// 	"Variable"	: "CONNECTEDLINE(num)",
-				// 	"Value"	: "num2",
-				// });
-
-
-
-				send(0, "asterisk_Bridge", 
-				{
-					"channel1": reuseChannelId,
-					"channel2": $(this).data("channel")["id"],
-					"parkLinked1": true,
-					"parkLinked2": true
-
-				});
+			// 	// send(0, "asterisk_Test", {
+			// 	// 	"Action"	: "Setvar",
+			// 	// 	"Channel"	: $(this).data("channel")["linkChannelName"],
+			// 	// 	"Variable"	: "CONNECTEDLINE(num)",
+			// 	// 	"Value"	: "num2",
+			// 	// });
 
 
-				return(false);
 
-				//redirct channel naar freepbx parking, hangt andere op
-				// send(0, "asterisk_Test", {
-				// 	"Action"	: "Redirect",
-				// 	"Channel"	: $(this).data("channel")["channelName"],
-				// 	"Context"	: "from-internal",
-				// 	"Exten"		: "70",
-				// 	"Priority"	: "1"
-				// });
+			// 	send(0, "asterisk_Bridge", 
+			// 	{
+			// 		"channel1": reuseChannelId,
+			// 		"channel2": $(this).data("channel")["id"],
+			// 		"parkLinked1": true,
+			// 		"parkLinked2": true
 
-				// //parkeert 1 call, hangt andere op:
-				// send(0, "asterisk_Test", {
-				// 	"Action"	: "Park",
-				// 	"Channel"	: $(this).data("channel")["channelName"],
-				// 	"Channel2"	: $(this).data("channel")["linkChannelName"],
-				// 	"Timeout"	: 2000
-				// });
-
-				// //wil niet?
-				// send(0, "asterisk_Test", {
-				// 	"Action"	: "MessageSend",
-				// 	"To"		: "SIP/101",
-				// 	"From"		: '"edwin" 100',
-				// 	"Body"		: "dit is een test"
-				// });
+			// 	});
 
 
-				//////////////////////////////////
-				//prepare and park both
-				send(0, "asterisk_Test", {
-					"Action"	: "SetVar",
-					"Channel"	: $(this).data("channel")["linkChannelName"],
-					"Variable"	: "__SYNAPSE_OWNER",
-					"Value"		: $(this).data("channel")["deviceId"],
-
-				});
-				send(0, "asterisk_Test", {
-					"Action"	: "SetVar",
-					"Channel"	: $(this).data("channel")["channelName"],
-					"Variable"	: "__SYNAPSE_OWNER",
-					"Value"		: $(this).data("channel")["deviceId"],
-				});
-
-				send(0, "asterisk_Test", {
-					"Action"	: "Redirect",
-					"ActionId"	: "chuche",
-					"Channel"	: $(this).data("channel")["channelName"],
-					// "Channel"	: $(this).data("channel")["linkChannelName"],
-					"Context"	: "from-synapse",
-					"Exten"		: "901",
-					"Priority"	: "1",
-					"ExtraChannel"	: $(this).data("channel")["linkChannelName"],
-					// "ExtraChannel"	: $(this).data("channel")["channelName"],
-					"ExtraContext"	: "from-synapse",
-					"ExtraExten"		: "901",
-					"ExtraPriority"	: "1"
-				});
-
-		// Action: Originate
-		// Channel: SIP/101test
-		// Context: default
-		// Exten: 8135551212
-		// Priority: 1
-		// Callerid: 3125551212
-		// Timeout: 30000
-		// Variable: var1=23|var2=24|var3=25
-		// ActionID: ABC45678901234567890
-
-				return(false);
-
-			})
+			// 	return(false);
+			// })
 		});
 
 
