@@ -188,7 +188,7 @@
 			//ring blinker (fast)
 			blink_ring_status=!blink_ring_status;
 			if (blink_ring_status)
- 				$('.device .channel[state="ringing"]').addClass("ring-blinker");
+ 				$('.device .channelIcon[state="ringing"]').addClass("ring-blinker");
  			else
  				$('.ring-blinker').removeClass("ring-blinker");
 
@@ -197,7 +197,7 @@
  			{
 				blink_hold_status=!blink_hold_status;
 				if (blink_hold_status)
-	 				$('.device .channel[state="hold"]').addClass("hold-blinker");
+	 				$('.device .channelIcon[state="hold"]').addClass("hold-blinker");
 	 			else
 	 				$('.hold-blinker').removeClass("hold-blinker");
 	 		}
@@ -230,7 +230,8 @@
 				//add a brand new channel object
 				var newChannelHtml="";
 				newChannelHtml+="<div class='channel "+msg["id"]+"'>";
-				newChannelHtml+="<div class='channelInfo'></div>";
+				newChannelHtml+="<span class='channelIcon'></span>";
+				newChannelHtml+="<span class='channelInfo'></span>";
 				newChannelHtml+="</div>";
 				$(escapeId(msg["deviceId"])+' .channelList').append(newChannelHtml);
 			}
@@ -238,16 +239,16 @@
 			//store all the info as data in the channel dom object:
 			$(".device "+escapeClass(msg["id"])).data("channel", msg);
 
-			if (msg["state"]=="ring")
-			{
-				$(escapeId(msg["deviceId"])).addClass("blink");
-			}
-			else
-			{
-				$(escapeId(msg["deviceId"])).removeClass("blink");
-				//$(escapeId(msg["deviceId"])).addClass("ui-state-error");
-			}
-			$(escapeId(msg["deviceId"])).addClass("blink");
+			// if (msg["state"]=="ring")
+			// {
+			// 	$(escapeId(msg["deviceId"])).addClass("blink");
+			// }
+			// else
+			// {
+			// 	$(escapeId(msg["deviceId"])).removeClass("blink");
+			// 	//$(escapeId(msg["deviceId"])).addClass("ui-state-error");
+			// }
+			// $(escapeId(msg["deviceId"])).addClass("blink");
 
 
 			//set caller info
@@ -329,7 +330,7 @@
 
 
 			///////////////////// Stuff for all channels
-			$(escapeClass(msg["id"])).attr('state', msg["state"]);
+			$(escapeClass(msg["id"])+" .channelIcon").attr('state', msg["state"]);
 			$(escapeClass(msg["id"])+":hidden").slideDown(); //show the channel (default is hidden)
 
 
@@ -346,11 +347,13 @@
 					//add a new parked channel object
 					var newChannelHtml="";
 					newChannelHtml+="<div class='channel parked_channel "+msg["id"]+"_parked'>";
-					newChannelHtml+="<div class='channelInfo'></div>";
+					newChannelHtml+="<span class='channelIcon'></span>";
+					newChannelHtml+="<span class='channelInfo'></span>";
 					newChannelHtml+="</div>";
 					$(escapeId(loginDeviceId)+' .channelList').append(newChannelHtml);
 
-					$(escapeClass(msg["id"])+'_parked').attr('state', "hold").slideDown();
+					$(escapeClass(msg["id"])+'_parked .channelIcon').attr('state', "hold");
+					$(escapeClass(msg["id"])+'_parked').slideDown();
 				}
 
 				//update called id of the parked channel
@@ -676,43 +679,56 @@
 			border-width: 1px;
 			margin:0;
 			min-width:15em;
-			padding-left:25px;
-			background-repeat:no-repeat !important;
-			background-position: left !important;
-			background-image:url('asterisk/channel_idle.png') !important;
 			position:relative;
 			font-weight: normal;
 
 		}
 
-		.channel[state="in"] 
+		.channelIcon
 		{
-			background-image:url('asterisk/channel_in.png') !important;
+			padding-left:25px;
+			background-repeat:no-repeat !important;
+			background-position: left !important;
+			background-image:url('asterisk/channel_idle.png') ;
 		}
 
-		.channel[state="out"] 
+		.channelIcon:hover
 		{
-			background-image:url('asterisk/channel_out.png') !important;
+			background-color: #dddddd;
+			cursor: pointer;
 		}
 
-		.channel[state="ringing"] 
+		.channelIcon[state="in"] 
 		{
-			background-image:url('asterisk/channel_ring.png') !important;
+			background-image:url('asterisk/channel_in.png') ;
 		}
 
-		.channel[state="hold"] 
+		.channelIcon[state="out"] 
 		{
-			background-image:url('asterisk/channel_hold.png') !important;
+			background-image:url('asterisk/channel_out.png') ;
 		}
+
+		.channelIcon[state="ringing"] 
+		{
+			background-image:url('asterisk/channel_ring.png') ;
+		}
+
+		.channelIcon[state="hold"] 
+		{
+			background-image:url('asterisk/channel_hold.png') ;
+		}
+
 
 		.hold-blinker
 		{
-			color: #bbbbbb;
+
+			background-color: #ffffcc;
 		}
 
 		.ring-blinker
 		{
-			color: #ff9999;
+			background-color: #ffffcc;
+
 		}
 
 		.deleted
@@ -726,6 +742,13 @@
 			margin:0;
 			padding:0;
 		}
+
+		.channelInfo:hover
+		{
+			background-color: #dddddd;
+			cursor: pointer;
+		}
+
 
 		.channelDebug
 		{
