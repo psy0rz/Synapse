@@ -235,6 +235,16 @@ namespace asterisk
 		out.send();
 	}
 
+	void Cserver::amiHangup(CchannelPtr channelPtr)
+	{
+		Cmsg out;
+		out.src=sessionId;
+		out.event="ami_Action";
+		out["Action"]="Hangup";
+		out["Channel"]=channelPtr->getChannelName();
+		out.send();
+	}
+
 	void Cserver::amiCall(CdevicePtr fromDevicePtr, CchannelPtr reuseChannelPtr, string exten)
 	{
 		
@@ -310,7 +320,7 @@ namespace asterisk
 		//bridge 2 existing channels
 		if (channel1Ptr!=CchannelPtr())
 		{
-			if (channel1Ptr->getDevicePtr()!=fromDevicePtr)
+			if (channel1Ptr->getDevicePtr()!=fromDevicePtr && (channel1Ptr->getLinkPtr()==CchannelPtr() || channel1Ptr->getLinkPtr()->getDevicePtr()!=fromDevicePtr))
 				throw(synapse::runtime_error("specified channel1 does not belong to this device"));
 
 			// //park linkedChannel1?

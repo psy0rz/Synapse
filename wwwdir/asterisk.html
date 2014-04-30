@@ -56,7 +56,7 @@
 
  		synapse_register("asterisk_authOk",function(msg_src, msg_dst, msg_event, msg)
 		{
-			$('#statusMsg').html("Logged in from "+msg["deviceId"]+" cookie="+msg["authCookie"]);
+			$('#statusMsg').html("Login ok");
 			loginDeviceId=msg["deviceId"];
 
 			//store the device and authcookie in a browser cookie, so the user doesnt have to relogin everytime.
@@ -287,7 +287,8 @@
 			{
 				var newChannelHtml="";
 				newChannelHtml+="<div class='channel "+msg["id"]+"'>";
-				newChannelHtml+="<div class='channelInfo'></div>";
+				newChannelHtml+="<span class='channelIcon'></span>";
+				newChannelHtml+="<span class='channelInfo'></span>";
 				newChannelHtml+="</div>";
 				$("#activeCallList .list").prepend(newChannelHtml);
 				show=1;
@@ -441,30 +442,31 @@
 			});
 
 
-			//gets an active channel from our device thats not on hold 
+			//gets an active channel from our device thats not on hold
+			//returns all channel data 
 			function getActiveChannel()
 			{
 
 				var channels=$(escapeId(loginDeviceId)+" .channel");
-				var channelName=undefined;
+				var activeChannel={};
 
 				channels.each(function(index, channel)
 				{
 					var data=$(channel).data("channel");
 					if (!$(channel).hasClass("parked_channel") && data["state"]!="hold")
 					{
-						channelName=data["id"];
+						activeChannel=data;
 						return(false);
 					}
 				});
-				return(channelName);
+				return(activeChannel);
 			}
 
 			$("#deviceList").on("click", ".device", function()
 			{
 				console.log("Clicked device", $(this).data("device"));
 
-				var reuseChannelId=getActiveChannel();
+				var reuseChannelId=getActiveChannel()["id"];
 
 				send(0, "asterisk_Call", 
 				{
@@ -475,20 +477,21 @@
 
 
 
-			$("#statusUser").on("click", ".channel", function()
+			$("#statusUser").on("click", ".channelInfo", function()
 			{
-				console.log("Clicked my channel", $(this).data("channel"));
+				var channel=$(this).parent().data("channel");
+				console.log("Clicked my channelinfo", channel);
 
+				//bridge the active channel to the clicked channel. (and park the call thats already bridged to the active channel)
 
 				//parked channel
-				if ($(this).hasClass("parked_channel"))
+				if ($(this).parent().hasClass("parked_channel"))
 				{
-					var reuseChannelId=getActiveChannel();
-					console.error(reuseChannelId);
+					var reuseChannelId=getActiveChannel()["id"];
 					send(0, "asterisk_Bridge", 
 					{
 						"channel1": reuseChannelId,
-						"channel2": $(this).data("channel")["id"],
+						"channel2": channel["id"],
 						"parkLinked1": true,
 					});
 
@@ -496,11 +499,11 @@
 				//normal channel:
 				else
 				{
-					var reuseChannelId=getActiveChannel();
+					var reuseChannelId=getActiveChannel()["id"];
 					send(0, "asterisk_Bridge", 
 					{
 						"channel1": reuseChannelId,
-						"channel2": $(this).data("channel")["linkId"],
+						"channel2": channel["linkId"],
 						"parkLinked1": true,
 					});
 				}
@@ -509,6 +512,80 @@
 
 				return(false);
 
+			});
+
+
+
+			////////////////// menu stuff
+			$("#statusUser").on("click", ".channelIcon", function()
+			{
+				var channel=$(this).parent().data("channel");
+				console.log("Clicked my channelicon", channel);
+
+				$(".menu").remove();
+
+				var menuHtml="";
+				menuHtml+="<ul class='menu' >";
+
+				menuHtml+="<li class='menu-hangup'><a href='#'>Hang up</a></li>";
+
+				if ($(this).parent().hasClass("parked_channel"))
+					menuHtml+="<li class='menu-transfer'><a href='#'>Transfer</a></li>";
+
+				menuHtml+="</ul>";
+
+				$(this).append(menuHtml);
+				$(".menu", this).menu({
+  					select: function( event, ui ) {
+  						event.stopPropagation();
+  						if (ui.item.hasClass("menu-hangup"))
+  						{
+  							send(0, "asterisk_Hangup", {
+  								"channel": channel["id"]
+  							});
+  						}
+  						else if (ui.item.hasClass("menu-transfer"))
+  						{
+								//bridge the clicked channel to the channel thats is currently bridged with the active channel. (e.g. a "transfer")
+								//parks the active channel
+
+								var activeChannel=getActiveChannel();
+
+								//clicked a parked channel
+//								if ($(this).parent().hasClass("parked_channel"))
+								{
+									send(0, "asterisk_Bridge", 
+									{
+										"channel1": activeChannel["linkId"],
+										"channel2": channel["id"],
+										"parkLinked1": false, //NOTE: it would be nice if the channel would stay open in some cases?
+									});
+
+								}
+/*
+								//normal channel:
+								else
+								{
+									send(0, "asterisk_Bridge", 
+									{
+										"channel1": activeChannel["linkId"],
+										"channel2": channel["linkId"],
+										"parkLinked1": true,
+									});
+								}
+*/
+  						}
+  						$(".menu").remove();
+  					}
+				});
+
+				return(false);
+			});
+
+			//remove menus when user clicks anywere else
+			$(document).on("click", function()
+			{
+				$(".menu").remove();
 			});
 
 
@@ -682,6 +759,7 @@
 			position:relative;
 			font-weight: normal;
 
+
 		}
 
 		.channelIcon
@@ -741,6 +819,8 @@
 		{
 			margin:0;
 			padding:0;
+			display: inline-block;
+			min-width:18em;
 		}
 
 		.channelInfo:hover
@@ -755,6 +835,12 @@
 			display:none;
 		}
 
+		.menu
+		{
+			position: absolute;
+			left:25px;
+			z-index: 1;
+		}
 
 	</style>
 

@@ -122,6 +122,9 @@ namespace asterisk
 		out["event"]=		"asterisk_Call";
 		out.send();
 
+		out["event"]=		"asterisk_Hangup";
+		out.send();
+
 		out["event"]=		"asterisk_Bridge";
 		out.send();
 
@@ -1235,7 +1238,10 @@ namespace asterisk
 		out.send();
 	}
 
-	
+
+
+	//FIXME: when using multiple groups on one server, we need to do some extra validation to make sure someone isnt bridging to a channel in another group. (security)	
+	//(needs to be fixed by all actions, not just call)
 	SYNAPSE_REGISTER(asterisk_Call)
 	{
 
@@ -1266,6 +1272,16 @@ namespace asterisk
 
 	}
 
+	SYNAPSE_REGISTER(asterisk_Hangup)
+	{
+
+		CsessionPtr sessionPtr=serverMan.getSessionPtr(msg.src);
+		CchannelPtr channelPtr;
+
+		channelPtr=sessionPtr->getServerPtr()->getChannelPtr(msg["channel"], false);
+		sessionPtr->getServerPtr()->amiHangup(channelPtr);
+
+	}
 
 	//test raw commands
 	//FIXME: remove, insecure

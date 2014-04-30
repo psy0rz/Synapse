@@ -117,6 +117,10 @@ namespace asterisk
 		//If channelA is not specified, it will originate a new call and then do the bridging to channelB via the bridge app.
 		//set parkLinked to true if you want to park any linked channels. (that are currently bridged)
 		void amiBridge(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, CchannelPtr channel2Ptr, bool parkLinked1);
+
+		//hangup the channel
+		void amiHangup(CchannelPtr channelPtr);
+
 	};
 
 
