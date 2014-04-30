@@ -444,7 +444,7 @@ namespace asterisk
 		}
 
 		//the remaining config entries need to be (re)created and (re)connected.
-		for (Cconfig::iterator configI=config.begin(); configI!=config.end(); configI++)
+		for (synapse::Cconfig::iterator configI=config.begin(); configI!=config.end(); configI++)
 		{
 			//start a new session for every new connection, and supply the config info
 			Cmsg out;

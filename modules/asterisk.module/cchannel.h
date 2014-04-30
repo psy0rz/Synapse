@@ -7,7 +7,6 @@
 
 namespace asterisk
 {
-	using namespace synapse;
 
 	//asterisk channels. these always point to a corresponding Cdevice
 	//they can also point to a 'linked' channel. (when asterisk links two channels together)
