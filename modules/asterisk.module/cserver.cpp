@@ -265,7 +265,7 @@ namespace asterisk
 				amiSetVar(linkedChannelPtr, "__SYNAPSE_OWNER", fromDevicePtr->getId());
 
 			amiRedirect(reuseChannelPtr, "from-internal", exten, 
-						linkedChannelPtr, "from-synapse", "901");
+						linkedChannelPtr, "from-synapse", "park");
 		}
 		//create new channel by doing a originate
 		else
@@ -362,14 +362,14 @@ namespace asterisk
 				//anything linked to channel2 is dropped
 				amiSetVar(channel1Ptr, "__SYNAPSE_BRIDGE", channel2Ptr->getChannelName());
 				amiSetVar(channel1Ptr->getLinkPtr(), "__SYNAPSE_OWNER", fromDevicePtr->getId());
-				amiRedirect(channel1Ptr, "from-synapse", "902",
-							channel1Ptr->getLinkPtr(), "from-synapse", "901");
+				amiRedirect(channel1Ptr, "from-synapse", "bridge",
+							channel1Ptr->getLinkPtr(), "from-synapse", "park");
 			}
 			else
 			{
 				//just bridge it to the channel
 				amiSetVar(channel1Ptr, "__SYNAPSE_BRIDGE", channel2Ptr->getChannelName());
-				amiRedirect(channel1Ptr, "from-synapse", "902");
+				amiRedirect(channel1Ptr, "from-synapse", "bridge");
 			}
 
 
@@ -383,7 +383,7 @@ namespace asterisk
 			out["Callerid"]=fromDevicePtr->getCallerIdAll();
 			out["Context"]="from-synapse";
 			out["Priority"]=1;
-			out["Exten"]="902";
+			out["Exten"]="bridge";
 			out["Async"]="true";
 			out["Variable"]="__SYNAPSE_BRIDGE="+channel2Ptr->getChannelName();
 			out.send();

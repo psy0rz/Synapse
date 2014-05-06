@@ -801,6 +801,9 @@ namespace asterisk
 		{
 			//determine specified session number
 			int sessionId=lexical_cast<int>(msg["Extension"].str().substr(strlen(ASTERISK_AUTH)));
+			CserverPtr serverPtr=serverMan.getServerPtr(msg.dst);
+			CchannelPtr channelPtr=serverPtr->getChannelPtr(msg["Uniqueid"]);
+			CdevicePtr devicePtr=serverPtr->getDevicePtr(getDeviceIdFromChannel(msg["Channel"]));
 
 			//do we know the specified session?
 			if (serverMan.sessionExists(sessionId))
@@ -810,8 +813,6 @@ namespace asterisk
 				if (!sessionPtr->isAuthorized())
 				{
 					//autenticate the session
-					CserverPtr serverPtr=serverMan.getServerPtr(msg.dst);
-					CdevicePtr devicePtr=serverPtr->getDevicePtr(getDeviceIdFromChannel(msg["Channel"]));
 					sessionPtr->authorize(serverPtr, devicePtr);
 
 					Cmsg out;
@@ -822,18 +823,15 @@ namespace asterisk
 					out["authCookie"]=serverMan.getAuthCookie(serverPtr->id, devicePtr->getId());
 					out.send();
 	
-					//hang up
-					out.clear();
-					out.dst=msg.src;
-					out.src=msg.dst;
-					out.event="ami_Action";
-					out["Action"]="Hangup";
-					out["Channel"]=msg["Channel"].str();
-					out.send();
-	
+					//give OK feedback to caller
+					serverPtr->amiRedirect(channelPtr, "from-synapse", "login_ok");
 					return;
 				}
 			}
+
+			//give negative feedback to caller
+			serverPtr->amiRedirect(channelPtr, "from-synapse", "login_failed");
+
 		}
 	
 		CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid"]);
