@@ -830,7 +830,8 @@ namespace asterisk
 			}
 
 			//give negative feedback to caller
-			serverPtr->amiRedirect(channelPtr, "from-synapse", "login_failed");
+			//serverPtr->amiRedirect(channelPtr, "from-synapse", "login_failed");
+			//sometimes is this is called multiple times, disable for now
 
 		}
 	
