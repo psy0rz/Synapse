@@ -832,6 +832,7 @@ namespace pl
             {
                 mState["sortField"]=params["sortField"].str();
             }
+            mState.changed();
 
             reloadFiles();
         }
@@ -855,7 +856,7 @@ namespace pl
 
             mCurrentPath=p;
             mState["currentPath"]=p.string();
-            
+            mState.changed();
 
         }
 
@@ -976,6 +977,7 @@ namespace pl
             mNextFilesScanner.mFileFilter.assign(regexStr, regex::icase);
             mPrevFilesScanner.mFileFilter.assign(regexStr, regex::icase);
             mState["fileFilter"]=f;
+	    mState.changed();
             reloadFiles();
         }
 
