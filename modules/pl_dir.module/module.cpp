@@ -54,19 +54,19 @@ synapse::Cconfig config;
  */
 namespace pl
 {
-	using namespace std;
-	using namespace boost::filesystem;
-	using namespace boost;
+    using namespace std;
+    using namespace boost::filesystem;
+    using namespace boost;
     using namespace boost::posix_time;
 
 
     //we dirive from directory_entry instead of path, since directory_entry caches extra data about the filetype (status())
-	class Cdirectory_entry : public directory_entry
-	{
-		private:
-		time_t mWriteDate;
+    class Cdirectory_entry : public directory_entry
+    {
+        private:
+        time_t mWriteDate;
 
-		public:
+        public:
 //        Cdirectory_entry(const class path & p, file_status st, file_status symlink_st)
   //      :directory_entry(p, st, symlink_st)
           Cdirectory_entry(const directory_entry & e)
@@ -75,44 +75,44 @@ namespace pl
             mWriteDate=0;
         }
 
-		//get/cache modification date
-		int getDate()
-		{
-			if (!mWriteDate) 
-				mWriteDate=last_write_time(this->path());
+        //get/cache modification date
+        int getDate()
+        {
+            if (!mWriteDate) 
+                mWriteDate=last_write_time(this->path());
 
-			return (mWriteDate);
-		}
+            return (mWriteDate);
+        }
 
-		//get sort filename string
-		std::string getSortName()
-		{
-			return(path().filename().string());
-		}
+        //get sort filename string
+        std::string getSortName()
+        {
+            return(path().filename().string());
+        }
 
 
 
-		//get/cache metadata field (from the path database)
-		std::string getMeta(std::string key)
-		{
-			throw(synapse::runtime_error("not implemented yet!"));
-		}
+        //get/cache metadata field (from the path database)
+        std::string getMeta(std::string key)
+        {
+            throw(synapse::runtime_error("not implemented yet!"));
+        }
 
-		void setMeta(std::string key, std::string value)
-		{
-			throw(synapse::runtime_error("not implemented yet!"));
+        void setMeta(std::string key, std::string value)
+        {
+            throw(synapse::runtime_error("not implemented yet!"));
 
-		}
-	};
+        }
+    };
 
 
     static map<path, list<Cdirectory_entry> > gDirCache;
 
     //reads one directory and apply appropriate filtering and sorting
-	class CsortedDir: public list<Cdirectory_entry>
-	{
-		private:
-		string mSortField;
+    class CsortedDir: public list<Cdirectory_entry>
+    {
+        private:
+        string mSortField;
 
 
         //read a directory without filtering and cache the results
@@ -135,38 +135,38 @@ namespace pl
         }
 
 
-		public:
+        public:
         path mBasePath;
-		enum Efiletype  { FILE, DIR, ALL };
+        enum Efiletype  { FILE, DIR, ALL };
         Efiletype mFiletype;
         regex mDirFilter;
         regex mFileFilter;
-//		list<Cpath> mPaths;
-//		list<Cpath>::iterator iterator;
+//      list<Cpath> mPaths;
+//      list<Cpath>::iterator iterator;
 
-		static bool compareFilename (Cdirectory_entry first, Cdirectory_entry second)
-		{
-			return (first.getSortName() < second.getSortName());
-		}
+        static bool compareFilename (Cdirectory_entry first, Cdirectory_entry second)
+        {
+            return (first.getSortName() < second.getSortName());
+        }
 
-		static bool compareDate (Cdirectory_entry first, Cdirectory_entry second)
-		{
-			return (first.getDate() < second.getDate());
-		}
+        static bool compareDate (Cdirectory_entry first, Cdirectory_entry second)
+        {
+            return (first.getDate() < second.getDate());
+        }
 
-		void read(
+        void read(
             const path & basePath, 
             const string & sortField, 
             Efiletype filetype, 
             const regex  & dirFilter, 
             const regex & fileFilter)
-		{
+        {
             //if nothing has changed, dont reread if its same 
             if (mBasePath==basePath && sortField==mSortField && filetype==mFiletype && fileFilter==mFileFilter && dirFilter == mDirFilter)
                 return;
 
-			mBasePath=basePath;
-			mSortField=sortField;
+            mBasePath=basePath;
+            mSortField=sortField;
             mFiletype=filetype;
             mFileFilter=fileFilter;
             mDirFilter=dirFilter;
@@ -174,10 +174,10 @@ namespace pl
 
             list<Cdirectory_entry> & dir=readCached(basePath);
 
-			for ( list<Cdirectory_entry>::iterator itr=dir.begin();
-				itr != dir.end();
-				++itr )
-			{
+            for ( list<Cdirectory_entry>::iterator itr=dir.begin();
+                itr != dir.end();
+                ++itr )
+            {
                 //dir
                 if (is_directory(itr->status()))
                 {
@@ -201,15 +201,15 @@ namespace pl
                         }
                     }
                 }
-			}
+            }
 
-			if (sortField=="filename")
-				sort(compareFilename);
-			else if (sortField=="date")
-				sort(compareDate);
-		}
+            if (sortField=="filename")
+                sort(compareFilename);
+            else if (sortField=="date")
+                sort(compareDate);
+        }
 
-	};
+    };
 
 
     //compares two absolute paths, to see if subdir is really a subdir of dir. (or the same dir)
@@ -534,12 +534,12 @@ namespace pl
     
 
     //play list 
-	class Cpl
-	{
-		private:
-		path mRootPath;
-		path mCurrentPath;
-		path mCurrentFile;
+    class Cpl
+    {
+        private:
+        path mRootPath;
+        path mCurrentPath;
+        path mCurrentFile;
 
         list<path> mPrevFiles;
         Cscanner mPrevFilesScanner;
@@ -553,7 +553,7 @@ namespace pl
         list<path> mNextPaths;
         Cscanner mNextPathsScanner;
 
-		int mId;
+        int mId;
 
         unsigned int mNextLen;
         unsigned int mPrevLen;
@@ -597,7 +597,7 @@ namespace pl
 
         }
 
-	
+    
         //make sure there are enough entries in the file and path lists
         //when it returns true, it should be called again. (used for scanning in small increments to improve response time)
         bool updateLists()
@@ -763,11 +763,11 @@ namespace pl
             return ((mRootPath/".mp.state").string());
         }
 
-		//reload all file data. call this after you've changed currentPath or other settings
-		void reloadFiles()
-		{
-			//clear lists
-			mNextFiles.clear();
+        //reload all file data. call this after you've changed currentPath or other settings
+        void reloadFiles()
+        {
+            //clear lists
+            mNextFiles.clear();
             mPrevFiles.clear();
 
             mNextFilesScanner.mSortField=mState["sortField"].str();
@@ -795,12 +795,12 @@ namespace pl
             //fill the lists
             updateListsAsync();
 
-		}
+        }
 
-		//reload path and file data, call this after you exited or entered a path so that the previous/next paths need to be reloaded 
-		void reloadPaths()
-		{
-			mNextPaths.clear();
+        //reload path and file data, call this after you exited or entered a path so that the previous/next paths need to be reloaded 
+        void reloadPaths()
+        {
+            mNextPaths.clear();
             mPrevPaths.clear();
 
             //this is the usual case: there is some path selected, so we set the rootPath of the directory-scanners to the parent:
@@ -818,8 +818,8 @@ namespace pl
 
             mNextPathsScanner.setSelectedPath(mCurrentPath);
             mPrevPathsScanner.setSelectedPath(mCurrentPath);
-			reloadFiles();
-		}
+            reloadFiles();
+        }
 
         void setMode(Cvar params)
         {
@@ -860,9 +860,9 @@ namespace pl
 
         }
 
-		//next file
-		void next()
-		{
+        //next file
+        void next()
+        {
             if (mNextFiles.empty())
                 return;
 
@@ -877,11 +877,11 @@ namespace pl
 
 
             updateListsAsync(); //make sure the lists stay filled
-		}
+        }
 
-		//prev file
-		void previous()
-		{
+        //prev file
+        void previous()
+        {
             if (mPrevFiles.empty())
                 return;
 
@@ -889,7 +889,7 @@ namespace pl
             setCurrentFile(mPrevFiles.front());
             mPrevFiles.pop_front();
             updateListsAsync(); //make sure the lists stay filled
-		}
+        }
 
         //goto start of the file list
         void gotoStart()
@@ -898,8 +898,8 @@ namespace pl
             reloadFiles();
         }
 
-		void nextPath()
-		{
+        void nextPath()
+        {
             if (mNextPaths.empty())
                 return;
 
@@ -907,31 +907,31 @@ namespace pl
             mCurrentPath=mNextPaths.front();
             mNextPaths.pop_front();
             reloadFiles();
-		}
+        }
 
-		void previousPath()
-		{
+        void previousPath()
+        {
             if (mPrevPaths.empty())
                 return;
             mNextPaths.push_front(mCurrentPath);
             mCurrentPath=mPrevPaths.front();
             mPrevPaths.pop_front();
             reloadFiles();
-		}
+        }
 
-		void exitPath()
-		{
-			if (isSubdir(mRootPath, mCurrentPath.parent_path()))
-			{
-				setCurrentPath(mCurrentPath.parent_path());
+        void exitPath()
+        {
+            if (isSubdir(mRootPath, mCurrentPath.parent_path()))
+            {
+                setCurrentPath(mCurrentPath.parent_path());
                 reloadPaths();
-			}
-		}
+            }
+        }
 
 
         //go one directory deeper, using the currentFile as reference
-		void enterPath()
-		{
+        void enterPath()
+        {
             path p;
             p=mCurrentFile;
             while (!p.empty())
@@ -961,7 +961,7 @@ namespace pl
                 setCurrentPath(mNextPathsScanner.getSelectedPath());
             }
             reloadPaths(); //always reload, since we've abused nextPathScanner.
-		}
+        }
 
         //sets regex for the file filter.
         //this is combined with the filter defined in config["filter"]
@@ -977,14 +977,14 @@ namespace pl
             mNextFilesScanner.mFileFilter.assign(regexStr, regex::icase);
             mPrevFilesScanner.mFileFilter.assign(regexStr, regex::icase);
             mState["fileFilter"]=f;
-	    mState.changed();
+        mState.changed();
             reloadFiles();
         }
 
-		void create(int id, string rootPath)
-		{
-			mId=id;
-			mRootPath=rootPath;
+        void create(int id, string rootPath)
+        {
+            mId=id;
+            mRootPath=rootPath;
 
             if (is_regular(getStateFile()))
             {
@@ -999,9 +999,9 @@ namespace pl
             setFileFilter(mState["fileFilter"]);
 
             reloadPaths();
-			DEB("Created pl " << id << " for path " << rootPath);
-			
-		}
+            DEB("Created pl " << id << " for path " << rootPath);
+            
+        }
 
 
         void deleteFile()
@@ -1045,8 +1045,8 @@ namespace pl
             }
         }
 
-		void send(int dst)
-		{
+        void send(int dst)
+        {
             //there are lots of places/situations where things can go wrong, so do this extra check:
             if (
                     (!mCurrentPath.empty() && !isSubdir(mRootPath, mCurrentPath)) || 
@@ -1057,11 +1057,11 @@ namespace pl
                 throw(synapse::runtime_error("Program error: ended up outside rootpath. (dont use trailing slashes for rootpath)"));
             }
 
-			Cmsg out;
-			out.event="pl_Entry";
-			out.dst=dst;
+            Cmsg out;
+            out.event="pl_Entry";
+            out.dst=dst;
 
-			out["rootPath"]=mRootPath.string();
+            out["rootPath"]=mRootPath.string();
     
             if (!mCurrentPath.empty())
             {
@@ -1128,51 +1128,59 @@ namespace pl
                 out["favorites"][favorite.first]=favorite.second["desc"];
             }
 
-			out.send();
-		}
+            out.send();
+        }
 
-		void destroy()
-		{
+        void destroy()
+        {
             mState.changed();
             mState.save(getStateFile());
 
-		}
+        }
 
-	};
+    };
 
-	class CplMan
-	{
-		private:
-		typedef map<int,Cpl> CplMap;
-		CplMap mPlMap;
+    class CplMan
+    {
+        private:
+        typedef map<int,Cpl> CplMap;
+        CplMap mPlMap;
 
-		public:
+        public:
 
-		Cpl & get(int id)
-		{
-			if (mPlMap.find(id)==mPlMap.end())
-				throw(synapse::runtime_error("Playlist not found"));
-			return(mPlMap[id]);
-		}
+        void saveAll()
+        {
+            BOOST_FOREACH( CplMap::value_type &pl, mPlMap )
+            {
+                pl.second.mState.save();
+            }
+        }
 
-		void create(int id, string basePath)
-		{
-			if (mPlMap.find(id)!=mPlMap.end())
-				throw(synapse::runtime_error("Playlist already exists"));
+        Cpl & get(int id)
+        {
+            if (mPlMap.find(id)==mPlMap.end())
+                throw(synapse::runtime_error("Playlist not found"));
+            return(mPlMap[id]);
+        }
 
-			mPlMap[id].create(id, basePath);
-		}
+        void create(int id, string basePath)
+        {
+            if (mPlMap.find(id)!=mPlMap.end())
+                throw(synapse::runtime_error("Playlist already exists"));
 
-		void destroy(int id)
-		{
-			get(id).destroy();
-			mPlMap.erase(id);
-		}
+            mPlMap[id].create(id, basePath);
+        }
+
+        void destroy(int id)
+        {
+            get(id).destroy();
+            mPlMap.erase(id);
+        }
 
 
-	};
+    };
 
-	CplMan plMan;
+    CplMan plMan;
 
     bool shutdown;
     int defaultId=-1;
@@ -1201,7 +1209,32 @@ namespace pl
         out.event="core_Ready";
         out.send();
 
+        out.clear();
+        out.event="core_LoadModule";
+        out["path"]="modules/timer.module/libtimer.so";
+        out.send();
+
     }
+
+    SYNAPSE_REGISTER(timer_Ready)
+    {
+        Cmsg out;
+        out.clear();
+        out.event="timer_Set";
+        out["seconds"]=10;
+        out["repeat"]=-1;
+        out["dst"]=dst;
+        out["event"]="pl_Save";
+        out.send();
+    }
+
+
+    SYNAPSE_REGISTER(pl_Save)
+    {
+        plMan.saveAll();
+    }
+
+
 
     SYNAPSE_REGISTER(module_SessionStart)
     {
@@ -1218,40 +1251,40 @@ namespace pl
         plMan.destroy(dst);
     }
 
-	/** Create a new pl
-		\param id Traverser id
-		\path path Base path. pl can never 'escape' this directory.
+    /** Create a new pl
+        \param id Traverser id
+        \path path Base path. pl can never 'escape' this directory.
 
-		SECURITY WARNING: Its possible to traverse the whole filesystem for users that have permission to send pl_Create!
+        SECURITY WARNING: Its possible to traverse the whole filesystem for users that have permission to send pl_Create!
 
-	\par Replies pl_Entry:
-		\param path Current path
-		\param file Current file, selected according to search criteria
+    \par Replies pl_Entry:
+        \param path Current path
+        \param file Current file, selected according to search criteria
 
-	*/
-	SYNAPSE_REGISTER(pl_New)
-	{
+    */
+    SYNAPSE_REGISTER(pl_New)
+    {
         Cmsg out;
         out.event="core_NewSession";
         out["path"]=msg["path"];
         out.dst=1;
         out.send();
-	}
+    }
 
 
-	/** Delete specified pl (actually ends session, so you cant destroy default pl)
-		\param id Traverser id
-	*/
-	SYNAPSE_REGISTER(pl_Del)
-	{
+    /** Delete specified pl (actually ends session, so you cant destroy default pl)
+        \param id Traverser id
+    */
+    SYNAPSE_REGISTER(pl_Del)
+    {
         if (msg.dst!=defaultId)
-		{
+        {
             Cmsg out;
             out.event="core_DelSession";
             out.dst=1;
             out.send();
         }
-	}
+    }
 
     //used internally 
     SYNAPSE_REGISTER(pl_UpdateLists)
@@ -1259,16 +1292,16 @@ namespace pl
         plMan.get(dst).updateListsAsync(true);
     }
 
-	/** Change selection/search criteria for files. Initalise a new pl
+    /** Change selection/search criteria for files. Initalise a new pl
         \param s
 
-	\par Replies pl_Entry:
-	 */
-	SYNAPSE_REGISTER(pl_SetMode)
-	{
+    \par Replies pl_Entry:
+     */
+    SYNAPSE_REGISTER(pl_SetMode)
+    {
         plMan.get(dst).setMode(msg);
 
-	}
+    }
 
     SYNAPSE_REGISTER(pl_SetFileFilter)
     {
@@ -1287,79 +1320,79 @@ namespace pl
     }
 
 
-	/** Get current directory and file
-		\param id Traverser id
+    /** Get current directory and file
+        \param id Traverser id
 
-	\par Replies pl_Entry.
-	*/
-	SYNAPSE_REGISTER(pl_GetStatus)
-	{
-		plMan.get(dst).send(msg.src);
-	}
+    \par Replies pl_Entry.
+    */
+    SYNAPSE_REGISTER(pl_GetStatus)
+    {
+        plMan.get(dst).send(msg.src);
+    }
 
-	/** Select next directory entry in list
-		\param id Traverser id
+    /** Select next directory entry in list
+        \param id Traverser id
 
-	\par Replies pl_Entry:
-	 */
-	SYNAPSE_REGISTER(pl_NextPath)
-	{
-		plMan.get(dst).nextPath();
+    \par Replies pl_Entry:
+     */
+    SYNAPSE_REGISTER(pl_NextPath)
+    {
+        plMan.get(dst).nextPath();
 
-	}
+    }
 
 
-	/** Select previous entry directory in list
-		\param id Traverser id
+    /** Select previous entry directory in list
+        \param id Traverser id
 
-	\par Replies pl_Entry:
-	 */
-	SYNAPSE_REGISTER(pl_PreviousPath)
-	{
-		plMan.get(dst).previousPath();
-	}
+    \par Replies pl_Entry:
+     */
+    SYNAPSE_REGISTER(pl_PreviousPath)
+    {
+        plMan.get(dst).previousPath();
+    }
 
-	/** Enters selected directory
-		\param id Traverser id
+    /** Enters selected directory
+        \param id Traverser id
 
-	\par Replies pl_Entry:
-	 */
-	SYNAPSE_REGISTER(pl_EnterPath)
-	{
-		plMan.get(dst).enterPath();
-	}
+    \par Replies pl_Entry:
+     */
+    SYNAPSE_REGISTER(pl_EnterPath)
+    {
+        plMan.get(dst).enterPath();
+    }
 
-	/** Exits directory, selecting directory on higher up the hierarchy
-		\param id Traverser id
+    /** Exits directory, selecting directory on higher up the hierarchy
+        \param id Traverser id
 
-	\par Replies pl_Entry:
-	 */
-	SYNAPSE_REGISTER(pl_ExitPath)
-	{
-		plMan.get(dst).exitPath();
+    \par Replies pl_Entry:
+     */
+    SYNAPSE_REGISTER(pl_ExitPath)
+    {
+        plMan.get(dst).exitPath();
 
-	}
+    }
 
-	/** Next song
-		\param id Traverser id
+    /** Next song
+        \param id Traverser id
 
-	\par Replies pl_Entry:
-	 */
-	SYNAPSE_REGISTER(pl_Next)
-	{
-		plMan.get(dst).next();
+    \par Replies pl_Entry:
+     */
+    SYNAPSE_REGISTER(pl_Next)
+    {
+        plMan.get(dst).next();
 
-	}
+    }
 
-	/** Previous song
-		\param id Traverser id
+    /** Previous song
+        \param id Traverser id
 
-	\par Replies pl_Entry:
-	 */
-	SYNAPSE_REGISTER(pl_Previous)
-	{
-		plMan.get(dst).previous();
-	}
+    \par Replies pl_Entry:
+     */
+    SYNAPSE_REGISTER(pl_Previous)
+    {
+        plMan.get(dst).previous();
+    }
 
     SYNAPSE_REGISTER(pl_GotoStart)
     {
@@ -1367,9 +1400,9 @@ namespace pl
     }
 
     SYNAPSE_REGISTER(module_Shutdown)
-	{
-		shutdown=true;
-	}
+    {
+        shutdown=true;
+    }
 
     SYNAPSE_REGISTER(pl_DeleteFile)
     {
