@@ -1006,14 +1006,14 @@ namespace pl
             //FIXME: now we just assume the default filter has a certain format
             string regexStr;
             if (f!="")
-                regexStr=".*"+f+".*"+config["filter"].str();
+                regexStr="(?=.*"+f+".*)(?="+config["filter"].str()+")";
             else
                 regexStr=config["filter"].str();
             DEB("Setting file regex to: " << regexStr)
             try
             {
-                mNextFilesScanner.mFileFilter.assign(regexStr, regex::icase);
-                mPrevFilesScanner.mFileFilter.assign(regexStr, regex::icase);
+                mNextFilesScanner.mFileFilter.assign(regexStr, regex::perl|regex::icase);
+                mPrevFilesScanner.mFileFilter.assign(regexStr, regex::perl|regex::icase);
                 mState["fileFilter"]=f;
                 mState.changed();
                 reloadFiles();
@@ -1052,7 +1052,7 @@ namespace pl
             path p=mCurrentFile;
             next();
             rename(p, p.string()+".deleted");
-            gSortedDirCache[p].invalidate();
+            gSortedDirCache[p.parent_path()].invalidate();
             reloadFiles();
         }
 
