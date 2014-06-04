@@ -106,33 +106,34 @@ namespace pl
     };
 
 
-    static map<path, list<Cdirectory_entry> > gDirCache;
+    // static map<path, list<Cdirectory_entry> > gDirCache;
 
     //reads one directory and apply appropriate filtering and sorting
     class CsortedDir: public list<Cdirectory_entry>
     {
         private:
         string mSortField;
-
+        list<Cdirectory_entry> mRawDir; //unfiltered and unsorted full directory contents (to enable fast search-while-typing)
+        ptime mRawDirTime; //how long ago when rawdir readed last?
 
         //read a directory without filtering and cache the results
         //FIXME: optimize and implement cleanup/refresh
 
-        list<Cdirectory_entry> & readCached(path p)
-        {
-            if (gDirCache.find(p) == gDirCache.end())
-            {
-                DEB("Reading directory " << p.string());
-                directory_iterator end_itr;
-                for ( directory_iterator itr( p );
-                    itr != end_itr;
-                    ++itr )
-                {
-                    gDirCache[p].push_back(*itr);
-                }
-            }
-            return gDirCache[p];
-        }
+        // list<Cdirectory_entry> & readCached(path p)
+        // {
+        //     if (gDirCache.find(p) == gDirCache.end())
+        //     {
+        //         DEB("Reading directory " << p.string());
+        //         directory_iterator end_itr;
+        //         for ( directory_iterator itr( p );
+        //             itr != end_itr;
+        //             ++itr )
+        //         {
+        //             gDirCache[p].push_back(*itr);
+        //         }
+        //     }
+        //     return gDirCache[p];
+        // }
 
 
         public:
@@ -144,6 +145,11 @@ namespace pl
 //      list<Cpath> mPaths;
 //      list<Cpath>::iterator iterator;
 
+        CsortedDir()
+        {
+            invalidate();
+        }
+
         static bool compareFilename (Cdirectory_entry first, Cdirectory_entry second)
         {
             return (first.getSortName() < second.getSortName());
@@ -154,6 +160,14 @@ namespace pl
             return (first.getDate() < second.getDate());
         }
 
+        //invalidates dir, forces a rescan
+        void invalidate()
+        {
+            clear();
+            mRawDir.clear();
+            mRawDirTime=microsec_clock::local_time()-seconds(config["ttl"]+1);
+        }
+
         void read(
             const path & basePath, 
             const string & sortField, 
@@ -161,8 +175,10 @@ namespace pl
             const regex  & dirFilter, 
             const regex & fileFilter)
         {
+            int rawDirAge=(microsec_clock::local_time()-mRawDirTime).total_seconds();
+
             //if nothing has changed, dont reread if its same 
-            if (mBasePath==basePath && sortField==mSortField && filetype==mFiletype && fileFilter==mFileFilter && dirFilter == mDirFilter)
+            if (rawDirAge<config["ttl"] && mBasePath==basePath && sortField==mSortField && filetype==mFiletype && fileFilter==mFileFilter && dirFilter == mDirFilter)
                 return;
 
             mBasePath=basePath;
@@ -172,10 +188,30 @@ namespace pl
             mDirFilter=dirFilter;
             clear();
 
-            list<Cdirectory_entry> & dir=readCached(basePath);
+            if (rawDirAge>config["ttl"])
+            {
+                DEB("Reading directory " << mBasePath.string());
+                mRawDir.clear();
+                directory_iterator end_itr;
+                try
+                {
+                    for ( directory_iterator itr( mBasePath );
+                        itr != end_itr;
+                        ++itr )
+                    {
+                        mRawDir.push_back(*itr);
+                    }
+                }
+                catch (const std::exception& e)
+                {
+                    ERROR("Error while reading directory: " << e.what());
+                    ;//ignore all directory read errors
+                }
+                mRawDirTime=microsec_clock::local_time();
+            }
 
-            for ( list<Cdirectory_entry>::iterator itr=dir.begin();
-                itr != dir.end();
+            for ( list<Cdirectory_entry>::iterator itr=mRawDir.begin();
+                itr != mRawDir.end();
                 ++itr )
             {
                 //dir
@@ -1009,8 +1045,7 @@ namespace pl
             path p=mCurrentFile;
             next();
             rename(p, p.string()+".deleted");
-            gDirCache.clear();
-            gSortedDirCache.clear();
+            gSortedDirCache[p].invalidate();
             reloadFiles();
         }
 
