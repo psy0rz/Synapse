@@ -1010,11 +1010,18 @@ namespace pl
             else
                 regexStr=config["filter"].str();
             DEB("Setting file regex to: " << regexStr)
-            mNextFilesScanner.mFileFilter.assign(regexStr, regex::icase);
-            mPrevFilesScanner.mFileFilter.assign(regexStr, regex::icase);
-            mState["fileFilter"]=f;
-        mState.changed();
-            reloadFiles();
+            try
+            {
+                mNextFilesScanner.mFileFilter.assign(regexStr, regex::icase);
+                mPrevFilesScanner.mFileFilter.assign(regexStr, regex::icase);
+                mState["fileFilter"]=f;
+                mState.changed();
+                reloadFiles();
+            }
+            catch (const std::exception& e)
+            {
+                ERROR("Error in search regular expression: " << e.what());
+            }
         }
 
         void create(int id, string rootPath)
