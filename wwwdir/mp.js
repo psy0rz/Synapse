@@ -255,6 +255,7 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
 
 
         console.log(event);
+        return(false);
 
     });
 
