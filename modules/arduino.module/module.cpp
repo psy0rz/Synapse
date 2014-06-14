@@ -28,7 +28,7 @@
 
 #include "synapse.h"
 #include "cserial.h"
-#include <boost/thread/condition.hpp>
+#include <boost/regex.hpp>
 
 
 
@@ -65,14 +65,29 @@ class CserialModule : public synapse::Cserial
 		Cmsg out;
 		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), readBuffer.size());
 		dataStr.resize(dataStr.find(delimiter)+delimiter.length());
+		readBuffer.consume(dataStr.length());
 
-		//remove newline
-		out["data"]=dataStr.substr(0, dataStr.length()-1);
-		out.event="net_Read";
-		out.dst=id;
+
+		//convert into nice synapse event
+		smatch what;
+		if (regex_search(
+			dataStr,
+			what, 
+			boost::regex("([0-9]*) ([^ ]*) (.*)\r")
+		))
+		{
+			out.event="arduino_Received";
+			out["node"]=what[1];
+			out["event"]=what[2];
+			out["data"]=what[3];
+		}
+		else
+		{
+			ERROR("arduino: Unknown data received: " << dataStr);
+		}
+		out.dst=0;
 		out.send();
 
-		readBuffer.consume(dataStr.length());
 	}
 
 };
