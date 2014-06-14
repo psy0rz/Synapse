@@ -16,7 +16,6 @@
     along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-// Dont use directly: Use CnetMan instead. Look at the network-module example how to use.
 
 #include "cserial.h"
 #include "clog.h"
@@ -53,6 +52,8 @@ void Cserial::doOpen(int id, string delimiter, string port,
 	serialPort.set_option(parity_value);
 	serialPort.set_option(stop_bits_value);
 	serialPort.set_option(character_size_value);
+	//start reading the next incoming data
+	startAsyncRead();
 }
 
 
@@ -81,22 +82,20 @@ void Cserial::readHandler(
 
 }
 
-void Cnet::disconnectHandler()
+void Cserial::closeHandler()
 {
-	DEB("Initiating permanent disconnect for id " << id);
-	reconnectTime=0;
-	tcpResolver.cancel();
-	tcpSocket.close();
+	DEB("Initiating port close for id " << id);
+	serialPort.close();
 }
 
 
 
-void Cnet::doDisconnect()
+void Cserial::doClose()
 {
-	ioService.post(bind(&Cnet::disconnectHandler,this));
+	ioService.post(bind(&Cserial::closeHandler,this));
 }
 
-void Cnet::doWrite(string & data)
+void Cserial:doWrite(string & data)
 {
 	//copy string into a buffer and pass it to the ioService
 	shared_ptr<string> stringPtr(new string(data));

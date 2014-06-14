@@ -20,6 +20,7 @@
 
 #include "cnet.h"
 #include "clog.h"
+//#include <boost/asio.hpp>
 
 //using namespace std;
 //using namespace boost;
@@ -102,6 +103,7 @@ void Cnet::doConnect()
 
 
 //a connect timeout happend
+//executed from io-service thread
 void Cnet::connectTimerHandler(
 	const boost::system::error_code& ec
 )
@@ -117,6 +119,7 @@ void Cnet::connectTimerHandler(
 
 
 
+//executed from io-service thread
 void Cnet::acceptHandler(
 	asio::io_service::work work,
 	const boost::system::error_code& ec
@@ -148,6 +151,7 @@ Cnet::~Cnet ()
 
 
 //handle the results of the resolver and start connecting to the first endpoint:
+//executed from io-service thread
 void Cnet::resolveHandler(
 	const boost::system::error_code& ec,
 	asio::ip::tcp::resolver::iterator endpointI)
@@ -170,6 +174,7 @@ void Cnet::resolveHandler(
 //handle the results of the connect: 
 //-try connecting to the next endpoints in case of failure
 //-start waiting for data in case of succes
+//executed from io-service thread
 void Cnet::connectHandler(
 	asio::ip::tcp::resolver::iterator endpointI,
 	const boost::system::error_code& ec
@@ -209,6 +214,7 @@ void Cnet::connectHandler(
 
 //handle the results of a read (incoming data) 
 //used for both client and servers.
+//executed from io-service thread
 void Cnet::readHandler(
 	const boost::system::error_code& ec,
 	std::size_t bytesTransferred)
@@ -227,6 +233,7 @@ void Cnet::readHandler(
 
 }
 
+//executed from io-service thread
 void Cnet::disconnectHandler()
 {
 	DEB("Initiating permanent disconnect for id " << id);
@@ -242,59 +249,77 @@ void Cnet::doDisconnect()
 	ioService.post(bind(&Cnet::disconnectHandler,this));
 }
 
-void Cnet::doWrite(string & data)
-{
-	//copy string into a buffer and pass it to the ioService
-	shared_ptr<string> stringPtr(new string(data));
-	asio::async_write(
-		tcpSocket, 
-		asio::buffer(*stringPtr), 
-		bind(&Cnet::writeStringHandler, this, stringPtr, _1, _2)
-	);
 
+void Cnet::doWrite(string data)
+{
+	shared_ptr<asio::streambuf> bufferPtr(new asio::streambuf(data.size()));
+	std::ostream os(&*bufferPtr);
+	os << data;
+	doWrite(bufferPtr);
 }
 
-void Cnet::doWrite(shared_ptr<asio::streambuf> bufferPtr)
+void Cnet::doWrite(shared_ptr< asio::streambuf> bufferPtr)
 {
-	asio::async_write(
-		tcpSocket, 
-		*bufferPtr, 
-		bind(&Cnet::writeStreambufHandler, this, bufferPtr, _1, _2)
-	);
-
+	//post data to the service-thread
+	ioService.post(bind(&Cnet::writeHandler,this, bufferPtr));
 }
 
-void Cnet::writeStringHandler(
-	shared_ptr<string> stringPtr,
+//executed from io-service thread
+void Cnet::writeHandler(shared_ptr< asio::streambuf> bufferPtr)
+{
+	if (writeQueue.empty())
+	{		
+		writeQueue.push_back(bufferPtr);
+		//if its empty it means we're not currently writing stuff, so we should start a new async write.
+		asio::async_write(
+			tcpSocket, 
+			*writeQueue.front(),
+			bind(&Cnet::writeCompleteHandler, this, _1, _2)
+		);
+	}
+	else
+	{
+		writeQueue.push_back(bufferPtr);
+	}
+};
+
+//boost only allows us to call async_write ONCE and then we have to wait for its completion. thats why we need the writequeue.)
+//the front item on the queue is the on being currently processed by async_write.
+//executed from io-service thread
+void Cnet::writeCompleteHandler(
 	const boost::system::error_code& ec, 
 	std::size_t bytesTransferred)
 {
+	//remove the front item, since the write is complete now. because of the shared_ptrs it will be freed automaticly.
+	if (!writeQueue.empty())
+		writeQueue.pop_front();
+
+	//error?
 	if (ec)
 	{
 		reset(ec);
 		return;
 	}
 
-}
-
-void Cnet::writeStreambufHandler(
-	shared_ptr<asio::streambuf> bufferPtr,
-	const boost::system::error_code& ec, 
-	std::size_t bytesTransferred)
-{
-	if (ec)
+	if (!writeQueue.empty())
 	{
-		reset(ec);
-		return;
+		//start next async write.
+		asio::async_write(
+			tcpSocket, 
+			*writeQueue.front(),
+			bind(&Cnet::writeCompleteHandler, this, _1, _2)
+		);
 	}
-
 }
 
+
+//executed from io-service thread
 void Cnet::run()
 {
 	ioService.run();
 }
 
+//executed from io-service thread
 void Cnet::reset(const boost::system::error_code& ec)
 {
 	//we probably got disconnected or had some kind of error,
@@ -306,6 +331,8 @@ void Cnet::reset(const boost::system::error_code& ec)
 	//callback for user
 	disconnected(id, ec);
 
+	writeQueue.clear();
+
 	//check if we need to reconnect
 	if (reconnectTime)
 	{
@@ -316,6 +343,7 @@ void Cnet::reset(const boost::system::error_code& ec)
 
 }
 
+//executed from io-service thread
 void Cnet::startAsyncRead()
 {
 	asio::async_read_until(
@@ -325,6 +353,7 @@ void Cnet::startAsyncRead()
 		bind(&Cnet::readHandler, this, _1, _2)
 	);
 }
+
 
 
 void Cnet::init(int id)
@@ -354,17 +383,20 @@ void Cnet::connecting(int id, const string &host, int port)
 	DEB(id << " is connecting to " << host << ":" << port);
 }
 
+//executed from io-service thread
 void Cnet::connected(int id, const string &host, int port)
 {
 	//dummy
 }
 
+//executed from io-service thread
 void Cnet::connected_server(int id, const string &host, int port, int local_port)
 {
 	//dummy
 	DEB(id << " server is connected to " << host << ":" << port);
 }
 
+//executed from io-service thread
 void Cnet::connected_client(int id, const string &host, int port)
 {
 	//dummy
@@ -373,7 +405,7 @@ void Cnet::connected_client(int id, const string &host, int port)
 
 
 
-
+//executed from io-service thread
 void Cnet::disconnected(int id, const boost::system::error_code& error)
 {
 	//dummy
@@ -382,6 +414,7 @@ void Cnet::disconnected(int id, const boost::system::error_code& error)
 
 
 
+//executed from io-service thread
 void Cnet::received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 {
 	//dummy

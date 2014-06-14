@@ -23,6 +23,9 @@
 // Threadsafe because we only post stuff with io_serivce::post()
 // The CnetMan class is responsible for handling the creation of these Cnet-objects.
 
+//look in cnet.cpp if you want to know from witch thread a function is called:
+//it can either be syncroniously from the calling thread, or asyncroniously from the io-service thread.
+
 
 
 
@@ -59,11 +62,13 @@ namespace synapse
 		Cnet();
 		virtual ~Cnet();
 
+		list < shared_ptr<asio::streambuf> > writeQueue;
+
 		//end-user api to ask us to DO stuff: (usually called from CnetMan)
 		void doDisconnect();
 		void doAccept(int id, CacceptorPtr acceptorPtr);
 		void doConnect(int id, string host, int port, int reconnectTime=0, string delimiter="\n");
-		void doWrite(string & data);
+		void doWrite(string data);
 		void doWrite(shared_ptr<asio::streambuf> bufferPtr);
 		void run();
 
@@ -125,15 +130,11 @@ namespace synapse
 			);
 
 	
-		void writeStringHandler(
-			shared_ptr<string> stringPtr,
-			const boost::system::error_code& ec,
+		void writeHandler(shared_ptr< asio::streambuf> bufferPtr);
+		void writeCompleteHandler(
+			const boost::system::error_code& ec, 
 			std::size_t bytesTransferred);
-	
-		void writeStreambufHandler(
-			shared_ptr<asio::streambuf> bufferPtr,
-			const boost::system::error_code& ec,
-			std::size_t bytesTransferred);
+
 	
 		void connectTimerHandler(
 			const boost::system::error_code& ec
