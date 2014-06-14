@@ -29,13 +29,16 @@
 #include "synapse.h"
 #include "cserial.h"
 #include <boost/regex.hpp>
-
-
+#include <time.h>
+#include <cconfig.h>
 
 using namespace boost;
 using namespace std;
 
 int moduleSessionId=0;
+
+synapse::Cconfig state;
+
 /** module_Init - called first, set up basic stuff here
  */
 SYNAPSE_REGISTER(module_Init)
@@ -43,8 +46,9 @@ SYNAPSE_REGISTER(module_Init)
 	Cmsg out;
 	moduleSessionId=msg.dst;
 
-	//one read tread (cserial run()), and one thread to receive writes.
+	state.load("var/arduino.state");
 
+	//one read tread (cserial run()), and one thread to receive writes.
 	out.clear();
 	out.event="core_ChangeModule";
 	out["maxThreads"]=2;
@@ -55,6 +59,23 @@ SYNAPSE_REGISTER(module_Init)
 	out["maxThreads"]=2;
 	out.send();
 
+	//receive by anonymous only:
+	out.clear();
+	out.event="core_ChangeEvent";
+	out["modifyGroup"]=	"modules";
+	out["sendGroup"]=	"modules";
+	out["recvGroup"]=	"anonymous";
+ 	out["event"]=		"arduino_Received"; 
+ 	out.send();
+
+	//send by anonymous only:
+	out.clear();
+	out.event="core_ChangeEvent";
+	out["modifyGroup"]=	"modules";
+	out["sendGroup"]=	"anonymous";
+	out["recvGroup"]=	"modules";
+	out["event"]=		"asterisk_Send";
+	out.send();
 
 }
 
@@ -80,6 +101,14 @@ class CserialModule : public synapse::Cserial
 			out["node"]=what[1];
 			out["event"]=what[2];
 			out["data"]=what[3];
+			out["time"]=time(NULL);
+
+			//store events per node in a tree
+			state[out["node"]][out["event"]]["data"]=out["data"];
+			state[out["node"]][out["event"]]["time"]=out["time"];
+			state.changed();
+			state.save();
+
 		}
 		else
 		{
@@ -115,17 +144,31 @@ SYNAPSE_REGISTER(module_SessionStart)
 
 }
 
-
-
-
-/** Write data to the connection related to src
- * If you care about data-ordering, send this to session-id that sended you the net_Connected.
- */
-SYNAPSE_REGISTER(net_Write)
+/** Re-send all arduino events to caller */
+SYNAPSE_REGISTER(arduino_Refresh)
 {
-	//linebased, so add a newline
-	msg["data"].str()+="\n";
-	serial.doWrite(msg["data"]);
+	FOREACH_VARMAP_ITER(nodeI,state)
+	{
+		Cmsg out;
+		out.event="arduino_Received";
+		out.dst=msg.src;
+		out["node"]=nodeI->first;
+		FOREACH_VARMAP_ITER(eventI,nodeI->second)
+		{
+			out["event"]=eventI->first;
+			out["data"]=eventI->second["data"];
+			out["time"]=eventI->second["time"];
+			out.send();
+		}
+	}
+}
+
+
+SYNAPSE_REGISTER(arduino_Send)
+{
+	string s;
+	s=msg["node"].str()+" "+msg["event"].str()+" "+msg["data"].str()+"\n";
+	serial.doWrite(s);
 }
 
 /** When a session ends, make sure the corresponding network connection is disconnected as well.
