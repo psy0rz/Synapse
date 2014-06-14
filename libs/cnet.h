@@ -62,13 +62,12 @@ namespace synapse
 		Cnet();
 		virtual ~Cnet();
 
-		list < shared_ptr<asio::streambuf> > writeQueue;
 
 		//end-user api to ask us to DO stuff: (usually called from CnetMan)
 		void doDisconnect();
 		void doAccept(int id, CacceptorPtr acceptorPtr);
 		void doConnect(int id, string host, int port, int reconnectTime=0, string delimiter="\n");
-		void doWrite(string data);
+		void doWrite(string & data);
 		void doWrite(shared_ptr<asio::streambuf> bufferPtr);
 		void run();
 
@@ -94,6 +93,9 @@ namespace synapse
 
 		//just stuff for getStatusStr, not neccesary for anything else.
 		int statusServer;
+
+		//queue of buffers that need to be written
+		list < shared_ptr<asio::streambuf> > writeQueue;
 
 		protected:
 

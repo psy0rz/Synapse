@@ -30,7 +30,7 @@ using namespace std;
 using namespace boost;
 
 Cserial::Cserial()
-		readBuffer(65535), serialPort(ioService) 
+		:readBuffer(65535), serialPort(ioService) 
 {
 	delimiter="\n";
 } 
@@ -39,10 +39,10 @@ Cserial::Cserial()
 
 void Cserial::doOpen(int id, string delimiter, string port, 
 	boost::asio::serial_port_base::baud_rate baud_value,
-	boost::asio::serial_port_base::flow_control flow_control_value,
+	boost::asio::serial_port_base::character_size character_size_value,
 	boost::asio::serial_port_base::parity parity_value,
 	boost::asio::serial_port_base::stop_bits stop_bits_value,
-	boost::asio::serial_port_base::character_size character_size_value)
+	boost::asio::serial_port_base::flow_control flow_control_value)
 {
 	this->id=id;
 	this->delimiter=delimiter;
@@ -95,147 +95,110 @@ void Cserial::doClose()
 	ioService.post(bind(&Cserial::closeHandler,this));
 }
 
-void Cserial:doWrite(string & data)
+void Cserial::doWrite(string & data)
 {
-	//copy string into a buffer and pass it to the ioService
-	shared_ptr<string> stringPtr(new string(data));
-	asio::async_write(
-		tcpSocket, 
-		asio::buffer(*stringPtr), 
-		bind(&Cnet::writeStringHandler, this, stringPtr, _1, _2)
-	);
-
+	shared_ptr<asio::streambuf> bufferPtr(new asio::streambuf(data.size()));
+	std::ostream os(&*bufferPtr);
+	os << data;
+	doWrite(bufferPtr);
 }
 
-void Cnet::doWrite(shared_ptr<asio::streambuf> bufferPtr)
+void Cserial::doWrite(shared_ptr< asio::streambuf> bufferPtr)
 {
-	asio::async_write(
-		tcpSocket, 
-		*bufferPtr, 
-		bind(&Cnet::writeStreambufHandler, this, bufferPtr, _1, _2)
-	);
-
+	//post data to the service-thread
+	ioService.post(bind(&Cserial::writeHandler,this, bufferPtr));
 }
 
-void Cnet::writeStringHandler(
-	shared_ptr<string> stringPtr,
+
+//executed from io-service thread
+void Cserial::writeHandler(shared_ptr< asio::streambuf> bufferPtr)
+{
+	if (writeQueue.empty())
+	{		
+		writeQueue.push_back(bufferPtr);
+		//if its empty it means we're not currently writing stuff, so we should start a new async write.
+		asio::async_write(
+			serialPort, 
+			*writeQueue.front(),
+			bind(&Cserial::writeCompleteHandler, this, _1, _2)
+		);
+	}
+	else
+	{
+		writeQueue.push_back(bufferPtr);
+	}
+};
+
+//boost only allows us to call async_write ONCE and then we have to wait for its completion. thats why we need the writequeue.)
+//the front item on the queue is the on being currently processed by async_write.
+//executed from io-service thread
+void Cserial::writeCompleteHandler(
 	const boost::system::error_code& ec, 
 	std::size_t bytesTransferred)
 {
+	//remove the front item, since the write is complete now. because of the shared_ptrs it will be freed automaticly.
+	if (!writeQueue.empty())
+		writeQueue.pop_front();
+
+	//error?
 	if (ec)
 	{
 		reset(ec);
 		return;
 	}
 
-}
-
-void Cnet::writeStreambufHandler(
-	shared_ptr<asio::streambuf> bufferPtr,
-	const boost::system::error_code& ec, 
-	std::size_t bytesTransferred)
-{
-	if (ec)
+	if (!writeQueue.empty())
 	{
-		reset(ec);
-		return;
+		//start next async write.
+		asio::async_write(
+			serialPort, 
+			*writeQueue.front(),
+			bind(&Cserial::writeCompleteHandler, this, _1, _2)
+		);
 	}
-
 }
 
-void Cnet::run()
+
+
+
+//executed from io-service thread
+void Cserial::run()
 {
 	ioService.run();
 }
 
-void Cnet::reset(const boost::system::error_code& ec)
+//executed from io-service thread
+void Cserial::reset(const boost::system::error_code& ec)
 {
-	//we probably got disconnected or had some kind of error,
-	//just cancel and close everything to be sure.
-	connectTimer.cancel();
-	tcpResolver.cancel();
-	tcpSocket.close();
-
 	//callback for user
-	disconnected(id, ec);
-
-	//check if we need to reconnect
-	if (reconnectTime)
-	{
-		DEB("Will reconnect id " << id << ", after " << reconnectTime << " seconds...");
-		sleep(reconnectTime);
-		doConnect();
-	}
+	error(id, ec);
 
 }
 
-void Cnet::startAsyncRead()
+//executed from io-service thread
+void Cserial::startAsyncRead()
 {
 	asio::async_read_until(
-		tcpSocket,
+		serialPort,
 		readBuffer,
 		delimiter,
-		bind(&Cnet::readHandler, this, _1, _2)
+		bind(&Cserial::readHandler, this, _1, _2)
 	);
 }
 
 
-void Cnet::init(int id)
+
+//executed from io-service thread
+void Cserial::error(int id, const boost::system::error_code& error)
 {
 	//dummy
-	DEB(id << " initalizing");
-}
-
-void Cnet::init_server(int id, CacceptorPtr acceptorPtr)
-{
-	DEB(id << " initalizing server");
+	DEB(id << " had an error:" << error.message());
 }
 
 
 
-void Cnet::accepting(int id, int port)
-{
-	//dummy
-	DEB(id << " is accepting connection on " << port);
-}
-
-
-
-void Cnet::connecting(int id, const string &host, int port)
-{
-	//dummy
-	DEB(id << " is connecting to " << host << ":" << port);
-}
-
-void Cnet::connected(int id, const string &host, int port)
-{
-	//dummy
-}
-
-void Cnet::connected_server(int id, const string &host, int port, int local_port)
-{
-	//dummy
-	DEB(id << " server is connected to " << host << ":" << port);
-}
-
-void Cnet::connected_client(int id, const string &host, int port)
-{
-	//dummy
-	DEB(id << " client is connected to " << host << ":" << port);
-}
-
-
-
-
-void Cnet::disconnected(int id, const boost::system::error_code& error)
-{
-	//dummy
-	DEB(id << " has been disconnected:" << error.message());
-}
-
-
-
-void Cnet::received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
+//executed from io-service thread
+void Cserial::received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 {
 	//dummy
 	DEB(id << " has received data:" << &readBuffer);
@@ -243,16 +206,5 @@ void Cnet::received(int id, asio::streambuf &readBuffer, std::size_t bytesTransf
 }
 
 
-void Cnet::getStatus(Cvar & var)
-{
-	if (tcpSocket.is_open())
-	{
-		var["id"]=id;
-		var["localAddr"]=tcpSocket.local_endpoint().address().to_string();
-		var["localPort"]=tcpSocket.local_endpoint().port();
-		var["remoteAddr"]=tcpSocket.remote_endpoint().address().to_string();
-		var["remotePort"]=tcpSocket.remote_endpoint().port();
-	}
-}
 
 }

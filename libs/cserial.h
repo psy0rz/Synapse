@@ -41,7 +41,7 @@ namespace synapse
 
 
 
-	class Cnet
+	class Cserial
 	{
 
 		public:
@@ -52,10 +52,10 @@ namespace synapse
 		//end-user api to ask us to DO stuff: 
 		void doOpen(int id, string delimiter, string port, 
 			boost::asio::serial_port_base::baud_rate baud_value,
-			boost::asio::serial_port_base::flow_control flow_control_value,
+			boost::asio::serial_port_base::character_size character_size,
 			boost::asio::serial_port_base::parity parity_value,
 			boost::asio::serial_port_base::stop_bits stop_bits_value,
-			boost::asio::serial_port_base::character_size character_size
+			boost::asio::serial_port_base::flow_control flow_control_value
 		);
 		void doClose();
 		void doWrite(string & data);
@@ -70,6 +70,9 @@ namespace synapse
 			const boost::system::error_code& ec,
 			std::size_t bytesTransferred);
 
+		void closeHandler();
+
+
 		asio::io_service ioService;
 
 		private:
@@ -82,48 +85,29 @@ namespace synapse
 
 		//this needs to be protected, in case someone overrides startAsyncRead():
 		asio::streambuf readBuffer;
-		serial_port serialPort;
+		asio::serial_port serialPort;
 
 		//never change this, CnetMan assigns it to you
 		int id;
 
+		//queue of buffers that need to be written
+		list < shared_ptr<asio::streambuf> > writeQueue;
 
 		private:
 
 		//Internal functions
-
-
-		void writeStringHandler(
-			shared_ptr<string> stringPtr,
-			const boost::system::error_code& ec,
+		void writeHandler(shared_ptr< asio::streambuf> bufferPtr);
+		void writeCompleteHandler(
+			const boost::system::error_code& ec, 
 			std::size_t bytesTransferred);
-	
-		void writeStreambufHandler(
-			shared_ptr<asio::streambuf> bufferPtr,
-			const boost::system::error_code& ec,
-			std::size_t bytesTransferred);
-	
 
+	
 		void reset(const boost::system::error_code& ec);
 
 		//you might want to override this if you need more flexible reading.
-		//(usefull for http servers etc)
 		virtual void startAsyncRead();
-
-		// //end-user "hooks" for server
-		// virtual void init_server(int id, CacceptorPtr acceptorPtr);
-		// virtual void accepting(int id, int port);
-		// virtual void connected_server(int id, const string &host, int port, int local_port);
-
-		// //end-user "hooks" for client
-		// virtual void connecting(int id, const string &host, int port);
-		// virtual void connected_client(int id, const string &host, int port);
-
-		//end-user "hooks" for client and server
-		// virtual void init(int id);
-		// virtual void connected(int id, const string &host, int port);
-		// virtual void disconnected(int id, const boost::system::error_code& error);
 		virtual void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred);
+		virtual void error(int id, const boost::system::error_code& error);
 
 	};
 }

@@ -250,7 +250,7 @@ void Cnet::doDisconnect()
 }
 
 
-void Cnet::doWrite(string data)
+void Cnet::doWrite(string & data)
 {
 	shared_ptr<asio::streambuf> bufferPtr(new asio::streambuf(data.size()));
 	std::ostream os(&*bufferPtr);
