@@ -192,7 +192,7 @@ void Cserial::startAsyncRead()
 void Cserial::error(int id, const boost::system::error_code& error)
 {
 	//dummy
-	DEB(id << " had an error:" << error.message());
+	ERROR("serial " << id << " had an error:" << error.message());
 }
 
 

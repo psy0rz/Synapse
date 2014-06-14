@@ -6,19 +6,28 @@
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
 	<title>Home controller</title>
 
-  
-    <link href="X/css/dark-hive/jquery-ui.css" rel="stylesheet" type="text/css"/>
     <link href="/css/ui-darkness/jquery-ui.css" rel="stylesheet" type="text/css"/>
-    <link href="X/css/dot-luv/jquery-ui.css" rel="stylesheet" type="text/css"/>
   
     <script type="text/javascript" src="/synapse/synapse.js"></script>
     <script type="text/javascript" src="arduino.js"></script>
 
 	<style>
-
-
-
+        .prototype
+        {
+            display: none;
+        }
  	</style>
+
+    <script>
+        $(document).ready(function(){
+            $('.prototype[event="node.ping"]')
+                .on("widget_update",function(e, msg)
+                {
+                    $(this).text("node "+msg["node"]);
+                    $(this).css('background-image', 'url("arduino/online.png")');
+                });
+        });
+    </script>
 </head>
 
 
@@ -32,7 +41,11 @@
         background-color: #000000"
 >
 
-
+<div class='prototype' event='node.ping' style='
+    padding-left: 1em;
+    background-repeat: no-repeat;
+'>
+</div>
 
 
 

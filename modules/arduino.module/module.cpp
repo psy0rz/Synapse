@@ -171,11 +171,4 @@ SYNAPSE_REGISTER(arduino_Send)
 	serial.doWrite(s);
 }
 
-/** When a session ends, make sure the corresponding network connection is disconnected as well.
- *
- */
-SYNAPSE_REGISTER(module_SessionEnded)
-{
-	serial.doClose();
-}
 
