@@ -4,9 +4,19 @@ synapse_register("error",function(errortxt)
     $('#error').html(errortxt);
 }); 
 
-        
+    
+var timeOffset=0;
+
+function serverTime()
+{
+    return ( ((new Date()).getTime()/1000) + timeOffset);
+}
+
 synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
 {
+    timeOffset=Math.round( msg["time"]-((new Date()).getTime()/1000));
+    console.debug("Server time offset: ", timeOffset);
+
     //style buttons and give them icons
     $("button").each(function()
     {

@@ -573,6 +573,7 @@ SYNAPSE_REGISTER(core_Login)
 
 \SEND module_SessionStart:
 	to the new session, within the same module. This is to let the module know about its new session.
+		\arg \c time Server time in seconds since epoch. (usefull for syncronising time)
 		\arg \c username Username of the session
 		\arg \c description (optional) description of the session, usefull for debugging and administration.
 		\arg \c (other parameters) Contains all specified arguments. (without password)
@@ -619,6 +620,8 @@ SYNAPSE_REGISTER(core_NewSession)
 					startmsg=msg;
 					if (startmsg.isSet("password"))
 						startmsg.erase("password");
+
+					startmsg["time"]=time(NULL);
 
 					//set username
 					startmsg.event="module_SessionStart";

@@ -20,11 +20,29 @@
 
     <script>
         $(document).ready(function(){
+
+            //////////////////////// node.ping
+            var pings={};
             $('.prototype[event="node.ping"]')
                 .on("widget_update",function(e, msg)
                 {
+                    clearTimeout(pings[msg["node"]]);
                     $(this).text("node "+msg["node"]);
-                    $(this).css('background-image', 'url("arduino/online.png")');
+                    var last_ping=serverTime()-msg["time"];
+                    if (last_ping>65)
+                    {
+                        $(this).css('background-image', 'url("arduino/offline.png")');
+                    }
+                    else
+                    {
+                        $(this).css('background-image', 'url("arduino/online.png")');
+                        //show offline when we dont receive the next ping in time
+                        setTimeout(function()
+                        {
+                            $(this).css('background-image', 'url("arduino/offline.png")');
+
+                        }, 65000-last_ping*1000);
+                    }
                 });
         });
     </script>
