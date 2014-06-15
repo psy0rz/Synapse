@@ -24,10 +24,52 @@
             //////////////////////// node.ping
             var pings={};
             $('.prototype[event="node.ping"]')
+                .on("widget_created",function(e, msg)
+                {
+                    var dialog=$('.dialog',this);
+                    var name=$('.name',this).text("node "+msg["node"]);
+
+                    //menu to send events with data (will show send-dialog)
+                    var menu=$('.menu',this).menu({
+                        "select":function(e,ui)
+                        {
+                            $('.node', dialog).text(msg["node"]);
+                            $('.event', dialog).text(ui.item.attr("send"));
+                            dialog.show().dialog();
+
+                            $('.send', dialog).off().click(function()
+                            {
+                                send(0,"arduino_Send", {
+                                    "node": msg["node"],
+                                    "event": ui.item.attr("send"),
+                                    "data": $('.data', dialog).val()
+                                });
+                            });
+                        }
+                    });
+
+
+                    //show menu
+                    name.click(function()
+                    {
+                        menu.show().position({
+                            my: "left top",
+                            at: "left bottom",
+                            of: name
+                        });
+
+                        $(document).one("click",function()
+                        {
+                            menu.hide();
+                        });
+                        return(false);
+                    });
+
+
+                })
                 .on("widget_update",function(e, msg)
                 {
                     clearTimeout(pings[msg["node"]]);
-                    $(this).text("node "+msg["node"]);
                     var last_ping=serverTime()-msg["time"];
                     if (last_ping>65)
                     {
@@ -66,6 +108,7 @@
                                 "data": 10
                             });
                         });
+
                 })
                 .on("widget_update",function(e,msg)
                 {
@@ -81,6 +124,8 @@
                     }
 
                 });
+
+
         });
 
 
@@ -102,11 +147,25 @@
     padding-left: 1em;
     background-repeat: no-repeat;
 '>
+    <span class='name'></span>
+    <ul class='menu' style='display:none; position:absolute; z-index:10'>
+      <li send='lock.set_pwm'><a href='#'>Set PWM</a></li>
+      <li send='rfid.set_adm'><a href='#'>Set admin key</a></li>
+      <li send='rfid.set_ut'><a href='#'>Set unlock time</a></li>
+    </ul>
+    <div class='dialog' style='display:none' title='Send event'>
+        To node: <span class='node'></span><br>
+        Event: <span class='event'></span><br>
+        Data: <input class='data' type='text'></input><br>
+
+        <button class='send'>Send</button>
+    </div>
+
 </div>
 
 <div class='prototype' event='rfid.state' style=''>
-    <input class='lock' type="submit" value="Lock">
-    <input class='unlock' type="submit" value="Unlock">
+    <button class='lock'>Lock</button>
+    <button class='unlock'>Unlock</button>
 </div>
 
 
