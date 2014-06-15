@@ -44,7 +44,46 @@
                         }, 65000-last_ping*1000);
                     }
                 });
+
+            //////////////////////// rfid.state
+            $('.prototype[event="rfid.state"]')
+                .on("widget_created",function(e, msg)
+                {
+                    $(this).attr("title","Node "+msg["node"]);
+                    $('.lock',this).button().click(function()
+                        {
+                            send(0,"arduino_Send", {
+                                "node": msg["node"],
+                                "event": "rfid.lock",
+                                "data": 0
+                            });
+                        });
+                    $('.unlock',this).button().click(function()
+                        {
+                            send(0,"arduino_Send", {
+                                "node": msg["node"],
+                                "event": "rfid.unlock",
+                                "data": 10
+                            });
+                        });
+                })
+                .on("widget_update",function(e,msg)
+                {
+                    if (msg["data"].substr(0,4)=="lock")
+                    {
+                        $(".lock",this).css("background","red");
+                        $(".unlock",this).css("background","gray");
+                    }
+                    else
+                    {
+                        $(".lock",this).css("background","gray");
+                        $(".unlock",this).css("background","green");
+                    }
+
+                });
         });
+
+
     </script>
 </head>
 
@@ -63,6 +102,11 @@
     padding-left: 1em;
     background-repeat: no-repeat;
 '>
+</div>
+
+<div class='prototype' event='rfid.state' style=''>
+    <input class='lock' type="submit" value="Lock">
+    <input class='unlock' type="submit" value="Unlock">
 </div>
 
 
