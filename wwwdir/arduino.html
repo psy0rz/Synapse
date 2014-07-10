@@ -7,9 +7,13 @@
 	<title>Home controller</title>
 
     <link href="/css/ui-darkness/jquery-ui.css" rel="stylesheet" type="text/css"/>
-  
+    
     <script type="text/javascript" src="/synapse/synapse.js"></script>
+
     <script type="text/javascript" src="arduino.js"></script>
+
+    <script src="lib/jquery.ui.colorPicker.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="lib/jquery.ui.colorPicker.css">
 
 	<style>
         .prototype
@@ -125,6 +129,65 @@
 
                 });
 
+            //////////////////////// led strip
+            $('.prototype[event="led.boot"]')
+                .on("widget_created",function(e, msg)
+                {
+                    $(this).attr("title","Node "+msg["node"]);
+                    $(".col", this).colorPicker({
+                        size: 200,
+                        format: 'rgb',
+                        colorChange:function(e, ui)
+                        {
+                            var colnr=parseInt($(this).attr('colnr'));
+                            send(0,"arduino_Send", {
+                                "node": msg["node"],
+                                "event": "led.col",
+                                "data": $(this).attr('colnr')+" "+ (ui.red>>1) +" "+ (ui.green>>1) +" "+ (ui.blue>>1)
+                            });
+                        }
+
+                    });
+
+                    $( ".fade",this ).slider({
+                        //orientation: "vertical",
+                        range: "min",
+                        min: -30,
+                        max: 30,
+                        value: 0,
+                        slide: function( event, ui ) {
+                            var colnr=parseInt($(this).attr('colnr'));
+                            send(0,"arduino_Send", {
+                                "node": msg["node"],
+                                "event": "led.fade",
+                                "data": $(this).attr('colnr')+" "+ (-ui.value)
+                            });
+                            
+                      }
+                    });
+
+                    $( ".speed",this ).slider({
+                        //orientation: "vertical",
+                        range: "min",
+                        min: 0,
+                        max: 255,
+                        value: 127,
+                        slide: function( event, ui ) {
+                            var colnr=parseInt($(this).attr('colnr'));
+                            send(0,"arduino_Send", {
+                                "node": msg["node"],
+                                "event": "led.speed",
+                                "data": ui.value
+                            });
+                            
+                      }
+                    });
+                })
+                .on("widget_update",function(e,msg)
+                {
+                    ;;
+                });
+
 
         });
 
@@ -168,6 +231,24 @@
     <button class='unlock'>Unlock</button>
 </div>
 
+<div class='prototype' event='led.boot' style=''>
+    <div style='width:20em' class='speed'></div>
+    <div>
+        Main color
+        <input type="text" class='col' colnr='0'>
+    </div>
+    <div style='width:20em' class='fade' colnr='0'></div>
+    <div>
+        Secondairy color
+        <input type="text" class='col' colnr='1'>
+    </div>
+    <div style='width:20em' class='fade' colnr='1'></div>
+    <div>
+        Background color
+        <input type="text" class='col' colnr='2'>
+    </div>
+    <div style='width:20em' class='fade' colnr='2'></div>
+</div>
 
 
 </body>
