@@ -45,8 +45,6 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
 
 synapse_register("arduino_Received",function(msg_src, msg_dst, msg_event, msg)
 {
-    console.log(msg);
-
     //every node/event combination gets a widget, cloned from the prototype
     var widget_class=msg["node"]+"_"+msg["event"].replace(".","_");
     var widget_element=$("."+widget_class);

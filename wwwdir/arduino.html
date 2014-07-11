@@ -130,10 +130,32 @@
                 });
 
             //////////////////////// led strip
+            synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
+            {
+                send(0, "arduino_DbGet", { 
+                    table: "led"
+                });
+            });
+
+            synapse_register("arduino_DbItems",function(msg_src, msg_dst, msg_event, msg)
+            {
+                if (msg["table"]!="led")
+                    return;
+
+                //delete all presets
+                $('.led-controller .preset').remove();
+
+                //create all presets
+                for (i in msg["items"])
+                {
+                    $('.led-controller .presets').append("<a href='#' class='preset' preset='"+msg["items"][i]+"'>"+msg["items"][i]+"</a> ");
+                }
+            });
+
             $('.prototype[event="led.boot"]')
                 .on("widget_created",function(e, msg)
                 {
-                    $(this).attr("title","Node "+msg["node"]);
+                    $(this).attr("title","Led strip node "+msg["node"]);
                     $(".col", this).colorPicker({
                         size: 200,
                         format: 'rgb',
@@ -181,6 +203,21 @@
                             });
                             
                       }
+                    });
+
+                    $(".presets", this).on("click", ".preset", function()
+                    {
+                        console.log(this);
+                        console.log(widget_class);
+                    });
+
+                    $(".preset-save").click(function()
+                    {
+                        send(0, "arduino_DbPut", { 
+                            table: "led",
+                            name: $()
+                        });
+
                     });
                 })
                 .on("widget_update",function(e,msg)
@@ -231,23 +268,39 @@
     <button class='unlock'>Unlock</button>
 </div>
 
-<div class='prototype' event='led.boot' style=''>
-    <div style='width:20em' class='speed'></div>
+<div class='prototype led-controller' event='led.boot' style='border: solid'>
     <div>
-        Main color
-        <input type="text" class='col' colnr='0'>
+        <input class='preset-name' type='text'>
+        <button class='preset-save'>Save</button>
+        <button class='preset-delete'>Delete</button>
+        <div class="presets">
+        </div>
     </div>
-    <div style='width:20em' class='fade' colnr='0'></div>
-    <div>
-        Secondairy color
-        <input type="text" class='col' colnr='1'>
+
+    <div style='display:inline-block; padding:1em;'>
+        <div style='width:20em' class='speed' title='Effect speed'></div>
+        <div >
+            Main color
+            <input type="text" class='col' colnr='0'>
+        </div>
+        <div style='width:20em' class='fade' colnr='0' title='Fade speed'></div>
     </div>
-    <div style='width:20em' class='fade' colnr='1'></div>
-    <div>
-        Background color
-        <input type="text" class='col' colnr='2'>
+
+    <div style='display:inline-block;padding:1em;'>
+        <div>
+            Secondairy color
+            <input type="text" class='col' colnr='1'>
+        </div>
+        <div style='width:20em' class='fade' colnr='1' title='Fade speed'></div>
     </div>
-    <div style='width:20em' class='fade' colnr='2'></div>
+
+    <div style='display:inline-block;padding:1em;'>
+        <div>
+            Background color
+            <input type="text" class='col' colnr='2'>
+        </div>
+        <div style='width:20em' class='fade' colnr='2' title='Fade speed'></div>
+    </div>
 </div>
 
 

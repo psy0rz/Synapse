@@ -38,6 +38,7 @@ using namespace std;
 int moduleSessionId=0;
 
 synapse::Cconfig state;
+synapse::Cconfig db;
 
 /** module_Init - called first, set up basic stuff here
  */
@@ -47,6 +48,7 @@ SYNAPSE_REGISTER(module_Init)
 	moduleSessionId=msg.dst;
 
 	state.load("var/arduino.state");
+	db.load("var/arduino.db");
 
 	//one read tread (cserial run()), and one thread to receive writes.
 	out.clear();
@@ -171,4 +173,46 @@ SYNAPSE_REGISTER(arduino_Send)
 	serial.doWrite(s);
 }
 
+/** Store stuff in database (settings and so on)
+* table: table/category
+* name: name and identifier of the data object (overwrites existing)
+* data: actual data
+*/
+SYNAPSE_REGISTER(arduino_DbPut)
+{
+	db[msg["table"]][msg["name"]]=msg["data"];
+	db.changed();
+	db.save();
+}
+
+/** Gets stuff from database by sending arduino_DbItem or arduino_DbItems (depending if name was specified or not)
+*/
+SYNAPSE_REGISTER(arduino_DbGet)
+{
+	if (msg.isSet("name"))
+	{
+		Cmsg out;
+		out.dst=msg.src;
+		out.event="arduino_DbItem";
+		out["table"]=msg["table"];
+		out["name"]=msg["name"];
+		out["data"]=db[msg["table"]][msg["name"]];
+		out["request_id"]=msg["request_id"];
+		out.send();
+	}
+	else
+	{
+		Cmsg out;
+		out.dst=msg.src;
+		out.event="arduino_DbItems";
+		out["table"]=msg["table"];
+		out["items"].list();
+		out["request_id"]=msg["request_id"];
+		FOREACH_VARMAP(item, db[msg["table"]])
+		{
+			out["items"].list().push_back(item.first);
+		}
+		out.send();
+	}
+}
 
