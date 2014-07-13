@@ -136,7 +136,7 @@ SYNAPSE_REGISTER(module_SessionStart)
 
 	using namespace boost::asio;
 	serial.doOpen(0, "\n", "/dev/ttyUSB0", 
-		serial_port_base::baud_rate(115200), 
+		serial_port_base::baud_rate(9600), 
 		serial_port_base::character_size(8),
 		serial_port_base::parity(serial_port_base::parity::none), 
 		serial_port_base::stop_bits(serial_port_base::stop_bits::one), 
