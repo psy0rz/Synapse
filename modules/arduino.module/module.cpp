@@ -176,11 +176,19 @@ SYNAPSE_REGISTER(arduino_Send)
 /** Store stuff in database (settings and so on)
 * table: table/category
 * name: name and identifier of the data object (overwrites existing)
-* data: actual data
+* data: actual data (if not set will delete the data)
 */
 SYNAPSE_REGISTER(arduino_DbPut)
 {
-	db[msg["table"]][msg["name"]]=msg["data"];
+	if (msg.isSet("data"))
+	{
+		db[msg["table"]][msg["name"]]=msg["data"];
+	}
+	//delete
+	else
+	{
+		db[msg["table"]].map().erase(msg["name"]);
+	}
 	db.changed();
 	db.save();
 }

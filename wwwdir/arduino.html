@@ -175,7 +175,10 @@
                 var controller=$("#"+msg.request_id);
                 var node=controller.attr("node");
 
+                $('.preset-name', controller).val(msg.name);
+
                 //update the arduino
+                send(0,"arduino_Send", { "node": node, "event": "led.pat", "data": msg.data.pat });
                 send(0,"arduino_Send", { "node": node, "event": "led.speed", "data": msg.data.speed });
                 send(0,"arduino_Send", { "node": node, "event": "led.fade", "data": "0 "+msg.data.fade[0] });
                 send(0,"arduino_Send", { "node": node, "event": "led.fade", "data": "1 "+msg.data.fade[1] });
@@ -185,16 +188,17 @@
                 led_send_color(node, 2, msg.data.col[2]);
 
                 //set all the widget in this controller
-                $('.col[colnr="0"]', controller).ColorPickerSetColor(msg.data.col[0]).click();
+                $('.col[colnr="0"]', controller).ColorPickerSetColor(msg.data.col[0]);
                 $('.col[colnr="1"]', controller).ColorPickerSetColor(msg.data.col[1]);
                 $('.col[colnr="2"]', controller).ColorPickerSetColor(msg.data.col[2]);
                 $('.speed', controller).slider("value", msg.data.speed);
                 $('.fade[colnr="0"]', controller).slider("value", msg.data.fade[0]);
                 $('.fade[colnr="1"]', controller).slider("value", msg.data.fade[1]);
                 $('.fade[colnr="2"]', controller).slider("value", msg.data.fade[2]);
-                $('.preset-name', controller).val(msg.name);
+                $('.pat', controller).spinner("value", msg.data.pat);
 
                 $.extend(true, controller.data("preset"), msg.data);
+                
             });
 
             $('.prototype[event="led.boot"]')
@@ -230,6 +234,22 @@
                             var colnr=this.parent().attr('colnr');
                             preset.col[colnr]=rgb;
                             led_send_color(msg["node"], colnr, rgb);
+                        }
+
+                    });
+
+                    $(".pat", this).spinner({
+                        min: 0,
+                        max: 100,
+                        value: 0,
+                        change: function()
+                        {
+                            preset.pat=$(this).val();
+                            send(0,"arduino_Send", {
+                                "node": msg["node"],
+                                "event": "led.pat",
+                                "data": $(this).val()
+                            });
                         }
 
                     });
@@ -291,6 +311,17 @@
                         });
                     });
 
+                    //delete a preset
+                    $(".preset-delete", this).click(function()
+                    {
+                        send(0, "arduino_DbPut", { 
+                            table: "led",
+                            name: $(".preset-name", controller).val(),
+                        });
+                        send(0, "arduino_DbGet", { 
+                            table: "led"
+                        });
+                    });
 
                 })
                 .on("widget_update",function(e,msg)
@@ -351,6 +382,7 @@
     </div>
 
     <div style='display:inline-block; padding:1em;'>
+        Pattern: <input type='text' class='pat' size=3>
         <div style='width:20em' class='speed' title='Effect speed'></div>
         <div >
             Main color
