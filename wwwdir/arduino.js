@@ -46,8 +46,8 @@ synapse_register("module_Login",function(msg_src, msg_dst, msg_event, msg)
 synapse_register("arduino_Received",function(msg_src, msg_dst, msg_event, msg)
 {
     //every node/event combination gets a widget, cloned from the prototype
-    var widget_class=msg["node"]+"_"+msg["event"].replace(".","_");
-    var widget_element=$("."+widget_class);
+    var widget_id=msg["node"]+"_"+msg["event"].replace(".","_");
+    var widget_element=$("#"+widget_id);
 
     //widget_element doesnt exist yet?
     if (widget_element.length==0)
@@ -60,7 +60,8 @@ synapse_register("arduino_Received",function(msg_src, msg_dst, msg_event, msg)
             widget_element=prototype_element.clone(true,true);
             widget_element.insertAfter(prototype_element);
             widget_element.removeClass("prototype");
-            widget_element.addClass(widget_class);
+            widget_element.attr("id", widget_id);
+            widget_element.attr("node", msg["node"]);
         }
 
         //call the create-handler of the widget
@@ -68,7 +69,6 @@ synapse_register("arduino_Received",function(msg_src, msg_dst, msg_event, msg)
     }
 
     //call the update-handler of the widget
-    var widget_element=$("."+widget_class);
     widget_element.trigger("widget_update", msg);
 
 

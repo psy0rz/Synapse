@@ -12,8 +12,12 @@
 
     <script type="text/javascript" src="arduino.js"></script>
 
-    <script src="lib/jquery.ui.colorPicker.js" type="text/javascript"></script>
-    <link rel="stylesheet" href="lib/jquery.ui.colorPicker.css">
+<!--    <script src="lib/jquery.ui.colorPicker.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="lib/jquery.ui.colorPicker.css"> -->
+
+    <link rel="stylesheet" media="screen" type="text/css" href="lib/colorpicker.css" />
+    <script type="text/javascript" src="lib/colorpicker.js"></script>
+                
 
 	<style>
         .prototype
@@ -137,6 +141,7 @@
                 });
             });
 
+            //got a list of presets
             synapse_register("arduino_DbItems",function(msg_src, msg_dst, msg_event, msg)
             {
                 if (msg["table"]!="led")
@@ -145,28 +150,86 @@
                 //delete all presets
                 $('.led-controller .preset').remove();
 
-                //create all presets
+                //recreate all presets
                 for (i in msg["items"])
                 {
                     $('.led-controller .presets').append("<a href='#' class='preset' preset='"+msg["items"][i]+"'>"+msg["items"][i]+"</a> ");
                 }
             });
 
+            function led_send_color(node, colnr, rgb)
+            {
+                send(0,"arduino_Send", {
+                    "node": node,
+                    "event": "led.col",
+                    "data": colnr+" "+ (rgb.r>>1) +" "+ (rgb.g>>1) +" "+ (rgb.b>>1)
+                });
+            }
+
+            //got a specific preset (activate it)
+            synapse_register("arduino_DbItem",function(msg_src, msg_dst, msg_event, msg)
+            {
+                if (msg["table"]!="led")
+                    return;
+
+                var controller=$("#"+msg.request_id);
+                var node=controller.attr("node");
+
+                //update the arduino
+                send(0,"arduino_Send", { "node": node, "event": "led.speed", "data": msg.data.speed });
+                send(0,"arduino_Send", { "node": node, "event": "led.fade", "data": "0 "+msg.data.fade[0] });
+                send(0,"arduino_Send", { "node": node, "event": "led.fade", "data": "1 "+msg.data.fade[1] });
+                send(0,"arduino_Send", { "node": node, "event": "led.fade", "data": "2 "+msg.data.fade[2] });
+                led_send_color(node, 0, msg.data.col[0]);
+                led_send_color(node, 1, msg.data.col[1]);
+                led_send_color(node, 2, msg.data.col[2]);
+
+                //set all the widget in this controller
+                $('.col[colnr="0"]', controller).ColorPickerSetColor(msg.data.col[0]).click();
+                $('.col[colnr="1"]', controller).ColorPickerSetColor(msg.data.col[1]);
+                $('.col[colnr="2"]', controller).ColorPickerSetColor(msg.data.col[2]);
+                $('.speed', controller).slider("value", msg.data.speed);
+                $('.fade[colnr="0"]', controller).slider("value", msg.data.fade[0]);
+                $('.fade[colnr="1"]', controller).slider("value", msg.data.fade[1]);
+                $('.fade[colnr="2"]', controller).slider("value", msg.data.fade[2]);
+                $('.preset-name', controller).val(msg.name);
+
+                $.extend(true, controller.data("preset"), msg.data);
+            });
+
             $('.prototype[event="led.boot"]')
                 .on("widget_created",function(e, msg)
                 {
+                    var controller=$(this);
+                    controller.data("preset", {
+                        col: [{}, {},{}],
+                        fade: [],
+                        speed: 127,
+                        pat:0
+                    });
+
+                    //note that this is a REFERENCE. any change you make to preset will also change data("preset")
+                    var preset=controller.data("preset");
+
                     $(this).attr("title","Led strip node "+msg["node"]);
-                    $(".col", this).colorPicker({
-                        size: 200,
-                        format: 'rgb',
-                        colorChange:function(e, ui)
+                    $(".col", this).ColorPicker({
+                        flat: true,
+                        // size: 200,
+                        // format: 'rgb',
+                        // colorChange:function(e, ui)
+                        // {
+                        //     var colnr=parseInt($(this).attr('colnr'));
+                        //     send(0,"arduino_Send", {
+                        //         "node": msg["node"],
+                        //         "event": "led.col",
+                        //         "data": $(this).attr('colnr')+" "+ (ui.red>>1) +" "+ (ui.green>>1) +" "+ (ui.blue>>1)
+                        //     });
+                        // }
+                        onChange:function(bla, bla2, rgb)
                         {
-                            var colnr=parseInt($(this).attr('colnr'));
-                            send(0,"arduino_Send", {
-                                "node": msg["node"],
-                                "event": "led.col",
-                                "data": $(this).attr('colnr')+" "+ (ui.red>>1) +" "+ (ui.green>>1) +" "+ (ui.blue>>1)
-                            });
+                            var colnr=this.parent().attr('colnr');
+                            preset.col[colnr]=rgb;
+                            led_send_color(msg["node"], colnr, rgb);
                         }
 
                     });
@@ -179,6 +242,7 @@
                         value: 0,
                         slide: function( event, ui ) {
                             var colnr=parseInt($(this).attr('colnr'));
+                            preset.fade[colnr]=ui.value;
                             send(0,"arduino_Send", {
                                 "node": msg["node"],
                                 "event": "led.fade",
@@ -195,30 +259,39 @@
                         max: 255,
                         value: 127,
                         slide: function( event, ui ) {
-                            var colnr=parseInt($(this).attr('colnr'));
+                            preset.speed=ui.value;
                             send(0,"arduino_Send", {
                                 "node": msg["node"],
                                 "event": "led.speed",
                                 "data": ui.value
                             });
-                            
-                      }
+                        }
                     });
 
+                    //load a preset
                     $(".presets", this).on("click", ".preset", function()
                     {
-                        console.log(this);
-                        console.log(widget_class);
+                        send(0, "arduino_DbGet", { 
+                            table: "led",
+                            name: $(this).attr("preset"),
+                            request_id: controller.attr("id")
+                        });
                     });
 
-                    $(".preset-save").click(function()
+                    //save a preset
+                    $(".preset-save", this).click(function()
                     {
                         send(0, "arduino_DbPut", { 
                             table: "led",
-                            name: $()
+                            name: $(".preset-name", controller).val(),
+                            data: preset
                         });
-
+                        send(0, "arduino_DbGet", { 
+                            table: "led"
+                        });
                     });
+
+
                 })
                 .on("widget_update",function(e,msg)
                 {
@@ -281,7 +354,7 @@
         <div style='width:20em' class='speed' title='Effect speed'></div>
         <div >
             Main color
-            <input type="text" class='col' colnr='0'>
+            <div class='col' colnr='0'></div>
         </div>
         <div style='width:20em' class='fade' colnr='0' title='Fade speed'></div>
     </div>
@@ -289,7 +362,7 @@
     <div style='display:inline-block;padding:1em;'>
         <div>
             Secondairy color
-            <input type="text" class='col' colnr='1'>
+            <div class='col' colnr='1'></div>
         </div>
         <div style='width:20em' class='fade' colnr='1' title='Fade speed'></div>
     </div>
@@ -297,7 +370,7 @@
     <div style='display:inline-block;padding:1em;'>
         <div>
             Background color
-            <input type="text" class='col' colnr='2'>
+            <div class='col' colnr='2'></div>
         </div>
         <div style='width:20em' class='fade' colnr='2' title='Fade speed'></div>
     </div>
