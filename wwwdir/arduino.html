@@ -180,9 +180,9 @@
                 //update the arduino
                 send(0,"arduino_Send", { "node": node, "event": "led.pat", "data": msg.data.pat });
                 send(0,"arduino_Send", { "node": node, "event": "led.speed", "data": msg.data.speed });
-                send(0,"arduino_Send", { "node": node, "event": "led.fade", "data": "0 "+msg.data.fade[0] });
-                send(0,"arduino_Send", { "node": node, "event": "led.fade", "data": "1 "+msg.data.fade[1] });
-                send(0,"arduino_Send", { "node": node, "event": "led.fade", "data": "2 "+msg.data.fade[2] });
+                send(0,"arduino_Send", { "node": node, "event": "led.fade", "data": "0 "+ (-msg.data.fade[0]) });
+                send(0,"arduino_Send", { "node": node, "event": "led.fade", "data": "1 "+ (-msg.data.fade[1]) });
+                send(0,"arduino_Send", { "node": node, "event": "led.fade", "data": "2 "+ (-msg.data.fade[2]) });
                 led_send_color(node, 0, msg.data.col[0]);
                 led_send_color(node, 1, msg.data.col[1]);
                 led_send_color(node, 2, msg.data.col[2]);
@@ -198,7 +198,7 @@
                 $('.pat', controller).spinner("value", msg.data.pat);
 
                 $.extend(true, controller.data("preset"), msg.data);
-                
+
             });
 
             $('.prototype[event="led.boot"]')
