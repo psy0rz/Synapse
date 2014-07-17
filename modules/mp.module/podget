@@ -1,6 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 import argparse
+import wget
+
 parser=argparse.ArgumentParser(
     description='PODcast url getter 1.0',
     epilog='This creates .strm files that can be used to listen to podcasts with MediaZapper.')
@@ -8,24 +10,25 @@ parser.add_argument('feed',  help='Feed url')
 args=parser.parse_args()
 
 
+print "Loading feed: "+args.feed
 
 import feedparser
 feed=feedparser.parse( args.feed )
 
-import os.path
+import os
+
 for entry in feed['entries']:
 	for link in entry['links']:
 		if link['rel'] == 'enclosure':
 			strm_file=entry['title'] + ".strm"
-			if not os.path.isfile(strm_file):
-				print (entry['title'] + " -> " + link['href'])
-				with open(strm_file, 'w') as f:
-					f.write(link['href'] + "\n")
-				break
-
-
-
-
-
-
-
+			audio_file=entry['title'] + ".mp3"
+#			if not os.path.isfile(strm_file):
+#				print (entry['title'] + " -> " + link['href'])
+#				with open(strm_file, 'w') as f:
+#					f.write(link['href'] + "\n")
+#				break
+			if not os.path.isfile(audio_file):
+				print ("Downloading "+audio_file+" from " + link['href'])
+				wget.download(link['href'], audio_file+".tmp")
+				print ("")
+				os.rename(audio_file+".tmp", audio_file)
