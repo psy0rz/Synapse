@@ -29,6 +29,11 @@ else(${CMAKE_BUILD_TYPE} STREQUAL Debug)
 	ADD_DEFINITIONS(-Wall -O3 -pthread -Werror -fno-strict-aliasing -rdynamic -fexceptions)
 endif(${CMAKE_BUILD_TYPE} STREQUAL Debug)
 
+#use less copmiler mem so it compiles on a raspberry with 187 mem. 
+if(${CMAKE_BUILD_TYPE} STREQUAL ReleaseLowMem)
+	ADD_DEFINITIONS(--param ggc-min-expand=100 --param ggc-min-heapsize=8192)
+endif(${CMAKE_BUILD_TYPE} STREQUAL ReleaseLowMem)
+
 #list all source files here
 file(GLOB sources *.cpp)
 MESSAGE(STATUS "Detected source files: ${sources}")
