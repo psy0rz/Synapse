@@ -29,7 +29,7 @@
 
 #ifndef CVAR_H
 #define CVAR_H
-
+#define BOOST_VARIANT_USE_RELAXED_GET_BY_DEFAULT 
 
 #include "clog.h"
 #include <string>
