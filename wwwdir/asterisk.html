@@ -3,894 +3,824 @@
 <html>
 
 <head>
-	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-	<title>SYN-3 operator panel</title>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+    <title>SYN-3 operator panel</title>
 
-	<!-- Jquery theme switcher  --> 
-	<!-- 
-	<link type="text/css" rel="stylesheet" href="http://jqueryui.com/themes/base/ui.all.css" />
-	<script type="text/javascript" src="http://jqueryui.com/js/jquery.js"></script>
-	<script>
-	$(document).ready(function(){
-	  $('#switcher').themeswitcher();
-	});
-	</script>
-	 -->
+    <!-- Jquery theme switcher  --> 
+    <!-- 
+    <link type="text/css" rel="stylesheet" href="http://jqueryui.com/themes/base/ui.all.css" />
+    <script type="text/javascript" src="http://jqueryui.com/js/jquery.js"></script>
+    <script>
+    $(document).ready(function(){
+      $('#switcher').themeswitcher();
+    });
+    </script>
+     -->
 
     <link href="/css/redmond/jquery-ui.css" rel="stylesheet" type="text/css"/>
 
-	<script type="text/javascript" src="synapse/synapse.js"></script>
-	<script type="text/javascript" src="synapse/common.js"></script>
-
-	<script type="text/javascript">
-
-		loginDeviceId="";
-
-		/// SYNAPSE EVENT HANDLERS
-		synapse_register("error",function(errortxt)
-		{
-//			$('#statusMsg').html("<span class='error'>"+errortxt+"</span>");
-		});	
-				
- 		synapse_register("module_Error",function(msg_src, msg_dst, msg_event, msg)
- 		{
- 			$('#statusMsg').html("<span class='error'>"+msg["description"]+"</span>");
- 		});
-
-
- 		synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
- 		{
-			$('#statusMsg').html("Requesting login...");
-			send(0,"asterisk_authReq", { 
-				authCookie: $.readCookie('asterisk_authCookie'),
-				deviceId:   $.readCookie('asterisk_deviceId'),
-				serverId:   $.readCookie('asterisk_serverId')
-			});
+    <script type="text/javascript" src="synapse/synapse.js"></script>
+    <script type="text/javascript" src="synapse/common.js"></script>
+
+    <script type="text/javascript">
+
+        loginDeviceId="";
+
+        /// SYNAPSE EVENT HANDLERS
+        synapse_register("error",function(errortxt)
+        {
+//          $('#statusMsg').html("<span class='error'>"+errortxt+"</span>");
+        }); 
+                
+        synapse_register("module_Error",function(msg_src, msg_dst, msg_event, msg)
+        {
+            $('#statusMsg').html("<span class='error'>"+msg["description"]+"</span>");
+        });
+
+
+        synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
+        {
+            $('#statusMsg').html("Requesting login...");
+            send(0,"asterisk_authReq", { 
+                authCookie: $.readCookie('asterisk_authCookie'),
+                deviceId:   $.readCookie('asterisk_deviceId'),
+                serverId:   $.readCookie('asterisk_serverId')
+            });
 
-		});
+        });
 
- 		synapse_register("asterisk_authCall",function(msg_src, msg_dst, msg_event, msg)
-		{
-			$('#statusMsg').html("Login by calling this number: <b>"+msg["number"]+"</b>");
-		});
+        synapse_register("asterisk_authCall",function(msg_src, msg_dst, msg_event, msg)
+        {
+            $('#statusMsg').html("Login by calling this number: <b>"+msg["number"]+"</b>");
+        });
 
- 		synapse_register("asterisk_authOk",function(msg_src, msg_dst, msg_event, msg)
-		{
-			$('#statusMsg').html("Login ok");
-			loginDeviceId=msg["deviceId"];
+        synapse_register("asterisk_authOk",function(msg_src, msg_dst, msg_event, msg)
+        {
+            $('#statusMsg').html("Login ok");
+            loginDeviceId=msg["deviceId"];
 
-			//store the device and authcookie in a browser cookie, so the user doesnt have to relogin everytime.
-			$.setCookie('asterisk_authCookie',msg["authCookie"], {duration:365, path:"/"});
-			$.setCookie('asterisk_deviceId',msg["deviceId"], {duration:365, path:"/"});
-			$.setCookie('asterisk_serverId',msg["serverId"], {duration:365, path:"/"});
+            //store the device and authcookie in a browser cookie, so the user doesnt have to relogin everytime.
+            $.setCookie('asterisk_authCookie',msg["authCookie"], {duration:365, path:"/"});
+            $.setCookie('asterisk_deviceId',msg["deviceId"], {duration:365, path:"/"});
+            $.setCookie('asterisk_serverId',msg["serverId"], {duration:365, path:"/"});
 
-			//request a refresh, to learn about all objects
-			send(0,"asterisk_refresh", { 
-			});
-		});
-
- 		synapse_register("asterisk_reset",function(msg_src, msg_dst, msg_event, msg)
- 		{
-			//reset all known state info
-			//(new info probably follows because we send a asterisk_refresh request)
-			$('.device').remove();
-			$('.channel').remove();
-
-		});
-
-		function prettyCallerId( callerId, callerIdName)
-		{
-			var txt="";
-			if (callerIdName!="")
-				txt=txt+callerIdName;
-
-			if (callerId!="")
-				txt=txt+" &lt;"+callerId+"&gt;";
-			else
-				txt=" (unknown)";
-
-			return txt;					
-		}
- 		
-
- 		synapse_register("asterisk_updateDevice",function(msg_src, msg_dst, msg_event, msg)
- 		{
-
-			//device doesnt exist yet?
-			if ($(escapeId(msg["id"])).length==0)
-			{
-				//add dom objects
-				html="<div class='ui-state-default ui-widget-content ui-corner-all device' id='"+msg["id"]+"'>";
-				html+="<div class='deviceInfo'></div>";
-				html+="<div class='channelList'></div>";
-				html+="</div>";
-
-				//is it the device of the logged in user?
-				if (msg["id"]==loginDeviceId)
-					$('#statusUser').append(html);
-				else
-					$('#deviceList').append(html);
-
-
-			}
-
-
-			//store all the info as data in the device dom object:
-			$(escapeId(msg["id"])).data("device", msg);
-
-			//update the device caller id:
-//			$(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]+"<br> tennant="+msg["groupId"]+" ("+msg["id"]+")");
-			$(escapeId(msg["id"])+" .deviceInfo").html(prettyCallerId(msg["callerId"], msg["callerIdName"]));
-
-			if (msg["online"])
-				$(escapeId(msg["id"])).removeClass('ui-state-disabled');
-			else
-				$(escapeId(msg["id"])).addClass('ui-state-disabled');
-
-
-			//is it the device of the logged in user?
-//			if (msg["id"]==loginDeviceId)
-//			{
-//				$('#statusLoginUser').text(msg["callerId"]);				
-//			}
-
-
- 		});
-
-
- 		synapse_register("asterisk_delDevice",function(msg_src, msg_dst, msg_event, msg)
- 		{
-			$(escapeId(msg["id"])).slideUp("",function() {
-			    $(this).remove();
-			});
-		});
-
-
-
-
- 		synapse_register("asterisk_debugChannel",function(msg_src, msg_dst, msg_event, msg)
-		{
-			//TODO: make it possible to disable debugging, its slow
-			//add debug dom object?
- 			if ($(escapeId("debug_"+msg["id"])).length==0)
-			{
-				html="<div class='channelDebug' id='debug_"+msg["id"]+"'>";
-				html+="</div>";
-
-				$('body').append(html);
-			}
- 			
-			var channelDebug=$(escapeId("debug_"+msg["id"]));
-
-			channelDebug.append(
-				"<br><b>"+msg["Event"]+"</b><br>"
-			);
-			for (var msgI in msg)
-			{
-				if (msgI!="id" && msgI!="serverId" && msgI!="Event")
-				{
-					channelDebug.append(
-						msgI+":"+msg[msgI].replace("<","&lt;").replace(">","&gt;")+"<br>"
-					);
-				}
-			}
-		});
-
-
- 		var blink_ring_status=false;
- 		var blink_hold_status=false;
- 		var blink_count=0;
- 		function blinker()
- 		{
- 			blink_count++;
-			setTimeout(blinker, 125);
-
-			//ring blinker (fast)
-			blink_ring_status=!blink_ring_status;
-			if (blink_ring_status)
- 				$('.device .channelIcon[state="ringing"]').addClass("ring-blinker");
- 			else
- 				$('.ring-blinker').removeClass("ring-blinker");
-
- 			//hold blinker (slow)
- 			if (blink_count%4 == 0)
- 			{
-				blink_hold_status=!blink_hold_status;
-				if (blink_hold_status)
-	 				$('.device .channelIcon[state="hold"]').addClass("hold-blinker");
-	 			else
-	 				$('.hold-blinker').removeClass("hold-blinker");
-	 		}
- 		}
- 		blinker();
-
-
- 		synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
- 		{
-			var moved=false;
-			
-			/////////// DeviceList-only stuff:
-			//does the channel exist already?
-			if ($(".device "+escapeClass(msg["id"])).length!=0)
-			{
-				//doesnt it exist under the specified device?
-				if ($(escapeId(msg["deviceId"]) + " " + escapeClass(msg["id"])).length==0)
-				{
-					 //then it probably has been moved/renamed, so delete the channel and recreate it below.
-					moved=true; //since it takes a while for the effect to actually remove it:
-					$(".device "+escapeClass(msg["id"])).slideUp("",function() {
-					    $(this).remove();
-					});
-				}
-			}
-
-			//channel doesnt exist (anymore)?
-			if (moved || $(".device "+escapeClass(msg["id"])).length==0)
-			{
-				//add a brand new channel object
-				var newChannelHtml="";
-				newChannelHtml+="<div class='channel "+msg["id"]+"'>";
-				newChannelHtml+="<span class='channelIcon'></span>";
-				newChannelHtml+="<span class='channelInfo'></span>";
-				newChannelHtml+="</div>";
-				$(escapeId(msg["deviceId"])+' .channelList').append(newChannelHtml);
-			}
-
-			//store all the info as data in the channel dom object:
-			$(".device "+escapeClass(msg["id"])).data("channel", msg);
-
-			// if (msg["state"]=="ring")
-			// {
-			// 	$(escapeId(msg["deviceId"])).addClass("blink");
-			// }
-			// else
-			// {
-			// 	$(escapeId(msg["deviceId"])).removeClass("blink");
-			// 	//$(escapeId(msg["deviceId"])).addClass("ui-state-error");
-			// }
-			// $(escapeId(msg["deviceId"])).addClass("blink");
-
-
-			//set caller info
-			var callerInfo="";
-
-			//channel is parked?
-			if (msg["ownerDeviceId"])
-			{
-				callerInfo="[parked by "+$(escapeId(msg["ownerDeviceId"])).data("device")['callerIdName']+"]";
-			}
-			//not parked (anymore)
-			else
-			{
-				//we know who's connected:
-				if (msg["linkCallerId"] != '')
-				{
-					callerInfo+=prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);
-				}
-				//we dont know whos connected yet
-				else
-				{
-					//show who's being dialed, or show caller id if its an incoming call:
-					if (msg["state"]=="out")
-						callerInfo+="Calling "+msg["firstExtension"];
-					else
-						callerInfo+=prettyCallerId(msg["callerId"], msg["callerIdName"]);
-				}
-			}
-
-			$(".device "+escapeClass(msg["id"])+" .channelInfo").html(callerInfo);
-
-
-			////////////////////// activeCallList-only stuff:
-			//add new channel to active call list?
-			if ($("#activeCallList "+escapeClass(msg["id"])).length==0)
-			{
-				var newChannelHtml="";
-				newChannelHtml+="<div class='channel "+msg["id"]+"'>";
-				newChannelHtml+="<span class='channelIcon'></span>";
-				newChannelHtml+="<span class='channelInfo'></span>";
-				newChannelHtml+="</div>";
-				$("#activeCallList .list").prepend(newChannelHtml);
-				show=1;
-
-				//make the device highlight when hoovering the active-call-list channel
-				$("#activeCallList "+escapeClass(msg["id"])).hover(
-					function () {
-						$(this).addClass("ui-state-highlight");
-						$(escapeId(msg["deviceId"])).addClass("ui-state-highlight");
-
-						//if its in the deviceList, scroll to it:
-						var device=$("#deviceList "+escapeId(msg["deviceId"]));
-						if (device.length!=0)
-						{
-							$('#deviceList').scrollTop($('#deviceList').scrollTop()+device.position().top); 
-						}
-					}, 
-					function () {
-						$(this).removeClass("ui-state-highlight");
-						$(escapeId(msg["deviceId"])).removeClass("ui-state-highlight");
-					}
-				);
-
-				//when clicking, show the corresponding debug object
-				$("#activeCallList "+escapeClass(msg["id"])).click(
-					function () {
-						$(escapeId("debug_"+msg["id"])).dialog({
-							title: "Debug channel "+msg["id"],
-							position: "top"
-													
-						});
-					}
-				);
-			}
-
-			//update active call list
- 			$("#activeCallList "+escapeClass(msg["id"])+" .channelInfo").html(
- 		 		prettyCallerId(msg["deviceCallerId"], msg["deviceCallerIdName"]) + " ... "+callerInfo
- 		 	);
-
-
-			///////////////////// Stuff for all channels
-			$(escapeClass(msg["id"])+" .channelIcon").attr('state', msg["state"]);
-			$(escapeClass(msg["id"])+":hidden").slideDown(); //show the channel (default is hidden)
-
-
- 			///////////////////////////// special parked stuff
- 			//the channel is parked by us?
-			if (msg["ownerDeviceId"]==loginDeviceId)
-			{
-
-				//we create a fake parked channel in our device to show the parked call.
-
-				//parked channel doesnt exist yet?
-				if ($(escapeClass(msg["id"])+"_parked").length==0)
-				{
-					//add a new parked channel object
-					var newChannelHtml="";
-					newChannelHtml+="<div class='channel parked_channel "+msg["id"]+"_parked'>";
-					newChannelHtml+="<span class='channelIcon'></span>";
-					newChannelHtml+="<span class='channelInfo'></span>";
-					newChannelHtml+="</div>";
-					$(escapeId(loginDeviceId)+' .channelList').append(newChannelHtml);
-
-					$(escapeClass(msg["id"])+'_parked .channelIcon').attr('state', "hold");
-					$(escapeClass(msg["id"])+'_parked').slideDown();
-				}
-
-				//update called id of the parked channel
-				$(escapeClass(msg["id"])+"_parked .channelInfo").html(prettyCallerId(msg["callerId"], msg["callerIdName"]));
-				//store all data 
-				$(escapeClass(msg["id"])+"_parked").data("channel", msg);
-
-
-			}
-			//its not parked (by us), so remove it from our list
-			else
-			{
-				$(escapeClass(msg["id"])+"_parked").slideUp("",function() {
-				    $(this).remove();
-				});
-			}
-
-
-
-
-		});
-
-
- 		synapse_register("asterisk_delChannel",function(msg_src, msg_dst, msg_event, msg)
- 		{
-			//remove channel from device
-			$(".device "+escapeClass(msg["id"])).slideUp("",function() {
-			    $(this).remove();
-    // 			//if device is now free, remove the highlight
-				// if ($(escapeId(msg["deviceId"])+" .channel").length==0)
-				// {
-				// 	$(escapeId(msg["deviceId"])).removeClass("ui-state-error");
-				// }
-
-			});
-
- 			//in case its parked, remove the parked fake channel as well
-			$(escapeClass(msg["id"])+"_parked").slideUp("",function() {
-			    $(this).remove();
-			});
-
-			//hide it from the call list with a nice effect 
-			$("#activeCallList "+escapeClass(msg["id"])).slideUp("",function() {
-				//add class and move it to the history
-	 			$(this).addClass('deleted');
-	 			//yes, this will actually MOVE the object, not copy it:
-	 			$("#historyCallList .list").prepend($(this));
-	 			//show it again with a nice effect
-				$("#historyCallList " + escapeClass(msg["id"])).slideDown("");
-			});
-
-		});
-
-
- 		synapse_register("module_SessionEnded",function(msg_src, msg_dst, msg_event, msg)
- 		{
-		});
-
-		/// JAVA SCRIPT EVENT HANDLERS
-		$(document).ready(function(){
-
-			$("#deviceList").sortable();
-			$("#deviceList").disableSelection();
-			$("#login").click(function()
-			{
-				send(0,"asterisk_authReq", {});
-				//send(0,"asterisk_reset", {});
-			});
-
-			$("#loginUser").click(function()
-			{
-				synapse_login();
-			});
-
-			$('#test1').on('click', function()
-			{
-				// send(0, "asterisk_Test", {
-				// 	"Action"	: "Originate",
-				// 	"Channel"	: "SIP/100",
-				// 	"Context"	: "from-synapse",
-				// 	"Priority"	: 1,
-				// 	"Exten"		: 901,
-				// });
-
-			});
-
-
-			//gets an active channel from our device thats not on hold
-			//returns all channel data 
-			function getActiveChannel()
-			{
-
-				var channels=$(escapeId(loginDeviceId)+" .channel");
-				var activeChannel={};
-
-				channels.each(function(index, channel)
-				{
-					var data=$(channel).data("channel");
-					if (!$(channel).hasClass("parked_channel") && data["state"]!="hold")
-					{
-						activeChannel=data;
-						return(false);
-					}
-				});
-				return(activeChannel);
-			}
-
-			$("#deviceList").on("click", ".device", function()
-			{
-				console.log("Clicked device", $(this).data("device"));
-
-				var reuseChannelId=getActiveChannel()["id"];
-
-				send(0, "asterisk_Call", 
-				{
-					"exten": $(this).data("device")["exten"],
-					"reuseChannelId": reuseChannelId
-				});
-			});
-
-
-
-
-	// $("#statusUser").on("click", ".channelInfo", function()
-	// {
-	// 	var channel=$(this).parent().data("channel");
-	// 	var activeChannel=getActiveChannel();
-	// 	console.log("Clicked my channelinfo", channel);
-
-	// 	//bridge the active channel to the clicked channel. (and park the call thats already bridged to the active channel)
-
-	// 	//parked channel
-	// 	if ($(this).parent().hasClass("parked_channel"))
-	// 	{
-	// 		var reuseChannelId=getActiveChannel()["id"];
-	// 		send(0, "asterisk_Bridge", 
-	// 		{
-	// 			"channel1": reuseChannelId,
-	// 			"channel2": channel["id"],
-	// 			"parkLinked1": true,
-	// 		});
-
-	// 	}
-	// 	//normal channel:
-	// 	else
-	// 	{
-	// 		var reuseChannelId=getActiveChannel()["id"];
-	// 		send(0, "asterisk_Bridge", 
-	// 		{
-	// 			"channel1": reuseChannelId,
-	// 			"channel2": channel["linkId"],
-	// 			"parkLinked1": true,
-	// 		});
-	// 	}
-
-
-
-	// 	return(false);
-
-	// });
-
-
-			////////////////// menu stuff
-			$("#statusUser").on("click", ".channelIcon,.channelInfo", function()
-			{
-
-				var channel=$(this).parent().data("channel");
-				var activeChannel=getActiveChannel();
-				console.log("Clicked my channelicon", channel);
-
-				$(".menu").remove();
-
-				var menuHtml="";
-				menuHtml+="<ul class='menu' >";
-
-				menuHtml+="<li class='menu-hangup'><a href='#'>Hang up</a></li>";
-
-				if ($(this).parent().hasClass("parked_channel"))
-				{
-					menuHtml+="<li class='menu-transfer'><a href='#'>Transfer</a></li>";
-					menuHtml+="<li class='menu-resume'><a href='#'>Switch to this caller</a></li>";
-				}
-				else
-				{
-					menuHtml+="<li class='menu-hold'><a href='#'>Put caller on hold</a></li>";
-				}
-
-				menuHtml+="</ul>";
-
-				$(this).append(menuHtml);
-				$(".menu", this).menu({
-  					select: function( event, ui ) {
-  						event.stopPropagation();
-  						if (ui.item.hasClass("menu-hangup"))
-  						{
-							console.log("Hanging up", channel["id"]);
-  							send(0, "asterisk_Hangup", {
-  								"channel": channel["id"]
-  							});
-  						}
-  						else if (ui.item.hasClass("menu-transfer"))
-  						{
-							console.log("Transferring", activeChannel["linkId"], channel["id"]);
-							send(0, "asterisk_Bridge", 
-							{
-								"channel1": activeChannel["linkId"],
-								"channel2": channel["id"],
-								"parkLinked1": false, //NOTE: it would be nice if the channel would stay open in some cases?
-							});
-  						}
-  						else if (ui.item.hasClass("menu-hold"))
-  						{
-							console.log("Putting on hold", activeChannel["id"], channel["linkId"]);
-							send(0, "asterisk_Park", 
-							{
-								"channel1": channel["linkId"],
-								"mode1": "park"
-							});
-  						}
-  						else if (ui.item.hasClass("menu-resume"))
-						{
-							send(0, "asterisk_Bridge", 
-							{
-								"channel1": activeChannel["id"],
-								"channel2": channel["id"],
-								"parkLinked1": true,
-							});
-						}
-
-  						$(".menu").remove();
-  					}
-				});
-
-				return(false);
-			});
-
-			//remove menus when user clicks anywere else
-			$(document).on("click", function()
-			{
-				$(".menu").remove();
-			});
-
-
-			// $("#deviceList").on("click", ".channel", function()
-			// {
-			// 	console.log("Clicked others channel", $(this).data("channel"));
-
-
-			// 	var reuseChannelId=getActiveChannel();
-
-			// 	// send(0, "asterisk_Test", {
-			// 	// 	"Action"	: "Setvar",
-			// 	// 	"Channel"	: $(this).data("channel")["linkChannelName"],
-			// 	// 	"Variable"	: "CONNECTEDLINE(name)",
-			// 	// 	"Value"	: "name2",
-			// 	// });
-
-			// 	// send(0, "asterisk_Test", {
-			// 	// 	"Action"	: "Setvar",
-			// 	// 	"Channel"	: $(this).data("channel")["linkChannelName"],
-			// 	// 	"Variable"	: "CONNECTEDLINE(num)",
-			// 	// 	"Value"	: "num2",
-			// 	// });
-
-
-
-			// 	send(0, "asterisk_Bridge", 
-			// 	{
-			// 		"channel1": reuseChannelId,
-			// 		"channel2": $(this).data("channel")["id"],
-			// 		"parkLinked1": true,
-			// 		"parkLinked2": true
-
-			// 	});
-
-
-			// 	return(false);
-			// })
-		});
-
-
-	</script>
-
-	<style>
-		
-	
-		body 
-		{
-			margin:0;
-			padding:0;
-			height:100%;
-			width: 100%;
-		} 
-
-
-		#statusBar
-		{
-			margin:0;
-			padding:0;
-			position:	absolute;
-			height: 	10em;
-			right: 		0em;
-			width: 		21em;
-		}
-
-		#statusUser
-		{
-			margin:0;
-			padding:0;
-			position:	absolute;
-			height: 	10em;
-			left: 		0em;
-			right: 		21em;
-			
-		}
-
-		#historyCallList
-		{
-			margin:0;
-			padding:0;
-			position:	absolute;
-			right: 		0em;
-			width: 		21em;
-			overflow: auto;
-			top:		30em;
-			bottom:		0em;
-		}
-
-		#activeCallList
-		{
-			margin:0;
-			padding:0;
-			position:	absolute;
-			right: 		0em;
-			width: 		21em;
-			top:		10em;
-			height:		20em;
-			overflow: auto;
-		}
-
-
-		#deviceList
-		{
-			margin:0;
-			padding:0;
-			position:	absolute;
-			left: 		0em;
-			top:		10em;
-			right: 		21em;
-			bottom:		0em;
-			overflow: auto;
-		}
-
-
-		#statusBar[state="ringing"]
-		{
-			background-color: #ffaaaa;
-		}
-
-
-		#statusMsg
-		{
-			background-color: #ffffff;	
-			border-style: none;
-			display: inline;
-		}
-
-		#statusMsg .error
-		{
-			color: red;
-			font-weight: bold;
-		}
-	
-		#statusLoginUser
-		{
-						
-			
-		}
-
-
-		.device
-		{
-			float: left;
-			width: 20em;
-			min-height: 3em;
-			margin: 5px;
-		}
-
-
-
-		.deviceInfo
-		{
-			text-align: center;
-		}
-
-		.channelList
-		{
-			border-style:none;
-			width:100%;
-			min-height: 2em;
-		}
-
-		.channel
-		{
-			display: none;
-			border-top-style:dashed;
-			border-color:#aaaaaa; 
-			border-width: 1px;
-			margin:0;
-			min-width:15em;
-			position:relative;
-			font-weight: normal;
-
-
-		}
-
-		.channelIcon
-		{
-			padding-left:25px;
-			background-repeat:no-repeat !important;
-			background-position: left !important;
-			background-image:url('asterisk/channel_idle.png') ;
-		}
-
-		.channelIcon:hover
-		{
-			background-color: #dddddd;
-			cursor: pointer;
-		}
-
-		.channelIcon[state="in"] 
-		{
-			background-image:url('asterisk/channel_in.png') ;
-		}
-
-		.channelIcon[state="out"] 
-		{
-			background-image:url('asterisk/channel_out.png') ;
-		}
-
-		.channelIcon[state="ringing"] 
-		{
-			background-image:url('asterisk/channel_ring.png') ;
-		}
-
-		.channelIcon[state="hold"] 
-		{
-			background-image:url('asterisk/channel_hold.png') ;
-		}
-
-
-		.hold-blinker
-		{
-
-			background-color: #ffffcc;
-		}
-
-		.ring-blinker
-		{
-			background-color: #ffffcc;
-
-		}
-
-		.deleted
-		{
-			color:#aaaaaa; 
-		}
-
-
-		.channelInfo
-		{
-			margin:0;
-			padding:0;
-			display: inline-block;
-			min-width:18em;
-		}
-
-		.channelInfo:hover
-		{
-			background-color: #dddddd;
-			cursor: pointer;
-		}
-
-
-		.channelDebug
-		{
-			display:none;
-		}
-
-		.menu
-		{
-			position: absolute;
-			left:25px;
-			z-index: 1;
-		}
-
-	</style>
+            //request a refresh, to learn about all objects
+            send(0,"asterisk_refresh", { 
+            });
+        });
+
+        synapse_register("asterisk_reset",function(msg_src, msg_dst, msg_event, msg)
+        {
+            //reset all known state info
+            //(new info probably follows because we send a asterisk_refresh request)
+            $('.device').remove();
+            $('.channel').remove();
+
+        });
+
+        function prettyCallerId( callerId, callerIdName)
+        {
+            var txt="";
+            if (callerIdName!="")
+                txt=txt+callerIdName;
+
+            if (callerId!="")
+                txt=txt+" &lt;"+callerId+"&gt;";
+            else
+                txt=" (unknown)";
+
+            return txt;                 
+        }
+        
+
+        synapse_register("asterisk_updateDevice",function(msg_src, msg_dst, msg_event, msg)
+        {
+
+            //device doesnt exist yet?
+            if ($(escapeId(msg["id"])).length==0)
+            {
+                //add dom objects
+                html="<div class='ui-state-default ui-widget-content ui-corner-all device' id='"+msg["id"]+"'>";
+                html+="<div class='deviceInfo'></div>";
+                html+="<div class='channelList'></div>";
+                html+="</div>";
+
+                //is it the device of the logged in user?
+                if (msg["id"]==loginDeviceId)
+                    $('#statusUser').append(html);
+                else
+                    $('#deviceList').append(html);
+
+
+            }
+
+
+            //store all the info as data in the device dom object:
+            $(escapeId(msg["id"])).data("device", msg);
+
+            //update the device caller id:
+//          $(escapeId(msg["id"])+" .deviceInfo").html(msg["callerId"]+"<br> tennant="+msg["groupId"]+" ("+msg["id"]+")");
+            $(escapeId(msg["id"])+" .deviceInfo").html(prettyCallerId(msg["callerId"], msg["callerIdName"]));
+
+            if (msg["online"])
+                $(escapeId(msg["id"])).removeClass('ui-state-disabled');
+            else
+                $(escapeId(msg["id"])).addClass('ui-state-disabled');
+
+
+            //is it the device of the logged in user?
+//          if (msg["id"]==loginDeviceId)
+//          {
+//              $('#statusLoginUser').text(msg["callerId"]);                
+//          }
+
+
+        });
+
+
+        synapse_register("asterisk_delDevice",function(msg_src, msg_dst, msg_event, msg)
+        {
+            $(escapeId(msg["id"])).slideUp(100,function() {
+                $(this).remove();
+            });
+        });
+
+
+
+
+        synapse_register("asterisk_debugChannel",function(msg_src, msg_dst, msg_event, msg)
+        {
+            //TODO: make it possible to disable debugging, its slow
+            //add debug dom object?
+            if ($(escapeId("debug_"+msg["id"])).length==0)
+            {
+                html="<div class='channelDebug' id='debug_"+msg["id"]+"'>";
+                html+="</div>";
+
+                $('body').append(html);
+            }
+            
+            var channelDebug=$(escapeId("debug_"+msg["id"]));
+
+            channelDebug.append(
+                "<br><b>"+msg["Event"]+"</b><br>"
+            );
+            for (var msgI in msg)
+            {
+                if (msgI!="id" && msgI!="serverId" && msgI!="Event")
+                {
+                    channelDebug.append(
+                        msgI+":"+msg[msgI].replace("<","&lt;").replace(">","&gt;")+"<br>"
+                    );
+                }
+            }
+        });
+
+
+        var blink_ring_status=false;
+        var blink_hold_status=false;
+        var blink_count=0;
+        function blinker()
+        {
+            blink_count++;
+            setTimeout(blinker, 125);
+
+            //ring blinker (fast)
+            blink_ring_status=!blink_ring_status;
+            if (blink_ring_status)
+                $('.device .channelIcon[state="ringing"]').addClass("ring-blinker");
+            else
+                $('.ring-blinker').removeClass("ring-blinker");
+
+            //hold blinker (slow)
+            if (blink_count%4 == 0)
+            {
+                blink_hold_status=!blink_hold_status;
+                if (blink_hold_status)
+                    $('.device .channelIcon[state="hold"]').addClass("hold-blinker");
+                else
+                    $('.hold-blinker').removeClass("hold-blinker");
+            }
+        }
+        blinker();
+
+
+        synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
+        {
+            var moved=false;
+            
+            /////////// DeviceList-only stuff:
+            //does the channel exist already?
+            if ($(".device "+escapeClass(msg["id"])).length!=0)
+            {
+                //doesnt it exist under the specified device?
+                if ($(escapeId(msg["deviceId"]) + " " + escapeClass(msg["id"])).length==0)
+                {
+                     //then it probably has been moved/renamed, so delete the channel and recreate it below.
+                    moved=true; //since it takes a while for the effect to actually remove it:
+                    $(".device "+escapeClass(msg["id"])).slideUp(100,function() {
+                        $(this).remove();
+                    });
+                }
+            }
+
+            //channel doesnt exist (anymore)?
+            if (moved || $(".device "+escapeClass(msg["id"])).length==0)
+            {
+                //add a brand new channel object
+                var newChannelHtml="";
+                newChannelHtml+="<div class='channel "+msg["id"]+"'>";
+                newChannelHtml+="<span class='channelIcon'></span>";
+                newChannelHtml+="<span class='channelInfo'></span>";
+
+                //is it our device?
+                if (msg["deviceId"]==loginDeviceId)
+                {
+                    newChannelHtml+="<span class='channelMenuItem channelMenuItemHangup'>End call</span>";
+                    newChannelHtml+="<span class='channelMenuItem channelMenuItemHold'>Hold</span>";
+                }
+
+
+                newChannelHtml+="</div>";
+                $(escapeId(msg["deviceId"])+' .channelList').append(newChannelHtml);
+            }
+
+            //store all the info as data in the channel dom object:
+            $(".device "+escapeClass(msg["id"])).data("channel", msg);
+
+            //set caller info
+            var callerInfo="";
+
+            //channel is parked?
+            if (msg["ownerDeviceId"])
+            {
+                callerInfo="[parked by "+$(escapeId(msg["ownerDeviceId"])).data("device")['callerIdName']+"]";
+            }
+            //not parked (anymore)
+            else
+            {
+                //we know who's connected:
+                if (msg["linkCallerId"] != '')
+                {
+                    callerInfo+=prettyCallerId(msg["linkCallerId"], msg["linkCallerIdName"]);
+                }
+                //we dont know whos connected yet
+                else
+                {
+                    //show who's being dialed, or show caller id if its an incoming call:
+                    if (msg["state"]=="out")
+                        callerInfo+="Calling "+msg["firstExtension"];
+                    else
+                        callerInfo+=prettyCallerId(msg["callerId"], msg["callerIdName"]);
+                }
+            }
+
+            $(".device "+escapeClass(msg["id"])+" .channelInfo").html(callerInfo);
+
+
+            ////////////////////// activeCallList-only stuff:
+            //add new channel to active call list?
+            if ($("#activeCallList "+escapeClass(msg["id"])).length==0)
+            {
+                var newChannelHtml="";
+                newChannelHtml+="<div class='channel "+msg["id"]+"'>";
+                newChannelHtml+="<span class='channelIcon'></span>";
+                newChannelHtml+="<span class='channelInfo'></span>";
+                newChannelHtml+="</div>";
+                $("#activeCallList .list").prepend(newChannelHtml);
+                show=1;
+
+                //make the device highlight when hoovering the active-call-list channel
+                $("#activeCallList "+escapeClass(msg["id"])).hover(
+                    function () {
+                        $(this).addClass("ui-state-highlight");
+                        $(escapeId(msg["deviceId"])).addClass("ui-state-highlight");
+
+                        //if its in the deviceList, scroll to it:
+                        var device=$("#deviceList "+escapeId(msg["deviceId"]));
+                        if (device.length!=0)
+                        {
+                            $('#deviceList').scrollTop($('#deviceList').scrollTop()+device.position().top); 
+                        }
+                    }, 
+                    function () {
+                        $(this).removeClass("ui-state-highlight");
+                        $(escapeId(msg["deviceId"])).removeClass("ui-state-highlight");
+                    }
+                );
+
+                //when clicking, show the corresponding debug object
+                $("#activeCallList "+escapeClass(msg["id"])).click(
+                    function () {
+                        $(escapeId("debug_"+msg["id"])).dialog({
+                            title: "Debug channel "+msg["id"],
+                            position: "top"
+                                                    
+                        });
+                    }
+                );
+            }
+
+            //update active call list
+            $("#activeCallList "+escapeClass(msg["id"])+" .channelInfo").html(
+                prettyCallerId(msg["deviceCallerId"], msg["deviceCallerIdName"]) + " ... "+callerInfo
+            );
+
+
+            ///////////////////// Stuff for all channels
+            $(escapeClass(msg["id"])+" .channelIcon").attr('state', msg["state"]);
+            $(escapeClass(msg["id"])+":hidden").slideDown(100); //show the channel (default is hidden)
+
+
+            ///////////////////////////// special parked stuff
+            //the channel is parked by us?
+            if (msg["ownerDeviceId"]==loginDeviceId)
+            {
+
+                //we create a fake parked channel in our device to show the parked call.
+
+                //parked channel doesnt exist yet?
+                if ($(escapeClass(msg["id"])+"_parked").length==0)
+                {
+                    //add a new parked channel object
+                    var newChannelHtml="";
+                    newChannelHtml+="<div class='channel parked_channel "+msg["id"]+"_parked'>";
+                    newChannelHtml+="<span class='channelIcon'></span>";
+                    newChannelHtml+="<span class='channelInfo'></span>";
+                    newChannelHtml+="<span class='channelMenuItem channelMenuItemHangup'>End call</span>";
+                    newChannelHtml+="<span class='channelMenuItem channelMenuItemResume'>Resume</span>";
+                    newChannelHtml+="<span class='channelMenuItem channelMenuItemTransfer'>Transfer</span>";
+                    newChannelHtml+="</div>";
+                    $(escapeId(loginDeviceId)+' .channelList').append(newChannelHtml);
+
+                    $(escapeClass(msg["id"])+'_parked .channelIcon').attr('state', "hold");
+                    $(escapeClass(msg["id"])+'_parked').slideDown(100);
+                }
+
+                //update called id of the parked channel
+                $(escapeClass(msg["id"])+"_parked .channelInfo").html(prettyCallerId(msg["callerId"], msg["callerIdName"]));
+                //store all data 
+                $(escapeClass(msg["id"])+"_parked").data("channel", msg);
+
+
+            }
+            //its not parked (by us), so remove it from our list
+            else
+            {
+                $(escapeClass(msg["id"])+"_parked").slideUp(100,function() {
+                    $(this).remove();
+                });
+            }
+
+
+
+
+        });
+
+
+        synapse_register("asterisk_delChannel",function(msg_src, msg_dst, msg_event, msg)
+        {
+            //remove channel from device
+            $(".device "+escapeClass(msg["id"])).slideUp(100,function() {
+                $(this).remove();
+    //          //if device is now free, remove the highlight
+                // if ($(escapeId(msg["deviceId"])+" .channel").length==0)
+                // {
+                //  $(escapeId(msg["deviceId"])).removeClass("ui-state-error");
+                // }
+
+            });
+
+            //in case its parked, remove the parked fake channel as well
+            $(escapeClass(msg["id"])+"_parked").slideUp(100,function() {
+                $(this).remove();
+            });
+
+            //hide it from the call list with a nice effect 
+            $("#activeCallList "+escapeClass(msg["id"])).slideUp(100,function() {
+                //add class and move it to the history
+                $(this).addClass('deleted');
+                //yes, this will actually MOVE the object, not copy it:
+                $("#historyCallList .list").prepend($(this));
+                //show it again with a nice effect
+                $("#historyCallList " + escapeClass(msg["id"])).slideDown(100);
+            });
+
+        });
+
+
+        synapse_register("module_SessionEnded",function(msg_src, msg_dst, msg_event, msg)
+        {
+        });
+
+        /// JAVA SCRIPT EVENT HANDLERS
+        $(document).ready(function(){
+
+            $("#deviceList").sortable();
+            $("#deviceList").disableSelection();
+            $("#login").click(function()
+            {
+                send(0,"asterisk_authReq", {});
+                //send(0,"asterisk_reset", {});
+            });
+
+            $("#loginUser").click(function()
+            {
+                synapse_login();
+            });
+
+            $('#test1').on('click', function()
+            {
+                // send(0, "asterisk_Test", {
+                //  "Action"    : "Originate",
+                //  "Channel"   : "SIP/100",
+                //  "Context"   : "from-synapse",
+                //  "Priority"  : 1,
+                //  "Exten"     : 901,
+                // });
+
+            });
+
+
+            //gets an active channel from our device thats not on hold
+            //returns all channel data 
+            function getActiveChannel()
+            {
+
+                var channels=$(escapeId(loginDeviceId)+" .channel");
+                var activeChannel={};
+
+                channels.each(function(index, channel)
+                {
+                    var data=$(channel).data("channel");
+                    if (!$(channel).hasClass("parked_channel") && data["state"]!="hold")
+                    {
+                        activeChannel=data;
+                        return(false);
+                    }
+                });
+                return(activeChannel);
+            }
+
+            $("#deviceList").on("click", ".device", function()
+            {
+                console.log("Clicked device", $(this).data("device"));
+
+                var reuseChannelId=getActiveChannel()["id"];
+
+                send(0, "asterisk_Call", 
+                {
+                    "exten": $(this).data("device")["exten"],
+                    "reuseChannelId": reuseChannelId
+                });
+            });
+
+
+            ////////////////// channel button stuff
+            $("body").on("click", ".channelMenuItem", function()
+            {
+
+                var channel=$(this).parent().data("channel");
+                var activeChannel=getActiveChannel();
+
+                if ($(this).hasClass("channelMenuItemHangup"))
+                {
+                    send(0, "asterisk_Hangup", {
+                        "channel": channel["id"]
+                    });
+                }
+                else if ($(this).hasClass("channelMenuItemTransfer"))
+                {
+                    send(0, "asterisk_Bridge", 
+                    {
+                        "channel1": activeChannel["linkId"],
+                        "channel2": channel["id"],
+                        "parkLinked1": false, //NOTE: it would be nice if the channel would stay open in some cases?
+                    });
+                }
+                else if ($(this).hasClass("channelMenuItemHold"))
+                {
+                    send(0, "asterisk_Park", 
+                    {
+                        "channel1": channel["linkId"],
+                        "mode1": "park"
+                    });
+                }
+                else if ($(this).hasClass("channelMenuItemResume"))
+                {
+                    send(0, "asterisk_Bridge", 
+                    {
+                        "channel1": activeChannel["id"],
+                        "channel2": channel["id"],
+                        "parkLinked1": true,
+                    });
+                }
+
+                return(false);
+            });
+
+            //remove menus when user clicks anywere else
+            $(document).on("click", function()
+            {
+                $(".menu").remove();
+            });
+        });
+
+
+    </script>
+
+    <style>
+        
+    
+        body 
+        {
+            margin:0;
+            padding:0;
+            height:100%;
+            width: 100%;
+        } 
+
+
+        #statusBar
+        {
+            margin:0;
+            padding:0;
+            position:   absolute;
+            height:     10em;
+            right:      0em;
+            width:      21em;
+        }
+
+        #statusUser
+        {
+            margin:0;
+            padding:0;
+            position:   absolute;
+            height:     10em;
+            left:       0em;
+            right:      21em;
+            
+        }
+
+        #historyCallList
+        {
+            margin:0;
+            padding:0;
+            position:   absolute;
+            right:      0em;
+            width:      21em;
+            overflow: auto;
+            top:        30em;
+            bottom:     0em;
+        }
+
+        #activeCallList
+        {
+            margin:0;
+            padding:0;
+            position:   absolute;
+            right:      0em;
+            width:      21em;
+            top:        10em;
+            height:     20em;
+            overflow: auto;
+        }
+
+
+        #deviceList
+        {
+            margin:0;
+            padding:0;
+            position:   absolute;
+            left:       0em;
+            top:        10em;
+            right:      21em;
+            bottom:     0em;
+            overflow: auto;
+        }
+
+
+        #statusBar[state="ringing"]
+        {
+            background-color: #ffaaaa;
+        }
+
+
+        #statusMsg
+        {
+            background-color: #ffffff;  
+            border-style: none;
+            display: inline;
+        }
+
+        #statusMsg .error
+        {
+            color: red;
+            font-weight: bold;
+        }
+    
+        #statusLoginUser
+        {
+                        
+            
+        }
+
+
+        #deviceList .device
+        {
+            float: left;
+            width: 20em;
+            min-height: 3em;
+            margin: 5px;
+        }
+
+        #deviceList .device:hover
+        {
+            border-color: yellow;
+            cursor: pointer;
+        }
+
+        #statusUser .device
+        {
+            float: left;
+            width: 40em;
+            min-height: 3em;
+            margin: 5px;
+        }
+
+
+        .deviceInfo
+        {
+            text-align: center;
+        }
+
+        .channelList
+        {
+            border-style:none;
+            width:100%;
+            min-height: 2em;
+        }
+
+        .channel
+        {
+            display: none;
+            border-top-style:dashed;
+            border-color:#aaaaaa; 
+            border-width: 1px;
+            margin:0;
+            min-width:15em;
+            position:relative;
+            font-weight: normal;
+
+
+        }
+
+        .channelIcon
+        {
+            padding-left:25px;
+            background-repeat:no-repeat !important;
+            background-position: left !important;
+            background-image:url('asterisk/channel_idle.png') ;
+        }
+
+
+        .channelIcon[state="in"] 
+        {
+            background-image:url('asterisk/channel_in.png') ;
+        }
+
+        .channelIcon[state="out"] 
+        {
+            background-image:url('asterisk/channel_out.png') ;
+        }
+
+        .channelIcon[state="ringing"] 
+        {
+            background-image:url('asterisk/channel_ring.png') ;
+        }
+
+        .channelIcon[state="hold"] 
+        {
+            background-image:url('asterisk/channel_hold.png') ;
+        }
+
+
+        .hold-blinker
+        {
+
+            background-color: #ffffcc;
+        }
+
+        .ring-blinker
+        {
+            background-color: #ffffcc;
+
+        }
+
+        .deleted
+        {
+            color:#aaaaaa; 
+        }
+
+
+        .channelInfo
+        {
+            margin:0;
+            padding:0;
+            display: inline-block;
+            min-width:18em;
+        }
+
+
+        .channelMenuItem
+        {
+            margin:2px;
+            padding:2px;
+            display: inline-block;
+            border-width: 2px;
+            border-style: solid;
+            color: black;
+            border-color: black;
+        }
+
+        .channelMenuItem:hover
+        {
+            color: white;
+            cursor: pointer;
+        }
+
+        .channelMenuItemHangup
+        {
+            background-color: red;          
+        }
+
+        .channelMenuItemTransfer
+        {
+            background-color: yellow;           
+        }
+
+        .channelMenuItemResume
+        {
+            background-color: green;
+        }
+
+        .channelMenuItemHold
+        {
+            background-color: gray;
+        }
+
+        .channelDebug
+        {
+            display:none;
+        }
+
+        .menu
+        {
+            position: absolute;
+            left:25px;
+            z-index: 1;
+        }
+
+    </style>
 
 </head>
 
 
 <body class='ui-widget' style='font-size:1em'>
-	<div class='ui-widget-content' id='statusUser'>
-		<div class='ui-widget-header'>My phone:</div>
-		<!-- <button id='test1'>Test1</button> -->
+    <div class='ui-widget-content' id='statusUser'>
+        <div class='ui-widget-header'>My phone:</div>
+        <!-- <button id='test1'>Test1</button> -->
 
-	</div>
+    </div>
 
-	<div class='ui-widget-content' id='statusBar'>
-		<div class='ui-widget-header'>Status:</div>
-		<div id='statusMsg'>
-			Loading...
-		</div>
-		<input id='login' type='submit' value='Change...'>
-		<input id='loginUser' type='submit' value='Admin login...'>
+    <div class='ui-widget-content' id='statusBar'>
+        <div class='ui-widget-header'>Status:</div>
+        <div id='statusMsg'>
+            Loading...
+        </div>
+        <input id='login' type='submit' value='Change...'>
+        <input id='loginUser' type='submit' value='Admin login...'>
 
-<!--  	<script type="text/javascript"
-		  src="http://jqueryui.com/themeroller/themeswitchertool/">
-		</script>
-		<div id="switcher"></div>-->		
+<!--    <script type="text/javascript"
+          src="http://jqueryui.com/themeroller/themeswitchertool/">
+        </script>
+        <div id="switcher"></div>-->        
 
-	</div>
+    </div>
 
 
-	<div class='ui-widget-content' id='activeCallList'>
-		<div class='ui-widget-header'>Active calls:</div>
-		<div class='list'></div>
-	</div>
+    <div class='ui-widget-content' id='activeCallList'>
+        <div class='ui-widget-header'>Active calls:</div>
+        <div class='list'></div>
+    </div>
 
-	<div class='ui-widget-content' id='historyCallList'>
-		<div class='ui-widget-header'>History:</div>
-		<div class='list'></div>
-	</div>
+    <div class='ui-widget-content' id='historyCallList'>
+        <div class='ui-widget-header'>History:</div>
+        <div class='list'></div>
+    </div>
 
-	<div class='ui-widget-content' id='deviceList'>
-		<div class='ui-widget-header'>Phone overview:</div>
-	</div>
+    <div class='ui-widget-content' id='deviceList'>
+        <div class='ui-widget-header'>Phone overview:</div>
+    </div>
 </body>
 </html>
