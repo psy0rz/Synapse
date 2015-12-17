@@ -305,6 +305,37 @@ namespace asterisk
 
 	// }
 
+	//park/dialtone one or more channels
+	void Cserver::amiPark(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, string mode1, CchannelPtr channel2Ptr, string mode2)
+	{
+
+		if (fromDevicePtr==CdevicePtr())
+			throw(synapse::runtime_error("device not specified"));
+
+		if (channel1Ptr==CchannelPtr())
+			throw(synapse::runtime_error("channel2 not specified"));
+
+		if (channel1Ptr->getDevicePtr()!=fromDevicePtr && (channel1Ptr->getLinkPtr()==CchannelPtr() || channel1Ptr->getLinkPtr()->getDevicePtr()!=fromDevicePtr))
+				throw(synapse::runtime_error("specified channel1 does not belong to this device"));
+
+		amiSetVar(channel1Ptr, "__SYNAPSE_OWNER", fromDevicePtr->getId());
+		amiUpdateCallerIdAll(channel1Ptr, "[parked] "+fromDevicePtr->getCallerIdAll());
+
+		if (channel2Ptr!=CchannelPtr())
+		{
+			amiSetVar(channel2Ptr, "__SYNAPSE_OWNER", fromDevicePtr->getId());
+			amiUpdateCallerIdAll(channel2Ptr, "[parked] "+fromDevicePtr->getCallerIdAll());
+
+			amiRedirect(channel1Ptr, "from-synapse", "park",
+						channel2Ptr, "from-synapse", "park");
+		}
+		else
+		{
+			amiRedirect(channel1Ptr, "from-synapse", "park");
+		}
+
+	}
+
 	void Cserver::amiBridge(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, CchannelPtr channel2Ptr, bool parkLinked1)
 	{
 		Cmsg out;

@@ -477,49 +477,52 @@
 
 
 
-			$("#statusUser").on("click", ".channelInfo", function()
-			{
-				var channel=$(this).parent().data("channel");
-				console.log("Clicked my channelinfo", channel);
 
-				//bridge the active channel to the clicked channel. (and park the call thats already bridged to the active channel)
+	// $("#statusUser").on("click", ".channelInfo", function()
+	// {
+	// 	var channel=$(this).parent().data("channel");
+	// 	var activeChannel=getActiveChannel();
+	// 	console.log("Clicked my channelinfo", channel);
 
-				//parked channel
-				if ($(this).parent().hasClass("parked_channel"))
-				{
-					var reuseChannelId=getActiveChannel()["id"];
-					send(0, "asterisk_Bridge", 
-					{
-						"channel1": reuseChannelId,
-						"channel2": channel["id"],
-						"parkLinked1": true,
-					});
+	// 	//bridge the active channel to the clicked channel. (and park the call thats already bridged to the active channel)
 
-				}
-				//normal channel:
-				else
-				{
-					var reuseChannelId=getActiveChannel()["id"];
-					send(0, "asterisk_Bridge", 
-					{
-						"channel1": reuseChannelId,
-						"channel2": channel["linkId"],
-						"parkLinked1": true,
-					});
-				}
+	// 	//parked channel
+	// 	if ($(this).parent().hasClass("parked_channel"))
+	// 	{
+	// 		var reuseChannelId=getActiveChannel()["id"];
+	// 		send(0, "asterisk_Bridge", 
+	// 		{
+	// 			"channel1": reuseChannelId,
+	// 			"channel2": channel["id"],
+	// 			"parkLinked1": true,
+	// 		});
+
+	// 	}
+	// 	//normal channel:
+	// 	else
+	// 	{
+	// 		var reuseChannelId=getActiveChannel()["id"];
+	// 		send(0, "asterisk_Bridge", 
+	// 		{
+	// 			"channel1": reuseChannelId,
+	// 			"channel2": channel["linkId"],
+	// 			"parkLinked1": true,
+	// 		});
+	// 	}
 
 
 
-				return(false);
+	// 	return(false);
 
-			});
-
+	// });
 
 
 			////////////////// menu stuff
-			$("#statusUser").on("click", ".channelIcon", function()
+			$("#statusUser").on("click", ".channelIcon,.channelInfo", function()
 			{
+
 				var channel=$(this).parent().data("channel");
+				var activeChannel=getActiveChannel();
 				console.log("Clicked my channelicon", channel);
 
 				$(".menu").remove();
@@ -530,7 +533,14 @@
 				menuHtml+="<li class='menu-hangup'><a href='#'>Hang up</a></li>";
 
 				if ($(this).parent().hasClass("parked_channel"))
+				{
 					menuHtml+="<li class='menu-transfer'><a href='#'>Transfer</a></li>";
+					menuHtml+="<li class='menu-resume'><a href='#'>Switch to this caller</a></li>";
+				}
+				else
+				{
+					menuHtml+="<li class='menu-hold'><a href='#'>Put caller on hold</a></li>";
+				}
 
 				menuHtml+="</ul>";
 
@@ -540,41 +550,40 @@
   						event.stopPropagation();
   						if (ui.item.hasClass("menu-hangup"))
   						{
+							console.log("Hanging up", channel["id"]);
   							send(0, "asterisk_Hangup", {
   								"channel": channel["id"]
   							});
   						}
   						else if (ui.item.hasClass("menu-transfer"))
   						{
-								//bridge the clicked channel to the channel thats is currently bridged with the active channel. (e.g. a "transfer")
-								//parks the active channel
-
-								var activeChannel=getActiveChannel();
-
-								//clicked a parked channel
-//								if ($(this).parent().hasClass("parked_channel"))
-								{
-									send(0, "asterisk_Bridge", 
-									{
-										"channel1": activeChannel["linkId"],
-										"channel2": channel["id"],
-										"parkLinked1": false, //NOTE: it would be nice if the channel would stay open in some cases?
-									});
-
-								}
-/*
-								//normal channel:
-								else
-								{
-									send(0, "asterisk_Bridge", 
-									{
-										"channel1": activeChannel["linkId"],
-										"channel2": channel["linkId"],
-										"parkLinked1": true,
-									});
-								}
-*/
+							console.log("Transferring", activeChannel["linkId"], channel["id"]);
+							send(0, "asterisk_Bridge", 
+							{
+								"channel1": activeChannel["linkId"],
+								"channel2": channel["id"],
+								"parkLinked1": false, //NOTE: it would be nice if the channel would stay open in some cases?
+							});
   						}
+  						else if (ui.item.hasClass("menu-hold"))
+  						{
+							console.log("Putting on hold", activeChannel["id"], channel["linkId"]);
+							send(0, "asterisk_Park", 
+							{
+								"channel1": channel["linkId"],
+								"mode1": "park"
+							});
+  						}
+  						else if (ui.item.hasClass("menu-resume"))
+						{
+							send(0, "asterisk_Bridge", 
+							{
+								"channel1": activeChannel["id"],
+								"channel2": channel["id"],
+								"parkLinked1": true,
+							});
+						}
+
   						$(".menu").remove();
   					}
 				});
@@ -850,7 +859,7 @@
 <body class='ui-widget' style='font-size:1em'>
 	<div class='ui-widget-content' id='statusUser'>
 		<div class='ui-widget-header'>My phone:</div>
-		<button id='test1'>Test1</button>
+		<!-- <button id='test1'>Test1</button> -->
 
 	</div>
 

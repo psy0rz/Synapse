@@ -100,12 +100,8 @@ namespace asterisk
 		void amiUpdateCallerId(CchannelPtr channelPtr, string num);
 		void amiUpdateCallerIdAll(CchannelPtr channelPtr, string all);
 
-		// //sets SYNAPSE_OWNER so that the owner can be traced back once the channel gets a new uniqueId (horrible but asterisk is hackish like that)
-		// //also calls amiUpdateCallerId to indicate to the channel that its parked
-		// void amiPreparePark(CchannelPtr channelPtr);
 
-		// //park one or 2 calls. calls preparepark first
-		// void amiPark(CchannelPtr channel1Ptr, CchannelPtr channel2Ptr);
+		void amiPark(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, string mode1, CchannelPtr channel2Ptr, string mode2);
 
 
 		//Make a call from specified device to extention
