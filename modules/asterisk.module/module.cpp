@@ -1280,24 +1280,8 @@ namespace asterisk
 
 		CsessionPtr sessionPtr=serverMan.getSessionPtr(msg.src);
 		CchannelPtr channel1Ptr;
-		CchannelPtr channel2Ptr;
-		string mode1;
-		string mode2;
-
-		if (msg.isSet("channel1"))
-		{
-			channel1Ptr=sessionPtr->getServerPtr()->getChannelPtr(msg["channel1"], false);
-			mode1=msg["mode1"].str();
-
-		}
-		
-		if (msg.isSet("channel2"))
-		{
-			channel2Ptr=sessionPtr->getServerPtr()->getChannelPtr(msg["channel2"], false);
-			mode2=msg["mode2"].str();
-		}
-
-		sessionPtr->getServerPtr()->amiPark(sessionPtr->getDevicePtr(), channel1Ptr, mode1, channel2Ptr, mode2);
+		channel1Ptr=sessionPtr->getServerPtr()->getChannelPtr(msg["channel1"], false);
+		sessionPtr->getServerPtr()->amiPark(sessionPtr->getDevicePtr(), channel1Ptr);
 
 	}
 

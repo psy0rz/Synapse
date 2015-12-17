@@ -101,7 +101,7 @@ namespace asterisk
 		void amiUpdateCallerIdAll(CchannelPtr channelPtr, string all);
 
 
-		void amiPark(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, string mode1, CchannelPtr channel2Ptr, string mode2);
+		void amiPark(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr);
 
 
 		//Make a call from specified device to extention
