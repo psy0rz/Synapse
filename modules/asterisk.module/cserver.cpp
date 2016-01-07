@@ -51,6 +51,17 @@ namespace asterisk
 
 				deviceMap[deviceId]->setGroupPtr(serverManPtr->groupMap[groupId]);
 
+				//not filtered?
+				if (this->device_show_regex=="" || regex_search(
+					deviceId,
+					what, 
+					boost::regex(this->device_show_regex)
+				))
+				{
+					deviceMap[deviceId]->setFiltered(false);
+				}
+
+
 				DEB("created device " << deviceId);
 			}
 			else

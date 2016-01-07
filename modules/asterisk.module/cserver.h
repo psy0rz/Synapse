@@ -69,6 +69,7 @@ namespace asterisk
 		string port;
 		string group_regex;
 		string group_default;
+		string device_show_regex;
 
 		enum Estatus
 		{

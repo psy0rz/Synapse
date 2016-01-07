@@ -7,7 +7,7 @@ namespace asterisk
 	Cdevice::Cdevice()
 	{
 		
-
+		filtered=true; //filtered from endusers?
 		changed=true;
 		online=true;
 		trunk=true; //assume true, to prevent showing trunks on asterisk-reconnect
@@ -16,19 +16,15 @@ namespace asterisk
 	//check if the device should be filtered from the endusers, according to various filtering options
 	bool Cdevice::isFiltered()
 	{
-		//dont show trunks
-		// if (trunk)
-		// 	return (true);
+		//never show trunks
+		if (trunk)
+			return (true);
 
 		//dont show devices with empty caller ID's
 		// if (callerIdName=="")
 		// 	return (true);
-
-		//dont show anything thats not sip (for now)
-		if (id.substr(0,3)!="SIP")
-			return (true);
-
-		return(false);
+	
+		return(filtered);
 	}
 
 	CgroupPtr Cdevice::getGroupPtr()
@@ -101,6 +97,12 @@ namespace asterisk
 	void Cdevice::setTrunk(bool trunk)
 	{
 		this->trunk=trunk;
+		changed=true;
+	}
+
+	void Cdevice::setFiltered(bool filtered)
+	{
+		this->filtered=filtered;
 		changed=true;
 	}
 

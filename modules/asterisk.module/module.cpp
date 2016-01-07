@@ -230,6 +230,7 @@ namespace asterisk
 			serverPtr->port=msg["server"]["port"].str();
 			serverPtr->group_default=msg["server"]["group_default"].str();
 			serverPtr->group_regex=msg["server"]["group_regex"].str();
+			serverPtr->device_show_regex=msg["server"]["device_show_regex"].str();
 	
 			//instruct ami to connect to the server
 			Cmsg out;

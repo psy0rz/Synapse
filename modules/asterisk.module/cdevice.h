@@ -19,6 +19,7 @@ namespace asterisk
 
 		bool trunk;
 		bool online;
+		bool filtered;
 		string callerId;
 		string callerIdName;
 		string id;
@@ -41,6 +42,7 @@ namespace asterisk
 		string getCallerIdName();
 		string getCallerIdAll();
 		void setTrunk(bool trunk);
+		void setFiltered(bool filtered);
 		void setOnline(bool online);
 		void setExten(string exten);
 		bool sendUpdate(int forceDst=0);

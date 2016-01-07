@@ -276,7 +276,8 @@ namespace asterisk
 		if (devicePtr==NULL || devicePtr->getGroupPtr()==NULL)
 			return (false);
 
-		if (devicePtr->isFiltered())
+		//filter it if both the device ptr and ownerptr are filtered:
+		if (devicePtr->isFiltered() && (ownerPtr==CdevicePtr() || ownerPtr->isFiltered()))
 			return (false);
 
 		Cmsg out;
