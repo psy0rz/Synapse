@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -36,18 +36,18 @@
 
 namespace synapse
 {
-using namespace boost;
-using namespace std;
+  using namespace std;
+  using namespace boost;
 
 /**
-	@author 
+	@author
 */
 class Cuser{
 public:
     Cuser(const string &name, const string &password);
 
     ~Cuser();
-	bool addMemberGroup(const CgroupPtr & group);
+	  bool addMemberGroup(const CgroupPtr & group);
     bool isMemberGroup(const CgroupPtr & group);
     string getName();
     bool isPassword(const string & password);
@@ -57,10 +57,10 @@ private:
 	string name;
 	string password;
 	list<CgroupPtr > memberGroups;
-	 	
+
 };
 
-typedef shared_ptr<Cuser> CuserPtr;
+typedef boost::shared_ptr<Cuser> CuserPtr;
 
 }
 

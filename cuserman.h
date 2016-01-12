@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -46,12 +46,12 @@ using namespace boost;
 #define MAX_SESSIONS 1000
 
 /**
-	@author 
+	@author
 */
 class CuserMan{
 public:
 	CuserMan();
-	
+
 	~CuserMan();
 	CuserPtr getUser(const string & userName);
 	bool addUser(const CuserPtr & user);
@@ -74,7 +74,7 @@ private:
 	CsessionPtr sessions[MAX_SESSIONS+1];
 	int sessionMaxPerUser;
 	int statMaxSessions; //maximum sessions ever used, for statistics
-	
+
 };
 }
 

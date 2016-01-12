@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -35,10 +35,10 @@
 
 namespace synapse
 {
-typedef shared_ptr<thread> CthreadPtr; 
+typedef boost::shared_ptr<thread> CthreadPtr; 
 
 /**
-	@author 
+	@author
 */
 class Ccall{
 public:
@@ -50,7 +50,7 @@ public:
 	CmsgPtr msg;
 	FsoHandler soHandler;
 	bool started;
-	CthreadPtr threadPtr;	
+	CthreadPtr threadPtr;
 
 };
 }

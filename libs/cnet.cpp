@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -33,10 +33,10 @@ using namespace boost;
 using asio::ip::tcp;
 
 Cnet::Cnet()
-		:tcpResolver(ioService), connectTimer(ioService), readBuffer(65535), tcpSocket(ioService) 
+		:tcpResolver(ioService), connectTimer(ioService), readBuffer(65535), tcpSocket(ioService)
 {
 	delimiter="\n";
-} 
+}
 
 //server mode: accept a new connection from the specified acceptorPtr. (usually provided by CnetMan)
 void Cnet::doAccept(int id, CacceptorPtr acceptorPtr)
@@ -55,11 +55,11 @@ void Cnet::doAccept(int id, CacceptorPtr acceptorPtr)
 	acceptorPtr->async_accept(
 		tcpSocket,
 		bind(&Cnet::acceptHandler,this,asio::io_service::work(ioService),_1)
-	);	
+	);
 
 	accepting(id, acceptorPtr->local_endpoint().port());
-		
-} 
+
+}
 
 
 //Client mode: Initiate a connect.
@@ -83,7 +83,7 @@ void Cnet::doConnect()
 	tcpSocket.close();
 
 
-	//start the resolver	
+	//start the resolver
 	stringstream portStr;
 	portStr << port;
 	DEB("Starting resolver for id " << id << ", resolving: " << host<<":"<<port);
@@ -97,7 +97,7 @@ void Cnet::doConnect()
 	connectTimer.async_wait(boost::bind(&Cnet::connectTimerHandler, this,_1));
 
 	connecting(id, host, port);
-    
+
 }
 
 
@@ -162,7 +162,7 @@ void Cnet::resolveHandler(
 		reset(ec);
 		return;
 	}
-	
+
 	//start connecting to first endpoint:
 	tcp::endpoint endpoint = *endpointI;
 	DEB("Resolved id " << id << ", starting connect to " << endpoint.address() << ":" << endpoint.port());
@@ -171,7 +171,7 @@ void Cnet::resolveHandler(
 	);
 }
 
-//handle the results of the connect: 
+//handle the results of the connect:
 //-try connecting to the next endpoints in case of failure
 //-start waiting for data in case of succes
 //executed from io-service thread
@@ -182,7 +182,7 @@ void Cnet::connectHandler(
 {
 	if (ec)
 	{
-		//we still have other endpoints we can try to connect? 
+		//we still have other endpoints we can try to connect?
 		if (endpointI != tcp::resolver::iterator())
 		{
 			tcpSocket.close();
@@ -212,7 +212,7 @@ void Cnet::connectHandler(
 
 }
 
-//handle the results of a read (incoming data) 
+//handle the results of a read (incoming data)
 //used for both client and servers.
 //executed from io-service thread
 void Cnet::readHandler(
@@ -224,7 +224,7 @@ void Cnet::readHandler(
 		reset(ec);
 		return;
 	}
-	
+
 	//netMan.read(id, readBuffer, bytesTransferred);
 	received(id, readBuffer, bytesTransferred);
 
@@ -252,27 +252,27 @@ void Cnet::doDisconnect()
 
 void Cnet::doWrite(string & data)
 {
-	shared_ptr<asio::streambuf> bufferPtr(new asio::streambuf(data.size()));
+	boost::shared_ptr<asio::streambuf> bufferPtr(new asio::streambuf(data.size()));
 	std::ostream os(&*bufferPtr);
 	os << data;
 	doWrite(bufferPtr);
 }
 
-void Cnet::doWrite(shared_ptr< asio::streambuf> bufferPtr)
+void Cnet::doWrite(boost::shared_ptr< asio::streambuf> bufferPtr)
 {
 	//post data to the service-thread
 	ioService.post(bind(&Cnet::writeHandler,this, bufferPtr));
 }
 
 //executed from io-service thread
-void Cnet::writeHandler(shared_ptr< asio::streambuf> bufferPtr)
+void Cnet::writeHandler(boost::shared_ptr< asio::streambuf> bufferPtr)
 {
 	if (writeQueue.empty())
-	{		
+	{
 		writeQueue.push_back(bufferPtr);
 		//if its empty it means we're not currently writing stuff, so we should start a new async write.
 		asio::async_write(
-			tcpSocket, 
+			tcpSocket,
 			*writeQueue.front(),
 			bind(&Cnet::writeCompleteHandler, this, _1, _2)
 		);
@@ -287,10 +287,10 @@ void Cnet::writeHandler(shared_ptr< asio::streambuf> bufferPtr)
 //the front item on the queue is the on being currently processed by async_write.
 //executed from io-service thread
 void Cnet::writeCompleteHandler(
-	const boost::system::error_code& ec, 
+	const boost::system::error_code& ec,
 	std::size_t bytesTransferred)
 {
-	//remove the front item, since the write is complete now. because of the shared_ptrs it will be freed automaticly.
+	//remove the front item, since the write is complete now. because of the boost::shared_ptrs it will be freed automaticly.
 	if (!writeQueue.empty())
 		writeQueue.pop_front();
 
@@ -305,7 +305,7 @@ void Cnet::writeCompleteHandler(
 	{
 		//start next async write.
 		asio::async_write(
-			tcpSocket, 
+			tcpSocket,
 			*writeQueue.front(),
 			bind(&Cnet::writeCompleteHandler, this, _1, _2)
 		);

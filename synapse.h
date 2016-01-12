@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -36,8 +36,8 @@ namespace synapse
 #endif
 
 //basic objects that are needed to call send messages
-weak_ptr<Cmodule> module;  //weak pointer, otherwise the reference count would be of by one when unloading a module.
-CmessageMan * messageMan; 
+boost::weak_ptr<Cmodule> module;  //weak pointer, otherwise the reference count would be of by one when unloading a module.
+CmessageMan * messageMan;
 
 // Thanks to hkaiser@#boost for helping me with the automatic handler registration:
 struct synapseAutoReg
@@ -83,21 +83,21 @@ list<synapse::Cvar> synapseAutoReg::handlers;
 
 //to determine compatability of module:
 extern "C" int synapseVersion() {
-	return (SYNAPSE_API_VERSION); 
+	return (SYNAPSE_API_VERSION);
 };
- 
+
 
 
 
 extern "C" bool synapseInit(CmessageMan * initMessageMan, CmodulePtr initModule)
-{ 
+{
 	messageMan=initMessageMan;
 	module=initModule;
 
 	//when this function is called we have a core-lock, so we can register our handlers directly:
 	BOOST_FOREACH(synapse::Cvar var, synapseAutoReg::handlers)
 	{
-		//we dont use core_Register to avoid chicken egg problems when loading the core module 
+		//we dont use core_Register to avoid chicken egg problems when loading the core module
 		((CmodulePtr)module)->setHandler(var["event"], var["event"]);
 
 		//are there extra event parameters specified?
@@ -121,22 +121,22 @@ extern "C" bool synapseInit(CmessageMan * initMessageMan, CmodulePtr initModule)
 }
 
 extern "C" void synapseCleanup()
-{ 
+{
 	//nothing to do yet..
 }
- 
+
 
 
 //make a copy of the message (can expensive for complex message structures)
 //and send a smartpointer of it to the core.
 //sendPtr should be defined in each module in synapse.h
 //you CANT send messages from the core with this funtion, you'll get an 'undefined reference'. :)
-void Cmsg::send(int cookie)
-{ 
+void Cmsg::send(int cookie, ElogLevel)
+{
 	lock_guard<mutex> lock(messageMan->threadMutex);
 
 	messageMan->sendMessage((CmodulePtr)module,CmsgPtr(new Cmsg(*this)), cookie);
-} 
+}
 
 
 /*!
@@ -163,12 +163,12 @@ bool Cmsg::returnIfOtherThan(char * keys, ...)
 {
 	va_list args;
 	va_start(args,keys);
-	
+
 	char * key=keys;
 	unsigned int found=0;
-	
+
 	do
-	{		
+	{
 		if (isSet(key))
 		{
 			found++;

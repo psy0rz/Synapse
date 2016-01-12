@@ -41,7 +41,7 @@ namespace synapse
 	using namespace boost;
 	using namespace std;
 
-	typedef shared_ptr<class Cmodule> CmodulePtr;
+	typedef boost::shared_ptr<class Cmodule> CmodulePtr;
 }
 
 #include "cmsg.h"

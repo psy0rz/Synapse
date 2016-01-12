@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -49,7 +49,7 @@
 
 namespace synapse
 {
-__thread int currentThreadDstId=0; 
+__thread int currentThreadDstId=0;
 
 //keep this many threads left, even though we dont need them right away.
 //This is to prevent useless thread destruction/creation.
@@ -59,9 +59,9 @@ using namespace boost;
 
 CmessageMan::CmessageMan()
 {
-    //pretent like the current thread is handling a call that was send to session id 1, 
-    //so that msg.src automaticly get 1 when the core call send with msg.src=0 
-    currentThreadDstId=1; 
+    //pretent like the current thread is handling a call that was send to session id 1,
+    //so that msg.src automaticly get 1 when the core call send with msg.src=0
+  currentThreadDstId=1;
 	logSends=true;
 	logReceives=true;
 //	defaultOwner=userMan.getUser("module");
@@ -104,7 +104,8 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 	//no src session specified means we use the session the original message was send to.
     //we do this be using the global currentThreadDstId which is thread-local storage and contains the dst-session of the current call.
 	//NOTE: this is the only case where modify the actual msg object.
-	if (!msg->src)
+
+  if (!msg->src)
 	{
 		if (currentThreadDstId!=0)
 		{
@@ -142,7 +143,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 	//source session belongs to this module?
 	if (src->module!=module)
 	{
-		//module is not the session owner. 
+		//module is not the session owner.
 		stringstream s;
 		s << "send: module " << module->name << " wants to send " << msg->event << " from session " << msg->src << ", but isnt the owner of this session.";
 		throw(synapse::runtime_error(s.str().c_str()));
@@ -221,6 +222,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		//all checks ok:
 		//make a copy of the message and add the destionation + handler to the call queue
 		callMan.addCall(msg, dst, soHandler);
+
 
 		//wake up a thread that calls the actual handler
 		threadCond.notify_one();

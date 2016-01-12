@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -55,8 +55,8 @@ class Ccurl
 {
 	private:
 	//threading stuff
-	shared_ptr<mutex> mMutex;
-	shared_ptr<condition_variable> mQueueChanged;
+	boost::shared_ptr<mutex> mMutex;
+	boost::shared_ptr<condition_variable> mQueueChanged;
 
 	//Ccurl stuff:
 	bool mAbort;		//try to abort this transfer
@@ -75,8 +75,8 @@ class Ccurl
 	{
 		mAbort=false;
 		mPerforming=false;
-		mMutex=shared_ptr<mutex>(new mutex);
-		mQueueChanged=shared_ptr<condition_variable>(new condition_variable);
+		mMutex=boost::shared_ptr<mutex>(new mutex);
+		mQueueChanged=boost::shared_ptr<condition_variable>(new condition_variable);
 
 		mCurl=curl_easy_init();
 		if (!mCurl)
@@ -111,7 +111,7 @@ class Ccurl
 		mQueue.push_back(queueMsg);
 
 		//Cqueue::iterator lastMsg=(--mQueue.end());
-		
+
 		mQueueChanged->notify_one();
 
 		//no performing thread yet?
@@ -212,7 +212,7 @@ class Ccurl
 			//set curl options, as long as there are no errors
 			curl_easy_reset(mCurl);
 			err=curl_easy_setopt(mCurl, CURLOPT_NOSIGNAL, 1);
-			
+
 			if (err==0)
 				err=curl_easy_setopt(mCurl, CURLOPT_WRITEFUNCTION, curl_write_callback);
 			if (err==0)
@@ -257,10 +257,10 @@ class Ccurl
 			if (err==0 && mMsg->isSet("post"))
 			{
 				err=curl_easy_setopt(mCurl, CURLOPT_POST, 1);
-				
+
 				if (err==0)
 					err=curl_easy_setopt(mCurl, CURLOPT_POSTFIELDS, ((*mMsg)["post"].str().c_str()));
-					
+
 				if (err==0)
 					err=curl_easy_setopt(mCurl, CURLOPT_POSTFIELDSIZE, ((*mMsg)["post"].str().length()));
 			}

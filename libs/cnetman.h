@@ -112,7 +112,7 @@ namespace synapse
 		//debugging/admin
 		void getStatus(Cvar & var);
 
-		typedef shared_ptr<Tnet> CnetPtr;
+		typedef boost::shared_ptr<Tnet> CnetPtr;
 		typedef map<int, CnetPtr > CnetMap;
 		typedef map<int, CacceptorPtr> CacceptorMap;
 

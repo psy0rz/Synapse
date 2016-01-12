@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -14,7 +14,6 @@
 
     You should have received a copy of the GNU General Public License
     along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
-
 
 
 
@@ -181,10 +180,10 @@ int CuserMan::addSession( CsessionPtr session)
 		}
 	}
 
-	//find free session ID. Start at the counter position, to prevent that we use the same numbers 
+	//find free session ID. Start at the counter position, to prevent that we use the same numbers
 	//all the time. (which will be confusing)
 	int startId=sessionCounter;
-	do 
+	do
 	{
 		sessionCounter++;
 		if (sessionCounter>=MAX_SESSIONS)

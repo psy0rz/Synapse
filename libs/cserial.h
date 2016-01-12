@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -49,8 +49,8 @@ namespace synapse
 		Cserial();
 		virtual ~Cserial();
 
-		//end-user api to ask us to DO stuff: 
-		void doOpen(int id, string delimiter, string port, 
+		//end-user api to ask us to DO stuff:
+		void doOpen(int id, string delimiter, string port,
 			boost::asio::serial_port_base::baud_rate baud_value,
 			boost::asio::serial_port_base::character_size character_size,
 			boost::asio::serial_port_base::parity parity_value,
@@ -59,7 +59,7 @@ namespace synapse
 		);
 		void doClose();
 		void doWrite(string & data);
-		void doWrite(shared_ptr<asio::streambuf> bufferPtr);
+		void doWrite(boost::shared_ptr<asio::streambuf> bufferPtr);
 		void run();
 
 		//admin/debugging
@@ -91,17 +91,17 @@ namespace synapse
 		int id;
 
 		//queue of buffers that need to be written
-		list < shared_ptr<asio::streambuf> > writeQueue;
+		list < boost::shared_ptr<asio::streambuf> > writeQueue;
 
 		private:
 
 		//Internal functions
-		void writeHandler(shared_ptr< asio::streambuf> bufferPtr);
+		void writeHandler(boost::shared_ptr< asio::streambuf> bufferPtr);
 		void writeCompleteHandler(
-			const boost::system::error_code& ec, 
+			const boost::system::error_code& ec,
 			std::size_t bytesTransferred);
 
-	
+
 		void reset(const boost::system::error_code& ec);
 
 		//you might want to override this if you need more flexible reading.

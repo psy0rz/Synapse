@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -31,14 +31,14 @@
 #define CSESSION_H
 
 #include <boost/shared_ptr.hpp>
-    
+
 namespace synapse
 {
 	using namespace boost;
 	using namespace std;
 
 
-	typedef shared_ptr<class Csession> CsessionPtr;
+	typedef boost::shared_ptr<class Csession> CsessionPtr;
 }
 
 #include "cmodule.h"
@@ -59,7 +59,7 @@ using namespace std;
 
 
 /**
-	@author 
+	@author
 */
 class Csession{
 public:
@@ -82,7 +82,7 @@ public:
 
 
 private:
-	
+
 };
 
 }

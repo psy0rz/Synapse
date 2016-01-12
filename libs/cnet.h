@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -51,7 +51,7 @@ namespace synapse
 	using asio::ip::tcp;
 
 
-	typedef shared_ptr<tcp::acceptor> CacceptorPtr;
+	typedef boost::shared_ptr<tcp::acceptor> CacceptorPtr;
 
 
 	class Cnet
@@ -68,7 +68,7 @@ namespace synapse
 		void doAccept(int id, CacceptorPtr acceptorPtr);
 		void doConnect(int id, string host, int port, int reconnectTime=0, string delimiter="\n");
 		void doWrite(string & data);
-		void doWrite(shared_ptr<asio::streambuf> bufferPtr);
+		void doWrite(boost::shared_ptr<asio::streambuf> bufferPtr);
 		void run();
 
 		//admin/debugging
@@ -95,7 +95,7 @@ namespace synapse
 		int statusServer;
 
 		//queue of buffers that need to be written
-		list < shared_ptr<asio::streambuf> > writeQueue;
+		list < boost::shared_ptr<asio::streambuf> > writeQueue;
 
 		protected:
 
@@ -131,13 +131,13 @@ namespace synapse
 			const boost::system::error_code& ec
 			);
 
-	
-		void writeHandler(shared_ptr< asio::streambuf> bufferPtr);
+
+		void writeHandler(boost::shared_ptr< asio::streambuf> bufferPtr);
 		void writeCompleteHandler(
-			const boost::system::error_code& ec, 
+			const boost::system::error_code& ec,
 			std::size_t bytesTransferred);
 
-	
+
 		void connectTimerHandler(
 			const boost::system::error_code& ec
 		);

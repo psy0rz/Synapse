@@ -74,7 +74,7 @@ private:
 
 };
 
-typedef shared_ptr<Cevent> CeventPtr;
+typedef boost::shared_ptr<Cevent> CeventPtr;
 
 }
 

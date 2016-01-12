@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -30,14 +30,14 @@ using namespace std;
 using namespace boost;
 
 Cserial::Cserial()
-		:readBuffer(65535), serialPort(ioService) 
+		:readBuffer(65535), serialPort(ioService)
 {
 	delimiter="\n";
-} 
+}
 
 
 
-void Cserial::doOpen(int id, string delimiter, string port, 
+void Cserial::doOpen(int id, string delimiter, string port,
 	boost::asio::serial_port_base::baud_rate baud_value,
 	boost::asio::serial_port_base::character_size character_size_value,
 	boost::asio::serial_port_base::parity parity_value,
@@ -63,7 +63,7 @@ Cserial::~Cserial ()
 }
 
 
-//handle the results of a read (incoming data) 
+//handle the results of a read (incoming data)
 void Cserial::readHandler(
 	const boost::system::error_code& ec,
 	std::size_t bytesTransferred)
@@ -73,7 +73,7 @@ void Cserial::readHandler(
 		reset(ec);
 		return;
 	}
-	
+
 	//netMan.read(id, readBuffer, bytesTransferred);
 	received(id, readBuffer, bytesTransferred);
 
@@ -97,13 +97,13 @@ void Cserial::doClose()
 
 void Cserial::doWrite(string & data)
 {
-	shared_ptr<asio::streambuf> bufferPtr(new asio::streambuf(data.size()));
+	boost::shared_ptr<asio::streambuf> bufferPtr(new asio::streambuf(data.size()));
 	std::ostream os(&*bufferPtr);
 	os << data;
 	doWrite(bufferPtr);
 }
 
-void Cserial::doWrite(shared_ptr< asio::streambuf> bufferPtr)
+void Cserial::doWrite(boost::shared_ptr< asio::streambuf> bufferPtr)
 {
 	//post data to the service-thread
 	ioService.post(bind(&Cserial::writeHandler,this, bufferPtr));
@@ -111,14 +111,14 @@ void Cserial::doWrite(shared_ptr< asio::streambuf> bufferPtr)
 
 
 //executed from io-service thread
-void Cserial::writeHandler(shared_ptr< asio::streambuf> bufferPtr)
+void Cserial::writeHandler(boost::shared_ptr< asio::streambuf> bufferPtr)
 {
 	if (writeQueue.empty())
-	{		
+	{
 		writeQueue.push_back(bufferPtr);
 		//if its empty it means we're not currently writing stuff, so we should start a new async write.
 		asio::async_write(
-			serialPort, 
+			serialPort,
 			*writeQueue.front(),
 			bind(&Cserial::writeCompleteHandler, this, _1, _2)
 		);
@@ -133,7 +133,7 @@ void Cserial::writeHandler(shared_ptr< asio::streambuf> bufferPtr)
 //the front item on the queue is the on being currently processed by async_write.
 //executed from io-service thread
 void Cserial::writeCompleteHandler(
-	const boost::system::error_code& ec, 
+	const boost::system::error_code& ec,
 	std::size_t bytesTransferred)
 {
 	//remove the front item, since the write is complete now. because of the shared_ptrs it will be freed automaticly.
@@ -151,7 +151,7 @@ void Cserial::writeCompleteHandler(
 	{
 		//start next async write.
 		asio::async_write(
-			serialPort, 
+			serialPort,
 			*writeQueue.front(),
 			bind(&Cserial::writeCompleteHandler, this, _1, _2)
 		);

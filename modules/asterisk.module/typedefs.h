@@ -12,19 +12,19 @@ namespace asterisk
 
 	class CserverMan;
 
-	typedef shared_ptr<class Cserver> CserverPtr;
+	typedef boost::shared_ptr<class Cserver> CserverPtr;
 	typedef map<int, CserverPtr> CserverMap;
 
-	typedef shared_ptr<class Csession> CsessionPtr;
+	typedef boost::shared_ptr<class Csession> CsessionPtr;
 	typedef map<int, CsessionPtr> CsessionMap;
 
-	typedef shared_ptr<class Cchannel> CchannelPtr;
+	typedef boost::shared_ptr<class Cchannel> CchannelPtr;
 	typedef map<string, CchannelPtr> CchannelMap;
 
-	typedef shared_ptr<class Cdevice> CdevicePtr;
+	typedef boost::shared_ptr<class Cdevice> CdevicePtr;
 	typedef map<string, CdevicePtr> CdeviceMap;
 
-	typedef shared_ptr<class Cgroup> CgroupPtr;
+	typedef boost::shared_ptr<class Cgroup> CgroupPtr;
 	typedef map<string, CgroupPtr> CgroupMap;
 
 	typedef long int TauthCookie;

@@ -24,12 +24,12 @@ SET(CMAKE_COLOR_MAKEFILE ON)
 
 #add definitions, compiler switches, etc.
 if(${CMAKE_BUILD_TYPE} STREQUAL Debug)
-	ADD_DEFINITIONS(-Wall -O0 -pthread -Werror -fno-strict-aliasing  -fexceptions)
+	ADD_DEFINITIONS(-std=c++11 -Wall -O0 -pthread -Werror -fno-strict-aliasing  -fexceptions)
 else(${CMAKE_BUILD_TYPE} STREQUAL Debug)
 	ADD_DEFINITIONS(-Wall -O3 -pthread -Werror -fno-strict-aliasing  -fexceptions)
 endif(${CMAKE_BUILD_TYPE} STREQUAL Debug)
 
-#use less copmiler mem so it compiles on a raspberry with 187 mem. 
+#use less copmiler mem so it compiles on a raspberry with 187 mem.
 if(${CMAKE_BUILD_TYPE} STREQUAL ReleaseLowMem)
 	ADD_DEFINITIONS(--param ggc-min-expand=100 --param ggc-min-heapsize=8192)
 endif(${CMAKE_BUILD_TYPE} STREQUAL ReleaseLowMem)

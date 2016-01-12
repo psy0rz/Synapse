@@ -77,6 +77,13 @@ namespace synapse
 
 	class Cmsg : public Cvar  {
 	public:
+		enum ElogLevel {
+			LOG_DEBUG,
+			LOG_INFO,
+			LOG_WARNING,
+			LOG_ERROR
+		};
+
 		Cmsg();
 		~Cmsg();
 		int src;
@@ -85,7 +92,7 @@ namespace synapse
 
 		//this function is only implemented in the .so object module
 		//so if you use it in the core you will get linker errors :)
-		void send(int cookie=0);
+		void send(int cookie=0, ElogLevel=LOG_INFO);
 		void returnError(string description);
 		void returnWarning(string description);
 		bool returnIfOtherThan(char * keys, ...);
@@ -99,7 +106,7 @@ namespace synapse
 
 	};
 
-	typedef shared_ptr<Cmsg> CmsgPtr;
+	typedef boost::shared_ptr<Cmsg> CmsgPtr;
 
 }
 
