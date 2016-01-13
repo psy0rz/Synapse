@@ -681,6 +681,8 @@ namespace asterisk
 		|Uniqueid = 1269870185.119 (string)                                                                                                     */
 
 		channelStatus(msg);
+    serverMan.sendChanges();
+
 	}
 
 

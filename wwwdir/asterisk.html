@@ -22,7 +22,7 @@
       }
 
 
-      #statusBar
+      #status-bar
       {
         margin:0;
         padding:0;
@@ -32,7 +32,7 @@
         width:      21em;
       }
 
-      #statusUser
+      #status-user
       {
         margin:0;
         padding:0;
@@ -43,7 +43,7 @@
 
       }
 
-      #historyCallList
+      #history-call-list
       {
         margin:0;
         padding:0;
@@ -55,7 +55,7 @@
         bottom:     0em;
       }
 
-      #activeCallList
+      #active-call-list
       {
         margin:0;
         padding:0;
@@ -68,7 +68,7 @@
       }
 
 
-      #deviceList
+      #device-list
       {
         margin:0;
         padding:0;
@@ -81,19 +81,19 @@
       }
 
 
-      #statusBar[state="ringing"]
+      #status-bar[state="ringing"]
       {
         background-color: #ffaaaa;
       }
 
 
-      #statusMsg
+      #status-msg
       {
       padding: 0.5em;
       font-size: 200%;
       }
 
-      #serverMsg
+      #server-msg
       {
       padding: 0.5em;
       color: red;
@@ -106,14 +106,7 @@
         font-weight: bold;
       }
 
-      #statusLoginUser
-      {
-
-
-      }
-
-
-      #deviceList .device
+      #device-list .device
       {
         float: left;
         width: 20em;
@@ -121,13 +114,13 @@
         margin: 5px;
       }
 
-      #deviceList .device:hover
+      #device-list .device:hover
       {
         border-color: yellow;
         cursor: pointer;
       }
 
-      #statusUser .device
+      #status-user .device
       {
         float: left;
         width: 40em;
@@ -136,12 +129,12 @@
       }
 
 
-      .deviceInfo
+      .device-info
       {
         text-align: center;
       }
 
-      .channelList
+      .channel-list
       {
         border-style:none;
         width:100%;
@@ -162,7 +155,7 @@
 
       }
 
-      .channelIcon
+      .channel-icon
       {
         padding-left:25px;
         background-repeat:no-repeat !important;
@@ -171,22 +164,22 @@
       }
 
 
-      .channelIcon[state="in"]
+      .channel-icon[state="in"]
       {
         background-image:url('asterisk/channel_in.png') ;
       }
 
-      .channelIcon[state="out"]
+      .channel-icon[state="out"]
       {
         background-image:url('asterisk/channel_out.png') ;
       }
 
-      .channelIcon[state="ringing"]
+      .channel-icon[state="ringing"]
       {
         background-image:url('asterisk/channel_ring.png') ;
       }
 
-      .channelIcon[state="hold"]
+      .channel-icon[state="hold"]
       {
         background-image:url('asterisk/channel_hold.png') ;
       }
@@ -210,7 +203,7 @@
       }
 
 
-      .channelInfo
+      .channel-info
       {
         margin:0;
         padding:0;
@@ -219,7 +212,7 @@
       }
 
 
-      .channelMenuItem
+      .channel-menu-item
       {
         margin:2px;
         padding:2px;
@@ -230,33 +223,33 @@
         border-color: black;
       }
 
-      .channelMenuItem:hover
+      .channel-menu-item:hover
       {
         color: white;
         cursor: pointer;
       }
 
-      .channelMenuItemHangup
+      .channel-menu-itemHangup
       {
         background-color: red;
       }
 
-      .channelMenuItemTransfer
+      .channel-menu-item-transfer
       {
         background-color: yellow;
       }
 
-      .channelMenuItemResume
+      .channel-menu-item-resume
       {
         background-color: green;
       }
 
-      .channelMenuItemHold
+      .channel-menu-item-hold
       {
         background-color: gray;
       }
 
-      .channelDebug
+      .channel-debug
       {
         display:none;
       }
@@ -274,36 +267,36 @@
 
 
   <body class='ui-widget' style='font-size:1em'>
-    <div class='ui-widget-content' id='statusUser'>
+    <div class='ui-widget-content' id='status-user'>
       <div class='ui-widget-header'>My phone:</div>
-      <div id='statusMsg'>
+      <div id='status-msg'>
         Loading...
       </div>
       <!-- <button id='test1'>Test1</button> -->
 
     </div>
 
-    <div class='ui-widget-content' id='statusBar'>
+    <div class='ui-widget-content' id='status-bar'>
       <div class='ui-widget-header'>Status:</div>
       <div style='padding:0.5em'>
         <input id='login' type='submit' value='Change phone...'>
-        <input id='loginUser' type='submit' value='Admin login'>
-        <div id='serverMsg'></div>
+        <input id='login-user' type='submit' value='Admin login'>
+        <div id='server-msg'></div>
       </div>
     </div>
 
 
-    <div class='ui-widget-content' id='activeCallList'>
+    <div class='ui-widget-content' id='active-call-list'>
       <div class='ui-widget-header'>Active calls:</div>
       <div class='list'></div>
     </div>
 
-    <div class='ui-widget-content' id='historyCallList'>
+    <div class='ui-widget-content' id='history-call-list'>
       <div class='ui-widget-header'>History:</div>
       <div class='list'></div>
     </div>
 
-    <div class='ui-widget-content' id='deviceList'>
+    <div class='ui-widget-content' id='device-list'>
       <div class='ui-widget-header'>Phone overview:</div>
     </div>
   </body>
