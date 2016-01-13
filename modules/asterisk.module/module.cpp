@@ -141,8 +141,8 @@ namespace asterisk
 		out["recvGroup"]=	"anonymous";
 
 
-		 out["event"]=		"asterisk_debugChannel";
-			out.send();
+		out["event"]=		"asterisk_debugChannel";
+		out.send();
 
 
 		out["event"]=		"asterisk_authCall";
@@ -166,6 +166,8 @@ namespace asterisk
 		out["event"]=		"asterisk_reset";
 		out.send();
 
+		out["event"]=		"asterisk_State";
+		out.send();
 	}
 
 
@@ -232,6 +234,9 @@ namespace asterisk
 			serverPtr->group_regex=msg["server"]["group_regex"].str();
 			serverPtr->device_show_regex=msg["server"]["device_show_regex"].str();
 
+			serverPtr->last_net_error="Connecting";
+			serverPtr->setState(Cserver::CONNECTING);
+
 			//instruct ami to connect to the server
 			Cmsg out;
 			out.clear();
@@ -271,7 +276,7 @@ namespace asterisk
 		out["Events"]="on";
 		out.send(0,Cmsg::INFO);
 
-		serverMan.getServerPtr(msg.dst)->status=Cserver::AUTHENTICATING;
+		serverMan.getServerPtr(msg.dst)->setState(Cserver::AUTHENTICATING);
 
 	}
 
@@ -325,8 +330,8 @@ namespace asterisk
 		//login response
 		else if (msg["ActionID"].str()=="Login")
 		{
-			serverMan.getServerPtr(msg.dst)->status=Cserver::AUTHENTICATED;
-						Cmsg out;
+			serverMan.getServerPtr(msg.dst)->setState(Cserver::AUTHENTICATED);
+			Cmsg out;
 
 			//learn all SIP peers as soon as we login
 			out.clear();
@@ -372,9 +377,7 @@ namespace asterisk
 
 	SYNAPSE_REGISTER(ami_Response_Error)
 	{
-		// ERROR("ERROR:" << msg["Message"].str());
-		//TODO: pass to clients?
-
+		serverMan.getServerPtr(msg.dst)->last_ami_error=msg["Message"].str();
 	}
 
 
@@ -382,7 +385,8 @@ namespace asterisk
 	{
 		//since we're disconnected, clear all devices/channels
 		serverMan.getServerPtr(msg.dst)->clear();
-		serverMan.getServerPtr(msg.dst)->status=Cserver::CONNECTING;
+		serverMan.getServerPtr(msg.dst)->last_net_error=msg["reason"].str();
+		serverMan.getServerPtr(msg.dst)->setState(Cserver::CONNECTING);
 
 		//ami reconnects automaticly
 	}

@@ -6,8 +6,8 @@
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
     <title>SYN-3 operator panel</title>
 
-    <!-- Jquery theme switcher  --> 
-    <!-- 
+    <!-- Jquery theme switcher  -->
+    <!--
     <link type="text/css" rel="stylesheet" href="http://jqueryui.com/themes/base/ui.all.css" />
     <script type="text/javascript" src="http://jqueryui.com/js/jquery.js"></script>
     <script>
@@ -30,18 +30,26 @@
         synapse_register("error",function(errortxt)
         {
 //          $('#statusMsg').html("<span class='error'>"+errortxt+"</span>");
-        }); 
-                
-        synapse_register("module_Error",function(msg_src, msg_dst, msg_event, msg)
-        {
-            $('#statusMsg').html("<span class='error'>"+msg["description"]+"</span>");
         });
 
+        synapse_register("module_Error",function(msg_src, msg_dst, msg_event, msg)
+        {
+            $('#serverMsg').html(msg["description"]);
+        });
+
+        synapse_register("asterisk_State",function(msg_src, msg_dst, msg_event, msg)
+        {
+            if (msg.state)
+              $('#serverMsg').html("Asterisk server '"+msg["id"]+"' is not connected.<br>"+msg["ami_error"]+"<br>"+msg["net_error"]);
+            else
+              $('#serverMsg').html("");
+
+        });
 
         synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
         {
             $('#statusMsg').html("Requesting login...");
-            send(0,"asterisk_authReq", { 
+            send(0,"asterisk_authReq", {
                 authCookie: $.readCookie('asterisk_authCookie'),
                 deviceId:   $.readCookie('asterisk_deviceId'),
                 serverId:   $.readCookie('asterisk_serverId')
@@ -51,12 +59,12 @@
 
         synapse_register("asterisk_authCall",function(msg_src, msg_dst, msg_event, msg)
         {
-            $('#statusMsg').html("Login by calling this number: <b>"+msg["number"]+"</b>");
+            $('#statusMsg').html("Please login by calling: <b>"+msg["number"]+"</b>");
         });
 
         synapse_register("asterisk_authOk",function(msg_src, msg_dst, msg_event, msg)
         {
-            $('#statusMsg').html("Login ok");
+            $('#statusMsg').html("");
             loginDeviceId=msg["deviceId"];
 
             //store the device and authcookie in a browser cookie, so the user doesnt have to relogin everytime.
@@ -65,7 +73,7 @@
             $.setCookie('asterisk_serverId',msg["serverId"], {duration:365, path:"/"});
 
             //request a refresh, to learn about all objects
-            send(0,"asterisk_refresh", { 
+            send(0,"asterisk_refresh", {
             });
         });
 
@@ -89,9 +97,9 @@
             else
                 txt=" (unknown)";
 
-            return txt;                 
+            return txt;
         }
-        
+
 
         synapse_register("asterisk_updateDevice",function(msg_src, msg_dst, msg_event, msg)
         {
@@ -131,7 +139,7 @@
             //is it the device of the logged in user?
 //          if (msg["id"]==loginDeviceId)
 //          {
-//              $('#statusLoginUser').text(msg["callerId"]);                
+//              $('#statusLoginUser').text(msg["callerId"]);
 //          }
 
 
@@ -159,7 +167,7 @@
 
                 $('body').append(html);
             }
-            
+
             var channelDebug=$(escapeId("debug_"+msg["id"]));
 
             channelDebug.append(
@@ -208,7 +216,7 @@
         synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
         {
             var moved=false;
-            
+
             /////////// DeviceList-only stuff:
             //does the channel exist already?
             if ($(".device "+escapeClass(msg["id"])).length!=0)
@@ -300,9 +308,9 @@
                         var device=$("#deviceList "+escapeId(msg["deviceId"]));
                         if (device.length!=0)
                         {
-                            $('#deviceList').scrollTop($('#deviceList').scrollTop()+device.position().top); 
+                            $('#deviceList').scrollTop($('#deviceList').scrollTop()+device.position().top);
                         }
-                    }, 
+                    },
                     function () {
                         $(this).removeClass("ui-state-highlight");
                         $(escapeId(msg["deviceId"])).removeClass("ui-state-highlight");
@@ -315,7 +323,7 @@
                         $(escapeId("debug_"+msg["id"])).dialog({
                             title: "Debug channel "+msg["id"],
                             position: "top"
-                                                    
+
                         });
                     }
                 );
@@ -359,7 +367,7 @@
 
                 //update called id of the parked channel
                 $(escapeClass(msg["id"])+"_parked .channelInfo").html(prettyCallerId(msg["callerId"], msg["callerIdName"]));
-                //store all data 
+                //store all data
                 $(escapeClass(msg["id"])+"_parked").data("channel", msg);
 
 
@@ -396,7 +404,7 @@
                 $(this).remove();
             });
 
-            //hide it from the call list with a nice effect 
+            //hide it from the call list with a nice effect
             $("#activeCallList "+escapeClass(msg["id"])).slideUp(100,function() {
                 //add class and move it to the history
                 $(this).addClass('deleted');
@@ -443,7 +451,7 @@
 
 
             //gets an active channel from our device thats not on hold
-            //returns all channel data 
+            //returns all channel data
             function getActiveChannel()
             {
 
@@ -468,7 +476,7 @@
 
                 var reuseChannelId=getActiveChannel()["id"];
 
-                send(0, "asterisk_Call", 
+                send(0, "asterisk_Call",
                 {
                     "exten": $(this).data("device")["exten"],
                     "reuseChannelId": reuseChannelId
@@ -491,7 +499,7 @@
                 }
                 else if ($(this).hasClass("channelMenuItemTransfer"))
                 {
-                    send(0, "asterisk_Bridge", 
+                    send(0, "asterisk_Bridge",
                     {
                         "channel1": activeChannel["linkId"],
                         "channel2": channel["id"],
@@ -500,14 +508,14 @@
                 }
                 else if ($(this).hasClass("channelMenuItemHold"))
                 {
-                    send(0, "asterisk_Park", 
+                    send(0, "asterisk_Park",
                     {
                         "channel1": channel["linkId"],
                     });
                 }
                 else if ($(this).hasClass("channelMenuItemResume"))
                 {
-                    send(0, "asterisk_Bridge", 
+                    send(0, "asterisk_Bridge",
                     {
                         "channel1": activeChannel["id"],
                         "channel2": channel["id"],
@@ -529,15 +537,15 @@
     </script>
 
     <style>
-        
-    
-        body 
+
+
+        body
         {
             margin:0;
             padding:0;
             height:100%;
             width: 100%;
-        } 
+        }
 
 
         #statusBar
@@ -558,7 +566,7 @@
             height:     10em;
             left:       0em;
             right:      21em;
-            
+
         }
 
         #historyCallList
@@ -607,21 +615,27 @@
 
         #statusMsg
         {
-            background-color: #ffffff;  
-            border-style: none;
-            display: inline;
+          padding: 0.5em;
+          font-size: 200%;
         }
 
-        #statusMsg .error
+        #serverMsg
+        {
+          padding: 0.5em;
+          color: red;
+          font-weight: bold;
+        }
+
+        .error
         {
             color: red;
             font-weight: bold;
         }
-    
+
         #statusLoginUser
         {
-                        
-            
+
+
         }
 
 
@@ -664,7 +678,7 @@
         {
             display: none;
             border-top-style:dashed;
-            border-color:#aaaaaa; 
+            border-color:#aaaaaa;
             border-width: 1px;
             margin:0;
             min-width:15em;
@@ -683,22 +697,22 @@
         }
 
 
-        .channelIcon[state="in"] 
+        .channelIcon[state="in"]
         {
             background-image:url('asterisk/channel_in.png') ;
         }
 
-        .channelIcon[state="out"] 
+        .channelIcon[state="out"]
         {
             background-image:url('asterisk/channel_out.png') ;
         }
 
-        .channelIcon[state="ringing"] 
+        .channelIcon[state="ringing"]
         {
             background-image:url('asterisk/channel_ring.png') ;
         }
 
-        .channelIcon[state="hold"] 
+        .channelIcon[state="hold"]
         {
             background-image:url('asterisk/channel_hold.png') ;
         }
@@ -718,7 +732,7 @@
 
         .deleted
         {
-            color:#aaaaaa; 
+            color:#aaaaaa;
         }
 
 
@@ -750,12 +764,12 @@
 
         .channelMenuItemHangup
         {
-            background-color: red;          
+            background-color: red;
         }
 
         .channelMenuItemTransfer
         {
-            background-color: yellow;           
+            background-color: yellow;
         }
 
         .channelMenuItemResume
@@ -788,23 +802,20 @@
 <body class='ui-widget' style='font-size:1em'>
     <div class='ui-widget-content' id='statusUser'>
         <div class='ui-widget-header'>My phone:</div>
+        <div id='statusMsg'>
+            Loading...
+        </div>
         <!-- <button id='test1'>Test1</button> -->
 
     </div>
 
     <div class='ui-widget-content' id='statusBar'>
         <div class='ui-widget-header'>Status:</div>
-        <div id='statusMsg'>
-            Loading...
+        <div style='padding:0.5em'>
+          <input id='login' type='submit' value='Change phone...'>
+          <input id='loginUser' type='submit' value='Admin login'>
+          <div id='serverMsg'></div>
         </div>
-        <input id='login' type='submit' value='Change...'>
-        <input id='loginUser' type='submit' value='Admin login...'>
-
-<!--    <script type="text/javascript"
-          src="http://jqueryui.com/themeroller/themeswitchertool/">
-        </script>
-        <div id="switcher"></div>-->        
-
     </div>
 
 

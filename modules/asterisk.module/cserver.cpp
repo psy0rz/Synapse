@@ -12,7 +12,7 @@ namespace asterisk
 	//////////////////////////////////////////////////////////
 	Cserver::Cserver(int sessionId, CserverMan * serverManPtr)
 	{
-		status=CONNECTING;
+		state=CONNECTING;
 		this->sessionId=sessionId;
 		this->serverManPtr=serverManPtr;
 	}
@@ -74,6 +74,8 @@ namespace asterisk
 
 	void Cserver::sendRefresh(int dst)
 	{
+		sendState(dst);
+
 		//let all devices send a refresh
 		for (CdeviceMap::iterator I=deviceMap.begin(); I!=deviceMap.end(); I++)
 		{
@@ -162,11 +164,11 @@ namespace asterisk
 
 
 
-		if (status==CONNECTING)
+		if (state==CONNECTING)
 			s=s+"connecting...";
-		if (status==AUTHENTICATING)
+		if (state==AUTHENTICATING)
 			s=s+"authenticating...";
-		if (status==AUTHENTICATED)
+		if (state==AUTHENTICATED)
 			s=s+"authenticated";
 
 		s=s+"\n";
@@ -189,6 +191,24 @@ namespace asterisk
 	int Cserver::getSessionId()
 	{
 		return(sessionId);
+	}
+
+	void Cserver::sendState(int dst)
+	{
+		Cmsg out;
+		out.event="asterisk_State";
+		out["ami_error"]=last_ami_error;
+		out["net_error"]=last_net_error;
+		out["state"]=state;
+		out["id"]=id;
+		out.dst=dst;
+		out.send(0,Cmsg::INFO);
+	}
+
+	void Cserver::setState(Estate state)
+	{
+		this->state=state;
+    sendState(0);
 	}
 
 

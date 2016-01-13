@@ -161,7 +161,11 @@ class CnetAmi : public synapse::Cnet
 			regexI++;
 		}
 		out.dst=id;
-		out.send(0,Cmsg::INFO);
+
+		if (out.event=="ami_Response_Error")
+		out.send(0,Cmsg::ERROR);
+		else
+			out.send(0,Cmsg::INFO);
 
 		readBuffer.consume(dataStr.length());
 	}

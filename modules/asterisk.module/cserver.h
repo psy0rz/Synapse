@@ -50,73 +50,77 @@ namespace asterisk
 	//physical asterisk servers. every server has its own device and channel map
 	class Cserver
 	{
+		public:
+			enum Estate
+			{
+				AUTHENTICATED, //everything is ok
+				AUTHENTICATING, //autenticating
+				CONNECTING, //disconnected, trying to reconnect
+			};
+
 		private:
-		CchannelMap channelMap;
-		CdeviceMap deviceMap;
+			CchannelMap channelMap;
+			CdeviceMap deviceMap;
+			CserverMan * serverManPtr;
 
+			int sessionId; //synapse sessionID of the ami-connection.
 
+			Estate state;
 
-
-		CserverMan * serverManPtr;
-
-		int sessionId; //synapse sessionID of the ami-connection.
 
 		public:
-		string id;
-		string username;
-		string password;
-		string host;
-		string port;
-		string group_regex;
-		string group_default;
-		string device_show_regex;
-
-		enum Estatus
-		{
-			CONNECTING,
-			AUTHENTICATING,
-			AUTHENTICATED,
-		};
-		Estatus status;
-
-		Cserver(int sessionId, CserverMan * serverManPtr);
-		CdevicePtr getDevicePtr(string deviceId, bool autoCreate=true);
-		void sendRefresh(int dst);
-		void sendChanges();
-		CchannelPtr getChannelPtr(string channelId, bool autoCreate=true);
-		void delChannel(string channelId);
-		void clear();
-		string getStatus(string prefix);
-		int getSessionId();
-
-		//sets a asterisk variable on a channel
-		void amiSetVar(CchannelPtr channelPtr, string variable, string value);
-
-		//redirect one or two channels to another context and extention. 
-		void amiRedirect(CchannelPtr channel1Ptr, string context1, string exten1, CchannelPtr channel2Ptr=CchannelPtr(), string context2="", string exten2="");
-
-		//update the caller id or number of a channel in realtime. 
-		//you need to enable sendrpid on the extension and have a supported phone (like a cisco spa)
-		void amiUpdateCallerIdName(CchannelPtr channelPtr, string name);
-		void amiUpdateCallerId(CchannelPtr channelPtr, string num);
-		void amiUpdateCallerIdAll(CchannelPtr channelPtr, string all);
+			string id;
+			string username;
+			string password;
+			string host;
+			string port;
+			string group_regex;
+			string group_default;
+			string device_show_regex;
+			string last_net_error;
+			string last_ami_error;
 
 
-		void amiPark(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr);
+			Cserver(int sessionId, CserverMan * serverManPtr);
+			CdevicePtr getDevicePtr(string deviceId, bool autoCreate=true);
+			void sendRefresh(int dst);
+			void sendState(int dst);
+			void sendChanges();
+			CchannelPtr getChannelPtr(string channelId, bool autoCreate=true);
+			void delChannel(string channelId);
+			void clear();
+			string getStatus(string prefix);
+			int getSessionId();
+			void setState(Estate state);
+
+			//sets a asterisk variable on a channel
+			void amiSetVar(CchannelPtr channelPtr, string variable, string value);
+
+			//redirect one or two channels to another context and extention.
+			void amiRedirect(CchannelPtr channel1Ptr, string context1, string exten1, CchannelPtr channel2Ptr=CchannelPtr(), string context2="", string exten2="");
+
+			//update the caller id or number of a channel in realtime.
+			//you need to enable sendrpid on the extension and have a supported phone (like a cisco spa)
+			void amiUpdateCallerIdName(CchannelPtr channelPtr, string name);
+			void amiUpdateCallerId(CchannelPtr channelPtr, string num);
+			void amiUpdateCallerIdAll(CchannelPtr channelPtr, string all);
 
 
-		//Make a call from specified device to extention
-		//Tries to be reuse the specified channel (parking the otherside of the call)
-		//Otherwise originates a new call on device.
-		void amiCall(CdevicePtr fromDevicePtr, CchannelPtr reuseChannelPtr, string exten);
+			void amiPark(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr);
 
-		//Bridge 2 channels together.
-		//If channelA is not specified, it will originate a new call and then do the bridging to channelB via the bridge app.
-		//set parkLinked to true if you want to park any linked channels. (that are currently bridged)
-		void amiBridge(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, CchannelPtr channel2Ptr, bool parkLinked1);
 
-		//hangup the channel
-		void amiHangup(CchannelPtr channelPtr);
+			//Make a call from specified device to extention
+			//Tries to be reuse the specified channel (parking the otherside of the call)
+			//Otherwise originates a new call on device.
+			void amiCall(CdevicePtr fromDevicePtr, CchannelPtr reuseChannelPtr, string exten);
+
+			//Bridge 2 channels together.
+			//If channelA is not specified, it will originate a new call and then do the bridging to channelB via the bridge app.
+			//set parkLinked to true if you want to park any linked channels. (that are currently bridged)
+			void amiBridge(CdevicePtr fromDevicePtr, CchannelPtr channel1Ptr, CchannelPtr channel2Ptr, bool parkLinked1);
+
+			//hangup the channel
+			void amiHangup(CchannelPtr channelPtr);
 
 	};
 
