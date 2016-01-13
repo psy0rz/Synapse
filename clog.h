@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -45,9 +45,11 @@ extern boost::mutex logMutex;
 #define  TERM_NORMAL "\033[0m"
 #define  TERM_WARN "\033[33;1m"
 #define  TERM_BAD "\033[31;1m"
-#define  TERM_SEND_MESSAGE "\033[32;1m"
+#define  TERM_ACTION "\033[32;1m"
 #define  TERM_RECV_MESSAGE "\033[34;1m"
 #define  TERM_BOLD "\033[1m"
+
+
 
 //TODO: replace this with a better more efficient logging mechnism, altough its not trivial to make a thread-safe version of cout.
 
@@ -82,8 +84,8 @@ extern boost::mutex logMutex;
 #define WARNING(s) LOG(boost::this_thread::get_id() << " " << TERM_WARN << "WARNING: " << s << TERM_NORMAL << std::endl)
 
 //messages:
-#define LOG_SEND(s) LOG(boost::this_thread::get_id() << " " << TERM_SEND_MESSAGE << s << TERM_NORMAL << std::endl)
-#define LOG_RECV(s) LOG(boost::this_thread::get_id() << " " << TERM_RECV_MESSAGE << s << TERM_NORMAL << std::endl)
+// #define LOG_SEND(s) LOG(boost::this_thread::get_id() << " " << TERM_SEND_MESSAGE << s << TERM_NORMAL << std::endl)
+// #define LOG_RECV(s) LOG(boost::this_thread::get_id() << " " << TERM_RECV_MESSAGE << s << TERM_NORMAL << std::endl)
 
 
 }

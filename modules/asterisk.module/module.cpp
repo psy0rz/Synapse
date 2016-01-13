@@ -1,19 +1,19 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
-    This file is part of Synapse.
+		This file is part of Synapse.
 
-    Synapse is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+		Synapse is free software: you can redistribute it and/or modify
+		it under the terms of the GNU General Public License as published by
+		the Free Software Foundation, either version 3 of the License, or
+		(at your option) any later version.
 
-    Synapse is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+		Synapse is distributed in the hope that it will be useful,
+		but WITHOUT ANY WARRANTY; without even the implied warranty of
+		MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+		GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
+		You should have received a copy of the GNU General Public License
+		along with Synapse.  If not, see <http://www.gnu.org/licenses/>. */
 
 
 /** \file
@@ -25,7 +25,7 @@ The complex flow of asterisk events is converted to a few simple events, usable 
 
 \code
 To capture test-data from a asterisk server:
-  script -c telnet 1.2.3.4 5038 -t ami.txt 2> ami.timing
+	script -c telnet 1.2.3.4 5038 -t ami.txt 2> ami.timing
 
 and login with:
  Action: Login
@@ -39,7 +39,7 @@ and login with:
 To setup a fake server replaying this:
 
  tcpserver 0.0.0.0 5555 scriptreplay ami.timing ami.txt
- 
+
 
 \endcode
 
@@ -75,23 +75,23 @@ namespace asterisk
 
 
 
-	
+
 		out.clear();
 		out.event="core_ChangeModule";
 		out["maxThreads"]=1; //NOTE: this module is single threaded only!
 		out.send();
-	
+
 		out.clear();
 		out.event="core_ChangeSession";
 		out["maxThreads"]=1;
 		out.send();
-	
+
 		out.clear();
 		out.event="core_LoadModule";
 		out["path"]="modules/ami.module/libami.so";
 		out.send();
-	
-	
+
+
 		out.clear();
 		out.event="core_LoadModule";
 		out["path"]="modules/timer.module/libtimer.so";
@@ -103,7 +103,7 @@ namespace asterisk
 		out["path"]="modules/http_json.module/libhttp_json.so";
 		out.send();
 
-	
+
 		out.clear();
 
 
@@ -140,32 +140,32 @@ namespace asterisk
 		out["sendGroup"]=	"modules";
 		out["recvGroup"]=	"anonymous";
 
-	
-	 	out["event"]=		"asterisk_debugChannel"; 
- 	 	out.send();
-	
 
-		out["event"]=		"asterisk_authCall"; 
-		out.send();
-	
-		out["event"]=		"asterisk_authOk"; 
-		out.send();
-	
-		out["event"]=		"asterisk_updateChannel"; 
-		out.send();
-	
-		out["event"]=		"asterisk_delChannel"; 
-		out.send();
-	
-		out["event"]=		"asterisk_updateDevice"; 
-		out.send();
-	
-		out["event"]=		"asterisk_delDevice"; 
+		 out["event"]=		"asterisk_debugChannel";
+			out.send();
+
+
+		out["event"]=		"asterisk_authCall";
 		out.send();
 
-		out["event"]=		"asterisk_reset"; 
+		out["event"]=		"asterisk_authOk";
 		out.send();
-	
+
+		out["event"]=		"asterisk_updateChannel";
+		out.send();
+
+		out["event"]=		"asterisk_delChannel";
+		out.send();
+
+		out["event"]=		"asterisk_updateDevice";
+		out.send();
+
+		out["event"]=		"asterisk_delDevice";
+		out.send();
+
+		out["event"]=		"asterisk_reset";
+		out.send();
+
 	}
 
 
@@ -178,7 +178,7 @@ namespace asterisk
 		smatch what;
 		if (!regex_search(
 			channel,
-			what, 
+			what,
 			boost::regex("^(.*)-([^-]*)$")
 		))
 		{
@@ -193,11 +193,11 @@ namespace asterisk
 		}
 	}
 
-	
-	
-	
-	
-	
+
+
+
+
+
 	SYNAPSE_REGISTER(ami_Ready)
 	{
 		///if ami is ready, we are ready ;)
@@ -211,9 +211,9 @@ namespace asterisk
 		out.event="asterisk_Config";
 		out.send();
 	}
-	
 
-	
+
+
 
 	SYNAPSE_REGISTER(module_SessionStart)
 	{
@@ -231,7 +231,7 @@ namespace asterisk
 			serverPtr->group_default=msg["server"]["group_default"].str();
 			serverPtr->group_regex=msg["server"]["group_regex"].str();
 			serverPtr->device_show_regex=msg["server"]["device_show_regex"].str();
-	
+
 			//instruct ami to connect to the server
 			Cmsg out;
 			out.clear();
@@ -239,7 +239,7 @@ namespace asterisk
 			out.src=msg.dst;
 			out["host"]=msg["server"]["host"].str();
 			out["port"]=msg["server"]["port"].str();
-			out.send();
+			out.send(0,Cmsg::INFO);
 		}
 	}
 
@@ -256,7 +256,7 @@ namespace asterisk
 		serverMan.delSession(msg["session"]);
 	}
 
-	
+
 	SYNAPSE_REGISTER(ami_Connected)
 	{
 		//ami is connected, now login with the right credentials for this server:
@@ -269,15 +269,15 @@ namespace asterisk
 		out["Secret"]=serverMan.getServerPtr(msg.dst)->password;
 		out["ActionID"]="Login";
 		out["Events"]="on";
-		out.send();
+		out.send(0,Cmsg::INFO);
 
 		serverMan.getServerPtr(msg.dst)->status=Cserver::AUTHENTICATING;
-	
+
 	}
-	
+
 	SYNAPSE_REGISTER(ami_Response_Success)
 	{
-		
+
 		//AMI is broken by design: why didnt they just use a Event, instead of defining the format of a Response exception. Now we need to use the ActionID and do extra marshhalling:
 		//SIPshowPeer response
 		if (msg["ActionID"].str()=="SIPshowPeer")
@@ -285,13 +285,13 @@ namespace asterisk
 			string deviceId=msg["Channeltype"].str()+"/"+msg["ObjectName"].str();
 			CdevicePtr devicePtr=serverMan.getServerPtr(msg.dst)->getDevicePtr(deviceId);
 			devicePtr->setExten(msg["ObjectName"]);
-	
-			//NOTE: we handle Unmonitored sip peers as online, while we dont actually know if its online or not.		
+
+			//NOTE: we handle Unmonitored sip peers as online, while we dont actually know if its online or not.
 			if (msg["Status"].str().find("OK")==0 || msg["Status"].str().find("Unmonitored")==0 )//||  msg["Status"].str().find("UNKNOWN")==0)
 				devicePtr->setOnline(true);
 			else
 				devicePtr->setOnline(false);
-	
+
 			if (msg["Callerid"].str() != "\"\" <>")
 			{
 				//split up the the callerid+callerIdname string
@@ -326,104 +326,104 @@ namespace asterisk
 		else if (msg["ActionID"].str()=="Login")
 		{
 			serverMan.getServerPtr(msg.dst)->status=Cserver::AUTHENTICATED;
-            Cmsg out;
+						Cmsg out;
 
 			//learn all SIP peers as soon as we login
 			out.clear();
 			out.src=msg.dst;
 			out.event="ami_Action";
 			out["Action"]="SIPPeers";
-			out.send();
-	
-            //learn all IAX peers as soon as we login
-            out.clear();
-            out.src=msg.dst;
-            out.event="ami_Action";
-            out["Action"]="IAXPeers";
-            out.send();
+			out.send(0,Cmsg::INFO);
 
-            //learn all ZAP channels as soon as we login
-            //NOTE: gives useless info
-            // out.clear();
-            // out.src=msg.dst;
-            // out.event="ami_Action";
-            // out["Action"]="ZapShowChannels";
-            // out.send();
+			//learn all IAX peers as soon as we login
+			out.clear();
+			out.src=msg.dst;
+			out.event="ami_Action";
+			out["Action"]="IAXPeers";
+			out.send(0,Cmsg::INFO);
 
-            //learn all DAHDI channels as soon as we login
-            //NOTE: gives useless info
-            // out.clear();
-            // out.src=msg.dst;
-            // out.event="ami_Action";
-            // out["Action"]="DahdiShowChannels";
-            // out.send();
+			//learn all ZAP channels as soon as we login
+			//NOTE: gives useless info
+			// out.clear();
+			// out.src=msg.dst;
+			// out.event="ami_Action";
+			// out["Action"]="ZapShowChannels";
+			// out.send();
+
+			//learn all DAHDI channels as soon as we login
+			//NOTE: gives useless info
+			// out.clear();
+			// out.src=msg.dst;
+			// out.event="ami_Action";
+			// out["Action"]="DahdiShowChannels";
+			// out.send();
 
 			//learn current channel status as soon as we login
 			out.clear();
 			out.src=msg.dst;
 			out.event="ami_Action";
 			out["Action"]="Status";
-			out.send();
-	
+			out.send(0,Cmsg::INFO);
+
 		}
-			
-		
+
+
 	}
-	
+
 	SYNAPSE_REGISTER(ami_Response_Error)
 	{
-		ERROR("ERROR:" << msg["Message"].str());
+		// ERROR("ERROR:" << msg["Message"].str());
 		//TODO: pass to clients?
-	
+
 	}
-	
-	
+
+
 	SYNAPSE_REGISTER(ami_Disconnected)
 	{
 		//since we're disconnected, clear all devices/channels
 		serverMan.getServerPtr(msg.dst)->clear();
 		serverMan.getServerPtr(msg.dst)->status=Cserver::CONNECTING;
-		
+
 		//ami reconnects automaticly
 	}
-	
-	
-	
-	
-	
+
+
+
+
+
 	//we got a response to our SIPPeers/IAXpeers request.
-    /* IAX2 1.8:
-        |ChanObjectType = peer (string)
-        |Channeltype = IAX2 (string)
-        |Dynamic = no (string)
-        |Encryption = no (string)
-        |Event = PeerEntry (string)
-        |IPaddress = 81.18.245.155 (string)
-        |IPport = 4569 (string)
-        |ObjectName = flexvoice/201-CDS_Datux (string)
-        |Status = Unmonitored (string)
-        |Trunk = yes (string)
+		/* IAX2 1.8:
+				|ChanObjectType = peer (string)
+				|Channeltype = IAX2 (string)
+				|Dynamic = no (string)
+				|Encryption = no (string)
+				|Event = PeerEntry (string)
+				|IPaddress = 81.18.245.155 (string)
+				|IPport = 4569 (string)
+				|ObjectName = flexvoice/201-CDS_Datux (string)
+				|Status = Unmonitored (string)
+				|Trunk = yes (string)
 
-       SIP 1.8:
-        |ACL = no (string)
-        |ChanObjectType = peer (string)
-        |Channeltype = SIP (string)
-        |Dynamic = yes (string)
-        |Event = PeerEntry (string)
-        |Forcerport = yes (string)
-        |IPaddress = -none- (string)
-        |IPport = 0 (string)
-        |ObjectName = 1002 (string)
-        |RealtimeDevice = no (string)
-        |Status = Unmonitored (string)
-        |TextSupport = no (string)
-        |VideoSupport = no (string)
+			 SIP 1.8:
+				|ACL = no (string)
+				|ChanObjectType = peer (string)
+				|Channeltype = SIP (string)
+				|Dynamic = yes (string)
+				|Event = PeerEntry (string)
+				|Forcerport = yes (string)
+				|IPaddress = -none- (string)
+				|IPport = 0 (string)
+				|ObjectName = 1002 (string)
+				|RealtimeDevice = no (string)
+				|Status = Unmonitored (string)
+				|TextSupport = no (string)
+				|VideoSupport = no (string)
 
-    */
+		*/
 	SYNAPSE_REGISTER(ami_Event_PeerEntry)
 	{
 		serverMan.getServerPtr(msg.dst)->getDevicePtr(msg["Channeltype"].str()+"/"+msg["ObjectName"].str());
-	
+
 		//request additional device info for this SIP peer
 		//example: "SIP/604"
 		if (msg["Channeltype"].str()=="SIP")
@@ -437,25 +437,25 @@ namespace asterisk
 			out["Action"]="SIPshowPeer";
 			out["ActionID"]="SIPshowPeer";
 			out["Peer"]=msg["ObjectName"].str();
-			out.send();
+			out.send(0,Cmsg::INFO);
 		}
-	
-	}
-	
-    /*
-        1.8:
-        |Alarm = No Alarm (string)
-        |Context = phones (string)
-        |DAHDIChannel = 1 (string)
-        |DND = Disabled (string)
-        |Event = DAHDIShowChannels (string)
-        |Signalling = FXO Kewlstart (string)
-        |SignallingCode = 4128 (string)
-    */
-    SYNAPSE_REGISTER(ami_Event_DAHDIShowChannels)
-    {
 
-    }
+	}
+
+		/*
+				1.8:
+				|Alarm = No Alarm (string)
+				|Context = phones (string)
+				|DAHDIChannel = 1 (string)
+				|DND = Disabled (string)
+				|Event = DAHDIShowChannels (string)
+				|Signalling = FXO Kewlstart (string)
+				|SignallingCode = 4128 (string)
+		*/
+		SYNAPSE_REGISTER(ami_Event_DAHDIShowChannels)
+		{
+
+		}
 
 	void channelStatus(Cmsg & msg)
 	{
@@ -463,7 +463,7 @@ namespace asterisk
 		CdevicePtr devicePtr=serverMan.getServerPtr(msg.dst)->getDevicePtr(
 			getDeviceIdFromChannel(msg["Channel"])
 		);
-	
+
 		channelPtr->setDevicePtr(devicePtr);
 		channelPtr->setChannelName(msg["Channel"]);
 
@@ -509,9 +509,9 @@ namespace asterisk
 		{
 			channelPtr->setState("");
 		}
-	
+
 		//NOTE: whats with all the different namings and <unknown> vs <Unknown> in Newcallerid?
-	
+
 		if (msg.isSet("CallerIDNum"))
 		{
 			if (msg["CallerIDNum"].str() == "<unknown>")
@@ -519,7 +519,7 @@ namespace asterisk
 			else
 				channelPtr->setCallerId(msg["CallerIDNum"]);
 		}
-	
+
 		if (msg.isSet("CallerID"))
 		{
 			if (msg["CallerID"].str() == "<unknown>")
@@ -527,7 +527,7 @@ namespace asterisk
 			else
 				channelPtr->setCallerId(msg["CallerID"]);
 		}
-	
+
 		if (msg.isSet("CallerIDName"))
 		{
 			if (msg["CallerIDName"].str() == "<unknown>")
@@ -535,7 +535,7 @@ namespace asterisk
 			else
 				channelPtr->setCallerIdName(msg["CallerIDName"]);
 		}
-	
+
 		if (msg.isSet("Exten")) //1.8
 		{
 			if (channelPtr->getFirstExtension()=="")
@@ -547,15 +547,15 @@ namespace asterisk
 
 //		devicePtr->sendChanges();
 		channelPtr->sendDebug(msg, msg.dst);
-	
-		
+
+
 	}
-	
-	
+
+
 	// new channel created
 	SYNAPSE_REGISTER(ami_Event_Newchannel)
 	{
-	
+
 	/*	Event: Newchannel
 		Privilege: call,all
 		Channel: SIP/604-00000069
@@ -563,7 +563,7 @@ namespace asterisk
 		CallerIDNum: 604
 		CallerIDName: Edwin (draadloos)
 		Uniqueid: 1269871368.143
-	
+
 		Event: Newchannel
 		Privilege: call,all
 		Channel: SIP/605-0000006a
@@ -572,17 +572,17 @@ namespace asterisk
 		CallerIDName: <unknown>
 		Uniqueid: 1269871368.144
 
-        1.8 dahdi horn pickup:
-        |Account =  (string)
-        |CallerIDName = <unknown> (string)
-        |CallerIDNum = <unknown> (string)
-        |Channel = DAHDI/1-1 (string)
-        |ConnectedLineName = <unknown> (string)
-        |ConnectedLineNum = <unknown> (string)
-        |Event = Status (string)
-        |Privilege = Call (string)
-        |State = Rsrvd (string)
-        |Uniqueid = 1352387005.54 (string)
+				1.8 dahdi horn pickup:
+				|Account =  (string)
+				|CallerIDName = <unknown> (string)
+				|CallerIDNum = <unknown> (string)
+				|Channel = DAHDI/1-1 (string)
+				|ConnectedLineName = <unknown> (string)
+				|ConnectedLineNum = <unknown> (string)
+				|Event = Status (string)
+				|Privilege = Call (string)
+				|State = Rsrvd (string)
+				|Uniqueid = 1352387005.54 (string)
 
 
 		1.8 meetme call. new channels always specify Exten
@@ -602,11 +602,11 @@ namespace asterisk
 
 
 
-        */
-	
+				*/
+
 		channelStatus(msg);
 	}
-	
+
 	// initial channel status event, requested just after connecting to an asterisk server.
 	SYNAPSE_REGISTER(ami_Event_Status)
 	{
@@ -619,7 +619,7 @@ namespace asterisk
 	// 	Account:
 	// 	State: Ringing
 	// 	Uniqueid: 1269958019.99
-	// 
+	//
 	// 	Event: Status
 	// 	Privilege: Call
 	// 	Channel: SIP/605-00000047
@@ -631,20 +631,20 @@ namespace asterisk
 	// 	Link: SIP/604-00000046
 	// 	Uniqueid: 1269958018.98
 /*
-        1.8 dahdi:	
-        |Account =  (string)
-        |CallerIDName = <unknown> (string)
-        |CallerIDNum = <unknown> (string)
-        |Channel = DAHDI/1-1 (string)
-        |ConnectedLineName = <unknown> (string)
-        |ConnectedLineNum = <unknown> (string)
-        |Event = Status (string)
-        |Privilege = Call (string)
-        |State = Rsrvd (string)
-        |Uniqueid = 1352387096.56 (string)
-	
-		1.8 normal channel with meetme	
- 		 |Accountcode =  (string)
+				1.8 dahdi:
+				|Account =  (string)
+				|CallerIDName = <unknown> (string)
+				|CallerIDNum = <unknown> (string)
+				|Channel = DAHDI/1-1 (string)
+				|ConnectedLineName = <unknown> (string)
+				|ConnectedLineNum = <unknown> (string)
+				|Event = Status (string)
+				|Privilege = Call (string)
+				|State = Rsrvd (string)
+				|Uniqueid = 1352387096.56 (string)
+
+		1.8 normal channel with meetme
+			|Accountcode =  (string)
 		 |CallerIDName = rechts (string)
 		 |CallerIDNum = 101 (string)
 		 |Channel = SIP/101-0000009a (string)
@@ -663,7 +663,7 @@ namespace asterisk
 */
 		channelStatus(msg);
 	}
-	
+
 	// channel status is changing
 	SYNAPSE_REGISTER(ami_Event_Newstate)
 	{
@@ -675,11 +675,11 @@ namespace asterisk
 		|Privilege = call,all (string)
 		|State = Ringing (string)
 		|Uniqueid = 1269870185.119 (string)                                                                                                     */
-	
+
 		channelStatus(msg);
 	}
-	
-	
+
+
 	SYNAPSE_REGISTER(ami_Event_Hangup)
 	{
 		CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid"]);
@@ -687,24 +687,24 @@ namespace asterisk
 		serverMan.getServerPtr(msg.dst)->delChannel(msg["Uniqueid"]);
 	//	serverMap[msg.dst].getDevicePtr(getDeviceId(msg["Channel"]))->sendStatus();
 	//	INFO("\n" << serverMap[msg.dst].getStatusStr());
-	
+
 	}
-	
+
 	SYNAPSE_REGISTER(ami_Event_PeerStatus)
 	{
-		
+
 		CdevicePtr devicePtr=serverMan.getServerPtr(msg.dst)->getDevicePtr(msg["Peer"]);
 		if (msg["PeerStatus"].str()=="Reachable" || msg["PeerStatus"].str()=="Registered" )
 			devicePtr->setOnline(true);
 		else
 			devicePtr->setOnline(false);
-	
+
 //		devicePtr->sendChanges();
-	
+
 	}
-	
-	
-	
+
+
+
 	SYNAPSE_REGISTER(ami_Event_Link)
 	{
 	/*	Event: Link
@@ -717,15 +717,15 @@ namespace asterisk
 		CallerID2: 605*/
 		CchannelPtr channelPtr1=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid1"]);
 		CchannelPtr channelPtr2=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid2"]);
-	
+
 		channelPtr1->setLinkPtr(channelPtr2);
 		channelPtr2->setLinkPtr(channelPtr1);
-	
-	
+
+
 		channelPtr1->sendDebug(msg, msg.dst);
 		channelPtr2->sendDebug(msg, msg.dst);
 	}
-	
+
 
 
 	SYNAPSE_REGISTER(ami_Event_Bridge)
@@ -740,20 +740,20 @@ namespace asterisk
 		//  |Event = Bridge (string)
 		//  |Privilege = call,all (string)
 		//  |Uniqueid1 = 1396706816.59 (string)
-		//  |Uniqueid2 = 1396706816.60 (string)		
+		//  |Uniqueid2 = 1396706816.60 (string)
 		CchannelPtr channelPtr1=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid1"]);
 		CchannelPtr channelPtr2=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid2"]);
-	
+
 		channelPtr1->setLinkPtr(channelPtr2);
 		channelPtr2->setLinkPtr(channelPtr1);
-	
-	
+
+
 		channelPtr1->sendDebug(msg, msg.dst);
 		channelPtr2->sendDebug(msg, msg.dst);
 	}
-	
 
-	
+
+
 	SYNAPSE_REGISTER(ami_Event_Unlink)
 	{
 		/*Event: Unlink
@@ -767,17 +767,17 @@ namespace asterisk
 		CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid1"]);
 		channelPtr->delLink();
 		channelPtr->sendDebug(msg, msg.dst);
-	
+
 		channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid2"]);
 		channelPtr->delLink();
 		channelPtr->sendDebug(msg, msg.dst);
-	
-	
-	
-	}
-	
 
-	
+
+
+	}
+
+
+
 	SYNAPSE_REGISTER(ami_Event_Newexten)
 	{
 		// Event: Newexten
@@ -789,7 +789,7 @@ namespace asterisk
 		// Application: Macro
 		// AppData: trunkdial-failover-0.3|SIP/0858784323/9991234|mISDN/g:trunk_m1/9991234|0858784323|trunk_m1
 		// Uniqueid: 1269802539.12
-		
+
 		/* |AppData = SIP/605 (string)
 		|Application = Dial (string)
 		|Channel = SIP/604-0000002f (string)
@@ -799,7 +799,7 @@ namespace asterisk
 		|Priority = 1 (string)
 		|Privilege = call,all (string)
 		|Uniqueid = 1269866053.55 (string)*/
-	
+
 		//somebody dialed the special authentication number?
 		if (msg["Extension"].str().find(ASTERISK_AUTH)==0)
 		{
@@ -825,8 +825,8 @@ namespace asterisk
 					out["deviceId"]=devicePtr->getId();
 					out["serverId"]=serverPtr->id;
 					out["authCookie"]=serverMan.getAuthCookie(serverPtr->id, devicePtr->getId());
-					out.send();
-	
+					out.send(0,Cmsg::INFO);
+
 					//give OK feedback to caller
 					serverPtr->amiRedirect(channelPtr, "from-synapse", "login_ok");
 					return;
@@ -838,18 +838,18 @@ namespace asterisk
 			//sometimes is this is called multiple times, disable for now
 
 		}
-	
+
 		CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid"]);
 		if (channelPtr->getFirstExtension()=="")
 		{
 			channelPtr->setFirstExtension(msg["Extension"]);
 		}
-	
-		//TOO much info..channelPtr->sendDebug(msg, msg.dst);	
+
+		//TOO much info..channelPtr->sendDebug(msg, msg.dst);
 	}
-	
-	
-	
+
+
+
 	SYNAPSE_REGISTER(ami_Event_Dial)
 	{
 	//1.4:
@@ -861,7 +861,7 @@ namespace asterisk
 	// 	CallerIDName: Edwin (draadloos)
 	// 	SrcUniqueID: 1269866053.55
 	// 	DestUniqueID: 1269866053.56
-	
+
 	// 	Event: Dial
 	// 	Privilege: call,all
 	// 	Source: SIP/604-00000031
@@ -870,7 +870,7 @@ namespace asterisk
 	// 	CallerIDName: <unknown>
 	// 	SrcUniqueID: 1269866267.57
 	// 	DestUniqueID: 1269866267.58
-	
+
 	//1.8:
 	 // |CallerIDName = links (string)
 	 // |CallerIDNum = 100 (string)
@@ -903,8 +903,8 @@ namespace asterisk
 		CchannelPtr channelPtr2=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["DestUniqueID"]);
 		channelPtr1->setLinkPtr(channelPtr2);
 		channelPtr2->setLinkPtr(channelPtr1);
-	
-		
+
+
 		//in case of followme and other situation its important we use the Dial callerId as well, on the originating channel (SrcUniqueID/UniqueID)
 		if (msg.isSet("CallerID")) //1.4
 		{
@@ -918,12 +918,12 @@ namespace asterisk
 		{
 			channelPtr1->setCallerId(msg["CallerIDNum"]);
 		}
-	
+
 		if (msg["CallerIDName"].str() == "<unknown>")
 			channelPtr1->setCallerIdName("");
 		else
 			channelPtr1->setCallerIdName(msg["CallerIDName"]);
-	
+
 
 		//in 1.8 we can use ConnectedLineName and Num to set the callerid of the other channel:
 		if (msg.isSet("ConnectedLineName")) //1.8
@@ -931,25 +931,25 @@ namespace asterisk
 
 		if (msg.isSet("ConnectedLineNum")) //1.8
 			channelPtr2->setCallerId(msg["ConnectedLineNum"]);
-	
-	
+
+
 		channelPtr1->sendDebug(msg, msg.dst);
 		channelPtr2->sendDebug(msg, msg.dst);
-	
+
 	/*
 		channelPtr=serverMap[msg.dst].getChannelPtr(msg["DestUniqueID"]);
 		channelPtr->setLink(msg["SrcUniqueID"]);*/
-	
+
 	// 	CchannelPtr channelPtr=serverMap[msg.dst].getChannelPtr(msg["Destination"]);
 	// 	channelPtr->setCallerId("gettingcalled\"" + msg["CallerIDName"].str() + "\" <" + msg["CallerID"].str() + ">" );
-	
+
 	// 	channelPtr=serverMap[msg.dst].getChannelPtr(msg["Source"]);
 	// 	channelPtr->setCallerId("calling\"" + msg["CallerIDName"].str() + "\" <" + msg["CallerID"].str() + ">" );
-	
+
 	}
-	
+
 	// renaming usually happens on things like call-transfers
-	
+
 	SYNAPSE_REGISTER(ami_Event_Rename)
 	{
 		//1.4:
@@ -971,7 +971,7 @@ namespace asterisk
 		CdevicePtr devicePtr=serverMan.getServerPtr(msg.dst)->getDevicePtr(
 			getDeviceIdFromChannel(msg["Newname"])
 		);
-	
+
 		channelPtr->setChannelName(msg["Newname"]);
 
 		//we assume a rename only is possible for channels that are already up?
@@ -984,7 +984,7 @@ namespace asterisk
 			channelPtr->setState("out");
 		}
 		channelPtr->setDevicePtr(devicePtr);
-	
+
 		if (channelPtr->getLinkPtr()==CchannelPtr())
 		{
 			//when we get renamed while NOT linked, we store the current callerids in the linkedcallerids.
@@ -992,10 +992,10 @@ namespace asterisk
 			channelPtr->setLinkCallerId(channelPtr->getCallerId());
 			channelPtr->setLinkCallerIdName(channelPtr->getCallerIdName());
 		}
-	
+
 		channelPtr->sendDebug(msg, msg.dst);
 	}
-	
+
 
 	void newCallerId(Cmsg & msg)
 	{
@@ -1009,7 +1009,7 @@ namespace asterisk
 			else
 				channelPtr->setCallerId(msg["CallerID"]);
 		}
-	
+
 		if (msg.isSet("CallerIDName"))//1.4
 		{
 			if (msg["CallerIDName"].str() == "<Unknown>")
@@ -1025,7 +1025,7 @@ namespace asterisk
 			else
 				channelPtr->setCallerId(msg["CallerIDNum"]);
 		}
-		
+
 		channelPtr->sendDebug(msg, msg.dst);
 	}
 
@@ -1040,7 +1040,7 @@ namespace asterisk
 	// 	CallerIDName: <Unknown>
 	// 	Uniqueid: 1269866486.60
 	// 	CID-CallingPres: 0 (Presentation Allowed, Not Screened)
-	
+
 	// Event: Newcallerid
 	// Privilege: call,all
 	// Channel: mISDN/0-u5
@@ -1048,7 +1048,7 @@ namespace asterisk
 	// CallerIDName: <Unknown>
 	// Uniqueid: 1269866267.58
 	// CID-CallingPres: 0 (Presentation Allowed, Not Screened)
-	
+
 	// Event: Newcallerid
 	// Privilege: call,all
 	// Channel: SIP/604-00000031
@@ -1056,10 +1056,10 @@ namespace asterisk
 	// CallerIDName: <Unknown>
 	// Uniqueid: 1269866267.57
 	// CID-CallingPres: 0 (Presentation Allowed, Not Screened)
-	
+
 		newCallerId(msg);
 	}
-	
+
 	//1.8
 	SYNAPSE_REGISTER(ami_Event_NewCallerid)
 	{
@@ -1073,13 +1073,13 @@ namespace asterisk
 		newCallerId(msg);
 
 	}
-	
+
 
 	SYNAPSE_REGISTER(ami_Event_CEL)
 	{
 		// CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["UniqueID"]);
 		// channelPtr->sendDebug(msg, msg.dst);
-	
+
 	}
 
 	SYNAPSE_REGISTER(ami_Event_VarSet)
@@ -1100,7 +1100,7 @@ namespace asterisk
 	//  |Exten = 100 (string)
 	//  |Hint = SIP/100&Custom:DND100 (string)
 	//  |Privilege = call,all (string)
-	//  |Status = 1 (string)	
+	//  |Status = 1 (string)
 	SYNAPSE_REGISTER(ami_Event_ExtensionStatus)
 	{
 		// CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["UniqueID"]);
@@ -1109,13 +1109,13 @@ namespace asterisk
 	}
 
 	SYNAPSE_REGISTER(ami_Event_UserEvent)
-	{		
+	{
 		// 0x7f4ee4001be0 RECV ami_Event_UserEvent FROM 3 BY 6:module@asterisk (map:)
 		//  |Uniqueid = 1396725358.0 (string)
 		//  |Event = UserEvent (string)
 		//  |Owner = SIP/101 (string)
 		//  |Privilege = user,all (string)
-		//  |UserEvent = synapse_Parked (string)		
+		//  |UserEvent = synapse_Parked (string)
 		if (msg["UserEvent"]=="synapse_Parked")
 		{
 			CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid"]);
@@ -1133,7 +1133,7 @@ namespace asterisk
 	//  |Status = On (string)
 	//  |Uniqueid = 1397749689.46 (string)
 	SYNAPSE_REGISTER(ami_Event_Hold)
-	{		
+	{
 		CchannelPtr channelPtr=serverMan.getServerPtr(msg.dst)->getChannelPtr(msg["Uniqueid"]);
 		channelPtr->setOnHold(msg["Status"]=="On");
 		channelPtr->sendDebug(msg, msg.dst);
@@ -1159,7 +1159,7 @@ namespace asterisk
 		out["status"]=serverMan.getStatus();
 		out.send();
 	}
-	
+
 	SYNAPSE_REGISTER(timer_Ready)
 	{
 		Cmsg out;
@@ -1171,25 +1171,25 @@ namespace asterisk
 		out["event"]="asterisk_SendChanges";
 		out.send();
 	}
-	
-	
 
-	
+
+
+
 	SYNAPSE_REGISTER(asterisk_SendChanges)
 	{
 		serverMan.sendChanges();
-	
+
 	}
 
 	SYNAPSE_REGISTER(asterisk_refresh)
 	{
 		serverMan.sendRefresh(msg.src);
-	
+
 	}
 
 
-	/** Requests authentication for \c src 
-	
+	/** Requests authentication for \c src
+
 	\par Replys \c asterisk_authCall
 		The session should authenticate by dialing a special crafted  number. After this asterisk knows to which device the client belongs, and can determine to which group the user belongs.
 			\arg \c number The number the client should call to authenticate.
@@ -1197,7 +1197,7 @@ namespace asterisk
 	\par Replys \c asterisk_authOk
 		After the user called the specified number.
 			\arg \c deviceId The deviceId the user was calling from.
-	
+
 	*/
 	SYNAPSE_REGISTER(asterisk_authReq)
 	{
@@ -1219,7 +1219,8 @@ namespace asterisk
 				out["deviceId"]=msg["deviceId"].str();
 				out["serverId"]=msg["serverId"].str();
 				out["authCookie"]=msg["authCookie"];
-				out.send();
+				out.send(0,Cmsg::INFO);
+
 				return;
 			}
 		}
@@ -1234,16 +1235,16 @@ namespace asterisk
 		Cmsg out;
 		out.event="asterisk_reset"; //since we're logged out again, make sure the screen is cleared.
 		out.dst=msg.src;
-		out.send();
+		out.send(0,Cmsg::INFO);
 
 		out.event="asterisk_authCall";
 		out["number"]=number.str();
-		out.send();
+		out.send(0,Cmsg::INFO);
 	}
 
 
 
-	//FIXME: when using multiple groups on one server, we need to do some extra validation to make sure someone isnt bridging to a channel in another group. (security)	
+	//FIXME: when using multiple groups on one server, we need to do some extra validation to make sure someone isnt bridging to a channel in another group. (security)
 	//(needs to be fixed by all actions, not just call)
 	SYNAPSE_REGISTER(asterisk_Call)
 	{
@@ -1267,7 +1268,7 @@ namespace asterisk
 
 		if (msg.isSet("channel1"))
 			channel1Ptr=sessionPtr->getServerPtr()->getChannelPtr(msg["channel1"], false);
-		
+
 		if (msg.isSet("channel2"))
 			channel2Ptr=sessionPtr->getServerPtr()->getChannelPtr(msg["channel2"], false);
 
@@ -1299,30 +1300,18 @@ namespace asterisk
 
 	//test raw commands
 	//FIXME: remove, insecure
-	SYNAPSE_REGISTER(asterisk_Test)
-	{
-
-		CsessionPtr sessionPtr=serverMan.getSessionPtr(msg.src);
-
-		Cmsg out;
-		out.clear();
-		out=msg;
-		out.src=sessionPtr->getServerPtr()->getSessionId();
-		out.event="ami_Action";
-		out.send();
-	}
+	// SYNAPSE_REGISTER(asterisk_Test)
+	// {
+	//
+	// 	CsessionPtr sessionPtr=serverMan.getSessionPtr(msg.src);
+	//
+	// 	Cmsg out;
+	// 	out.clear();
+	// 	out=msg;
+	// 	out.src=sessionPtr->getServerPtr()->getSessionId();
+	// 	out.event="ami_Action";
+	// 	out.send();
+	// }
 
 
 }
-
-
-
-
-
-
-
-
-
-
-
-

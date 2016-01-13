@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -33,7 +33,7 @@ To login to an asterisk server define these two handlers:
 		out["port"]="5038";
 		out.send();
 	}
-	
+
 	SYNAPSE_REGISTER(ami_Connected)
 	{
 		Cmsg out;
@@ -57,7 +57,7 @@ To login to an asterisk server define these two handlers:
 		...called on failed login with msg["ActionID"] == "Login".
 	}
 
-Sending actions can be done with ami_Action. 
+Sending actions can be done with ami_Action.
 
 Received events are converted to messages with event: ami_Event_"eventname" .
 
@@ -95,20 +95,20 @@ SYNAPSE_REGISTER(module_Init)
 	out.event="core_Ready";
 	out.send();
 }
- 
+
 class CnetAmi : public synapse::Cnet
 {
 	void init(int id)
 	{
 		delimiter="\r\n\r\n";
 	}
-	
+
   	void connected(int id, const string &host, int port)
 	{
 		Cmsg out;
 		out.dst=id;
 		out.event="ami_Connected";
-		out.send();
+		out.send(0,Cmsg::INFO);
 	}
 
 	/** Parse an event from asterisk and convert it to a synapse message
@@ -130,7 +130,7 @@ class CnetAmi : public synapse::Cnet
 	*/
 	void received(int id, asio::streambuf &readBuffer, std::size_t bytesTransferred)
 	{
-		//convert streambuf to string, 
+		//convert streambuf to string,
 		string dataStr(boost::asio::buffer_cast<const char*>(readBuffer.data()), readBuffer.size());
 		dataStr.resize(dataStr.find(delimiter)+delimiter.length());
 
@@ -138,8 +138,8 @@ class CnetAmi : public synapse::Cnet
 
 		//create a regex iterator
 		boost::sregex_iterator regexI(
-			dataStr.begin(), 
-			dataStr.end(), 
+			dataStr.begin(),
+			dataStr.end(),
 			boost::regex("^([[:alnum:]]*): (.*?)$")
 		);
 
@@ -161,7 +161,7 @@ class CnetAmi : public synapse::Cnet
 			regexI++;
 		}
 		out.dst=id;
-		out.send();
+		out.send(0,Cmsg::INFO);
 
 		readBuffer.consume(dataStr.length());
 	}
@@ -172,7 +172,7 @@ class CnetAmi : public synapse::Cnet
 		out.dst=id;
 		out.event="ami_Disconnected";
 		out["reason"]=ec.message();
-		out.send();
+		out.send(0,Cmsg::ERROR);
 	}
 
 
@@ -243,14 +243,14 @@ SYNAPSE_REGISTER(module_Shutdown)
 SYNAPSE_REGISTER(ami_Action)
 {
 	string amiString;
-	
+
 	//convert synapse parameters to ami event string:
 	for (Cmsg::iterator msgI=msg.begin(); msgI!=msg.end(); msgI++)
 	{
 		amiString+=(string)(msgI->first)+": "+(string)(msgI->second)+"\r\n";
 	}
 	amiString+="\r\n";
-	
+
 	// DEB("SEND TO ASTERISK:\n" << amiString);
 
 	net.doWrite(msg.src, amiString);

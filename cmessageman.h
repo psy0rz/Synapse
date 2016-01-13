@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -68,7 +68,7 @@ using namespace std;
 using namespace boost;
 
 /**
-	@author 
+	@author
 */
 
 
@@ -76,7 +76,7 @@ using namespace boost;
 class CmessageMan{
 public:
 	CmessageMan();
-	
+
 	~CmessageMan();
 
 	//these 2 are 'the' threads, and do their own locking:
@@ -84,8 +84,8 @@ public:
 	int run(string coreName,list<string> moduleNames);
 
 	//the rest is not thread safe, so callers are responsible for locking:
-	void sendMappedMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg,int cookie);
-	void sendMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg, int cookie=0);
+	void sendMappedMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg,int cookie, Cmsg::ElogLevel logLevel=Cmsg::DEBUG);
+	void sendMessage(const CmodulePtr & modulePtr, const CmsgPtr & msg, int cookie=0, Cmsg::ElogLevel logLevel=Cmsg::DEBUG);
 
 	void checkThread();
 
@@ -119,6 +119,15 @@ public:
 private:
 	condition_variable threadCond;
 
+	//log level to terminal color mapping
+  const char * logTermMapping[5]={
+    TERM_NORMAL, //Cmsg::DEBUG
+    TERM_BOLD,   //Cmsg::INFO
+		TERM_ACTION,   //Cmsg::ACTION
+		TERM_WARN,   //Cmsg::WARN
+    TERM_BAD     //Cmsg::ERROR
+  };
+
 
 	//TODO: we COULD do this with a hash map, but stl doesnt has a good one and boost only has Unordered from 1.36 or higher. but its fast enough for now. (tested with 10000)
 	typedef map<string, CeventPtr> CeventHashMap;
@@ -131,17 +140,17 @@ private:
 	map<thread::id,CthreadPtr> threadMap;
 	int 	currentThreads; //number of  threads in memory
 	int	wantCurrentThreads;	//number of threads we want. threads will be added/deleted accordingly.
-	int 	maxThreads;     //max number of threads. system will never create more then this many 
+	int 	maxThreads;     //max number of threads. system will never create more then this many
 	int	    activeThreads;	//threads that are actually executing actively
 	int 	maxActiveThreads; //max number of active threads seen (reset every X seconds by reaper)
 	int     statMaxThreads; //maximum number of threads ever reached, just for statistics
 	bool    shutdown; //program shutdown: end all threads
-	int 	exit;     //shutdown exit code	
+	int 	exit;     //shutdown exit code
 
 	bool idleThread();
 	void activeThread();
 
-	
+
 	CgroupPtr defaultRecvGroup;
 	CgroupPtr defaultSendGroup;
 	CgroupPtr defaultModifyGroup;

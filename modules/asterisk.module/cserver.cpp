@@ -35,7 +35,7 @@ namespace asterisk
 				smatch what;
 				if (this->group_regex!="" && regex_search(
 					deviceId,
-					what, 
+					what,
 					boost::regex(this->group_regex)
 				))
 				{
@@ -54,7 +54,7 @@ namespace asterisk
 				//not filtered?
 				if (this->device_show_regex=="" || regex_search(
 					deviceId,
-					what, 
+					what,
 					boost::regex(this->device_show_regex)
 				))
 				{
@@ -71,7 +71,7 @@ namespace asterisk
 		}
 		return (deviceMap[deviceId]);
 	}
-	
+
 	void Cserver::sendRefresh(int dst)
 	{
 		//let all devices send a refresh
@@ -145,7 +145,7 @@ namespace asterisk
 		}
 
 
-		//delete all chans 
+		//delete all chans
 		for (CdeviceMap::iterator I=deviceMap.begin(); I!=deviceMap.end(); I++)
 			I->second->del();
 
@@ -202,7 +202,7 @@ namespace asterisk
 		out["Channel"]=channelPtr->getChannelName();
 		out["Variable"]=variable;
 		out["Value"]=value;
-		out.send();
+		out.send(0,Cmsg::INFO);
 	}
 
 	void Cserver::amiUpdateCallerIdAll(CchannelPtr channelPtr, string all)
@@ -243,7 +243,7 @@ namespace asterisk
 			out["ExtraPriority"]=1;
 			out["ExtraExten"]=exten2;
 		}
-		out.send();
+		out.send(0,Cmsg::INFO);
 	}
 
 	void Cserver::amiHangup(CchannelPtr channelPtr)
@@ -253,12 +253,12 @@ namespace asterisk
 		out.event="ami_Action";
 		out["Action"]="Hangup";
 		out["Channel"]=channelPtr->getChannelName();
-		out.send();
+		out.send(0,Cmsg::INFO);
 	}
 
 	void Cserver::amiCall(CdevicePtr fromDevicePtr, CchannelPtr reuseChannelPtr, string exten)
 	{
-		
+
 
 		if (fromDevicePtr==CdevicePtr())
 			throw(synapse::runtime_error("device not specified"));
@@ -275,7 +275,7 @@ namespace asterisk
 			if (linkedChannelPtr!=CchannelPtr())
 				amiSetVar(linkedChannelPtr, "__SYNAPSE_OWNER", fromDevicePtr->getId());
 
-			amiRedirect(reuseChannelPtr, "from-internal", exten, 
+			amiRedirect(reuseChannelPtr, "from-internal", exten,
 						linkedChannelPtr, "from-synapse", "park");
 		}
 		//create new channel by doing a originate
@@ -292,7 +292,7 @@ namespace asterisk
 			out["Channel"]=fromDevicePtr->getId();
 			out["Callerid"]=fromDevicePtr->getCallerIdAll();
 			out["Async"]="true";
-			out.send();
+			out.send(0,Cmsg::INFO);
 		}
 	}
 
@@ -424,7 +424,7 @@ namespace asterisk
 			out["Exten"]="bridge";
 			out["Async"]="true";
 			out["Variable"]="__SYNAPSE_BRIDGE="+channel2Ptr->getChannelName();
-			out.send();
+			out.send(0,Cmsg::INFO);
 		}
 
 
@@ -539,7 +539,7 @@ namespace asterisk
 			stateDb.changed();
 			stateDb.save();
 		}
-			
+
 		return(stateDb[serverId][deviceId]["authCookie"]);
 	}
 
@@ -572,13 +572,13 @@ namespace asterisk
 
 	void CserverMan::send(string groupId, Cmsg & msg)
 	{
-		//broadcast?
+		//broadcast? these are usually initalised by new calls or new devices.
 		if (msg.dst==0)
 		{
 			//we cant simply broadcast it, we need to check group membership session by session
 			for (CsessionMap::iterator I=sessionMap.begin(); I!=sessionMap.end(); I++)
 			{
-				if (I->second->isAdmin() || 
+				if (I->second->isAdmin() ||
 					( (I->second->getDevicePtr()!=NULL) && I->second->getDevicePtr()->getGroupPtr()->getId()==groupId )
 					)
 				{
@@ -586,7 +586,7 @@ namespace asterisk
 					msg.dst=I->first;
 					try
 					{
-						msg.send();
+						msg.send(0,Cmsg::ACTION);
 					}
 					catch(const std::exception& e)
 					{
@@ -597,18 +597,19 @@ namespace asterisk
 			//restore dst value:
 			msg.dst=0;
 		}
+		//event for specific session, usually requested by an enduser
 		else
 		{
 			CsessionMap::iterator I=sessionMap.find(msg.dst);
 			if (I!=sessionMap.end())
 			{
-				if (I->second->isAdmin() || 
+				if (I->second->isAdmin() ||
 					( (I->second->getDevicePtr()!=NULL) && I->second->getDevicePtr()->getGroupPtr()->getId()==groupId )
 					)
 				{
 					try
 					{
-						msg.send();
+						msg.send(0,Cmsg::INFO);
 					}
 					catch(const std::exception& e)
 					{
@@ -649,11 +650,11 @@ namespace asterisk
 
 	void CserverMan::sendChanges()
 	{
-		//let all servers send their changes 
+		//let all servers send their changes
 		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
 		{
 			I->second->sendChanges();
-		}		
+		}
 	}
 
 	void CserverMan::sendRefresh(int dst)
@@ -661,9 +662,9 @@ namespace asterisk
 		//indicate start of a refresh, deletes all known state-info in client
 		Cmsg out;
 		out.event="asterisk_reset";
-		out.dst=dst; 
-		out.send();
-	
+		out.dst=dst;
+		out.send(0,Cmsg::INFO);
+
 		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
 		{
 			I->second->sendRefresh(dst);

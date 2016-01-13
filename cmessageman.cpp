@@ -59,6 +59,7 @@ using namespace boost;
 
 CmessageMan::CmessageMan()
 {
+
     //pretent like the current thread is handling a call that was send to session id 1,
     //so that msg.src automaticly get 1 when the core call send with msg.src=0
   currentThreadDstId=1;
@@ -89,7 +90,7 @@ CmessageMan::~CmessageMan()
 
 
 
-void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie)
+void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie, Cmsg::ElogLevel logLevel)
 {
 	// -module is a pointer thats set by the core and can be trusted
 	// -msg is set by the user and only containts direct objects, and NO pointers. it cant be trusted yet!
@@ -216,7 +217,8 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		{
 			msgStr << msg->dst << ":" << dst->user->getName() << "@" << dst->module->name <<
 				" " << msg->getPrint(" |");
-			LOG_SEND(msgStr.str());
+
+      LOG(boost::this_thread::get_id() << " " << logTermMapping[logLevel] << msgStr.str() << TERM_NORMAL << std::endl)
 		}
 
 		//all checks ok:
@@ -281,8 +283,8 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		if (logSends)
 		{
 			msgStr << ") " <<
-				msg->getPrint(" |");
-			LOG_SEND(msgStr.str());
+  		  msg->getPrint(" |");
+      LOG(boost::this_thread::get_id() << " " << logTermMapping[logLevel] << msgStr.str() << TERM_NORMAL << std::endl)
 		}
 
 		if (!delivered)
@@ -294,11 +296,11 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 Internally it will result in 1 or more calls to sendMappedMessage, if the msg.dst is -1.
 */
 
-void CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie)
+void CmessageMan::sendMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie, Cmsg::ElogLevel logLevel)
 {
 	if (msg->dst >= 0)
 	{
-		sendMappedMessage(module, msg, cookie);
+		sendMappedMessage(module, msg, cookie, logLevel);
 	}
 	else
 	{
@@ -390,7 +392,7 @@ void CmessageMan::operator()()
 				" BY " << callI->dst->id << ":" << callI->dst->user->getName() << "@" << callI->dst->module->name << " " <<
 				callI->msg->getPrint(" |");
 
-			LOG_RECV(msgStr.str());
+      LOG(boost::this_thread::get_id() << " " << msgStr.str() << std::endl)
 		}
 
 		//handle call

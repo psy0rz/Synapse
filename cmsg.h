@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -46,8 +46,8 @@
 typical route of a cmsg object
 
 1. Sendmessage is called with a shared_ptr to a Cmsg object:
-   [Cmsg object] -smart_ptr-> Sendmessage() 
- 	
+   [Cmsg object] -smart_ptr-> Sendmessage()
+
 2. This creates one or more Ccalls that point to it:
            [Ccall objects]  -shared_ptr->  [Cmsg object]
 
@@ -55,10 +55,10 @@ typical route of a cmsg object
            operator() -iterator-> [Ccall object] --shared_ptr-> [Cmsg object]
 
 4. The operator calls the apropriate handler with a reference to the message object:
-     [Cmsg object] -reference-> soHander() 
+     [Cmsg object] -reference-> soHander()
 
 5. The Ccall objects are deleted after the operators() are done:
-    *poof* shared_ptr automaticly deletes [Cmsg object] after everyone is one. 
+    *poof* shared_ptr automaticly deletes [Cmsg object] after everyone is one.
     INCLUDING the original sender of the message.
 
 
@@ -67,22 +67,23 @@ typical route of a cmsg object
 
 
 /**
-	@author 
+	@author
 */
 
 namespace synapse
 {
 	using namespace std;
 
-
 	class Cmsg : public Cvar  {
 	public:
 		enum ElogLevel {
-			LOG_DEBUG,
-			LOG_INFO,
-			LOG_WARNING,
-			LOG_ERROR
+			DEBUG, //default level for most message
+			INFO, //informational messages that have to stand out from the debugging noise
+			ACTION, //direct enduser actions. (for example: enduser events send by http json module)
+			WARNING, //warnings
+			ERROR //errors
 		};
+
 
 		Cmsg();
 		~Cmsg();
@@ -92,7 +93,7 @@ namespace synapse
 
 		//this function is only implemented in the .so object module
 		//so if you use it in the core you will get linker errors :)
-		void send(int cookie=0, ElogLevel=LOG_INFO);
+		void send(int cookie=0, ElogLevel=DEBUG);
 		void returnError(string description);
 		void returnWarning(string description);
 		bool returnIfOtherThan(char * keys, ...);

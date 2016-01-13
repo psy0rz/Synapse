@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -76,7 +76,7 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
 	if (authCookie!=0)
 	{
 		ChttpSessionMap::iterator httpSessionI=findSessionByCookie(authCookie);
-	
+
 		if (httpSessionI==httpSessionMap.end())
 		{
 			DEB("Unknown or expired authCookie: " << authCookie << ", aborting.");
@@ -86,7 +86,7 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
 
 		if (!httpSessionI->second.jsonQueue.empty())
 		{
-			//return the queued json messages: 
+			//return the queued json messages:
 			jsonStr=httpSessionI->second.jsonQueue+"]";
 			//clear the queue and netId
 			httpSessionI->second.jsonQueue.clear();
@@ -112,12 +112,12 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
 	}
 
 	DEB("Creating new session for " << netId);
-	
+
 	//create a new uniq authCookie:
-	while (!authCookie || findSessionByCookie(authCookie)!=httpSessionMap.end()) 
+	while (!authCookie || findSessionByCookie(authCookie)!=httpSessionMap.end())
 	{
 		mrand48_r(&randomBuffer, &authCookie);
-	} 
+	}
 
 	//Request a new session from core...
 	Cmsg out;
@@ -200,28 +200,28 @@ void ChttpSessionMan::endGet(int netId,ThttpCookie & authCookie)
 
 	{
 		lock_guard<mutex> lock(threadMutex);
-	
+
 		ChttpSessionMap::iterator httpSessionI=findSessionByCookie(authCookie);
-	
+
 		if (httpSessionI==httpSessionMap.end())
 		{
 			DEB("Network id " << netId << " with UNKNOWN httpsession " << authCookie << " isnt interested in messages anymore. ignoring.");
 			return;
 		}
-	
+
 		if (httpSessionI->second.netId!=netId)
 		{
 			DEB("UNKNOWN network id " << netId << " with httpsession " << authCookie << " isnt interested in messages anymore. ignoring.");
 			return;
 		}
-	
+
 		DEB("Network id " << netId << " with httpsession " << authCookie << " isnt interested in messages anymore. Session timeout timing is now enable.");
 		httpSessionI->second.netId=0;
-	}	
+	}
 }
 
 
-/** A client wants to send a message to the core 
+/** A client wants to send a message to the core
  */
 string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonLines)
 {
@@ -268,12 +268,12 @@ string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonLines
 			//fill in msg.src with the correct session id
 			msg.src=httpSessionI->first;
 		}
-	
+
 		if (!failed)
 		{
 			try
 			{
-				msg.send();
+				msg.send(0,Cmsg::ACTION);
 			}
 			catch(const std::exception& e)
 			{
@@ -292,7 +292,7 @@ string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonLines
 void ChttpSessionMan::sessionStart(Cmsg & msg)
 {
 	lock_guard<mutex> lock(threadMutex);
- 
+
 	if (!msg.isSet("authCookie"))
 	{
 		WARNING("Ignoring new session " << msg.dst << " from core: no authCookie set?");
@@ -343,7 +343,7 @@ int ChttpSessionMan::enqueueMessage(Cmsg & msg, int dst)
 	{
 		lock_guard<mutex> lock(threadMutex);
 		//NOTE: look at dst and NOT at msg.dst, because of broadcasts!
-	
+
 		ChttpSessionMap::iterator httpSessionI=httpSessionMap.find(dst);
 		if (httpSessionI==httpSessionMap.end())
 		{
@@ -358,7 +358,7 @@ int ChttpSessionMan::enqueueMessage(Cmsg & msg, int dst)
 			DEB("Dropped message for session " << dst << ": session expired");
 			return(0);
 		}
-	
+
 		//add it to the jsonQueue. Which is a string that contains a json-array.
 		if (httpSessionI->second.jsonQueue.empty())
 		{
@@ -368,7 +368,7 @@ int ChttpSessionMan::enqueueMessage(Cmsg & msg, int dst)
 		{
 			httpSessionI->second.jsonQueue+=","+jsonStr;
 		}
-	
+
 		//we want to inform the netId only ONE time
 		int netId=0;
 		if (!httpSessionI->second.netInformed)
@@ -376,9 +376,9 @@ int ChttpSessionMan::enqueueMessage(Cmsg & msg, int dst)
 			httpSessionI->second.netInformed=true;
 			netId=httpSessionI->second.netId;
 		}
-	
+
 		DEB("Enqueued message for destination session " << dst << ", probably for netId " << netId << ": " << jsonStr);
-	
+
 		return(netId);
 	}
 }
@@ -449,4 +449,3 @@ void ChttpSessionMan::getStatus(Cvar & var)
 		httpSessionI++;
 	}
 }
-
