@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -365,7 +365,3 @@ SYNAPSE_HANDLER(all)
 		}
 	}
 }
-
-
-
-
