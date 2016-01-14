@@ -107,7 +107,24 @@ synapse_register("asterisk_updateDevice",function(msg_src, msg_dst, msg_event, m
         {
             html=cloneTemplate("template-device-other");
             html.attr("id", msg["id"]);
-            $('#device-list').append(html);
+
+            var devices=$('#device-list .device:not(.template)');
+            //find out sort order
+            var added=false;
+            devices.each(function(index, device)
+            {
+                var data=$(device).data("device");
+                if (msg.callerIdName < data.callerIdName)
+                {
+                    $(device).before(html);
+                    added=true;
+                    return(false);
+                }
+            });
+            if (!added)
+            {
+                $('#device-list').append(html);
+            }
         }
         device=$(escapeId(msg["id"]));
     }
