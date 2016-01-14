@@ -119,14 +119,6 @@ public:
 private:
 	condition_variable threadCond;
 
-	//log level to terminal color mapping
-  const char * logTermMapping[5]={
-    TERM_NORMAL, //Cmsg::DEBUG
-    TERM_BOLD,   //Cmsg::INFO
-		TERM_ACTION,   //Cmsg::ACTION
-		TERM_WARN,   //Cmsg::WARN
-    TERM_BAD     //Cmsg::ERROR
-  };
 
 
 	//TODO: we COULD do this with a hash map, but stl doesnt has a good one and boost only has Unordered from 1.36 or higher. but its fast enough for now. (tested with 10000)

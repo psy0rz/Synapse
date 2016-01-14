@@ -88,6 +88,14 @@ CmessageMan::~CmessageMan()
 }
 
 
+//log level to terminal color mapping
+const char * logTermMapping[]={
+	TERM_NORMAL, //Cmsg::DEBUG
+	TERM_BOLD,   //Cmsg::INFO
+	TERM_ACTION,   //Cmsg::ACTION
+	TERM_WARN,   //Cmsg::WARN
+	TERM_BAD     //Cmsg::ERROR
+};
 
 
 void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  msg, int cookie, Cmsg::ElogLevel logLevel)

@@ -171,7 +171,7 @@ function blinker()
     {
         blink_hold_status=!blink_hold_status;
         if (blink_hold_status)
-            $('.device .channel-icon[state="hold"]').addClass("hold-blinker");
+            $('.channel-icon[state="hold"]').addClass("hold-blinker");
         else
             $('.hold-blinker').removeClass("hold-blinker");
     }
