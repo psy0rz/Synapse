@@ -88,7 +88,7 @@ function prettyCallerId( callerId, callerIdName)
 
 
 
-
+//received information about a new or existing device
 synapse_register("asterisk_updateDevice",function(msg_src, msg_dst, msg_event, msg)
 {
     device=$(escapeId(msg["id"]))
@@ -162,7 +162,7 @@ function blinker()
     //ring blinker (fast)
     blink_ring_status=!blink_ring_status;
     if (blink_ring_status)
-        $('.device .channel-icon[state="ringing"]').addClass("ring-blinker");
+        $('.device .channel-icon[state="ring_in"]').addClass("ring-blinker");
     else
         $('.ring-blinker').removeClass("ring-blinker");
 
@@ -221,55 +221,55 @@ function update_device_channel(msg, callerInfo)
 }
 
 
-//update list of active calls
-function update_call_list_channel(msg, callerInfo)
-{
-    ////////////////////// active-call-list-only stuff:
-    //add new channel to active call list?
-    if ($("#active-call-list "+escapeClass(msg["id"])).length==0)
-    {
-        newChannelHtml=cloneTemplate("template-channel-call-list");
-        newChannelHtml.addClass(msg["id"]);
-        $("#active-call-list .list").prepend(newChannelHtml);
-        show=1;
-
-        //make the device highlight when hoovering the active-call-list channel
-        $("#active-call-list "+escapeClass(msg["id"])).hover(
-            function () {
-                $(this).addClass("ui-state-highlight");
-                $(escapeId(msg["deviceId"])).addClass("ui-state-highlight");
-
-                //if its in the deviceList, scroll to it:
-                var device=$("#device-list "+escapeId(msg["deviceId"]));
-                if (device.length!=0)
-                {
-                    $('#device-list').scrollTop($('#device-list').scrollTop()+device.position().top);
-                }
-            },
-            function () {
-                $(this).removeClass("ui-state-highlight");
-                $(escapeId(msg["deviceId"])).removeClass("ui-state-highlight");
-            }
-        );
-
-        //when clicking, show the corresponding debug object
-        $("#active-call-list "+escapeClass(msg["id"])).click(
-            function () {
-                $(escapeId("debug_"+msg["id"])).dialog({
-                    title: "Debug channel "+msg["id"],
-                    position: "top"
-
-                });
-            }
-        );
-    }
-
-    //update active call list
-    $("#active-call-list "+escapeClass(msg["id"])+" .channel-info").html(
-        prettyCallerId(msg["deviceCallerId"], msg["deviceCallerIdName"]) + " ... "+callerInfo
-    );
-
-}
+// //update list of active calls
+// function update_call_list_channel(msg, callerInfo)
+// {
+//     ////////////////////// active-call-list-only stuff:
+//     //add new channel to active call list?
+//     if ($("#active-call-list "+escapeClass(msg["id"])).length==0)
+//     {
+//         newChannelHtml=cloneTemplate("template-channel-call-list");
+//         newChannelHtml.addClass(msg["id"]);
+//         $("#active-call-list .list").prepend(newChannelHtml);
+//         show=1;
+//
+//         //make the device highlight when hoovering the active-call-list channel
+//         $("#active-call-list "+escapeClass(msg["id"])).hover(
+//             function () {
+//                 $(this).addClass("ui-state-highlight");
+//                 $(escapeId(msg["deviceId"])).addClass("ui-state-highlight");
+//
+//                 //if its in the deviceList, scroll to it:
+//                 var device=$("#device-list "+escapeId(msg["deviceId"]));
+//                 if (device.length!=0)
+//                 {
+//                     $('#device-list').scrollTop($('#device-list').scrollTop()+device.position().top);
+//                 }
+//             },
+//             function () {
+//                 $(this).removeClass("ui-state-highlight");
+//                 $(escapeId(msg["deviceId"])).removeClass("ui-state-highlight");
+//             }
+//         );
+//
+//         //when clicking, show the corresponding debug object
+//         $("#active-call-list "+escapeClass(msg["id"])).click(
+//             function () {
+//                 $(escapeId("debug_"+msg["id"])).dialog({
+//                     title: "Debug channel "+msg["id"],
+//                     position: "top"
+//
+//                 });
+//             }
+//         );
+//     }
+//
+//     //update active call list
+//     $("#active-call-list "+escapeClass(msg["id"])+" .channel-info").html(
+//         prettyCallerId(msg["deviceCallerId"], msg["deviceCallerIdName"]) + " ... "+callerInfo
+//     );
+//
+// }
 
 //channels that are parked by us should show up in the parking area
 function update_parked_channel(msg, callerInfo)

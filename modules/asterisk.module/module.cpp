@@ -489,17 +489,17 @@ namespace asterisk
 
 		if (state=="Ringing")
 		{
-			channelPtr->setState("ringing");
+			channelPtr->setState("ring_in");
 		}
 		//device is dialing (ringing other side)
 		else if (state=="Ring")
 		{
-			channelPtr->setState("out");
+			channelPtr->setState("ring_out");
 		}
 		//device is connected with other side
 		else if (state=="Up")
 		{
-			if (channelPtr->getState()=="ringing")
+			if (channelPtr->getState()=="ring_in")
 			{
 				channelPtr->setState("in");
 			}

@@ -99,10 +99,10 @@
       }
 
 
-      #status-bar[state="ringing"]
+      /*#status-bar[state="ring_in"]
       {
         background-color: #ffaaaa;
-      }
+      }*/
 
 
       #status-msg
@@ -202,9 +202,14 @@
         background-image:url('asterisk/channel_out.png') ;
       }
 
-      .channel-icon[state="ringing"]
+      .channel-icon[state="ring_in"]
       {
         background-image:url('asterisk/channel_ring.png') ;
+      }
+
+      .channel-icon[state="ring_out"]
+      {
+        background-image:url('asterisk/channel_idle.png') ;
       }
 
       .channel-icon[state="hold"]
