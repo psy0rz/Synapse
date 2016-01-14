@@ -21,6 +21,33 @@
         width: 100%;
       }
 
+      .template
+      {
+        display:none;
+      }
+
+
+      #status-user
+      {
+        margin:     0;
+        padding:    0;
+        position:   absolute;
+        height:     10em;
+        left:       0em;
+        width:      31em;
+
+      }
+
+      #channel-parked-list
+      {
+        margin:     0;
+        padding:    0;
+        position:   absolute;
+        height:     10em;
+        left:       31em;
+        right:      21em;
+        overflow:   auto;
+      }
 
       #status-bar
       {
@@ -32,18 +59,9 @@
         width:      21em;
       }
 
-      #status-user
-      {
-        margin:0;
-        padding:0;
-        position:   absolute;
-        height:     10em;
-        left:       0em;
-        right:      21em;
 
-      }
 
-      #history-call-list
+      /*#history-call-list
       {
         margin:0;
         padding:0;
@@ -65,7 +83,7 @@
         top:        10em;
         height:     20em;
         overflow: auto;
-      }
+      }*/
 
 
       #device-list
@@ -75,7 +93,7 @@
         position:   absolute;
         left:       0em;
         top:        10em;
-        right:      21em;
+        right:      0em;
         bottom:     0em;
         overflow: auto;
       }
@@ -123,8 +141,8 @@
       #status-user .device
       {
         float: left;
-        width: 40em;
-        min-height: 3em;
+        width: 30em;
+        min-height: 5em;
         margin: 5px;
       }
 
@@ -143,7 +161,6 @@
 
       .channel
       {
-        display: none;
         border-top-style:dashed;
         border-color:#aaaaaa;
         border-width: 1px;
@@ -151,9 +168,20 @@
         min-width:15em;
         position:relative;
         font-weight: normal;
-
-
       }
+
+      .channel-parked
+      {
+        border-top-style:dashed;
+        border-color:#aaaaaa;
+        border-width: 1px;
+        margin:0;
+        min-width:15em;
+        position:relative;
+        font-weight: normal;
+      }
+
+
 
       .channel-icon
       {
@@ -229,7 +257,7 @@
         cursor: pointer;
       }
 
-      .channel-menu-itemHangup
+      .channel-menu-item-hang-up
       {
         background-color: red;
       }
@@ -268,12 +296,35 @@
 
   <body class='ui-widget' style='font-size:1em'>
     <div class='ui-widget-content' id='status-user'>
-      <div class='ui-widget-header'>My phone:</div>
-      <div id='status-msg'>
+        <div class='ui-widget-header'>My phone:</div>
+        <div id='status-msg'>
         Loading...
-      </div>
-      <!-- <button id='test1'>Test1</button> -->
+        </div>
+        <!-- This is cloned for users own device -->
+        <div class='template template-device-own ui-state-default ui-widget-content ui-corner-all device'>
+        <div class='device-info'></div>
+        <div class='channel-list'>
+          <!-- Cloned for every channel in users own device -->
+          <div class='template template-channel-own channel'>
+            <span class='channel-icon'></span>
+            <span class='channel-info'></span>
+            <span class='channel-menu-item channel-menu-item-hang-up'>End call</span>
+            <span class='channel-menu-item channel-menu-item-hold'>Park &gt;&gt;</span>
+          </div>
+        </div>
+        </div>
+    </div>
 
+    <div class='ui-widget-content' id='channel-parked-list'>
+      <div class='ui-widget-header'>Parked calls:</div>
+      <!-- Cloned for every channel channel that is parked by the user -->
+      <div class='template template-channel-parked channel-parked'>
+        <span class='channel-icon'></span>
+        <span class='channel-info'></span>
+        <span class='channel-menu-item channel-menu-item-hang-up'>End call</span>
+        <span class='channel-menu-item channel-menu-item-resume'>Resume &lt;&lt; </span>
+        <span class='channel-menu-item channel-menu-item-transfer'>Transfer</span>
+      </div>
     </div>
 
     <div class='ui-widget-content' id='status-bar'>
@@ -286,18 +337,35 @@
     </div>
 
 
-    <div class='ui-widget-content' id='active-call-list'>
+    <!-- <div class='ui-widget-content' id='active-call-list'>
       <div class='ui-widget-header'>Active calls:</div>
-      <div class='list'></div>
+      <div class='list'>
+          <div class='template template-channel-call-list channel'>
+              <span class='channel-icon'></span>
+              <span class='channel-info'></span>
+          </div>
+      </div>
     </div>
 
     <div class='ui-widget-content' id='history-call-list'>
       <div class='ui-widget-header'>History:</div>
       <div class='list'></div>
-    </div>
+    </div> -->
 
     <div class='ui-widget-content' id='device-list'>
       <div class='ui-widget-header'>Phone overview:</div>
+
+      <!-- This is cloned for every device of other users -->
+      <div class='template template-device-other ui-state-default ui-widget-content ui-corner-all device'>
+        <div class='device-info'></div>
+        <div class='channel-list'>
+          <!-- Cloned for every channel in a device -->
+          <div class='template template-channel-other channel'>
+            <span class='channel-icon'></span>
+            <span class='channel-info'></span>
+          </div>
+        </div>
+      </div>
     </div>
   </body>
 </html>

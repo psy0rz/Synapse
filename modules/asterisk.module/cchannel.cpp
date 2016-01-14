@@ -29,6 +29,8 @@ namespace asterisk
 
 	bool Cchannel::sendDebug(Cmsg msg, int serverId)
 	{
+        return(true);
+        
 		if (devicePtr==NULL || devicePtr->getGroupPtr()==NULL)
 			return (false);
 
@@ -266,7 +268,7 @@ namespace asterisk
 		{
 			if (sendUpdate())
 				changesSent=changes;
-		}	
+		}
 
 
 	}
@@ -366,7 +368,7 @@ namespace asterisk
 		{
 			Cmsg out;
 			out.event="asterisk_delChannel";
-			out.dst=0; 
+			out.dst=0;
 			out["id"]=id;
 			if (devicePtr!=CdevicePtr())
 			{
