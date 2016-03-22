@@ -40,6 +40,11 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
         deviceId:   $.readCookie('asterisk_deviceId'),
         serverId:   $.readCookie('asterisk_serverId')
     });
+    send(0,"asterisk_refresh", {
+        authCookie: $.readCookie('asterisk_authCookie'),
+        deviceId:   $.readCookie('asterisk_deviceId'),
+        serverId:   $.readCookie('asterisk_serverId')
+    });
 
 });
 
