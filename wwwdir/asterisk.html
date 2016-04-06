@@ -303,22 +303,23 @@
   <body class='ui-widget' style='font-size:1em'>
     <div class='ui-widget-content' id='status-user'>
         <div class='ui-widget-header'>My phone:</div>
-        <div id='status-msg'>
-        Loading...
-        </div>
-        <!-- This is cloned for users own device -->
-        <div class='template template-device-own ui-state-default ui-widget-content ui-corner-all device'>
-        <div class='device-info'></div>
-        <div class='channel-list'>
-          <!-- Cloned for every channel in users own device -->
-          <div class='template template-channel-own channel'>
-            <span class='channel-icon'></span>
-            <span class='channel-info'></span>
-            <span class='channel-menu-item channel-menu-item-hang-up'>End call</span>
-            <span class='channel-menu-item channel-menu-item-hold'>Park &gt;&gt;</span>
-          </div>
-        </div>
-        </div>
+        <span id='device-user'>
+            <!-- This is cloned for users own device -->
+            <div class='template template-device-own ui-state-default ui-widget-content ui-corner-all device'>
+                <div class='device-info'></div>
+                <div class='channel-list'>
+                  <!-- Cloned for every channel in users own device -->
+                  <div class='template template-channel-own channel'>
+                    <span class='channel-icon'></span>
+                    <span class='channel-info'></span>
+                    <span class='channel-menu-item channel-menu-item-hang-up'>End call</span>
+                    <span class='channel-menu-item channel-menu-item-hold'>Park &gt;&gt;</span>
+                  </div>
+                </div>
+            </div>
+        </span>
+        <span id='status-msg'>Loading...</span>
+        <a id='logout' href='#'>Logout...</a>
     </div>
 
     <div class='ui-widget-content' id='channel-parked-list'>
@@ -336,8 +337,7 @@
     <div class='ui-widget-content' id='status-bar'>
       <div class='ui-widget-header'>Status:</div>
       <div style='padding:0.5em'>
-        <input id='login' type='submit' value='Change phone...'>
-        <input id='login-user' type='submit' value='Admin login'>
+        <!-- <input id='login-user' type='submit' value='Admin login'> -->
         <div id='server-msg'></div>
         <div style='font-size:75%'>Version 1.0.1</div>
       </div>

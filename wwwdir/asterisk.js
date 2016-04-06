@@ -35,6 +35,7 @@ synapse_register("asterisk_State",function(msg_src, msg_dst, msg_event, msg)
 synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
 {
     $('#status-msg').html("Requesting login...");
+    $('#logout').hide();
     send(0,"asterisk_authReq", {
         authCookie: $.readCookie('asterisk_authCookie'),
         deviceId:   $.readCookie('asterisk_deviceId'),
@@ -51,11 +52,13 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 synapse_register("asterisk_authCall",function(msg_src, msg_dst, msg_event, msg)
 {
     $('#status-msg').html("Please login by calling: <b>"+msg["number"]+"</b>");
+    $('#logout').hide();
 });
 
 synapse_register("asterisk_authOk",function(msg_src, msg_dst, msg_event, msg)
 {
     $('#status-msg').html("");
+    $('#logout').show();
     loginDeviceId=msg["deviceId"];
 
     //store the device and authcookie in a browser cookie, so the user doesnt have to relogin everytime.
@@ -106,7 +109,7 @@ synapse_register("asterisk_updateDevice",function(msg_src, msg_dst, msg_event, m
         {
             html=cloneTemplate("template-device-own");
             html.attr("id", msg["id"]);
-            $('#status-user').append(html);
+            $('#device-user').append(html);
         }
         else
         {
@@ -405,10 +408,12 @@ $(document).ready(function(){
 
     // $("#device-list").sortable();
     $("#device-list").disableSelection();
-    $("#login").click(function()
+    $("#logout").click(function()
     {
         send(0,"asterisk_authReq", {});
-        //send(0,"asterisk_reset", {});
+        $.delCookie('asterisk_authCookie');
+        $.delCookie('asterisk_deviceId');
+        $.delCookie('asterisk_serverId');
     });
 
     $("#login-user").click(function()
