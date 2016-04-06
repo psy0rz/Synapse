@@ -83,6 +83,7 @@ synapse_register("asterisk_reset",function(msg_src, msg_dst, msg_event, msg)
     //(new info probably follows because we send a asterisk_refresh request)
     $('.device:not(.template)').remove();
     $('.channel:not(.template)').remove();
+    $('.speed-dial-entry:not(.template)').remove();
 
 });
 
@@ -462,6 +463,19 @@ $(document).ready(function(){
         return(activeChannel);
     }
 
+    $("#speed-dial-list").on("click", ".speed-dial-entry", function()
+    {
+        var reuseChannelId=getActiveChannel()["id"];
+
+        send(0, "asterisk_Call",
+        {
+            "exten": $(this).attr("number"),
+            "reuseChannelId": reuseChannelId
+        });
+    });
+
+
+    ///////////////////// device button
     $("#device-list").on("click", ".device", function()
     {
         console.log("Clicked device", $(this).data("device"));
@@ -554,4 +568,20 @@ synapse_register("asterisk_debugChannel",function(msg_src, msg_dst, msg_event, m
             );
         }
     }
+});
+
+
+synapse_register("asterisk_speedDialList",function(msg_src, msg_dst, msg_event, msg)
+{
+
+    for (var entryI in msg.numbers)
+    {
+        var entry=msg.numbers[entryI];
+        html=cloneTemplate("template-speed-dial-entry");
+        $(".speed-dial-name", html).text(entry.full_name);
+        $(".speed-dial-number", html).text(entry.number);
+        html.attr("number", entry.number);
+        $("#speed-dial-list").append(html);
+    }
+
 });

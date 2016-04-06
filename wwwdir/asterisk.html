@@ -20,6 +20,7 @@
         padding:0;
         height:100%;
         width: 100%;
+        overflow:hidden;
       }
 
       .template
@@ -87,7 +88,7 @@
       }*/
 
 
-      #device-list
+      #main-tabs
       {
         margin:0;
         padding:0;
@@ -96,9 +97,38 @@
         top:        10em;
         right:      0em;
         bottom:     0em;
-        overflow: auto;
       }
 
+      #speed-dial-list
+      {
+          overflow:auto;
+          position: absolute;
+          top: 3em;
+          bottom: 0em;
+          padding: 0em;
+      }
+
+      .speed-dial-entry
+      {
+          float: left;
+          width: 10em;
+          min-height: 4em;
+          margin: 5px;
+          text-align: center;
+          vertical-align: middle;
+
+      }
+
+      .speed-dial-number
+      {
+          font-size: 75%;
+      }
+
+      .speed-dial-entry:hover
+      {
+        border-color: yellow;
+        cursor: pointer;
+      }
 
       /*#status-bar[state="ring_in"]
       {
@@ -124,6 +154,16 @@
         color: red;
         font-weight: bold;
       }
+
+      #device-list
+      {
+          overflow:auto;
+          position: absolute;
+          top: 3em;
+          bottom: 0em;
+          padding: 0em;
+      }
+
 
       #device-list .device
       {
@@ -297,6 +337,12 @@
 
     </style>
 
+    <script>
+        $(function() {
+          $( "#main-tabs" ).tabs();
+        });
+    </script>
+
   </head>
 
 
@@ -366,20 +412,38 @@
       <div class='list'></div>
     </div> -->
 
-    <div class='ui-widget-content' id='device-list'>
-      <div class='ui-widget-header'>Phone overview:</div>
+    <div id='main-tabs'>
+        <ul>
+          <li><a href="#device-list">Phone overview</a></li>
+          <li><a href="#speed-dial-list">Speed dial</a></li>
+        </ul>
 
-      <!-- This is cloned for every device of other users -->
-      <div class='template template-device-other ui-state-default ui-widget-content ui-corner-all device'>
-        <div class='device-info'></div>
-        <div class='channel-list'>
-          <!-- Cloned for every channel in a device -->
-          <div class='template template-channel-other channel'>
-            <span class='channel-icon'></span>
-            <span class='channel-info'></span>
+        <div class='' id='device-list'>
+          <!-- <div class='ui-widget-header'>Phone overview:</div> -->
+
+          <!-- This is cloned for every device of other users -->
+          <div class='template template-device-other ui-state-default ui-widget-content ui-corner-all device'>
+            <div class='device-info'></div>
+            <div class='channel-list'>
+              <!-- Cloned for every channel in a device -->
+              <div class='template template-channel-other channel'>
+                <span class='channel-icon'></span>
+                <span class='channel-info'></span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+
+
+        <div class='' id='speed-dial-list'>
+          <!-- <div class='ui-widget-header ui-widget '>Speed dial:</div> -->
+          <!-- Cloned for every speeddial entry -->
+          <div class='template template-speed-dial-entry speed-dial-entry ui-widget-content ui-corner-all'>
+            <div class='speed-dial-name'></div>
+            <div class='speed-dial-number'></div>
+          </div>
+        </div>
+
     </div>
   </body>
 </html>
