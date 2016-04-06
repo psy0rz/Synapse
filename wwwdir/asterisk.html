@@ -57,7 +57,7 @@
         position:   absolute;
         height:     10em;
         right:      0em;
-        width:      21em;
+        width:      31em;
       }
 
 
@@ -318,8 +318,12 @@
                 </div>
             </div>
         </span>
-        <span id='status-msg'>Loading...</span>
-        <a id='logout' href='#'>Logout...</a>
+        <span class='show-when-logged-in'>
+            Call: <input id='dial-number' type='text'></input> <input id='dial-button' type='submit' value='Dial'></input>
+        </span>
+        <div id='status-msg'>Loading...</div>
+
+
     </div>
 
     <div class='ui-widget-content' id='channel-parked-list'>
@@ -337,9 +341,12 @@
     <div class='ui-widget-content' id='status-bar'>
       <div class='ui-widget-header'>Status:</div>
       <div style='padding:0.5em'>
-        <!-- <input id='login-user' type='submit' value='Admin login'> -->
+
         <div id='server-msg'></div>
+        <a id='logout' class='show-when-logged-in' href='#'>Logout...</a>
+        <p>
         <div style='font-size:75%'>Version 1.0.1</div>
+
       </div>
     </div>
 

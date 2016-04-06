@@ -35,7 +35,9 @@ synapse_register("asterisk_State",function(msg_src, msg_dst, msg_event, msg)
 synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
 {
     $('#status-msg').html("Requesting login...");
-    $('#logout').hide();
+    //logged out
+    $('.show-when-logged-out').show();
+    $('.show-when-logged-in').hide();
     send(0,"asterisk_authReq", {
         authCookie: $.readCookie('asterisk_authCookie'),
         deviceId:   $.readCookie('asterisk_deviceId'),
@@ -52,13 +54,17 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
 synapse_register("asterisk_authCall",function(msg_src, msg_dst, msg_event, msg)
 {
     $('#status-msg').html("Please login by calling: <b>"+msg["number"]+"</b>");
-    $('#logout').hide();
+    //logged out
+    $('.show-when-logged-out').show();
+    $('.show-when-logged-in').hide();
 });
 
 synapse_register("asterisk_authOk",function(msg_src, msg_dst, msg_event, msg)
 {
     $('#status-msg').html("");
-    $('#logout').show();
+    //logged in
+    $('.show-when-logged-out').hide();
+    $('.show-when-logged-in').show();
     loginDeviceId=msg["deviceId"];
 
     //store the device and authcookie in a browser cookie, so the user doesnt have to relogin everytime.
@@ -406,6 +412,10 @@ synapse_register("module_SessionEnded",function(msg_src, msg_dst, msg_event, msg
 /// JAVA SCRIPT EVENT HANDLERS
 $(document).ready(function(){
 
+    //logged out
+    $('.show-when-logged-out').show();
+    $('.show-when-logged-in').hide();
+
     // $("#device-list").sortable();
     $("#device-list").disableSelection();
     $("#logout").click(function()
@@ -421,15 +431,14 @@ $(document).ready(function(){
         synapse_login();
     });
 
-    $('#test1').on('click', function()
+    $('#dial-button').on('click', function()
     {
-        // send(0, "asterisk_Test", {
-        //  "Action"    : "Originate",
-        //  "Channel"   : "SIP/100",
-        //  "Context"   : "from-synapse",
-        //  "Priority"  : 1,
-        //  "Exten"     : 901,
-        // });
+        var reuseChannelId=getActiveChannel()["id"];
+
+        send(0, "asterisk_Call", {
+         "exten"              : $('#dial-number').val(),
+         "reuseChannelId"     : reuseChannelId,
+        });
 
     });
 
