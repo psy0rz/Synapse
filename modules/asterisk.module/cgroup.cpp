@@ -81,7 +81,7 @@ namespace asterisk
                 DEB("Loading speeddial for group '" << id << "', from file: " << csvFileName);
                 ifstream csvStream;
                 csvStream.exceptions( ifstream::badbit  );
-                csvStream.open(csvFileName.c_str());
+                csvStream.open(csvFileName.string().c_str());
                 while(!csvStream.eof())
                 {
                     std::vector<std::string> fields;
