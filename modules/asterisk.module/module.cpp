@@ -168,6 +168,9 @@ namespace asterisk
 
 		out["event"]=		"asterisk_State";
 		out.send();
+
+		out["event"]=		"asterisk_speedDialList";
+		out.send();
 	}
 
 
@@ -1305,7 +1308,7 @@ namespace asterisk
 	}
 
 	//test raw commands
-	//FIXME: remove, insecure
+	//FIXME: remove, insecure, only use while debugging
 	// SYNAPSE_REGISTER(asterisk_Test)
 	// {
 	//

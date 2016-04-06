@@ -442,7 +442,6 @@ $(document).ready(function(){
 
     });
 
-
     //gets an active channel from our device thats not on hold
     //returns all channel data
     function getActiveChannel()

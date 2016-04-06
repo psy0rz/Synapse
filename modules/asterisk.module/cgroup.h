@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -39,6 +39,8 @@ namespace asterisk
 		private:
 		string id;
 		CserverMan * serverManPtr;
+		Cvar speedDialList;
+
 
 		public:
 		Cgroup(CserverMan * serverManPtr);
@@ -47,6 +49,10 @@ namespace asterisk
 		string getStatus(string prefix);
 
 		void send(Cmsg & msg);
+
+		Cvar getSpeedDial();
+		void sendRefresh(int dst);
+
 
 	};
 

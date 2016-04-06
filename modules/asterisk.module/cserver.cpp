@@ -88,6 +88,9 @@ namespace asterisk
 			I->second->sendRefresh(dst);
 		}
 
+		//
+
+
 	}
 
 	void Cserver::sendChanges()
@@ -686,6 +689,11 @@ namespace asterisk
 		out.send(0,Cmsg::INFO);
 
 		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
+		{
+			I->second->sendRefresh(dst);
+		}
+
+		for (CgroupMap::iterator I=groupMap.begin(); I!=groupMap.end(); I++)
 		{
 			I->second->sendRefresh(dst);
 		}

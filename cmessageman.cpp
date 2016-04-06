@@ -209,7 +209,7 @@ void CmessageMan::sendMappedMessage(const CmodulePtr &module, const CmsgPtr &  m
 		soHandler=dst->module->getHandler(msg->event);
 		if (soHandler==NULL)
 		{
-			WARNING("send ignored message: no handler for " << msg->event << " found in " << dst->module->name );
+			DEB("send ignored message: no handler for " << msg->event << " found in " << dst->module->name );
 			return;
 		}
 

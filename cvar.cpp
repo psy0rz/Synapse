@@ -1,4 +1,4 @@
-/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl) 
+/*  Copyright 2008,2009,2010 Edwin Eefting (edwin@datux.nl)
 
     This file is part of Synapse.
 
@@ -49,7 +49,7 @@ Cvar::Cvar()
 
 Cvar::~Cvar()
 {
-	
+
 }
 
 void Cvar::clear()
@@ -335,7 +335,7 @@ Cvar::operator CvarMap & ()
 {
 	if (value.which()==CVAR_EMPTY)
 	{
-		//DEB("Cvar " << this << ": converting CVAR_EMPTY to CVAR_MAP"); 
+		//DEB("Cvar " << this << ": converting CVAR_EMPTY to CVAR_MAP");
 		value=CvarMap();
 	}
 	else if (value.which()!=CVAR_MAP)
@@ -442,7 +442,7 @@ void Cvar::fromJsonSpirit(Value &spiritValue)
 			break;
 		case(obj_type):
 			value=CvarMap();
-			//convert the Object(string,Value) pairs to a CvarMap 
+			//convert the Object(string,Value) pairs to a CvarMap
 			for (Object::iterator ObjectI=spiritValue.get_obj().begin(); ObjectI!=spiritValue.get_obj().end(); ObjectI++)
 			{
 				//recurse to convert the json_spirit pair into a CvarMap key->item.
@@ -494,14 +494,14 @@ void Cvar::toJsonSpirit(Value &spiritValue)
 
 			break;
 		case(CVAR_MAP):
-			//convert the CvarMap to a json_spirit Object with (String,Value) pairs 
+			//convert the CvarMap to a json_spirit Object with (String,Value) pairs
 			spiritValue=Object();
 			for (CvarMap::iterator varI=begin(); varI!=end(); varI++)
 			{
 				Value subValue;
 				//recurse to convert the map-value of the CvarMap into a json_spirit Value:
 				varI->second.toJsonSpirit(subValue);
-				
+
 				//push the resulting Value onto the json_spirit Object
 				spiritValue.get_obj().push_back(Pair(
 					varI->first,
@@ -510,14 +510,14 @@ void Cvar::toJsonSpirit(Value &spiritValue)
 			}
 			break;
 		case(CVAR_LIST):
-			//convert the CvarList to a json_spirit Array with (String,Value) pairs 
+			//convert the CvarList to a json_spirit Array with (String,Value) pairs
 			spiritValue=Array();
 			for (CvarList::iterator varI=list().begin(); varI!=list().end(); varI++)
 			{
 				Value subValue;
 				//recurse to convert the list item of the CvarList into a json_spirit Value:
 				varI->toJsonSpirit(subValue);
-				
+
 				//push the resulting Value onto the json_spirit Object
 				spiritValue.get_array().push_back(subValue);
 			}
@@ -616,12 +616,21 @@ bool Cvar::selfTest()
 		DEB("test: Selftesting basic exception handler");
 		Cvar e;
 		TESTTHROW(e.castError("exception test"));
-		
-	
+
+		DEB("Test default initialisation");
+		TEST(e.isEmpty());
+
+
 		DEB("test: Selftesting CVAR_LONG_DOUBLE");
 
 		DEB("test: empty long value");
 		TEST((int)e==0);
+
+		DEB("test: isempty() and clear()");
+		TEST(!e.isEmpty());
+		e.clear();
+		TEST(e.isEmpty());
+
 
 		DEB("test: use long as boolean");
 		e=1;
