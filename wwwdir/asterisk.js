@@ -1,14 +1,19 @@
 
 loginDeviceId="";
 
+//get jquery object to template dom
+function getTemplate(class_name, context)
+{
+    return($(".template."+class_name, context));
+
+}
+
 //clones a template and returns it as a jquery object
 //removes .template class from clone.
-//removes any child templates dom objects
-function cloneTemplate(class_name)
+function cloneTemplate(class_name, context)
 {
-  clone=$(".template."+class_name).clone();
+  clone=getTemplate(class_name,context).clone();
   clone.removeClass("template");
-  $(".template", clone).remove();
   return(clone);
 }
 
@@ -106,7 +111,11 @@ function prettyCallerId( callerId, callerIdName)
 //received information about a new or existing device
 synapse_register("asterisk_updateDevice",function(msg_src, msg_dst, msg_event, msg)
 {
-    device=$(escapeId(msg["id"]))
+    var device;
+    var html;
+    var template;
+
+    device=$(escapeId(msg["id"]));
 
     //device doesnt exist yet?
     if (device.length==0)
@@ -114,13 +123,13 @@ synapse_register("asterisk_updateDevice",function(msg_src, msg_dst, msg_event, m
         //is it the device of the logged in user?
         if (msg["id"]==loginDeviceId)
         {
-            html=cloneTemplate("template-device-own");
+            html=cloneTemplate("device-own");
             html.attr("id", msg["id"]);
             $('#device-user').append(html);
         }
         else
         {
-            html=cloneTemplate("template-device-other");
+            html=cloneTemplate("device-other");
             html.attr("id", msg["id"]);
 
             var devices=$('#device-list .device:not(.template)');
@@ -213,26 +222,21 @@ function update_device_channel(msg, callerInfo)
         }
     }
 
+    var device=$(escapeId(msg["deviceId"]));
+
     //channel doesnt exist (anymore)?
-    if (moved || $(".device "+escapeClass(msg["id"])).length==0)
+    if (moved || $(escapeClass(msg["id"]), device).length==0)
     {
-
-        //is it our device?
-        if (msg["deviceId"]==loginDeviceId)
-            newChannelHtml=cloneTemplate("template-channel-own");
-        else
-            newChannelHtml=cloneTemplate("template-channel-other");
-
-        newChannelHtml.addClass(msg["id"]);
-
-        // newChannelHtml+="</div>";
-        $(escapeId(msg["deviceId"])+' .channel-list').append(newChannelHtml);
+        var template=getTemplate("channel", device);
+        var html=cloneTemplate("channel", device);
+        html.addClass(msg["id"]);
+        html.insertBefore(template);
+        // $(escapeId(msg["deviceId"])+' .channel-list').append(newChannelHtml);
     }
 
     //store all the info as data in the channel dom object:
-    $(".device "+escapeClass(msg["id"])).data("channel", msg);
-
-    $(".device "+escapeClass(msg["id"])+" .channel-info").html(callerInfo);
+    $(escapeClass(msg["id"]), device).data("channel", msg);
+    $(escapeClass(msg["id"])+" .channel-info", device).html(callerInfo);
 }
 
 
@@ -298,7 +302,7 @@ function update_parked_channel(msg, callerInfo)
         if ($(escapeClass(msg["id"])+"_parked").length==0)
         {
             //add a new parked channel object
-            newChannelHtml=cloneTemplate("template-channel-parked");
+            newChannelHtml=cloneTemplate("channel-parked");
             newChannelHtml.addClass(msg["id"]+"_parked");
             $("#channel-parked-list").append(newChannelHtml);
             // var newChannelHtml="";
@@ -448,7 +452,7 @@ $(document).ready(function(){
     function getActiveChannel()
     {
 
-        var channels=$(escapeId(loginDeviceId)+" .channel");
+        var channels=$(escapeId(loginDeviceId)+" .channel:not(.template)");
         var activeChannel={};
 
         channels.each(function(index, channel)
@@ -463,7 +467,7 @@ $(document).ready(function(){
         return(activeChannel);
     }
 
-    $("#speed-dial-list").on("click", ".speed-dial-entry", function()
+    $("body").on("click", ".speed-dial-entry", function()
     {
         var reuseChannelId=getActiveChannel()["id"];
 
@@ -541,11 +545,10 @@ $(document).ready(function(){
 
 
 
-
+//(debugging is disabled on server side)
 synapse_register("asterisk_debugChannel",function(msg_src, msg_dst, msg_event, msg)
 {
-    //TODO: make it possible to disable debugging, its slow
-    //add debug dom object?
+
     if ($(escapeId("debug_"+msg["id"])).length==0)
     {
         html="<div class='channel-debug' id='debug_"+msg["id"]+"'>";
@@ -573,15 +576,7 @@ synapse_register("asterisk_debugChannel",function(msg_src, msg_dst, msg_event, m
 
 synapse_register("asterisk_speedDialList",function(msg_src, msg_dst, msg_event, msg)
 {
-
-    for (var entryI in msg.numbers)
-    {
-        var entry=msg.numbers[entryI];
-        html=cloneTemplate("template-speed-dial-entry");
-        $(".speed-dial-name", html).text(entry.full_name);
-        $(".speed-dial-number", html).text(entry.number);
-        html.attr("number", entry.number);
-        $("#speed-dial-list").append(html);
-    }
+    //too GUI specific to handle here
+    ;
 
 });

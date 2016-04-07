@@ -111,8 +111,8 @@
       .speed-dial-entry
       {
           float: left;
-          width: 10em;
-          min-height: 4em;
+          width: 20em;
+          min-height: 3em;
           margin: 5px;
           text-align: center;
           vertical-align: middle;
@@ -155,7 +155,7 @@
         font-weight: bold;
       }
 
-      #device-list
+      .main-tab
       {
           overflow:auto;
           position: absolute;
@@ -338,8 +338,46 @@
     </style>
 
     <script>
-        $(function() {
-          $( "#main-tabs" ).tabs();
+
+        //create speedial tabs and buttons
+        synapse_register("asterisk_speedDialList",function(msg_src, msg_dst, msg_event, msg)
+        {
+            //traverse all the speed dial entries
+            for (var entryI in msg.numbers)
+            {
+                var entry=msg.numbers[entryI];
+
+                category_id="speed-dial-list-"+entry.category.replace(/[^a-zA-Z0-9]/g,"-");
+                //need new category?
+                var speed_dial_list=$("#"+category_id);
+                if (speed_dial_list.length==0)
+                {
+                    //create new tab
+                    var template=getTemplate("speed-dial-tab");
+                    var html=cloneTemplate("speed-dial-tab");
+                    $("a", html).attr("href", "#"+category_id);
+                    $("a", html).text(entry.category);
+                    html.insertBefore(template);
+
+                    //create new list
+                    var template=getTemplate("speed-dial-list");
+                    var html=cloneTemplate("speed-dial-list");
+                    html.attr("id", category_id);
+                    html.insertBefore(template);
+
+                }
+                speed_dial_list=$("#"+category_id);
+
+                //create new entry
+                var template=getTemplate("speed-dial-entry", speed_dial_list);
+                var html=cloneTemplate("speed-dial-entry", speed_dial_list);
+                $(".speed-dial-name", html).text(entry.full_name);
+                $(".speed-dial-number", html).text(entry.number);
+                html.attr("number", entry.number);
+                html.insertBefore(template);
+            }
+
+            $( "#main-tabs" ).tabs();
         });
     </script>
 
@@ -351,11 +389,11 @@
         <div class='ui-widget-header'>My phone:</div>
         <span id='device-user'>
             <!-- This is cloned for users own device -->
-            <div class='template template-device-own ui-state-default ui-widget-content ui-corner-all device'>
+            <div class='template device-own ui-state-default ui-widget-content ui-corner-all device'>
                 <div class='device-info'></div>
                 <div class='channel-list'>
                   <!-- Cloned for every channel in users own device -->
-                  <div class='template template-channel-own channel'>
+                  <div class='template channel'>
                     <span class='channel-icon'></span>
                     <span class='channel-info'></span>
                     <span class='channel-menu-item channel-menu-item-hang-up'>End call</span>
@@ -375,7 +413,7 @@
     <div class='ui-widget-content' id='channel-parked-list'>
       <div class='ui-widget-header'>Parked calls:</div>
       <!-- Cloned for every channel channel that is parked by the user -->
-      <div class='template template-channel-parked channel-parked'>
+      <div class='template channel-parked'>
         <span class='channel-icon'></span>
         <span class='channel-info'></span>
         <span class='channel-menu-item channel-menu-item-hang-up'>End call</span>
@@ -397,36 +435,20 @@
     </div>
 
 
-    <!-- <div class='ui-widget-content' id='active-call-list'>
-      <div class='ui-widget-header'>Active calls:</div>
-      <div class='list'>
-          <div class='template template-channel-call-list channel'>
-              <span class='channel-icon'></span>
-              <span class='channel-info'></span>
-          </div>
-      </div>
-    </div>
-
-    <div class='ui-widget-content' id='history-call-list'>
-      <div class='ui-widget-header'>History:</div>
-      <div class='list'></div>
-    </div> -->
-
     <div id='main-tabs'>
         <ul>
           <li><a href="#device-list">Phone overview</a></li>
-          <li><a href="#speed-dial-list">Speed dial</a></li>
+          <!-- Cloned for every speed dial category -->
+          <li class='template speed-dial-tab'><a >...</a></li>
         </ul>
 
-        <div class='' id='device-list'>
-          <!-- <div class='ui-widget-header'>Phone overview:</div> -->
-
+        <div class='main-tab' id='device-list'>
           <!-- This is cloned for every device of other users -->
-          <div class='template template-device-other ui-state-default ui-widget-content ui-corner-all device'>
+          <div class='template device-other ui-state-default ui-widget-content ui-corner-all device'>
             <div class='device-info'></div>
             <div class='channel-list'>
               <!-- Cloned for every channel in a device -->
-              <div class='template template-channel-other channel'>
+              <div class='template  channel'>
                 <span class='channel-icon'></span>
                 <span class='channel-info'></span>
               </div>
@@ -434,16 +456,14 @@
           </div>
         </div>
 
-
-        <div class='' id='speed-dial-list'>
-          <!-- <div class='ui-widget-header ui-widget '>Speed dial:</div> -->
+        <!-- Cloned for every speed dial category -->
+        <div class='main-tab speed-dial-list template'>
           <!-- Cloned for every speeddial entry -->
-          <div class='template template-speed-dial-entry speed-dial-entry ui-widget-content ui-corner-all'>
+          <div class='template speed-dial-entry ui-widget-content ui-corner-all'>
             <div class='speed-dial-name'></div>
             <div class='speed-dial-number'></div>
           </div>
         </div>
-
     </div>
   </body>
 </html>

@@ -40,7 +40,7 @@ namespace asterisk
 		string id;
 		CserverMan * serverManPtr;
 		Cvar speedDialList;
-
+		Cvar phoneBookList;
 
 		public:
 		Cgroup(CserverMan * serverManPtr);
@@ -51,6 +51,7 @@ namespace asterisk
 		void send(Cmsg & msg);
 
 		Cvar getSpeedDial();
+		void loadPhoneBook();
 		void sendRefresh(int dst);
 
 

@@ -91,6 +91,14 @@ namespace asterisk
                         Cvar addressEntry;
                         addressEntry["full_name"]=fields[0];
                         addressEntry["number"]=fields[1];
+                        if (fields.size()>=3)
+                        {
+                            addressEntry["category"]=fields[2];
+                        }
+                        else
+                        {
+                            addressEntry["category"]=""; //will end up in phone overview instead of seperate list
+                        }
                         speedDialList.list().push_back(addressEntry);
                     }
                 }
@@ -106,6 +114,52 @@ namespace asterisk
 
         return(speedDialList);
     }
+
+    //loads phonebook into phoneBookList (if it exists)
+    //format:
+    // company;first_name;last_name;number
+    void Cgroup::loadPhoneBook()
+    {
+        boost::filesystem::path csvFileName("etc/synapse/asterisk_phonebook_"+id+".csv");
+        if (phoneBookList.isEmpty())
+        {
+            //create list
+            phoneBookList.list();
+            if (boost::filesystem::exists(csvFileName))
+            {
+                DEB("Loading phonebook for group '" << id << "', from file: " << csvFileName);
+                ifstream csvStream;
+                csvStream.exceptions( ifstream::badbit  );
+                csvStream.open(csvFileName.string().c_str());
+                while(!csvStream.eof())
+                {
+                    std::vector<std::string> fields;
+                    fields=parseNextLineCsvLine(csvStream, ';');
+                    if (fields.size()>=4)
+                    {
+                        Cvar addressEntry;
+                        addressEntry["company"]=fields[0];
+                        addressEntry["first_name"]=fields[1];
+                        addressEntry["last_name"]=fields[2];
+                        addressEntry["number"]=fields[3];
+                        phoneBookList.list().push_back(addressEntry);
+                    }
+                }
+                csvStream.close();
+            }
+            else
+            {
+                WARNING("Not loading phonebook for group '" << id << "', because file does not exist: " << csvFileName);
+            }
+        }
+
+    }
+    //
+    // //regex query on all fields in phonebook list
+    // void Cgroup::searchPhoneBook(string re)
+    // {
+    //
+    // }
 
 	string Cgroup::getId()
 	{
