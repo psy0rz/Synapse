@@ -106,6 +106,28 @@ function prettyCallerId( callerId, callerIdName)
     return txt;
 }
 
+//add a dom html object to a list but use sorting.
+function htmlAddSorted(html, selector, context, sort_string)
+{
+    var items=$(selector, context);
+
+    html.attr("sort-string",sort_string);
+
+    //find out sort order
+    var added=false;
+    items.each(function(index, item)
+    {
+        if ($(item).attr("sort-string") > sort_string)
+        {
+            html.insertBefore(item);
+            added=true
+            return(false);
+        }
+    });
+
+    if (!added)
+        context.append(html);
+}
 
 
 //received information about a new or existing device
@@ -131,24 +153,8 @@ synapse_register("asterisk_updateDevice",function(msg_src, msg_dst, msg_event, m
         {
             html=cloneTemplate("device-other");
             html.attr("id", msg["id"]);
+            htmlAddSorted(html, ".sorted-button", $("#device-list"), msg.callerIdName);
 
-            var devices=$('#device-list .device:not(.template)');
-            //find out sort order
-            var added=false;
-            devices.each(function(index, device)
-            {
-                var data=$(device).data("device");
-                if (msg.callerIdName < data.callerIdName)
-                {
-                    $(device).before(html);
-                    added=true;
-                    return(false);
-                }
-            });
-            if (!added)
-            {
-                $('#device-list').append(html);
-            }
         }
         device=$(escapeId(msg["id"]));
     }
@@ -240,55 +246,6 @@ function update_device_channel(msg, callerInfo)
 }
 
 
-// //update list of active calls
-// function update_call_list_channel(msg, callerInfo)
-// {
-//     ////////////////////// active-call-list-only stuff:
-//     //add new channel to active call list?
-//     if ($("#active-call-list "+escapeClass(msg["id"])).length==0)
-//     {
-//         newChannelHtml=cloneTemplate("template-channel-call-list");
-//         newChannelHtml.addClass(msg["id"]);
-//         $("#active-call-list .list").prepend(newChannelHtml);
-//         show=1;
-//
-//         //make the device highlight when hoovering the active-call-list channel
-//         $("#active-call-list "+escapeClass(msg["id"])).hover(
-//             function () {
-//                 $(this).addClass("ui-state-highlight");
-//                 $(escapeId(msg["deviceId"])).addClass("ui-state-highlight");
-//
-//                 //if its in the deviceList, scroll to it:
-//                 var device=$("#device-list "+escapeId(msg["deviceId"]));
-//                 if (device.length!=0)
-//                 {
-//                     $('#device-list').scrollTop($('#device-list').scrollTop()+device.position().top);
-//                 }
-//             },
-//             function () {
-//                 $(this).removeClass("ui-state-highlight");
-//                 $(escapeId(msg["deviceId"])).removeClass("ui-state-highlight");
-//             }
-//         );
-//
-//         //when clicking, show the corresponding debug object
-//         $("#active-call-list "+escapeClass(msg["id"])).click(
-//             function () {
-//                 $(escapeId("debug_"+msg["id"])).dialog({
-//                     title: "Debug channel "+msg["id"],
-//                     position: "top"
-//
-//                 });
-//             }
-//         );
-//     }
-//
-//     //update active call list
-//     $("#active-call-list "+escapeClass(msg["id"])+" .channel-info").html(
-//         prettyCallerId(msg["deviceCallerId"], msg["deviceCallerIdName"]) + " ... "+callerInfo
-//     );
-//
-// }
 
 //channels that are parked by us should show up in the parking area
 function update_parked_channel(msg, callerInfo)
@@ -305,15 +262,6 @@ function update_parked_channel(msg, callerInfo)
             newChannelHtml=cloneTemplate("channel-parked");
             newChannelHtml.addClass(msg["id"]+"_parked");
             $("#channel-parked-list").append(newChannelHtml);
-            // var newChannelHtml="";
-            // newChannelHtml+="<div class='channel parked_channel "+msg["id"]+"_parked'>";
-            // newChannelHtml+="<span class='channel-icon'></span>";
-            // newChannelHtml+="<span class='channel-info'></span>";
-            // newChannelHtml+="<span class='channel-menu-item channel-menu-item-hang-up'>End call</span>";
-            // newChannelHtml+="<span class='channel-menu-item channel-menu-item-resume'>Resume</span>";
-            // newChannelHtml+="<span class='channel-menu-item channel-menu-item-transfer'>Transfer</span>";
-            // newChannelHtml+="</div>";
-            // $(escapeId(loginDeviceId)+' .channel-list').append(newChannelHtml);
 
 
             $(escapeClass(msg["id"])+'_parked .channel-icon').attr('state', "hold");
@@ -414,6 +362,14 @@ synapse_register("module_SessionEnded",function(msg_src, msg_dst, msg_event, msg
 {
 });
 
+//filter spaces and (0) stuff from numbers before dialing
+function filterNumber(number)
+{
+        number=number.replace(/ /g, "");
+        number=number.replace(/\(0\)/g,"");
+        return(number);
+}
+
 /// JAVA SCRIPT EVENT HANDLERS
 $(document).ready(function(){
 
@@ -441,7 +397,7 @@ $(document).ready(function(){
         var reuseChannelId=getActiveChannel()["id"];
 
         send(0, "asterisk_Call", {
-         "exten"              : $('#dial-number').val(),
+         "exten"              : filterNumber( $('#dial-number').val()),
          "reuseChannelId"     : reuseChannelId,
         });
 
@@ -473,7 +429,7 @@ $(document).ready(function(){
 
         send(0, "asterisk_Call",
         {
-            "exten": $(this).attr("number"),
+            "exten": filterNumber($(this).attr("number")),
             "reuseChannelId": reuseChannelId
         });
     });

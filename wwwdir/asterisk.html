@@ -112,7 +112,7 @@
       {
           float: left;
           width: 20em;
-          min-height: 3em;
+          min-height: 3.5em;
           margin: 5px;
           text-align: center;
           vertical-align: middle;
@@ -169,7 +169,7 @@
       {
         float: left;
         width: 20em;
-        min-height: 3em;
+        min-height: 3.5em;
         margin: 5px;
       }
 
@@ -347,34 +347,51 @@
             {
                 var entry=msg.numbers[entryI];
 
-                category_id="speed-dial-list-"+entry.category.replace(/[^a-zA-Z0-9]/g,"-");
-                //need new category?
-                var speed_dial_list=$("#"+category_id);
-                if (speed_dial_list.length==0)
+                //add it to a category-tab
+                if (entry.category)
                 {
-                    //create new tab
-                    var template=getTemplate("speed-dial-tab");
-                    var html=cloneTemplate("speed-dial-tab");
-                    $("a", html).attr("href", "#"+category_id);
-                    $("a", html).text(entry.category);
-                    html.insertBefore(template);
+                    category_id="speed-dial-list-"+entry.category.replace(/[^a-zA-Z0-9]/g,"-");
+                    //need new category?
+                    var speed_dial_list=$("#"+category_id);
+                    if (speed_dial_list.length==0)
+                    {
+                        //create new tab
+                        var template=getTemplate("speed-dial-tab");
+                        var html=cloneTemplate("speed-dial-tab");
+                        $("a", html).attr("href", "#"+category_id);
+                        $("a", html).text(entry.category);
+                        html.insertBefore(template);
 
-                    //create new list
-                    var template=getTemplate("speed-dial-list");
-                    var html=cloneTemplate("speed-dial-list");
-                    html.attr("id", category_id);
+                        //create new list
+                        var template=getTemplate("speed-dial-list");
+                        var html=cloneTemplate("speed-dial-list");
+                        html.attr("id", category_id);
+                        html.insertBefore(template);
+
+                    }
+                    speed_dial_list=$("#"+category_id);
+
+                    //create new entry
+                    var template=getTemplate("speed-dial-entry", speed_dial_list);
+                    var html=cloneTemplate("speed-dial-entry", speed_dial_list);
+                    $(".speed-dial-name", html).text(entry.full_name);
+                    $(".speed-dial-number", html).text(entry.number);
+                    html.attr("number", entry.number);
                     html.insertBefore(template);
+                }
+                //add the speed dial entry to the normal device list (if category is not specified)
+                else
+                {
+                    device_list=$("#device-list");
+
+                    //create new entry
+                    var html=cloneTemplate("speed-dial-entry", device_list);
+                    $(".speed-dial-name", html).text(entry.full_name);
+                    $(".speed-dial-number", html).text(entry.number);
+                    html.attr("number", entry.number);
+                    htmlAddSorted(html, ".sorted-button", device_list, entry.full_name);
 
                 }
-                speed_dial_list=$("#"+category_id);
-
-                //create new entry
-                var template=getTemplate("speed-dial-entry", speed_dial_list);
-                var html=cloneTemplate("speed-dial-entry", speed_dial_list);
-                $(".speed-dial-name", html).text(entry.full_name);
-                $(".speed-dial-number", html).text(entry.number);
-                html.attr("number", entry.number);
-                html.insertBefore(template);
             }
 
             $( "#main-tabs" ).tabs();
@@ -410,7 +427,7 @@
 
     </div>
 
-    <div class='ui-widget-content' id='channel-parked-list'>
+    <div class='show-when-logged-in ui-widget-content' id='channel-parked-list'>
       <div class='ui-widget-header'>Parked calls:</div>
       <!-- Cloned for every channel channel that is parked by the user -->
       <div class='template channel-parked'>
@@ -435,7 +452,7 @@
     </div>
 
 
-    <div id='main-tabs'>
+    <div class='show-when-logged-in' id='main-tabs'>
         <ul>
           <li><a href="#device-list">Phone overview</a></li>
           <!-- Cloned for every speed dial category -->
@@ -444,7 +461,7 @@
 
         <div class='main-tab' id='device-list'>
           <!-- This is cloned for every device of other users -->
-          <div class='template device-other ui-state-default ui-widget-content ui-corner-all device'>
+          <div class='template sorted-button device-other ui-state-default ui-widget-content ui-corner-all device'>
             <div class='device-info'></div>
             <div class='channel-list'>
               <!-- Cloned for every channel in a device -->
@@ -454,6 +471,13 @@
               </div>
             </div>
           </div>
+
+          <!-- Cloned for every speeddial entry -->
+          <div class='template sorted-button speed-dial-entry ui-widget-content ui-corner-all'>
+            <div class='speed-dial-name'></div>
+            <div class='speed-dial-number'></div>
+          </div>
+
         </div>
 
         <!-- Cloned for every speed dial category -->

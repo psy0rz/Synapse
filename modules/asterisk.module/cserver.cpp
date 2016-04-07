@@ -281,7 +281,7 @@ namespace asterisk
 
 	void Cserver::amiCall(CdevicePtr fromDevicePtr, CchannelPtr reuseChannelPtr, string exten)
 	{
-
+		
 
 		if (fromDevicePtr==CdevicePtr())
 			throw(synapse::runtime_error("device not specified"));
