@@ -94,7 +94,7 @@
         padding:0;
         position:   absolute;
         left:       0em;
-        top:        10em;
+        top:        11em;
         right:      0em;
         bottom:     0em;
       }
@@ -182,9 +182,9 @@
       #status-user .device
       {
         float: left;
-        width: 30em;
-        min-height: 5em;
-        margin: 5px;
+        width: 29em;
+        min-height: 7em;
+        margin: 1em;
       }
 
 
@@ -198,6 +198,11 @@
         border-style:none;
         width:100%;
         min-height: 2em;
+      }
+
+      #status-user .channel-list
+      {
+          min-height:4em;
       }
 
       .channel
@@ -417,10 +422,10 @@
                     <span class='channel-menu-item channel-menu-item-hold'>Park &gt;&gt;</span>
                   </div>
                 </div>
+                <!-- <span class='show-when-logged-in'> -->
+                Call: <input id='dial-number' type='text'></input> <input id='dial-button' type='submit' value='Dial'></input>
+                <!-- </span> -->
             </div>
-        </span>
-        <span class='show-when-logged-in'>
-            Call: <input id='dial-number' type='text'></input> <input id='dial-button' type='submit' value='Dial'></input>
         </span>
         <div id='status-msg'>Loading...</div>
 
