@@ -309,9 +309,9 @@ synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, 
         else
         {
             //show who's being dialed, or show caller id if its an incoming call:
-            if (msg["state"]=="out")
-                callerInfo+="Calling "+msg["firstExtension"];
-            else
+            // if (msg["state"]=="out")
+            //     callerInfo+="Calling "+msg["firstExtension"];
+            // else
                 callerInfo+=prettyCallerId(msg["callerId"], msg["callerIdName"]);
         }
     }
@@ -394,16 +394,11 @@ $(document).ready(function(){
 
     $('.dial-button').on('click', function()
     {
-        var reuseChannelId=getActiveChannel()["id"];
-
-        send(0, "asterisk_Call", {
-         "exten"              : filterNumber( $('.dial-number', $(this).parent() ).val()),
-         "reuseChannelId"     : reuseChannelId,
-        });
+        asterisk_Call($('.dial-number', $(this).parent() ).val());
 
     });
 
-    //gets an active channel from our device thats not on hold
+    //gets an active channel from our device thats not on hold and not ringin in or out
     //returns all channel data
     function getActiveChannel()
     {
@@ -423,30 +418,35 @@ $(document).ready(function(){
         return(activeChannel);
     }
 
-    $("body").on("click", ".speed-dial-entry", function()
+    //place an new call:
+    //-tries reuse channels active channels and parking the active call
+    //-filters number using filterNumber()
+    function asterisk_Call(number)
     {
+        //hang up all unaswered originating calls
+        var channels=$(escapeId(loginDeviceId)+" .channel:not(.template)");
+
         var reuseChannelId=getActiveChannel()["id"];
 
         send(0, "asterisk_Call",
         {
-            "exten": filterNumber($(this).attr("number")),
-            "reuseChannelId": reuseChannelId
+            "exten": filterNumber(number),
+            "reuseChannelId": reuseChannelId,
+            "parkLinked": true
         });
+
+    }
+
+    $("body").on("click", ".speed-dial-entry", function()
+    {
+        asterisk_Call($(this).attr("number"));
     });
 
 
     ///////////////////// device button
     $("#device-list").on("click", ".device", function()
     {
-        console.log("Clicked device", $(this).data("device"));
-
-        var reuseChannelId=getActiveChannel()["id"];
-
-        send(0, "asterisk_Call",
-        {
-            "exten": $(this).data("device")["exten"],
-            "reuseChannelId": reuseChannelId
-        });
+        asterisk_Call($(this).data("device")["exten"]);
     });
 
 

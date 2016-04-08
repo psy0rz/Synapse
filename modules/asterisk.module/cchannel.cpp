@@ -30,7 +30,7 @@ namespace asterisk
 	bool Cchannel::sendDebug(Cmsg msg, int serverId)
 	{
         return(true);
-        
+
 		if (devicePtr==NULL || devicePtr->getGroupPtr()==NULL)
 			return (false);
 
@@ -233,7 +233,11 @@ namespace asterisk
 
 	string Cchannel::getState()
 	{
-		return (state);
+		//when a channel is put on hold by the phone instead of us"
+		if (onHold)
+			return("hold");
+		else
+			return (state);
 	}
 
 	void Cchannel::setState(string state)
@@ -287,10 +291,7 @@ namespace asterisk
 		out.dst=forceDst;
 		out["id"]=id;
 
-		if (onHold)
-			out["state"]="hold";
-		else
-			out["state"]=state;
+		out["state"]=getState();
 
 //			out["initiator"]=initiator;
 		out["callerId"]=callerId;
@@ -318,6 +319,7 @@ namespace asterisk
 		{
 			out["linkChannelName"]=linkChannelPtr->getChannelName();
 			out["linkId"]=linkChannelPtr->getId();
+			out["linkState"]=linkChannelPtr->getState();
 		}
 
 

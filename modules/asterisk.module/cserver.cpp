@@ -245,7 +245,7 @@ namespace asterisk
 	}
 
 
-
+	//redirect specified channels to another context and extention.
 	void Cserver::amiRedirect(CchannelPtr channel1Ptr, string context1, string exten1, CchannelPtr channel2Ptr, string context2, string exten2)
 	{
 		Cmsg out;
@@ -279,9 +279,10 @@ namespace asterisk
 		out.send(0,Cmsg::INFO);
 	}
 
-	void Cserver::amiCall(CdevicePtr fromDevicePtr, CchannelPtr reuseChannelPtr, string exten)
+
+	void Cserver::amiCall(CdevicePtr fromDevicePtr, CchannelPtr reuseChannelPtr, string exten, bool parkLinked)
 	{
-		
+
 
 		if (fromDevicePtr==CdevicePtr())
 			throw(synapse::runtime_error("device not specified"));
@@ -292,14 +293,22 @@ namespace asterisk
 			if (reuseChannelPtr->getDevicePtr()!=fromDevicePtr)
 				throw(synapse::runtime_error("specified channel does not belong to this device"));
 
-			//park the other channel and make the call
-			CchannelPtr linkedChannelPtr=reuseChannelPtr->getLinkPtr();
+			if (parkLinked)
+			{
+				//park the other channel and make the call
+				CchannelPtr linkedChannelPtr=reuseChannelPtr->getLinkPtr();
 
-			if (linkedChannelPtr!=CchannelPtr())
-				amiSetVar(linkedChannelPtr, "__SYNAPSE_OWNER", fromDevicePtr->getId());
+				if (linkedChannelPtr!=CchannelPtr())
+					amiSetVar(linkedChannelPtr, "__SYNAPSE_OWNER", fromDevicePtr->getId());
 
-			amiRedirect(reuseChannelPtr, "from-internal", exten,
-						linkedChannelPtr, "from-synapse", "park");
+					amiRedirect(reuseChannelPtr, "from-synapse-call", exten,
+								linkedChannelPtr, "from-synapse", "park");
+			}
+			else
+			{
+				//just redirect and hang up the other channel
+				amiRedirect(reuseChannelPtr, "from-synapse-call", exten);
+			}
 		}
 		//create new channel by doing a originate
 		else
@@ -307,9 +316,8 @@ namespace asterisk
 			Cmsg out;
 			out.src=sessionId;
 			out.event="ami_Action";
-
 			out["Action"]="Originate";
-			out["Context"]="from-internal";
+			out["Context"]="from-synapse-call";
 			out["Priority"]=1;
 			out["Exten"]=exten;
 			out["Channel"]=fromDevicePtr->getId();

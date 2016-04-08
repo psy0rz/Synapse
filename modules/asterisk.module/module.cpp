@@ -1264,7 +1264,7 @@ namespace asterisk
 		if (msg.isSet("reuseChannelId"))
 			channelPtr=sessionPtr->getServerPtr()->getChannelPtr(msg["reuseChannelId"], false);
 
-		sessionPtr->getServerPtr()->amiCall(sessionPtr->getDevicePtr(), channelPtr, msg["exten"]);
+		sessionPtr->getServerPtr()->amiCall(sessionPtr->getDevicePtr(), channelPtr, msg["exten"], msg["parkLinked"]);
 
 	}
 

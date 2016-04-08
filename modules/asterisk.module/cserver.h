@@ -112,7 +112,7 @@ namespace asterisk
 			//Make a call from specified device to extention
 			//Tries to be reuse the specified channel (parking the otherside of the call)
 			//Otherwise originates a new call on device.
-			void amiCall(CdevicePtr fromDevicePtr, CchannelPtr reuseChannelPtr, string exten);
+			void amiCall(CdevicePtr fromDevicePtr, CchannelPtr reuseChannelPtr, string exten, bool parkLinked);
 
 			//Bridge 2 channels together.
 			//If channelA is not specified, it will originate a new call and then do the bridging to channelB via the bridge app.
