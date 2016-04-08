@@ -12,7 +12,7 @@ function getTemplate(class_name, context)
 //removes .template class from clone.
 function cloneTemplate(class_name, context)
 {
-  clone=getTemplate(class_name,context).clone();
+  clone=getTemplate(class_name,context).clone(true,true);
   clone.removeClass("template");
   return(clone);
 }
@@ -392,12 +392,12 @@ $(document).ready(function(){
         synapse_login();
     });
 
-    $('#dial-button').on('click', function()
+    $('.dial-button').on('click', function()
     {
         var reuseChannelId=getActiveChannel()["id"];
 
         send(0, "asterisk_Call", {
-         "exten"              : filterNumber( $('#dial-number').val()),
+         "exten"              : filterNumber( $('.dial-number', $(this).parent() ).val()),
          "reuseChannelId"     : reuseChannelId,
         });
 

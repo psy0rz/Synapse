@@ -185,6 +185,8 @@
         width: 29em;
         min-height: 7em;
         margin: 1em;
+        text-align: center;
+
       }
 
 
@@ -328,6 +330,11 @@
         background-color: gray;
       }
 
+      .channel-menu-item-dial
+      {
+        background-color: gray;
+      }
+
       .channel-debug
       {
         display:none;
@@ -423,7 +430,7 @@
                   </div>
                 </div>
                 <!-- <span class='show-when-logged-in'> -->
-                Call: <input id='dial-number' type='text'></input> <input id='dial-button' type='submit' value='Dial'></input>
+                Call: <input class='dial-number' type='text'></input> <span class='channel-menu-item  channel-menu-item-dial dial-button'>Dial</span>
                 <!-- </span> -->
             </div>
         </span>
@@ -478,9 +485,9 @@
           </div>
 
           <!-- Cloned for every speeddial entry -->
-          <div class='template sorted-button speed-dial-entry ui-widget-content ui-corner-all'>
+          <div class='template sorted-button speed-dial-entry ui-state-default ui-widget-content ui-corner-all'>
             <div class='speed-dial-name'></div>
-            <div class='speed-dial-number'></div>
+            <!-- <div class='speed-dial-number'></div> -->
           </div>
 
         </div>
