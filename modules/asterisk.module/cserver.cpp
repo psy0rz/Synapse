@@ -471,7 +471,11 @@ namespace asterisk
 	CserverMan::CserverMan(string stateFileName)
 	{
 		//load state database
-		stateDb.load(stateFileName);
+
+		if (boost::filesystem::exists(stateFileName))
+			stateDb.load(stateFileName);
+		else
+			stateDb.save(stateFileName);
 
 		//initialize randomizer
 		//FIXME: unsafe randomiser?
