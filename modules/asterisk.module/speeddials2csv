@@ -1,0 +1,28 @@
+#!/usr/bin/python
+
+import subprocess
+
+
+speeddial={}
+
+#read and parse asterisk database
+lines=subprocess.check_output([ "asterisk", "-r" ,"-x", "database show"]).split("\n")
+for line in lines:
+	if line.find("/")==-1:
+		continue
+
+	fields = line.split(":")
+	key=fields[0].lstrip("/").rstrip()
+	value=fields[1].lstrip().rstrip()
+	path=key.split("/")
+	
+	if path[0]=='cidname':
+		speeddial[path[1]]=value
+		#print (value+";"+path[1])
+	
+	#print(path)
+	#if path[0]=='sysspeeddials' and path[1][0]=='4' and len(path[1])==3:
+	if path[0]=='sysspeeddials':
+		#print (path)
+		print(speeddial[value].replace("&#039;","'")+" <"+path[1]+">;"+value)
+
