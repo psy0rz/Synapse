@@ -2,8 +2,10 @@
 //TODO: make configurable
 var defaultCountryCode="+31";
 
-loginDeviceId="";
-phoneBook={};
+var loginDeviceId="";
+var phoneBook={};
+
+
 
 
 //get jquery object to template dom
@@ -108,7 +110,6 @@ function normalizeNumber(number)
 {
     var normalizedNumber=number.replace(/[^0-9+]/, "");
     normalizedNumber=normalizedNumber.replace(/^0/, defaultCountryCode);
-    console.log("normlaized", normalizedNumber);
     return(normalizedNumber);
 }
 
@@ -336,6 +337,40 @@ function update_parked_channel(msg, callerInfo)
 }
 
 
+var notification_popup=null;
+
+
+function update_popup_channel(msg, callerInfo)
+{
+
+    //is it our channel?
+    if (msg["deviceId"]==loginDeviceId)
+    {
+        //its ringing?
+        if (msg["state"]=="ring_in")
+        {
+            //no popup anymore?
+            if (notification_popup==null || notification_popup.closed)
+            {
+                 console.log("niewue");
+                 notification_popup=window.open("asterisk_popup.html", "asterisk_popup", "height=100,width=100");
+            }
+            else
+            {
+                notification_popup.focus();
+            }
+
+            $(notification_popup).load(function()
+            {
+                console.log("loaded", callerInfo);
+
+
+                $("#status-msg", notification_popup.document).html(callerInfo);
+            });
+        }
+    }
+}
+
 synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, msg)
 {
     //determine caller info
@@ -368,11 +403,13 @@ synapse_register("asterisk_updateChannel",function(msg_src, msg_dst, msg_event, 
 
 
     update_device_channel(msg, callerInfo);
-    // update_call_list_channel(msg, callerInfo);
     update_parked_channel(msg, callerInfo);
+    update_popup_channel(msg, callerInfo);
 
     //update all channel-icons
     $(escapeClass(msg["id"])+" .channel-icon").attr('state', msg["state"]);
+
+
 
 });
 
@@ -422,6 +459,8 @@ function filterNumber(number)
 
 /// JAVA SCRIPT EVENT HANDLERS
 $(document).ready(function(){
+
+    window.name="asterisk";
 
     //logged out
     $('.show-when-logged-out').show();
@@ -589,8 +628,6 @@ synapse_register("asterisk_speedDialList",function(msg_src, msg_dst, msg_event, 
 
 synapse_register("asterisk_phoneBookList",function(msg_src, msg_dst, msg_event, msg)
 {
-        // console.log(msg);;
         phoneBook[msg["groupId"]]=msg["numbers"];
-        console.log(phoneBook);
 
 });

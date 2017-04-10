@@ -1,0 +1,376 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+    <title>Incoming call</title>
+
+    <link href="/css/redmond/jquery-ui.css" rel="stylesheet" type="text/css"/>
+    <link rel="shortcut icon" href="asterisk/favicon.ico" />
+
+    <script type="text/javascript" src="lib/jquery-1.9.0.js"></script>
+
+
+
+    <style>
+      body
+      {
+        margin:0;
+        padding:0;
+        height:100%;
+        width: 100%;
+        overflow:hidden;
+      }
+
+      .template
+      {
+        display:none;
+      }
+
+
+      #status-user
+      {
+        margin:     0;
+        padding:    0;
+        position:   absolute;
+        height:     10em;
+        left:       0em;
+        width:      31em;
+
+      }
+
+      #channel-parked-list
+      {
+        margin:     0;
+        padding:    0;
+        position:   absolute;
+        height:     10em;
+        left:       31em;
+        right:      21em;
+        overflow:   auto;
+      }
+
+      #status-bar
+      {
+        margin:0;
+        padding:0;
+        position:   absolute;
+        height:     10em;
+        right:      0em;
+        width:      31em;
+      }
+
+
+
+      /*#history-call-list
+      {
+        margin:0;
+        padding:0;
+        position:   absolute;
+        right:      0em;
+        width:      21em;
+        overflow: auto;
+        top:        30em;
+        bottom:     0em;
+      }
+
+      #active-call-list
+      {
+        margin:0;
+        padding:0;
+        position:   absolute;
+        right:      0em;
+        width:      21em;
+        top:        10em;
+        height:     20em;
+        overflow: auto;
+      }*/
+
+
+      #main-tabs
+      {
+        margin:0;
+        padding:0;
+        position:   absolute;
+        left:       0em;
+        top:        11em;
+        right:      0em;
+        bottom:     0em;
+      }
+
+      #speed-dial-list
+      {
+          overflow:auto;
+          position: absolute;
+          top: 3em;
+          bottom: 0em;
+          padding: 0em;
+      }
+
+      .speed-dial-entry
+      {
+          float: left;
+          width: 20em;
+          min-height: 3.5em;
+          margin: 5px;
+          text-align: center;
+          vertical-align: middle;
+
+      }
+
+      .speed-dial-number
+      {
+          font-size: 75%;
+      }
+
+      .speed-dial-entry:hover
+      {
+        border-color: yellow;
+        cursor: pointer;
+      }
+
+      /*#status-bar[state="ring_in"]
+      {
+        background-color: #ffaaaa;
+      }*/
+
+
+      #status-msg
+      {
+      padding: 0.5em;
+      font-size: 200%;
+      }
+
+      #server-msg
+      {
+      padding: 0.5em;
+      color: red;
+      font-weight: bold;
+      }
+
+      .error
+      {
+        color: red;
+        font-weight: bold;
+      }
+
+      .main-tab
+      {
+          overflow:auto;
+          position: absolute;
+          top: 3em;
+          bottom: 0em;
+          padding: 0em;
+      }
+
+
+      #device-list .device
+      {
+        float: left;
+        width: 20em;
+        min-height: 3.5em;
+        margin: 5px;
+      }
+
+      #device-list .device:hover
+      {
+        border-color: yellow;
+        cursor: pointer;
+      }
+
+      #status-user .device
+      {
+        float: left;
+        width: 29em;
+        min-height: 7em;
+        margin: 1em;
+        text-align: center;
+
+      }
+
+
+      .device-info
+      {
+        text-align: center;
+      }
+
+      .channel-list
+      {
+        border-style:none;
+        width:100%;
+        min-height: 2em;
+      }
+
+      #status-user .channel-list
+      {
+          min-height:4em;
+      }
+
+      .channel
+      {
+        border-top-style:dashed;
+        border-color:#aaaaaa;
+        border-width: 1px;
+        margin:0;
+        min-width:15em;
+        position:relative;
+        font-weight: normal;
+      }
+
+      .channel-parked
+      {
+        border-top-style:dashed;
+        border-color:#aaaaaa;
+        border-width: 1px;
+        margin:0;
+        min-width:15em;
+        position:relative;
+        font-weight: normal;
+      }
+
+
+
+      .channel-icon
+      {
+        padding-left:25px;
+        background-repeat:no-repeat !important;
+        background-position: left !important;
+        background-image:url('asterisk/channel_idle.png') ;
+      }
+
+
+      .channel-icon[state="in"]
+      {
+        background-image:url('asterisk/channel_in.png') ;
+      }
+
+      .channel-icon[state="out"]
+      {
+        background-image:url('asterisk/channel_out.png') ;
+      }
+
+      .channel-icon[state="ring_in"]
+      {
+        background-image:url('asterisk/channel_ring.png') ;
+      }
+
+      .channel-icon[state="ring_out"]
+      {
+        background-image:url('asterisk/channel_idle.png') ;
+      }
+
+      .channel-icon[state="hold"]
+      {
+        background-image:url('asterisk/channel_hold.png') ;
+      }
+
+
+      .hold-blinker
+      {
+
+          background-image:url('asterisk/channel_idle.png') !important;
+      }
+
+      .ring-blinker
+      {
+          background-image:url('asterisk/channel_idle.png') !important;
+
+      }
+
+      .deleted
+      {
+        color:#aaaaaa;
+      }
+
+
+      .channel-info
+      {
+        margin:0;
+        padding:0;
+        display: inline-block;
+        min-width:18em;
+      }
+
+
+      .channel-menu-item
+      {
+        margin:2px;
+        padding:2px;
+        display: inline-block;
+        border-width: 2px;
+        border-style: solid;
+        color: black;
+        border-color: black;
+      }
+
+      .channel-menu-item:hover
+      {
+        color: white;
+        cursor: pointer;
+      }
+
+      .channel-menu-item-hang-up
+      {
+        background-color: red;
+      }
+
+      .channel-menu-item-transfer
+      {
+        background-color: yellow;
+      }
+
+      .channel-menu-item-resume
+      {
+        background-color: green;
+      }
+
+      .channel-menu-item-hold
+      {
+        background-color: gray;
+      }
+
+      .channel-menu-item-dial
+      {
+        background-color: gray;
+      }
+
+      .channel-debug
+      {
+        display:none;
+      }
+
+      .menu
+      {
+        position: absolute;
+        left:25px;
+        z-index: 1;
+      }
+
+    </style>
+
+    <script>
+
+    $(document).ready(function(){
+        $('#status-msg').click(function()
+        {
+            window.open("",window.opener.name);
+            window.close();
+        });
+
+    });
+    </script>
+
+
+  </head>
+
+
+  <body class='ui-widget' style='font-size:1em'>
+
+
+    <div class='ui-widget-content' id='status-user'>
+        <div class='ui-widget-header'>Incoming call:</div>
+        <a id='status-msg' href='#'>(loading)</a>
+    </div>
+
+  </body>
+</html>
