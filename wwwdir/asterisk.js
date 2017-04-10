@@ -342,6 +342,10 @@ var notification_popup=null;
 
 function update_popup_channel(msg, callerInfo)
 {
+    if (document.hasFocus())
+    {
+        return;
+    };
 
     //is it our channel?
     if (msg["deviceId"]==loginDeviceId)
@@ -352,7 +356,6 @@ function update_popup_channel(msg, callerInfo)
             //no popup anymore?
             if (notification_popup==null || notification_popup.closed)
             {
-                 console.log("niewue");
                  notification_popup=window.open("asterisk_popup.html", "asterisk_popup", "height=100,width=100");
             }
             else
@@ -362,8 +365,6 @@ function update_popup_channel(msg, callerInfo)
 
             $(notification_popup).load(function()
             {
-                console.log("loaded", callerInfo);
-
 
                 $("#status-msg", notification_popup.document).html(callerInfo);
             });
