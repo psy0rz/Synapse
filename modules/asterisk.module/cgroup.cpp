@@ -118,7 +118,7 @@ namespace asterisk
     //loads phonebook into phoneBookList (if it exists)
     //format:
     // company;first_name;last_name;number
-    void Cgroup::loadPhoneBook()
+    Cvar Cgroup::getPhoneBook()
     {
         boost::filesystem::path csvFileName("etc/synapse/asterisk_phonebook_"+id+".csv");
         if (phoneBookList.isEmpty())
@@ -152,7 +152,7 @@ namespace asterisk
                 WARNING("Not loading phonebook for group '" << id << "', because file does not exist: " << csvFileName);
             }
         }
-
+        return(phoneBookList);
     }
     //
     // //regex query on all fields in phonebook list
@@ -174,6 +174,15 @@ namespace asterisk
         out["numbers"]=getSpeedDial();
         out["groupId"]=getId();
         send(out);
+
+        out.clear();
+        out.dst=dst;
+        out.event="asterisk_phoneBookList";
+        out["numbers"]=getPhoneBook();
+        out["groupId"]=getId();
+        send(out);
+
+
 	}
 
 

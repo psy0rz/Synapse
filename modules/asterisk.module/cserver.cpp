@@ -700,15 +700,20 @@ namespace asterisk
 		out.dst=dst;
 		out.send(0,Cmsg::INFO);
 
+		for (CgroupMap::iterator I=groupMap.begin(); I!=groupMap.end(); I++)
+		{
+			I->second->sendRefresh(dst);
+		}
+
 		for (CserverMap::iterator I=serverMap.begin(); I!=serverMap.end(); I++)
 		{
 			I->second->sendRefresh(dst);
 		}
 
-		for (CgroupMap::iterator I=groupMap.begin(); I!=groupMap.end(); I++)
-		{
-			I->second->sendRefresh(dst);
-		}
+		out.event="asterisk_resetComplete";
+		out.dst=dst;
+		out.send(0,Cmsg::INFO);
+
 	}
 
 }

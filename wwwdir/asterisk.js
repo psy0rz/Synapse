@@ -1,5 +1,10 @@
 
+//TODO: make configurable
+var defaultCountryCode="+31";
+
 loginDeviceId="";
+phoneBook={};
+
 
 //get jquery object to template dom
 function getTemplate(class_name, context)
@@ -35,6 +40,8 @@ synapse_register("asterisk_State",function(msg_src, msg_dst, msg_event, msg)
     else
       $('#server-msg').html("");
 
+
+
 });
 
 synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg)
@@ -48,11 +55,11 @@ synapse_register("module_SessionStart",function(msg_src, msg_dst, msg_event, msg
         deviceId:   $.readCookie('asterisk_deviceId'),
         serverId:   $.readCookie('asterisk_serverId')
     });
-    send(0,"asterisk_refresh", {
-        authCookie: $.readCookie('asterisk_authCookie'),
-        deviceId:   $.readCookie('asterisk_deviceId'),
-        serverId:   $.readCookie('asterisk_serverId')
-    });
+    // send(0,"asterisk_refresh", {
+    //     authCookie: $.readCookie('asterisk_authCookie'),
+    //     deviceId:   $.readCookie('asterisk_deviceId'),
+    //     serverId:   $.readCookie('asterisk_serverId')
+    // });
 
 });
 
@@ -66,7 +73,7 @@ synapse_register("asterisk_authCall",function(msg_src, msg_dst, msg_event, msg)
 
 synapse_register("asterisk_authOk",function(msg_src, msg_dst, msg_event, msg)
 {
-    $('#status-msg').html("");
+    $('#status-msg').html("Downloading data...");
     //logged in
     $('.show-when-logged-out').hide();
     $('.show-when-logged-in').show();
@@ -92,16 +99,59 @@ synapse_register("asterisk_reset",function(msg_src, msg_dst, msg_event, msg)
 
 });
 
+synapse_register("asterisk_resetComplete",function(msg_src, msg_dst, msg_event, msg)
+{
+    $('#status-msg').html("");
+});
+
+function normalizeNumber(number)
+{
+    var normalizedNumber=number.replace(/[^0-9+]/, "");
+    normalizedNumber=normalizedNumber.replace(/^0/, defaultCountryCode);
+    console.log("normlaized", normalizedNumber);
+    return(normalizedNumber);
+}
+
+function findPhoneBookEntry(number)
+{
+    if (number.length<=4)
+        return(undefined);
+
+    var normalizedNumber=normalizeNumber(number);
+
+    for (var groupId in phoneBook)
+    {
+        for (var phoneBookI in phoneBook[groupId])
+        {
+            if (normalizeNumber(phoneBook[groupId][phoneBookI]["number"])==normalizedNumber)
+            {
+                return(phoneBook[groupId][phoneBookI]);
+            }
+        }
+    }
+    return(undefined);
+}
+
 function prettyCallerId( callerId, callerIdName)
 {
     var txt="";
-    if (callerIdName!="")
-        txt=txt+callerIdName;
 
-    if (callerId!="")
-        txt=txt+" &lt;"+callerId+"&gt;";
+    //try to find in phonebook first
+    var phoneBookEntry=findPhoneBookEntry(callerId);
+    if (phoneBookEntry)
+    {
+        txt=phoneBookEntry["first_name"]+" "+phoneBookEntry["last_name"]+" ("+phoneBookEntry["company"]+")";
+    }
     else
-        txt=" (unknown)";
+    {
+        if (callerIdName!="")
+            txt=txt+callerIdName;
+
+        if (callerId!="")
+            txt=txt+" &lt;"+callerId+"&gt;";
+        else
+            txt=" (unknown)";
+    }
 
     return txt;
 }
@@ -534,5 +584,13 @@ synapse_register("asterisk_speedDialList",function(msg_src, msg_dst, msg_event, 
 {
     //too GUI specific to handle here
     ;
+
+});
+
+synapse_register("asterisk_phoneBookList",function(msg_src, msg_dst, msg_event, msg)
+{
+        // console.log(msg);;
+        phoneBook[msg["groupId"]]=msg["numbers"];
+        console.log(phoneBook);
 
 });

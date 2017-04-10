@@ -51,7 +51,7 @@ namespace asterisk
 		void send(Cmsg & msg);
 
 		Cvar getSpeedDial();
-		void loadPhoneBook();
+		Cvar getPhoneBook();
 		void sendRefresh(int dst);
 
 

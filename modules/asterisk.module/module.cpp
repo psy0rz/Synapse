@@ -166,10 +166,16 @@ namespace asterisk
 		out["event"]=		"asterisk_reset";
 		out.send();
 
+		out["event"]=		"asterisk_resetComplete";
+		out.send();
+
 		out["event"]=		"asterisk_State";
 		out.send();
 
 		out["event"]=		"asterisk_speedDialList";
+		out.send();
+
+		out["event"]=		"asterisk_phoneBookList";
 		out.send();
 	}
 
