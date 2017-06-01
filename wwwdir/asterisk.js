@@ -356,7 +356,7 @@ function update_popup_channel(msg, callerInfo)
             //no popup anymore?
             if (notification_popup==null || notification_popup.closed)
             {
-                 notification_popup=window.open("asterisk_popup.html", "asterisk_popup", "height=100,width=100");
+                 notification_popup=window.open("asterisk_popup.html", "asterisk_popup", "height=200,width=500,centerscreen,location=off,left=200,top=200");
             }
             else
             {
