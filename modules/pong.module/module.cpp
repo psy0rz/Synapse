@@ -395,7 +395,7 @@ namespace pong
 		}
 	};
 
-	mutex threadMutex;
+	boost::mutex threadMutex;
 	typedef map<int,Cpong> CpongMap ;
 	CpongMap pongMap;
 
@@ -416,7 +416,7 @@ namespace pong
 		{
 			idle=true;
 			{
-				lock_guard<mutex> lock(threadMutex);
+				boost::lock_guard<boost::mutex> lock(threadMutex);
 				for (CpongMap::iterator I=pongMap.begin(); I!=pongMap.end(); I++)
 				{
 					I->second.runStep();
@@ -437,7 +437,7 @@ namespace pong
 	 */
 	SYNAPSE_REGISTER(pong_NewGame)
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		if (msg["name"].str()=="")
 		{
 			throw(runtime_error("Please supply your name when creating a game."));
@@ -465,7 +465,7 @@ namespace pong
 	//only modules can del games
 	SYNAPSE_REGISTER(pong_DelGame)
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		pongMap.erase(msg["id"]);
 
 		Cmsg out;
@@ -480,7 +480,7 @@ namespace pong
 	 */
 	SYNAPSE_REGISTER(pong_JoinGame)
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		//leave all other games
 		//TODO: future versions allow you perhaps to be in multiple games? :)
 		for (CpongMap::iterator I=pongMap.begin(); I!=pongMap.end(); I++)
@@ -496,7 +496,7 @@ namespace pong
 	 */
 	SYNAPSE_REGISTER(pong_StartGame)
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		getPong(msg.src).start();
 	}
 
@@ -505,7 +505,7 @@ namespace pong
 	 */
 	SYNAPSE_REGISTER(pong_GetGames)
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		for (CpongMap::iterator I=pongMap.begin(); I!=pongMap.end(); I++)
 		{
 			I->second.sendStatus(msg.src);
@@ -517,7 +517,7 @@ namespace pong
 	 */
 	SYNAPSE_REGISTER(pong_SetPosition)
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		if (msg.list().size()==3)
 		{
 			CvarList::iterator I;
@@ -536,7 +536,7 @@ namespace pong
 
 	SYNAPSE_REGISTER(module_SessionEnded)
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 
 		//leave all games
 		for (CpongMap::iterator I=pongMap.begin(); I!=pongMap.end(); I++)

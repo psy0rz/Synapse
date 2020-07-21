@@ -24,7 +24,7 @@
 using namespace std;
 using namespace boost;
 
-mutex threadMutex;
+boost::mutex threadMutex;
 
 
 SYNAPSE_REGISTER(module_Init)

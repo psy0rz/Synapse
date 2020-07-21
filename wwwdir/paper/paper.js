@@ -16,8 +16,8 @@ function Cpoint(x,y)
 	
 }
 
-var mouseInterval=50; //max update inteval in mS (can be higer if mouseMax is exceeded)
-var mouseMax=50; //max mouse pixel offset before sending (regardless of update interval)
+var mouseInterval=40; //max update inteval in mS (can be higer if mouseMax is exceeded)
+var mouseMax=10; //max mouse pixel offset before sending (regardless of update interval)
 
 var mousePoint=new Cpoint(); //current mouse position
 var mousePointStart=new Cpoint(); //mouse position at start of current operation

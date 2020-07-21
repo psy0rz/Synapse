@@ -47,7 +47,7 @@ class ChttpSessionMan
 	typedef map<int, ChttpSession> ChttpSessionMap;
 	ChttpSessionMap httpSessionMap;
 
-	mutex threadMutex;
+	boost::mutex threadMutex;
  	struct drand48_data randomBuffer;
 
 public:

@@ -340,7 +340,7 @@ void CmessageMan::operator()()
 	CthreadPtr threadPtr;
 	//init thread
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		DEB("thread started");
 		activeThread();
 		//get a pointer to our own thread object and remove it from the threadmap
@@ -359,7 +359,7 @@ void CmessageMan::operator()()
 			boost::this_thread::disable_interruption di;
 
 			//lock core
-			unique_lock<mutex> lock(threadMutex);
+			boost::unique_lock<boost::mutex> lock(threadMutex);
 
 
 			//end previous call
@@ -414,7 +414,7 @@ void CmessageMan::operator()()
 	  	catch (const ios::failure& e)
   		{
 			//return std::exceptions as error events
-			lock_guard<mutex> lock(threadMutex);
+			boost::lock_guard<boost::mutex> lock(threadMutex);
 
 			ERROR("I/O error while handling " << callI->msg->event << ": " << strerror(errno));
 			CmsgPtr error(new Cmsg);
@@ -434,7 +434,7 @@ void CmessageMan::operator()()
 	  	catch (const synapse::runtime_error& e)
   		{
 			//return std::exceptions as error events
-			lock_guard<mutex> lock(threadMutex);
+			boost::lock_guard<boost::mutex> lock(threadMutex);
 
 			ERROR("synapse exception while handling " << callI->msg->event << ": " << e.what());
 			DEB("Backtrace:\n" << e.getTrace());
@@ -455,7 +455,7 @@ void CmessageMan::operator()()
 	  	catch (const std::exception& e)
   		{
 			//return std::exceptions as error events
-			lock_guard<mutex> lock(threadMutex);
+			boost::lock_guard<boost::mutex> lock(threadMutex);
 
 			ERROR("exception while handling " << callI->msg->event << ": " << e.what());
 			CmsgPtr error(new Cmsg);
@@ -474,7 +474,7 @@ void CmessageMan::operator()()
 		catch(...)
 		{
 			//return other exceptions as error events
-			lock_guard<mutex> lock(threadMutex);
+			boost::lock_guard<boost::mutex> lock(threadMutex);
 
 			ERROR("unknown exception while handling " << callI->msg->event);
 			CmsgPtr error(new Cmsg);
@@ -577,7 +577,7 @@ int CmessageMan::run(string coreName, list<string> moduleNames)
 
 		//lock core and do our stuff
 		{
-			lock_guard<mutex> lock(threadMutex);
+			boost::lock_guard<boost::mutex> lock(threadMutex);
 // 			DEB(maxActiveThreads << "/" << wantCurrentThreads << " threads active.");
 // 			callMan.print();
 // 			userMan.print();
@@ -600,7 +600,7 @@ int CmessageMan::run(string coreName, list<string> moduleNames)
 	while(1)
 	{
 		{
-			lock_guard<mutex> lock(threadMutex);
+			boost::lock_guard<boost::mutex> lock(threadMutex);
 			if (currentThreads)
 			{
 				INFO("shutting down - waiting for threads to end:" << currentThreads);

@@ -261,7 +261,8 @@ namespace asterisk
 
 	string Cchannel::getChannelName()
 	{
-		return(this->channelName=channelName);
+		return(this->channelName);
+		
 	}
 
 	void Cchannel::sendChanges()

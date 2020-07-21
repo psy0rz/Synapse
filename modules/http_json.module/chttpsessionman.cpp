@@ -71,7 +71,7 @@ ChttpSessionMan::ChttpSessionMap::iterator ChttpSessionMan::findSessionByCookie(
 */
 void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string & jsonStr, ThttpCookie authCookieClone)
 {
-	lock_guard<mutex> lock(threadMutex);
+	boost::lock_guard<boost::mutex> lock(threadMutex);
 
 	if (authCookie!=0)
 	{
@@ -165,7 +165,7 @@ void ChttpSessionMan::getJsonQueue(int netId, ThttpCookie & authCookie, string &
  */
 void ChttpSessionMan::getJsonQueue(ThttpCookie & authCookie, string & jsonStr)
 {
-	lock_guard<mutex> lock(threadMutex);
+	boost::lock_guard<boost::mutex> lock(threadMutex);
 
 	if (authCookie!=0)
 	{
@@ -199,7 +199,7 @@ void ChttpSessionMan::endGet(int netId,ThttpCookie & authCookie)
 		return;
 
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 
 		ChttpSessionMap::iterator httpSessionI=findSessionByCookie(authCookie);
 
@@ -256,7 +256,7 @@ string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonLines
 		if (!failed)
 		{
 			//httpSession stuff, has to be locked offcourse:
-			lock_guard<mutex> lock(threadMutex);
+			boost::lock_guard<boost::mutex> lock(threadMutex);
 			ChttpSessionMap::iterator httpSessionI=findSessionByCookie(authCookie);
 
 			if (httpSessionI==httpSessionMap.end())
@@ -291,7 +291,7 @@ string ChttpSessionMan::sendMessage(ThttpCookie & authCookie, string & jsonLines
 //core informs us of a new session that is started, probably for a client of us:
 void ChttpSessionMan::sessionStart(Cmsg & msg)
 {
-	lock_guard<mutex> lock(threadMutex);
+	boost::lock_guard<boost::mutex> lock(threadMutex);
 
 	if (!msg.isSet("authCookie"))
 	{
@@ -317,7 +317,7 @@ void ChttpSessionMan::sessionStart(Cmsg & msg)
 //session creation failed
 void ChttpSessionMan::newSessionError(Cmsg & msg)
 {
-//	lock_guard<mutex> lock(threadMutex);
+//	boost::lock_guard<boost::mutex> lock(threadMutex);
 	//we cant do anything at this point...the client will just wait forever.
 	//if our maxSessions has a practical value this should never happen.
 }
@@ -325,7 +325,7 @@ void ChttpSessionMan::newSessionError(Cmsg & msg)
 //core informs us a session has ended.
 void ChttpSessionMan::sessionEnd(Cmsg & msg)
 {
-	lock_guard<mutex> lock(threadMutex);
+	boost::lock_guard<boost::mutex> lock(threadMutex);
 	DEB("Core has ended session " << msg.dst << ", deleting httpSession.");
 	httpSessionMap.erase(msg.dst);
 
@@ -341,7 +341,7 @@ int ChttpSessionMan::enqueueMessage(Cmsg & msg, int dst)
 	msg.toJson(jsonStr);
 
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		//NOTE: look at dst and NOT at msg.dst, because of broadcasts!
 
 		ChttpSessionMap::iterator httpSessionI=httpSessionMap.find(dst);
@@ -435,7 +435,7 @@ void ChttpSessionMan::expireCheckAll()
 
 void ChttpSessionMan::getStatus(Cvar & var)
 {
-	lock_guard<mutex> lock(threadMutex);
+	boost::lock_guard<boost::mutex> lock(threadMutex);
 
 
 	ChttpSessionMap::iterator httpSessionI=httpSessionMap.begin();

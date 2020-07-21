@@ -119,8 +119,8 @@ namespace synapse
 		//also publicly avaible for easy access to all your connections
 		//be carefull with locking!
 		CnetMap nets;
-		mutex threadMutex;
-		condition_variable threadCond;
+		boost::mutex threadMutex;
+		boost::condition_variable threadCond;
 
 
 		private:

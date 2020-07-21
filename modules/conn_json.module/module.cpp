@@ -182,7 +182,7 @@ class CnetModule : public synapse::Cnet
 				{
 					//no mapping yet: create a new session mapping on the fly, by approaching the core directly!
 					//(normally this would be considered a hack, but for the special case of connector-modules its ok i think)
-					lock_guard<mutex> lock(synapse::messageMan->threadMutex);
+					boost::lock_guard<boost::mutex> lock(synapse::messageMan->threadMutex);
 					synapse::CsessionPtr session=synapse::messageMan->userMan.getSession(moduleSessionId);
 					if (!session)
 						error="BUG: conn_json cant find module session.";
@@ -269,7 +269,7 @@ synapse::CnetMan<CnetModule> net;
 //	{
 //		//no specific id, and its a broadcast?
 //		//send it to all net objects:
-//		lock_guard<mutex> lock(net.threadMutex);
+//		boost::lock_guard<boost::mutex> lock(net.threadMutex);
 //
 //		for (synapse::CnetMan<CnetModule>::CnetMap::iterator netI=net.nets.begin(); netI!=net.nets.end(); netI++)
 //		{
@@ -348,7 +348,7 @@ SYNAPSE_HANDLER(all)
 	if (cookie)
 	{
 		//accessing the net-object directly, so lock it:
-		lock_guard<mutex> lock(net.threadMutex);
+		boost::lock_guard<boost::mutex> lock(net.threadMutex);
 
 		synapse::CnetMan<CnetModule>::CnetMap::iterator netI;
 		netI=net.nets.find(cookie);

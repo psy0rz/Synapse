@@ -24,7 +24,7 @@
 using namespace std;
 using namespace boost;
 
-mutex threadMutex;
+boost::mutex threadMutex;
 
 
 SYNAPSE_REGISTER(module_Init)
@@ -160,7 +160,7 @@ SYNAPSE_REGISTER(net_Read)
 	{
 		INFO("GOT TO EOF FOR " << msg.dst);
 		{
-			lock_guard<mutex> lock(threadMutex);
+			boost::lock_guard<boost::mutex> lock(threadMutex);
 			sessioneof++;
 		}
 		lastId[msg.dst]=-1;
@@ -177,7 +177,7 @@ SYNAPSE_REGISTER(net_Read)
 	{
 		ERROR("Data ordering error: Expected " << lastId[msg.dst]+1 << " but got " << msg["data"]);
 		{
-			lock_guard<mutex> lock(threadMutex);
+			boost::lock_guard<boost::mutex> lock(threadMutex);
 			failed=true;
 		}
 	}
@@ -187,7 +187,7 @@ SYNAPSE_REGISTER(net_Read)
 
 SYNAPSE_REGISTER(net_Disconnected)
 {
-	lock_guard<mutex> lock(threadMutex);
+	boost::lock_guard<boost::mutex> lock(threadMutex);
 
 	if (lastId[msg.dst]!=-1)
 	{

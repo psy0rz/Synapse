@@ -281,7 +281,7 @@ SYNAPSE_REGISTER(core_LoadModule)
 	string path;
 
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 		CmodulePtr module;
 
 		if (msg.isSet("path"))
@@ -373,7 +373,7 @@ SYNAPSE_REGISTER(core_Ready)
 	string error;
 	list<int> requestingSessions;
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 
 		CsessionPtr session=messageMan->userMan.getSession(msg.src);
 		if (!session)
@@ -417,7 +417,7 @@ SYNAPSE_REGISTER(core_Register)
 {
 	string error;
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 
 		CsessionPtr session=messageMan->userMan.getSession(msg.src);
 		if (!session)
@@ -476,7 +476,7 @@ SYNAPSE_REGISTER(core_ChangeEvent)
 
 	string error;
  	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 		CsessionPtr session=messageMan->userMan.getSession(msg.src);
 		if (!session)
 			error="Session not found";
@@ -542,7 +542,7 @@ SYNAPSE_REGISTER(core_Login)
 	string error;
 	Cmsg loginmsg;
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 		error=messageMan->userMan.login(msg.src, msg["username"], msg["password"]);
 		if (error=="")
 		{
@@ -588,7 +588,7 @@ SYNAPSE_REGISTER(core_NewSession)
 	Cmsg startmsg;
 
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 		CsessionPtr session=messageMan->userMan.getSession(msg.src);
 		if (!session)
 			error="Session not found";
@@ -680,7 +680,7 @@ SYNAPSE_REGISTER(core_Shutdown)
 	//this ends all sessions, so that all modules are eventually unloaded and the core shuts down.
 
 	Cmsg endmsg;
-	lock_guard<mutex> lock(messageMan->threadMutex);
+	boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 
 	WARNING("Shutdown requested, ending all sessions.");
 
@@ -748,7 +748,7 @@ SYNAPSE_REGISTER(core_DelSession)
 	string error;
 	Cmsg endmsg;
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 		CsessionPtr session=messageMan->userMan.getSession(msg.src);
 		if (!session)
 			error="Session not found";
@@ -771,7 +771,7 @@ SYNAPSE_REGISTER(core_DelSession)
 
 		//now actually delete the session
 		{
-			lock_guard<mutex> lock(messageMan->threadMutex);
+			boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 			if (!messageMan->userMan.delSession(msg.src))
 				ERROR("cant delete session" << msg.src);
 		}
@@ -792,7 +792,7 @@ SYNAPSE_REGISTER(core_DelCookieSessions)
 	list<int> deletedIds;
 
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 		CsessionPtr session=messageMan->userMan.getSession(msg.src);
 		if (!session)
 			error="Session not found";
@@ -829,7 +829,7 @@ SYNAPSE_REGISTER(core_ChangeModule)
 {
 	string error;
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 
 		CsessionPtr session=messageMan->userMan.getSession(msg.src);
 		if (!session)
@@ -860,7 +860,7 @@ SYNAPSE_REGISTER(core_ChangeSession)
 {
 	string error;
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 
 		CsessionPtr session=messageMan->userMan.getSession(msg.src);
 		if (!session)
@@ -896,7 +896,7 @@ SYNAPSE_REGISTER(core_Interrupt)
 	string error;
 
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 		if (!messageMan->callMan.interruptCall(msg["event"], msg.src, msg["dst"]))
 			error="Cannot find call, or call has already ended";
 		out.dst=msg.src;
@@ -923,7 +923,7 @@ SYNAPSE_REGISTER(core_Interrupt)
 SYNAPSE_REGISTER(core_ChangeLogging)
 {
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 		messageMan->logSends=msg["logSends"];
 		messageMan->logReceives=msg["logReceives"];
 	}
@@ -941,7 +941,7 @@ SYNAPSE_REGISTER(core_GetStatus)
 {
 	Cmsg out;
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 		out.event="core_Status";
 		out.dst=msg.src;
 		messageMan->callMan.getStatus(out);
@@ -962,7 +962,7 @@ SYNAPSE_REGISTER(core_GetEvents)
 {
 	Cmsg out;
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 		messageMan->getEvents(out);
 		out.event="core_Events";
 		out.dst=msg.src;
@@ -987,7 +987,7 @@ SYNAPSE_REGISTER(core_AddMapping)
 	Cmsg out;
 	string error;
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 		error=messageMan->addMapping(msg["mapFrom"], msg["mapTo"]);
 
 		//send a updated core_MappedEvent
@@ -1017,7 +1017,7 @@ SYNAPSE_REGISTER(core_DelMapping)
 	Cmsg out;
 	string error;
 	{
-		lock_guard<mutex> lock(messageMan->threadMutex);
+		boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 		error=messageMan->delMapping(msg["mapFrom"], msg["mapTo"]);
 
 		//send a updated core_MappedEvent

@@ -838,7 +838,7 @@ void enqueueMessage(Cmsg & msg, int dst)
 	if (waitingNetId)
 	{
 		//a client is waiting for a message, lets inform him:
-		lock_guard<mutex> lock(net.threadMutex);
+		boost::lock_guard<boost::mutex> lock(net.threadMutex);
 
 		synapse::CnetMan<CnetHttp>::CnetMap::iterator netI=net.nets.find(waitingNetId);
 

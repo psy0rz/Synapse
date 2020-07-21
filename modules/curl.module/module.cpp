@@ -55,7 +55,7 @@ class Ccurl
 {
 	private:
 	//threading stuff
-	boost::shared_ptr<mutex> mMutex;
+	boost::shared_ptr<boost::mutex> mMutex;
 	boost::shared_ptr<condition_variable> mQueueChanged;
 
 	//Ccurl stuff:
@@ -75,7 +75,7 @@ class Ccurl
 	{
 		mAbort=false;
 		mPerforming=false;
-		mMutex=boost::shared_ptr<mutex>(new mutex);
+		mMutex=boost::shared_ptr<boost::mutex>(new mutex);
 		mQueueChanged=boost::shared_ptr<condition_variable>(new condition_variable);
 
 		mCurl=curl_easy_init();
@@ -87,7 +87,7 @@ class Ccurl
 	//aborts all downloads and empties queue
 	void abort()
 	{
-		lock_guard<mutex> lock(*mMutex);
+		boost::lock_guard<boost::mutex> lock(*mMutex);
 		mAbort=true;
 		mQueue.empty();
 		mQueueChanged->notify_one();
@@ -96,7 +96,7 @@ class Ccurl
 	//enqueues a download. returns true if the calling thread should call perform().
 	bool enqueue(Cmsg & msg)
 	{
-		lock_guard<mutex> lock(*mMutex);
+		boost::lock_guard<boost::mutex> lock(*mMutex);
 
 		//create new queue message
 		Cmsg queueMsg;
@@ -128,7 +128,7 @@ class Ccurl
 	//only call this when not already performing. when it returns false , curl is uninitalized so dont call perform or anything else again.
 	bool shouldPerform()
 	{
-		lock_guard<mutex> lock(*mMutex);
+		boost::lock_guard<boost::mutex> lock(*mMutex);
 
 
 		//still no data after waiting, delete curl instance and make sure we dont get called again
@@ -200,7 +200,7 @@ class Ccurl
 		struct curl_slist *headers=NULL;
 
 		{
-			unique_lock<mutex> lock(*mMutex);
+boost::unique_lock<boost::mutex> lock(*mMutex);
 
 			//empty?
 			if (mQueue.empty())
@@ -390,7 +390,7 @@ class Ccurl
 		}
 
 		{
-			unique_lock<mutex> lock(*mMutex);
+boost::unique_lock<boost::mutex> lock(*mMutex);
 
 			if (err==0)
 			{
@@ -436,7 +436,7 @@ class Ccurl
 };
 
 
-mutex curlMapMutex;
+boost::mutex curlMapMutex;
 typedef pair<int, string> CcurlKey;
 typedef map<CcurlKey, Ccurl> CcurlMap;
 CcurlMap curlMap;
@@ -514,7 +514,7 @@ SYNAPSE_REGISTER(curl_Get)
 	bool perform=true;
 
 	{
-		lock_guard<mutex> lock(curlMapMutex);
+		boost::lock_guard<boost::mutex> lock(curlMapMutex);
 
 		//returns true if we should call perform
 		perform=curlMap[key].enqueue(msg);
@@ -529,7 +529,7 @@ SYNAPSE_REGISTER(curl_Get)
 		curlI->second.perform();
 
 		{
-			lock_guard<mutex> lock(curlMapMutex);
+			boost::lock_guard<boost::mutex> lock(curlMapMutex);
 
 			//we need this construction to prevent the racecondition when something is enqueued just after perform has returned
 			if (!curlI->second.shouldPerform())
@@ -545,7 +545,7 @@ SYNAPSE_REGISTER(curl_Get)
 
 SYNAPSE_REGISTER(curl_Abort)
 {
-	lock_guard<mutex> lock(curlMapMutex);
+	boost::lock_guard<boost::mutex> lock(curlMapMutex);
 	getCurl(msg.src,msg["id"]).abort();
 }
 

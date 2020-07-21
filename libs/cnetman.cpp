@@ -26,6 +26,12 @@
 //using namespace boost;
 //using asio::ip::tcp;
 
+#if BOOST_VERSION >= 107000
+#define GET_IO_SERVICE(s) ((boost::asio::io_context&)(s)->get_executor().context())
+#else
+#define GET_IO_SERVICE(s) ((s)->get_io_service())
+#endif
+
 namespace synapse
 {
 
@@ -34,8 +40,7 @@ using namespace boost;
 using asio::ip::tcp;
 
 
-template <class Tnet> 
-CnetMan<Tnet>::CnetMan(unsigned int maxConnections)
+template <class Tnet> CnetMan<Tnet>::CnetMan(unsigned int maxConnections)
 {
 	shutdown=false;
 	autoIdCount=0;	
@@ -58,7 +63,7 @@ bool CnetMan<Tnet>::runConnect(int id, string host, int port, int reconnectTime,
 {
 	CnetPtr netPtr;
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 
 		if (nets.size()>=maxConnections)
 		{
@@ -87,7 +92,7 @@ bool CnetMan<Tnet>::runConnect(int id, string host, int port, int reconnectTime,
 	DEB("ioservice finished for id " << id);
 
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		//we're done, remove the Cnetobject from the list
  		nets.erase(id);
 	}
@@ -100,7 +105,7 @@ bool CnetMan<Tnet>::runListen(int port)
 {
 	asio::io_service ioService;
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		if (acceptors.find(port)!=acceptors.end())
 		{
 			ERROR("net port " << port << " is already listening, ignoring listen-request");
@@ -140,7 +145,7 @@ bool CnetMan<Tnet>::runListen(int port)
 
 
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		//we're done, remove the acceptor from the list
 		acceptors.erase(port);
 		//FIXME: what happens if a runAccept JUST started a threadCond.wait()? will it hang until shutdown or the next runListen?
@@ -161,7 +166,7 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
 //	try
 	{
 		{
-			unique_lock<mutex> lock(threadMutex);
+boost::unique_lock<boost::mutex> lock(threadMutex);
 
 			if (nets.size()>=maxConnections)
 			{
@@ -207,7 +212,7 @@ bool CnetMan<Tnet>::runAccept(int port, int id)
 
 	{
 //		FIXEN: dit word niet gedaan bij exception, en exception word niet door caller afgehandled!
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		//we're done, remove the Cnetobject from the list
  		nets.erase(id);
 	}
@@ -219,7 +224,7 @@ template <class Tnet>
 bool CnetMan<Tnet>::doClose(int port)
 {
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		if (acceptors.find(port)==acceptors.end())
 		{
 			ERROR("net port " << port << " is not listening, ignoring close-request");
@@ -228,7 +233,9 @@ bool CnetMan<Tnet>::doClose(int port)
 
 		//post via ioservice because acceptor is not threadsafe
 		DEB("Posting close request for port " << port);
-		acceptors[port]->get_io_service().post(bind(&CnetMan::closeHandler,this,port));
+		GET_IO_SERVICE(acceptors[port]).post(bind(&CnetMan::closeHandler,this,port));
+		
+	
 	}
 	return true;
 }
@@ -238,7 +245,7 @@ template <class Tnet>
 void CnetMan<Tnet>::closeHandler(int port)
 {
 	acceptors[port]->close();
-	acceptors[port]->get_io_service().stop();
+	GET_IO_SERVICE(acceptors[port]).stop();
 	//after cancelling all pending accepts, doListen will now return
 }
 
@@ -246,7 +253,7 @@ template <class Tnet>
 bool CnetMan<Tnet>::doDisconnect(int id)
 {
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		if (nets.find(id)==nets.end())
 		{
 			DEB("id " << id << " does not exist, ignoring disconnect request");
@@ -261,7 +268,7 @@ template <class Tnet>
 bool CnetMan<Tnet>::doWrite(int id, string & data)
 {
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 		if (nets.find(id)==nets.end())
 		{
 			ERROR("net id " << id << " does not exist, ignoring write request");
@@ -277,7 +284,7 @@ template <class Tnet>
 void CnetMan<Tnet>::doShutdown()
 {
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 
 		if (shutdown)
 			return;
@@ -292,7 +299,7 @@ void CnetMan<Tnet>::doShutdown()
 		DEB("Closing all open ports");	
 		for (CacceptorMap::iterator acceptorI=acceptors.begin(); acceptorI!=acceptors.end(); acceptorI++)
 		{
-			acceptorI->second->get_io_service().post(bind(&CnetMan::closeHandler,this,acceptorI->first));
+			GET_IO_SERVICE(acceptorI->second).post(bind(&CnetMan::closeHandler,this,acceptorI->first));
 		}
 
 		//FIXME: we need a sleep here? since it takes a while to post and process the request, and in that time new connections could arrive?
@@ -311,7 +318,7 @@ void CnetMan<Tnet>::doShutdown()
 template <class Tnet> 
 void CnetMan<Tnet>::setMaxConnections(unsigned int maxConnections)
 {
-	lock_guard<mutex> lock(threadMutex);
+	boost::lock_guard<boost::mutex> lock(threadMutex);
 	this->maxConnections=maxConnections;
 }
 
@@ -319,7 +326,7 @@ template <class Tnet>
 void CnetMan<Tnet>::getStatus(Cvar & var)
 {
 	{
-		lock_guard<mutex> lock(threadMutex);
+		boost::lock_guard<boost::mutex> lock(threadMutex);
 
 		for (CacceptorMap::iterator acceptorI=acceptors.begin(); acceptorI!=acceptors.end(); acceptorI++)
 		{

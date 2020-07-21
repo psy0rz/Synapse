@@ -165,7 +165,8 @@ namespace pl
         {
             clear();
             mRawDir.clear();
-            mRawDirTime=microsec_clock::local_time()-seconds(config["ttl"]+1);
+            mRawDirTime=microsec_clock::local_time()-seconds(long(config["ttl"])+1);
+            
         }
 
         void read(

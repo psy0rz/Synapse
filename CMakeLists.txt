@@ -51,6 +51,6 @@ find_package( Boost 1.40.0 REQUIRED thread regex system filesystem)
 #TARGET_LINK_LIBRARIES(synapse boost_thread-mt dl boost_regex-mt boost_system-mt -pg json_spirit)
 TARGET_LINK_LIBRARIES(synapse ${Boost_LIBRARIES} json_spirit dl exception)
 
-INCLUDE_DIRECTORIES(libs libs/json_spirit ${Boost_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(. libs libs/json_spirit ${Boost_INCLUDE_DIRS})
 
 SUBDIRS(libs modules)

@@ -133,7 +133,7 @@ extern "C" void synapseCleanup()
 //you CANT send messages from the core with this funtion, you'll get an 'undefined reference'. :)
 void Cmsg::send(int cookie, ElogLevel logLevel)
 {
-	lock_guard<mutex> lock(messageMan->threadMutex);
+	boost::lock_guard<boost::mutex> lock(messageMan->threadMutex);
 
 	messageMan->sendMessage((CmodulePtr)module,CmsgPtr(new Cmsg(*this)), cookie, logLevel);
 }

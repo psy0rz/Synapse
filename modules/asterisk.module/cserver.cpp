@@ -299,10 +299,12 @@ namespace asterisk
 				CchannelPtr linkedChannelPtr=reuseChannelPtr->getLinkPtr();
 
 				if (linkedChannelPtr!=CchannelPtr())
+				{
 					amiSetVar(linkedChannelPtr, "__SYNAPSE_OWNER", fromDevicePtr->getId());
 
 					amiRedirect(reuseChannelPtr, "from-synapse-call", exten,
 								linkedChannelPtr, "from-synapse", "park");
+				}
 			}
 			else
 			{

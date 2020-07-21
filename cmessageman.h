@@ -97,7 +97,7 @@ public:
    	string getModulePath(string name);
     CmodulePtr getModule(string path);
 
-	mutex threadMutex;
+	boost::mutex threadMutex;
 	CuserMan userMan;
 	CcallMan callMan;
 
@@ -117,7 +117,7 @@ public:
 	string delMapping(string mapFrom, string mapTo);
 	void getMapping(string mapFrom, Cvar & var);
 private:
-	condition_variable threadCond;
+	boost::condition_variable threadCond;
 
 
 
@@ -129,7 +129,7 @@ private:
 	typedef map<string, list<string> > CeventMapperMap;
 	CeventMapperMap eventMappers;
 
-	map<thread::id,CthreadPtr> threadMap;
+	map<boost::thread::id,CthreadPtr> threadMap;
 	int 	currentThreads; //number of  threads in memory
 	int	wantCurrentThreads;	//number of threads we want. threads will be added/deleted accordingly.
 	int 	maxThreads;     //max number of threads. system will never create more then this many

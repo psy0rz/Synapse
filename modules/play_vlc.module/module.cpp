@@ -133,7 +133,7 @@ class CPlayer
 
 	static void vlcEventGeneric(const libvlc_event_t * event, void *player)
 	{
-        lock_guard<recursive_mutex> lock(vlcMutex);
+        boost::lock_guard<recursive_mutex> lock(vlcMutex);
 
 		Cmsg out;
 		out["id"]=((CPlayer *)player)->mId;
@@ -144,7 +144,7 @@ class CPlayer
 
 	static void vlcEventMediaPlayerTimeChanged(const libvlc_event_t * event, void *player)
 	{
-        lock_guard<recursive_mutex> lock(vlcMutex);
+        boost::lock_guard<recursive_mutex> lock(vlcMutex);
 
 		int newTime=event->u.media_player_time_changed.new_time/1000;
 
@@ -230,7 +230,7 @@ class CPlayer
 
 	static void vlcEventMediaMetaChanged(const libvlc_event_t * event, void *player)
 	{
-        lock_guard<recursive_mutex> lock(vlcMutex);
+        boost::lock_guard<recursive_mutex> lock(vlcMutex);
 
 		static Cmsg prevMsg;
 
@@ -260,7 +260,7 @@ class CPlayer
 
 	static void vlcEventMediaStateChanged(const libvlc_event_t * event, void *player)
 	{
-        lock_guard<recursive_mutex> lock(vlcMutex);
+        boost::lock_guard<recursive_mutex> lock(vlcMutex);
 
 /*
         DEB("lock");
@@ -349,7 +349,7 @@ class CPlayer
 
     static void vlcEventMediaListPlayerNextItemSet(const libvlc_event_t * event, void *player)
     {
-        lock_guard<recursive_mutex> lock(vlcMutex);
+        boost::lock_guard<recursive_mutex> lock(vlcMutex);
         ((CPlayer*)player)->mVlcSubitemsLeft--;
        // ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
     }
@@ -357,7 +357,7 @@ class CPlayer
 
 	static void vlcEventMediaSubItemAdded(const libvlc_event_t * event, void *player)
 	{
-        lock_guard<recursive_mutex> lock(vlcMutex);
+        boost::lock_guard<recursive_mutex> lock(vlcMutex);
 
         ((CPlayer*)player)->mVlcSubitemsLeft++;
       //  ERROR(" LEFT " << ((CPlayer*)player)->mVlcSubitemsLeft);
@@ -629,7 +629,7 @@ SYNAPSE_REGISTER(module_Shutdown)
 {
 	for(CPlayerMap::iterator I=players.begin(); I!=players.end(); I++)
 	{
-	    lock_guard<recursive_mutex> lock(vlcMutex);
+	    boost::lock_guard<recursive_mutex> lock(vlcMutex);
 		I->second.destroy();
 	}
 }
@@ -666,7 +666,7 @@ SYNAPSE_REGISTER(play_GetPlayers)
 SYNAPSE_REGISTER(play_DelPlayer)
 {
 
-    lock_guard<recursive_mutex> lock(vlcMutex);
+    boost::lock_guard<recursive_mutex> lock(vlcMutex);
 
 	players[msg["id"]].destroy();
 	players.erase(msg["id"]);
@@ -679,7 +679,7 @@ SYNAPSE_REGISTER(play_DelPlayer)
 SYNAPSE_REGISTER(play_NewPlayer)
 {
 
-    lock_guard<recursive_mutex> lock(vlcMutex);
+    boost::lock_guard<recursive_mutex> lock(vlcMutex);
 
 	players[msg["id"]].init(msg);
 
@@ -721,7 +721,7 @@ SYNAPSE_REGISTER(play_NewPlayer)
 SYNAPSE_REGISTER(play_Open)
 {
 	//niet?? waaroim niet
-    //lock_guard<recursive_mutex> lock(vlcMutex);
+    //boost::lock_guard<recursive_mutex> lock(vlcMutex);
 
 
 	FOREACH_VARLIST(id, msg["ids"])
@@ -738,7 +738,7 @@ SYNAPSE_REGISTER(play_Open)
 */
 SYNAPSE_REGISTER(play_Stop)
 {
-    lock_guard<recursive_mutex> lock(vlcMutex);
+    boost::lock_guard<recursive_mutex> lock(vlcMutex);
 
 	FOREACH_VARLIST(id, msg["ids"])
 	{
@@ -748,7 +748,7 @@ SYNAPSE_REGISTER(play_Stop)
 
 SYNAPSE_REGISTER(play_Pause, '{ "recvGroup": "everyone", "sendGroup": "modules" }')
 {
-    lock_guard<recursive_mutex> lock(vlcMutex);
+    boost::lock_guard<recursive_mutex> lock(vlcMutex);
 
 	FOREACH_VARLIST(id, msg["ids"])
 	{
@@ -759,7 +759,7 @@ SYNAPSE_REGISTER(play_Pause, '{ "recvGroup": "everyone", "sendGroup": "modules" 
 
 SYNAPSE_REGISTER(play_SetTime)
 {
-    lock_guard<recursive_mutex> lock(vlcMutex);
+    boost::lock_guard<recursive_mutex> lock(vlcMutex);
 
 	FOREACH_VARLIST(id, msg["ids"])
 	{
@@ -770,7 +770,7 @@ SYNAPSE_REGISTER(play_SetTime)
 
 SYNAPSE_REGISTER(play_MoveTime)
 {
-    lock_guard<recursive_mutex> lock(vlcMutex);
+    boost::lock_guard<recursive_mutex> lock(vlcMutex);
 
 	FOREACH_VARLIST(id, msg["ids"])
 	{
@@ -786,7 +786,7 @@ SYNAPSE_REGISTER(play_MoveTime)
  */
 SYNAPSE_REGISTER(play_GetStatus)
 {
-    lock_guard<recursive_mutex> lock(vlcMutex);
+    boost::lock_guard<recursive_mutex> lock(vlcMutex);
 	FOREACH_VARLIST(id, msg["ids"])
 	{
 	    players[id].sendStatus(msg.src);

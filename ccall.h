@@ -35,7 +35,7 @@
 
 namespace synapse
 {
-typedef boost::shared_ptr<thread> CthreadPtr; 
+typedef boost::shared_ptr<boost::thread> CthreadPtr; 
 
 /**
 	@author
