@@ -22,6 +22,8 @@
 
 /** Synapse network states/flow:
 	
+   	NOTE: this is not super scalable since it uses one thread and io_context per connection.
+
 	CnetMan is threadsafe, Cnet is NOT.
 	
 	id is optional: when 0 it will assign an id automaticly.
