@@ -8,3 +8,5 @@ CMakeCache.txt
 /var
 /wwwdir/p
 Doxyfile
+.vscode
+build
